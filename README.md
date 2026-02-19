@@ -7,6 +7,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -See time spent on websites and total page loads
 -Export and import history and bookmarks
 -Export session tabs
+-Quick access to recent history by pressing extension button 
 -Change accent colors if you are into that
 -Delete history per day, based on filter, or selection
 </pre>
