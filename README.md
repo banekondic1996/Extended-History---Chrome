@@ -14,7 +14,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 **To do:**
 <pre>
 -Fix time spent calculation
--Delete history by certian amount of time
+**-Delete history by certian amount of time**
 -Make popup load faster
 -Maybe remove lazy loading or improve scrolling for history
 -Store page even if page didn't load completely 
