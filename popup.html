@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<title>Extended History</title>
+<style>
+:root { --accent:#3b9eff; --accent2:#2dd4a0; }
+[data-theme="dark"]  { --bg:#131318; --s1:#18181f; --s2:#1f1f28; --border:rgba(255,255,255,0.08); --text:#f0eee8; --text2:#a09eb0; --text3:#5a5870; }
+[data-theme="light"] { --bg:#ffffff; --s1:#f5f5f7; --s2:#eeeef2; --border:rgba(0,0,0,0.08); --text:#111118; --text2:#555568; --text3:#aaaabc; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',sans-serif; width:340px; font-size:13px; }
+.header { display:flex; align-items:center; gap:8px; padding:12px 14px 10px; border-bottom:1px solid var(--border); }
+.hico { width:26px;height:26px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:6px; display:flex;align-items:center;justify-content:center; font-size:13px; }
+.htitle { font-weight:600; font-size:0.9rem; flex:1; }
+.open-btn { padding:5px 11px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.75rem; font-weight:600; cursor:pointer; }
+.recent { max-height:320px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--s2) transparent; }
+.ritem { display:flex; align-items:center; gap:9px; padding:8px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.08s; }
+.ritem:hover { background:var(--s1); }
+.rfav { width:14px;height:14px;border-radius:3px;flex-shrink:0; }
+.rbody { flex:1; min-width:0; }
+.rtitle { font-size:0.8rem; color:var(--text); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.rurl   { font-size:0.65rem; color:var(--text2); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; font-family:monospace; }
+.rtime  { font-size:0.65rem; color:var(--text3); flex-shrink:0; font-family:monospace; }
+.loading { padding:18px 14px; color:var(--text3); font-size:0.8rem; }
+.footer { display:flex; gap:0; border-top:1px solid var(--border); }
+.flink { flex:1; padding:10px 8px; text-align:center; font-size:0.72rem; color:var(--text2); cursor:pointer; border:none; background:none; transition:all 0.1s; }
+.flink:hover { background:var(--s1); color:var(--accent); }
+.flink + .flink { border-left:1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="hico">🕐</div>
+  <div class="htitle">Extended History</div>
+  <button class="open-btn" id="openBtn">Open</button>
+</div>
+<div class="recent" id="recent"><div class="loading">Loading…</div></div>
+<div class="footer">
+  <button class="flink" data-panel="activity">Activity</button>
+  <button class="flink" data-panel="timespent">Time</button>
+  <button class="flink" data-panel="sessions">Sessions</button>
+  <button class="flink" data-panel="settings">Settings</button>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
