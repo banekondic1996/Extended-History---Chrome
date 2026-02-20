@@ -791,9 +791,12 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 }
 .bm-tr-toggle {
     font-size: 9px; color: var(--text3); flex-shrink: 0;
-    width: 12px; text-align: center;
-    transition: transform 0.15s; display: inline-block;
+    width: 20px; min-height: 20px; text-align: center;
+    transition: transform 0.15s; display: inline-flex;
+    align-items: center; justify-content: center;
+    border-radius: 3px; cursor: pointer;
 }
+.bm-tr-toggle:hover { background: var(--surf3); color: var(--text2); }
 .bm-tr-icon  { font-size: 14px; flex-shrink: 0; }
 .bm-tr-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 
@@ -809,11 +812,28 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
     display: flex; align-items: center; gap: 10px;
     padding: 9px 18px; border-bottom: 1px solid var(--border);
     cursor: pointer; transition: background 0.08s;
+    will-change: opacity;
 }
 .bm-item:last-child { border-bottom: none; }
 .bm-item:hover { background: var(--surf1); }
 .bm-fav   { width: 15px; height: 15px; border-radius: 3px; opacity: 0.8; flex-shrink: 0; }
 .bm-title { font-size: 0.87rem; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Drag handle */
+.bm-drag-handle {
+    color: var(--text3); font-size: 13px; cursor: grab; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.1s; padding: 0 2px;
+}
+.bm-item:hover .bm-drag-handle { opacity: 1; }
+.bm-item.bm-dragging { opacity: 0.4; background: var(--surf2); }
+
+/* Drop target highlight on tree rows */
+.bm-tree-row.bm-drop-target {
+    background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 4px;
+}
 
 @keyframes dhPulse { 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
 

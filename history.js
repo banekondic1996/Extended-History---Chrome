@@ -777,6 +777,24 @@ async function loadSessions() {
         exportSessionAsHtml(dateLabel.main, tabsArr);
       });
 
+      // Restore button — only for past sessions (not current)
+      if (!badgeText) {
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className   = 'tb-btn';
+        restoreBtn.textContent = '↺ Restore';
+        restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
+        restoreBtn.addEventListener('click', async ev => {
+          ev.stopPropagation();
+          const urls = tabsArr.filter(t => t.url).map(t => t.url);
+          if (urls.length > 20 && !confirm(`Restore ${urls.length} tabs?`)) return;
+          try {
+            await send('RESTORE_SESSION', { tabs: tabsArr });
+            toast(`Restored ${urls.length} tabs`, 'ok');
+          } catch(err) { toast(err.message, 'err'); }
+        });
+        head.appendChild(restoreBtn); // will be inserted before toggle below
+      }
+
       const toggle = document.createElement('span');
       toggle.className   = 'sess-toggle';
       toggle.textContent = '▶';
@@ -784,6 +802,7 @@ async function loadSessions() {
       head.appendChild(headLeft);
       head.appendChild(tabCount);
       head.appendChild(exportBtn);
+      // restoreBtn already appended conditionally above
       head.appendChild(toggle);
 
       const tabsEl = document.createElement('div');
@@ -828,7 +847,7 @@ function buildSessTabEl(t) {
 
   const row = document.createElement('div');
   row.className = 'sess-tab-row';
-  row.addEventListener('click', () => window.open(t.url, '_blank'));
+  row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
   const img = document.createElement('img');
   img.className = 'sess-fav';
@@ -894,7 +913,7 @@ async function loadDevices() {
         const dom = tryDomain(t.url || '');
         const row = document.createElement('div');
         row.className = 'dc-row';
-        row.addEventListener('click', () => window.open(t.url, '_blank'));
+        row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
         const img = document.createElement('img');
         img.className = 'dc-rfav';
@@ -959,6 +978,55 @@ async function loadBookmarks() {
   }
 }
 
+// Reload tree data but preserve the currently selected folder and all expanded states
+async function reloadBookmarksKeepState() {
+  // Snapshot which node IDs are expanded and which is active
+  const expandedIds = new Set();
+  function collectExpanded(nodes) {
+    for (const n of nodes) {
+      if (!n.url && n._expanded) expandedIds.add(n.id);
+      if (n.children) collectExpanded(n.children);
+    }
+  }
+  if (_bmTree) collectExpanded(_bmTree);
+  const activeId = _bmActiveNode?.id ?? null;
+
+  // Fetch fresh tree
+  try {
+    const { tree } = await send('GET_BOOKMARKS');
+    _bmTree = tree;
+
+    // Restore _expanded flags on matching nodes
+    function restoreExpanded(nodes) {
+      for (const n of nodes) {
+        if (!n.url) {
+          if (expandedIds.has(n.id)) n._expanded = true;
+          if (n.children) restoreExpanded(n.children);
+        }
+      }
+    }
+    restoreExpanded(_bmTree);
+
+    // Find the active node by ID
+    _bmActiveNode = null;
+    if (activeId) {
+      function findNode(nodes) {
+        for (const n of nodes) {
+          if (n.id === activeId) return n;
+          if (n.children) { const f = findNode(n.children); if (f) return f; }
+        }
+        return null;
+      }
+      _bmActiveNode = findNode(_bmTree);
+    }
+
+    renderBmTree();
+    renderBmItems(_bmActiveNode);
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+}
+
 // Build flat list of all top-level chrome bookmark roots' children
 function bmRootChildren() {
   const out = [];
@@ -967,6 +1035,9 @@ function bmRootChildren() {
   }
   return out;
 }
+
+// Dragging state
+let _bmDragId = null; // chrome bookmark id being dragged
 
 // Render the left folder tree pane
 function renderBmTree() {
@@ -981,6 +1052,53 @@ function renderBmTree() {
   rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
   pane.appendChild(rootRow);
 
+  // Helper: make a tree row a drop target
+  // Track last highlighted drop row to avoid querySelectorAll on every dragover
+  let _lastDropRow = null;
+  function clearDropHighlight() {
+    if (_lastDropRow) { _lastDropRow.classList.remove('bm-drop-target'); _lastDropRow = null; }
+  }
+
+  function makeDropTarget(row, targetNode) {
+    row.addEventListener('dragover', ev => {
+      if (!_bmDragId) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      if (_lastDropRow !== row) {
+        clearDropHighlight();
+        row.classList.add('bm-drop-target');
+        _lastDropRow = row;
+      }
+    });
+    row.addEventListener('dragleave', ev => {
+      if (!row.contains(ev.relatedTarget)) {
+        row.classList.remove('bm-drop-target');
+        if (_lastDropRow === row) _lastDropRow = null;
+      }
+    });
+    row.addEventListener('drop', async ev => {
+      ev.preventDefault();
+      clearDropHighlight();
+      if (!_bmDragId) return;
+      const dragId = _bmDragId;
+      _bmDragId = null;
+      const parentId = targetNode ? targetNode.id : '1';
+      const r = await send('MOVE_BOOKMARK', { id: dragId, parentId });
+      if (r?.error) toast(r.error, 'err');
+      else { toast('Bookmark moved', 'ok'); await reloadBookmarksKeepState(); }
+    });
+  }
+
+  // Folder right-click context menu
+  function addFolderCtx(row, n) {
+    row.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      showBmFolderCtxMenu(ev.clientX, ev.clientY, n);
+    });
+  }
+
+  makeDropTarget(rootRow, null);
+
   // Render folder nodes recursively
   function walkFolders(nodes, depth) {
     for (const n of nodes) {
@@ -990,11 +1108,22 @@ function renderBmTree() {
       row.className = 'bm-tree-row' + (_bmActiveNode === n ? ' active' : '');
       row.style.paddingLeft = (12 + depth * 16) + 'px';
 
-      // Expand/collapse toggle
+      // Expand/collapse toggle — ONLY this element triggers expand
       const hasSubFolders = n.children.some(c => !c.url && c.children);
       const toggle = document.createElement('span');
       toggle.className = 'bm-tr-toggle';
-      toggle.textContent = hasSubFolders ? '▶' : ' ';
+      toggle.textContent = hasSubFolders ? '▶' : '';
+      if (n._expanded === undefined) n._expanded = false;
+      if (n._expanded) toggle.style.transform = 'rotate(90deg)';
+
+      toggle.addEventListener('click', ev => {
+        ev.stopPropagation();
+        if (!hasSubFolders) return;
+        n._expanded = !n._expanded;
+        toggle.style.transform = n._expanded ? 'rotate(90deg)' : '';
+        // Re-render just the tree pane (cheap, no list repaint)
+        renderBmTree();
+      });
 
       const icon = document.createElement('span');
       icon.className = 'bm-tr-icon';
@@ -1008,19 +1137,19 @@ function renderBmTree() {
       row.appendChild(icon);
       row.appendChild(label);
 
-      // Track expanded state on the node itself
-      if (n._expanded === undefined) n._expanded = false;
-
-      row.addEventListener('click', (ev) => {
+      // Row click = select folder only, no expand/collapse
+      row.addEventListener('click', ev => {
         ev.stopPropagation();
         _bmActiveNode = n;
-        if (hasSubFolders) {
-          n._expanded = !n._expanded;
-          toggle.style.transform = n._expanded ? 'rotate(90deg)' : '';
-        }
         renderBmTree();
         renderBmItems(n);
       });
+
+      // Right-click = folder context menu
+      addFolderCtx(row, n);
+
+      // Drop target
+      makeDropTarget(row, n);
 
       pane.appendChild(row);
 
@@ -1032,6 +1161,83 @@ function renderBmTree() {
 
   walkFolders(bmRootChildren(), 0);
 }
+
+// ── Folder context menu ───────────────────────────────────────────────────────
+let _bmCtxFolderNode = null;
+
+function showBmFolderCtxMenu(x, y, node) {
+  _bmCtxFolderNode = node;
+  const menu = document.getElementById('bmFolderCtx');
+  if (!menu) return;
+  menu.style.display = 'block';
+  // Keep within viewport
+  const mw = 190, mh = 80;
+  menu.style.left = Math.min(x, window.innerWidth  - mw - 8) + 'px';
+  menu.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
+}
+
+function hideBmFolderCtxMenu() {
+  const m = document.getElementById('bmFolderCtx');
+  if (m) m.style.display = 'none';
+  _bmCtxFolderNode = null;
+}
+
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideBmFolderCtxMenu(); });
+
+// Single delegated handler — check actions first, then hide menu
+document.addEventListener('click', async ev => {
+  const menu = document.getElementById('bmFolderCtx');
+
+  // ── Rename ──
+  const renameBtn = ev.target.closest('#bmCtxRename');
+  if (renameBtn) {
+    const node = _bmCtxFolderNode;
+    hideBmFolderCtxMenu();
+    if (!node) return;
+    const newTitle = prompt('Rename folder:', node.title || '');
+    if (!newTitle || !newTitle.trim()) return;
+    const r = await send('RENAME_BOOKMARK', { id: node.id, title: newTitle.trim() });
+    if (r?.error) toast(r.error, 'err');
+    else { toast('Folder renamed', 'ok'); node.title = newTitle.trim(); renderBmTree(); }
+    return;
+  }
+
+  // ── Delete ──
+  const deleteBtn = ev.target.closest('#bmCtxDelete');
+  if (deleteBtn) {
+    const node = _bmCtxFolderNode;
+    hideBmFolderCtxMenu();
+    if (!node) return;
+    const count = (node.children || []).length;
+    const msg = count > 0
+    ? `Delete folder "${node.title}" and its ${count} item${count !== 1 ? 's' : ''}? Cannot be undone.`
+    : `Delete empty folder "${node.title}"?`;
+    if (!confirm(msg)) return;
+    const r = await send('DELETE_BOOKMARK', { id: node.id });
+    if (r?.error) toast(r.error, 'err');
+    else { toast('Folder deleted', 'ok'); if (_bmActiveNode === node) _bmActiveNode = null; await reloadBookmarksKeepState(); }
+    return;
+  }
+
+  // ── New folder ──
+  const newFolderBtn = ev.target.closest('#bmCtxNewFolder');
+  if (newFolderBtn) {
+    const parentNode = _bmCtxFolderNode;
+    hideBmFolderCtxMenu();
+    const name = prompt('New folder name:', 'New Folder');
+    if (!name || !name.trim()) return;
+    const parentId = parentNode ? parentNode.id : '1';
+    const r = await send('CREATE_BOOKMARK_FOLDER', { parentId, title: name.trim() });
+    if (r?.error) toast(r.error, 'err');
+    else { toast('Folder created', 'ok'); await reloadBookmarksKeepState(); }
+    return;
+  }
+
+  // ── Hide menu if clicking outside ──
+  if (menu && menu.style.display !== 'none' && !menu.contains(ev.target)) {
+    hideBmFolderCtxMenu();
+  }
+});
 
 // Render the right bookmark list for a folder node (null = show all)
 function renderBmItems(folderNode) {
@@ -1063,8 +1269,21 @@ function renderBmItems(folderNode) {
     const row = document.createElement('div');
     row.className = 'bm-item';
     row.dataset.url = n.url;
-    row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
+    row.draggable = true;
+    row.innerHTML = `<span class="bm-drag-handle" title="Drag to move">⠿</span><img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
     <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.addEventListener('dragstart', ev => {
+      _bmDragId = n.id;
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', n.id);
+      // Use setTimeout so the drag image is captured before the class is applied
+      setTimeout(() => row.classList.add('bm-dragging'), 0);
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('bm-dragging');
+      _bmDragId = null;
+      document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
+    });
     row.addEventListener('click', () => window.open(n.url, '_blank'));
     row.addEventListener('contextmenu', ev => {
       ev.preventDefault(); ev.stopPropagation();
@@ -1234,6 +1453,7 @@ function syncCps() {
 
 function populateSettings(s) {
   if (s.retentionDays) { document.getElementById('retDays').value = s.retentionDays; syncRetChips(s.retentionDays); }
+  if (s.maxSessions)   { const el = document.getElementById('maxSessionsInput'); if (el) el.value = s.maxSessions; }
   if (s.fontSize)       document.getElementById('fontSzInput').value = s.fontSize;
   if (s.font) {
     const sel = document.getElementById('fontSel');
@@ -1262,15 +1482,18 @@ function applyVisuals(s) {
 }
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
-  const days = parseInt(document.getElementById('retDays').value);
-  const c1   = document.getElementById('cp1').value;
-  const c2   = document.getElementById('cp2').value;
-  const font = document.getElementById('fontSel').value;
-  const sz   = parseInt(document.getElementById('fontSzInput').value);
+  const days    = parseInt(document.getElementById('retDays').value);
+  const c1      = document.getElementById('cp1').value;
+  const c2      = document.getElementById('cp2').value;
+  const font    = document.getElementById('fontSel').value;
+  const sz      = parseInt(document.getElementById('fontSzInput').value);
+  const maxSess = parseInt(document.getElementById('maxSessionsInput')?.value || '4');
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
     const r = await send('SAVE_SETTINGS', { settings: { retentionDays: days, accentColor: c1, accentColor2: c2, font, fontSize: sz, theme: _curSettings.theme || 'dark' } });
     _curSettings = r.settings;
+    // Save max sessions separately
+    if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
     toast('Settings saved', 'ok');
   } catch (err) { toast(err.message, 'err'); }
 });
@@ -1401,7 +1624,13 @@ function switchPanel(name) {
   if (name === 'devices')   loadDevices();
   if (name === 'sessions')  loadSessions();
   if (name === 'bookmarks') loadBookmarks();
-  if (name === 'settings')  send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
+  if (name === 'settings') {
+    send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
+    send('GET_SESSIONS').then(r => {
+      const el = document.getElementById('maxSessionsInput');
+      if (el && r.maxSessions) el.value = r.maxSessions;
+    }).catch(() => {});
+  }
 }
 
 // ══ DELETE HISTORY MODAL ═════════════════════════════════════════════════════

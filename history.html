@@ -330,6 +330,20 @@
           </div>
         </div>
 
+        <div class="s-card">
+          <div class="s-card-title">Sessions</div>
+          <div class="s-row" style="border-bottom:none">
+            <div class="s-row-info">
+              <div class="s-row-lbl">Sessions to keep</div>
+              <div class="s-row-desc">How many past sessions are stored (1–20)</div>
+            </div>
+            <div class="s-ctrl">
+              <input type="number" id="maxSessionsInput" value="4" min="1" max="20" style="width:70px"/>
+              <span class="unit">sessions</span>
+            </div>
+          </div>
+        </div>
+
         <button class="action-btn primary" id="saveSettingsBtn" style="align-self:flex-start">Save Settings</button>
 
         <div class="s-card" style="border-color: color-mix(in srgb, var(--danger) 30%, transparent); background: color-mix(in srgb, var(--danger) 4%, transparent)">
@@ -395,6 +409,14 @@
 
 
 <script src="history.js"></script>
+
+<!-- Bookmark folder context menu -->
+<div id="bmFolderCtx" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:190px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
+  <div class="ctx-item" id="bmCtxNewFolder">📁 New subfolder</div>
+  <div class="ctx-item" id="bmCtxRename">✏ Rename folder</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="bmCtxDelete">✕ Delete folder</div>
+</div>
 
 <!-- Delete History Modal -->
 <div class="modal-backdrop" id="deleteHistoryModal">

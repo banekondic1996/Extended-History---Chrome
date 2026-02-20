@@ -8,7 +8,7 @@ const TIME_KEY     = 'eh_time';
 const SETTINGS_KEY = 'eh_settings';
 const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
-const MAX_SESSIONS = 3;
+const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
   retentionDays: 3650,
@@ -185,12 +185,35 @@ let sessionId    = null;
 let sessionTabs  = {};
 let sessionStart = null;
 
+// Persist current session state so SW restarts don't lose it
+async function saveSessionState() {
+  if (!sessionId) return;
+  await chrome.storage.local.set({ eh_cur_session: { sessionId, sessionStart, sessionTabs } });
+}
+async function loadSessionState() {
+  const r = await chrome.storage.local.get('eh_cur_session');
+  if (r.eh_cur_session) {
+    sessionId    = r.eh_cur_session.sessionId;
+    sessionStart = r.eh_cur_session.sessionStart;
+    sessionTabs  = r.eh_cur_session.sessionTabs || {};
+  }
+}
+async function clearSessionState() {
+  await chrome.storage.local.remove('eh_cur_session');
+}
+
 async function getSessions() {
   const r = await chrome.storage.local.get(SESSIONS_KEY);
   return r[SESSIONS_KEY] || [];
 }
+async function getMaxSessions() {
+  const r = await chrome.storage.local.get('eh_max_sessions');
+  return r.eh_max_sessions || MAX_SESSIONS_DEFAULT;
+}
+
 async function saveSessions(list) {
-  if (list.length > MAX_SESSIONS) list = list.slice(-MAX_SESSIONS);
+  const max = await getMaxSessions();
+  if (list.length > max) list = list.slice(-max);
   await chrome.storage.local.set({ [SESSIONS_KEY]: list });
 }
 async function beginSession() {
@@ -204,28 +227,37 @@ async function beginSession() {
         sessionTabs[t.id] = { url: t.url, title: t.title||'', domain: domainOf(t.url), opened: Date.now(), closed: null };
     }
   } catch {}
+  await saveSessionState();
 }
 async function finishSession() {
-  if (!sessionId) return;
+  // Restore persisted state in case SW restarted (sessionId would be null)
+  if (!sessionId) await loadSessionState();
+  if (!sessionId) return; // truly no session
   const list = await getSessions();
   const tabs = Object.values(sessionTabs).filter(t => t.url);
   const uniq = new Set(tabs.map(t => t.url));
   if (tabs.length) list.push({ id: sessionId, start: sessionStart, end: Date.now(), tabCount: uniq.size, tabs });
   await saveSessions(list);
   sessionId = null; sessionTabs = {}; sessionStart = null;
+  await clearSessionState();
 }
 
-chrome.tabs.onCreated.addListener(tab => {
+chrome.tabs.onCreated.addListener(async tab => {
   if (!sessionId || !isTrackable(tab.url)) return;
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), opened: Date.now(), closed: null };
+  await saveSessionState();
 });
-chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (!sessionId || !info.url || !isTrackable(info.url)) return;
   const prev = sessionTabs[tabId];
   sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), opened: prev?.opened||Date.now(), closed: null };
+  await saveSessionState();
 });
-chrome.tabs.onRemoved.addListener(tabId => {
-  if (sessionTabs[tabId]) sessionTabs[tabId].closed = Date.now();
+chrome.tabs.onRemoved.addListener(async tabId => {
+  if (sessionTabs[tabId]) {
+    sessionTabs[tabId].closed = Date.now();
+    await saveSessionState();
+  }
 });
 
 // ── Context menus ────────────────────────────────────────────────────────────
@@ -425,7 +457,26 @@ async function handle(msg) {
     case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
     case 'GET_SESSIONS': {
       const list=await getSessions();
-      return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url)}:null};
+      const maxSess=await getMaxSessions();
+      return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url)}:null,maxSessions:maxSess};
+    }
+    case 'SET_MAX_SESSIONS': {
+      const val = Math.max(1, Math.min(20, parseInt(msg.value) || MAX_SESSIONS_DEFAULT));
+      await chrome.storage.local.set({ eh_max_sessions: val });
+      // Trim existing sessions if new max is smaller
+      const list = await getSessions();
+      if (list.length > val) await chrome.storage.local.set({ [SESSIONS_KEY]: list.slice(-val) });
+      return { success: true, value: val };
+    }
+    case 'RESTORE_SESSION': {
+      const { tabs } = msg;
+      if (!Array.isArray(tabs)) return { success: false };
+      for (const t of tabs) {
+        if (t.url && isTrackable(t.url)) {
+          try { await chrome.tabs.create({ url: t.url, active: false }); } catch {}
+        }
+      }
+      return { success: true };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
     case 'SAVE_SETTINGS': {
@@ -472,6 +523,31 @@ async function handle(msg) {
       } catch(e){return {error:e.message};}
     }
     case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
+    case 'MOVE_BOOKMARK': {
+      try {
+        await chrome.bookmarks.move(msg.id, { parentId: msg.parentId });
+        return { success: true };
+      } catch(e) { return { error: e.message }; }
+    }
+    case 'DELETE_BOOKMARK': {
+      try {
+        // removeTree handles both bookmarks and folders
+        await chrome.bookmarks.removeTree(msg.id);
+        return { success: true };
+      } catch(e) { return { error: e.message }; }
+    }
+    case 'RENAME_BOOKMARK': {
+      try {
+        await chrome.bookmarks.update(msg.id, { title: msg.title });
+        return { success: true };
+      } catch(e) { return { error: e.message }; }
+    }
+    case 'CREATE_BOOKMARK_FOLDER': {
+      try {
+        const folder = await chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title });
+        return { success: true, id: folder.id };
+      } catch(e) { return { error: e.message }; }
+    }
     case 'IMPORT_BOOKMARKS': {
       const {bookmarks}=msg; let imported=0;
       for(const bm of (bookmarks||[])) if(bm.url){try{await chrome.bookmarks.create({title:bm.title||bm.url,url:bm.url});imported++;}catch{}}
