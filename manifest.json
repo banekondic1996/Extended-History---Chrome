@@ -7,6 +7,7 @@
     "activeTab",
     "alarms",
     "bookmarks",
+    "browsingData",
     "contextMenus",
     "favicon",
     "history",
@@ -15,7 +16,8 @@
     "storage",
     "tabs",
     "unlimitedStorage",
-    "webNavigation"
+    "webNavigation",
+    "windows"
   ],
   "background": {
     "service_worker": "background.js"

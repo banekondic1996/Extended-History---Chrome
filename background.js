@@ -30,26 +30,13 @@ function isTrackable(url) {
 
 // ── Time tracking ─────────────────────────────────────────────────────────────
 //
-// The single source of truth:
-//   activeTabId     — id of the tab the user is currently looking at
-//   activeDomain    — domain of that tab
-//   segmentStart    — Date.now() when this segment started
-//   windowFocused   — whether Chrome's window has OS focus
-//
-// A "segment" is a continuous stretch where:
-//   - a specific tab is active AND
-//   - the Chrome window has OS focus
-//
-// We end (commit) a segment on every event that could change either condition:
-//   onActivated, onUpdated (url change), onRemoved, onFocusChanged
-//
-// The 30s alarm is a safety net only — it rolls the segment forward so a
-// crash loses at most 30s instead of everything.
+// Tracks the currently active tab in the focused window.
+// SW restarts from scratch after idle — self-heals within 30s via alarm.
 
 let activeTabId    = null;
 let activeDomain   = null;
 let segmentStart   = null;
-let windowFocused  = true;
+let windowFocused  = true; // corrected by resumeActiveTab
 
 async function commitSegment() {
   if (!activeDomain || !segmentStart || !windowFocused) {
@@ -58,12 +45,11 @@ async function commitSegment() {
   }
   const now = Date.now();
   const ms  = now - segmentStart;
-  segmentStart = null;                    // clear immediately to prevent double-commit
+  segmentStart = null; // clear immediately to prevent double-commit
 
-  // Only accept segments between 1 second and 2 hours
   if (ms < 1000 || ms > 7_200_000) return;
 
-  // Don't bleed across midnight — cap at today's end
+  // Cap at today's elapsed time (don't bleed across midnight)
   const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
   const sinceDay = now - midnight.getTime();
   const capped   = Math.min(ms, sinceDay);
@@ -78,6 +64,20 @@ function startSegment(tabId, domain) {
   segmentStart  = Date.now();
 }
 
+// Called on startup/install to pick up wherever we are
+async function resumeActiveTab() {
+  try {
+    const wins = await chrome.windows.getAll({ populate: false });
+    const focused = wins.find(w => w.focused);
+    if (!focused) { windowFocused = false; return; }
+    windowFocused = true;
+    const [tab] = await chrome.tabs.query({ active: true, windowId: focused.id });
+    if (tab && isTrackable(tab.url)) {
+      startSegment(tab.id, domainOf(tab.url));
+    }
+  } catch {}
+}
+
 async function addTime(domain, ms) {
   if (!domain) return;
   const r   = await chrome.storage.local.get(TIME_KEY);
@@ -88,14 +88,18 @@ async function addTime(domain, ms) {
   await chrome.storage.local.set({ [TIME_KEY]: map });
 }
 
-// Safety-net alarm: commit current segment and start a fresh one
-// so crashes lose at most 30s of data
+// Safety-net alarm every 30s:
+// - segment running → commit + restart
+// - no segment (e.g. after SW restart) → resumeActiveTab to self-heal
 chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name !== 'eh_tick') return;
-  if (!activeDomain || !segmentStart || !windowFocused) return;
-  await commitSegment();                  // commits and clears segmentStart
-  segmentStart = Date.now();             // immediately start a fresh segment
+  if (activeDomain && segmentStart && windowFocused) {
+    await commitSegment();
+    segmentStart = Date.now();
+  } else if (!segmentStart) {
+    await resumeActiveTab();
+  }
 });
 
 // ── Tab activated (user switches tabs) ───────────────────────────────────────
@@ -141,14 +145,12 @@ chrome.windows.onFocusChanged.addListener(async wid => {
     await commitSegment();
     activeTabId = null; activeDomain = null;
   } else {
-    // User came back to Chrome
+    // User came back to Chrome — find the active tab in this window
     windowFocused = true;
-    // Find whatever tab is active in this window right now
     try {
       const [tab] = await chrome.tabs.query({ active: true, windowId: wid });
       if (tab && isTrackable(tab.url)) {
         startSegment(tab.id, domainOf(tab.url));
-        activeTabId = tab.id;
       }
     } catch {}
   }
@@ -248,17 +250,14 @@ chrome.runtime.onStartup.addListener(async () => {
   setupContextMenus();
   await finishSession();
   await beginSession();
-  // Resume timing on the currently active tab
-  try {
-    const [tab] = await chrome.tabs.query({ active:true, lastFocusedWindow:true });
-    if (tab && isTrackable(tab.url)) startSegment(tab.id, domainOf(tab.url));
-  } catch {}
+  await resumeActiveTab();
 });
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   await migrateStorage();
   setupContextMenus();
   await beginSession();
+  await resumeActiveTab();
   const done = await chrome.storage.local.get(BACKFILL_KEY);
   if (done[BACKFILL_KEY]) return;
   try {
@@ -339,12 +338,20 @@ async function handle(msg) {
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
     }
     case 'DELETE_IDS': {
-      const s=new Set(msg.ids); await setAll((await getAll()).filter(e=>!s.has(e.id))); return {success:true};
+      const s=new Set(msg.ids);
+      const all = await getAll();
+      const toDelete = all.filter(e => s.has(e.id));
+      await setAll(all.filter(e => !s.has(e.id)));
+      // Remove from Chrome native history too
+      for (const e of toDelete) {
+        try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+      }
+      return {success:true};
     }
     case 'DELETE_MATCHING': {
       const {query='',mode='all',startDate,endDate}=msg;
       let entries=await getAll(); const q=query.toLowerCase();
-      const toDelete=new Set(entries.filter(e=>{
+      const toDelete=entries.filter(e=>{
         const ms=!startDate||e.visitTime>=startDate; const me=!endDate||e.visitTime<=endDate;
         let mq=true; if(q){
           if(mode==='title') mq=(e.title||'').toLowerCase().includes(q);
@@ -353,11 +360,40 @@ async function handle(msg) {
           else mq=e.url.toLowerCase().includes(q)||(e.title||'').toLowerCase().includes(q)||(e.domain||'').toLowerCase().includes(q);
         }
         return ms&&me&&mq;
-      }).map(e=>e.id));
-      await setAll(entries.filter(e=>!toDelete.has(e.id)));
-      return {success:true,deleted:toDelete.size};
+      });
+      const toDeleteIds=new Set(toDelete.map(e=>e.id));
+      await setAll(entries.filter(e=>!toDeleteIds.has(e.id)));
+      // Remove from Chrome native history too
+      for (const e of toDelete) {
+        try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+      }
+      return {success:true,deleted:toDelete.length};
     }
-    case 'CLEAR_ALL': { await setAll([]); return {success:true}; }
+    case 'DELETE_HISTORY_RANGE': {
+      const { startTime, endTime, clearCookies, clearCache } = msg;
+      // Delete from extension storage
+      let entries = await getAll();
+      const before = entries.length;
+      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+      await setAll(entries);
+      const deleted = before - entries.length;
+      // Delete from Chrome native history
+      try { await chrome.history.deleteRange({ startTime, endTime }); } catch {}
+      // Optionally clear cookies and cache
+      if (clearCookies || clearCache) {
+        const since = startTime;
+        const dataTypes = {};
+        if (clearCookies) { dataTypes.cookies = true; dataTypes.localStorage = true; dataTypes.indexedDB = true; }
+        if (clearCache)   { dataTypes.cache = true; dataTypes.cacheStorage = true; }
+        try { await chrome.browsingData.remove({ since }, dataTypes); } catch {}
+      }
+      return { success: true, deleted };
+    }
+    case 'CLEAR_ALL': {
+      await setAll([]);
+      try { await chrome.history.deleteAll(); } catch {}
+      return { success: true };
+    }
     case 'GET_STATS': {
       const entries=await getAll(); const used=await chrome.storage.local.getBytesInUse(HISTORY_KEY);
       const oldest=entries.length?Math.min(...entries.map(e=>e.visitTime)):null;
@@ -443,8 +479,16 @@ async function handle(msg) {
     }
     case 'OPEN_INCOGNITO': { try{await chrome.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
     case 'FLUSH_TIME': {
-      if (!activeDomain||!segmentStart||!windowFocused) return {success:true};
-      await commitSegment(); segmentStart=Date.now(); return {success:true};
+      // Commit whatever is running (if anything), then restart
+      if (activeDomain && segmentStart && windowFocused) {
+        await commitSegment();
+        segmentStart = Date.now();
+      }
+      return {success:true};
+    }
+    case 'CLEAR_TIME_DATA': {
+      await chrome.storage.local.remove(TIME_KEY);
+      return {success:true};
     }
     default: return {error:`Unknown: ${msg.type}`};
   }

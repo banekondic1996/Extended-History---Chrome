@@ -825,7 +825,6 @@ async function loadSessions() {
 
 function buildSessTabEl(t) {
   const dom = tryDomain(t.url || '');
-  const dur = (t.closed && t.opened) ? fmtDuration(t.closed - t.opened) : '';
 
   const row = document.createElement('div');
   row.className = 'sess-tab-row';
@@ -852,13 +851,6 @@ function buildSessTabEl(t) {
   body.appendChild(url);
   row.appendChild(img);
   row.appendChild(body);
-
-  if (dur) {
-    const time = document.createElement('div');
-    time.className   = 'sess-ttime';
-    time.textContent = dur;
-    row.appendChild(time);
-  }
   return row;
 }
 
@@ -947,81 +939,180 @@ async function loadDevices() {
   }
 }
 
-// ══ BOOKMARKS ═══════════════════════════════════════════════════════════════
+// ══ BOOKMARKS — split-pane tree + list ══════════════════════════════════════
+let _bmTree        = null;   // full Chrome bookmark tree
+let _bmActiveNode  = null;   // currently selected folder node (null = root)
+
 async function loadBookmarks() {
-  const el = document.getElementById('bookmarksContent');
-  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
+  const treePane = document.getElementById('bmTreePane');
+  const listPane = document.getElementById('bookmarksContent');
+  if (treePane) treePane.innerHTML = '<div class="state-msg" style="padding:20px"><span class="state-msg-icon" style="font-size:20px">⏳</span></div>';
+  listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
   try {
     const { tree } = await send('GET_BOOKMARKS');
-    el.innerHTML = renderBmTree(tree);
-
-    el.querySelectorAll('.bm-fav-img').forEach(img => {
-      img.addEventListener('error', () => { img.style.opacity = '0'; });
-    });
-
-    el.querySelectorAll('.bm-folder-head').forEach(h => {
-      h.addEventListener('click', () => {
-        const items  = h.nextElementSibling;
-        const toggle = h.querySelector('.bm-folder-toggle');
-        const open   = items.classList.toggle('open');
-        if (toggle) toggle.classList.toggle('open', open);
-      });
-    });
-    el.querySelectorAll('.bm-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const url = item.dataset.url;
-        if (url) window.open(url, '_blank');
-      });
-        item.addEventListener('contextmenu', ev => {
-          if (!item.dataset.url) return;
-          ev.preventDefault(); ev.stopPropagation();
-          showCtxMenu(ev.clientX, ev.clientY, { url: item.dataset.url, title: item.querySelector('.bm-title')?.textContent });
-        });
-    });
+    _bmTree = tree;
+    _bmActiveNode = null;
+    renderBmTree();
+    renderBmItems(null);
   } catch (err) {
-    el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+    listPane.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
 }
 
-function renderBmTree(nodes) {
-  let html = '';
-  for (const node of nodes) {
-    if (node.children) {
-      if (!node.children.length) continue;
-      html += `<div class="bm-folder">
-      <div class="bm-folder-head">
-      📁 ${esc(node.title || 'Folder')}
-      <span class="bm-folder-toggle">▶</span>
-      </div>
-      <div class="bm-items">
-      ${renderBmItems(node.children)}
-      </div>
-      </div>`;
+// Build flat list of all top-level chrome bookmark roots' children
+function bmRootChildren() {
+  const out = [];
+  for (const root of (_bmTree || [])) {
+    if (root.children) out.push(...root.children);
+  }
+  return out;
+}
+
+// Render the left folder tree pane
+function renderBmTree() {
+  const pane = document.getElementById('bmTreePane');
+  if (!pane) return;
+  pane.innerHTML = '';
+
+  // "All bookmarks" root entry
+  const rootRow = document.createElement('div');
+  rootRow.className = 'bm-tree-row' + (_bmActiveNode === null ? ' active' : '');
+  rootRow.innerHTML = '<span class="bm-tr-icon">📚</span><span class="bm-tr-label">All Bookmarks</span>';
+  rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
+  pane.appendChild(rootRow);
+
+  // Render folder nodes recursively
+  function walkFolders(nodes, depth) {
+    for (const n of nodes) {
+      if (n.url) continue; // skip bookmarks in tree pane
+      if (!n.children) continue;
+      const row = document.createElement('div');
+      row.className = 'bm-tree-row' + (_bmActiveNode === n ? ' active' : '');
+      row.style.paddingLeft = (12 + depth * 16) + 'px';
+
+      // Expand/collapse toggle
+      const hasSubFolders = n.children.some(c => !c.url && c.children);
+      const toggle = document.createElement('span');
+      toggle.className = 'bm-tr-toggle';
+      toggle.textContent = hasSubFolders ? '▶' : ' ';
+
+      const icon = document.createElement('span');
+      icon.className = 'bm-tr-icon';
+      icon.textContent = '📁';
+
+      const label = document.createElement('span');
+      label.className = 'bm-tr-label';
+      label.textContent = n.title || 'Folder';
+
+      row.appendChild(toggle);
+      row.appendChild(icon);
+      row.appendChild(label);
+
+      // Track expanded state on the node itself
+      if (n._expanded === undefined) n._expanded = false;
+
+      row.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        _bmActiveNode = n;
+        if (hasSubFolders) {
+          n._expanded = !n._expanded;
+          toggle.style.transform = n._expanded ? 'rotate(90deg)' : '';
+        }
+        renderBmTree();
+        renderBmItems(n);
+      });
+
+      pane.appendChild(row);
+
+      if (hasSubFolders && n._expanded) {
+        walkFolders(n.children, depth + 1);
+      }
     }
   }
-  return html || '<div class="state-msg"><span class="state-msg-icon">🔖</span>No bookmarks found</div>';
+
+  walkFolders(bmRootChildren(), 0);
 }
 
-function renderBmItems(nodes) {
-  let html = '';
-  for (const n of nodes) {
-    if (n.url) {
-      const dom = tryDomain(n.url);
-      html += `<div class="bm-item" data-url="${esc(n.url)}">
-      <img class="bm-fav bm-fav-img" src="${favUrl(dom)}" loading="lazy"/>
-      <div class="bm-title">${esc(n.title || n.url)}</div>
-      <div class="bm-url">${esc(n.url)}</div>
-      </div>`;
-    } else if (n.children?.length) {
-      html += `<div class="bm-item" style="cursor:default;opacity:0.6">
-      📁 ${esc(n.title || 'Subfolder')}
-      </div>`;
-      html += renderBmItems(n.children);
+// Render the right bookmark list for a folder node (null = show all)
+function renderBmItems(folderNode) {
+  const pane = document.getElementById('bookmarksContent');
+  pane.innerHTML = '';
+
+  let items;
+  if (folderNode === null) {
+    // Collect ALL bookmarks recursively
+    items = [];
+    function collectAll(nodes) {
+      for (const n of nodes) {
+        if (n.url) items.push(n);
+        else if (n.children) collectAll(n.children);
+      }
+    }
+    collectAll(bmRootChildren());
+  } else {
+    items = (folderNode.children || []).filter(n => !!n.url);
+  }
+
+  if (!items.length) {
+    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No bookmarks here</div>';
+    return;
+  }
+
+  for (const n of items) {
+    const dom = tryDomain(n.url || '');
+    const row = document.createElement('div');
+    row.className = 'bm-item';
+    row.dataset.url = n.url;
+    row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
+    <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.addEventListener('click', () => window.open(n.url, '_blank'));
+    row.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title });
+    });
+    pane.appendChild(row);
+  }
+}
+
+// Search: flat list across all bookmarks
+function renderBookmarksWithFilter(query) {
+  const q = query.trim().toLowerCase();
+  if (!_bmTree) return;
+  if (!q) {
+    renderBmItems(_bmActiveNode);
+    return;
+  }
+  const pane = document.getElementById('bookmarksContent');
+  const results = [];
+  function walk(nodes) {
+    for (const n of nodes) {
+      if (n.url) {
+        if ((n.title || '').toLowerCase().includes(q) || n.url.toLowerCase().includes(q)) results.push(n);
+      } else if (n.children) walk(n.children);
     }
   }
-  return html;
-}
+  walk(bmRootChildren());
 
+  pane.innerHTML = '';
+  if (!results.length) {
+    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No matching bookmarks</div>';
+    return;
+  }
+  for (const n of results) {
+    const dom = tryDomain(n.url || '');
+    const row = document.createElement('div');
+    row.className = 'bm-item';
+    row.dataset.url = n.url;
+    row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
+    <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.addEventListener('click', () => window.open(n.url, '_blank'));
+    row.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title });
+    });
+    pane.appendChild(row);
+  }
+}
 // Bookmark export (HTML format compatible with browsers)
 document.getElementById('exportBmBtn').addEventListener('click', async () => {
   try {
@@ -1230,6 +1321,15 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   } catch (err) { toast(err.message, 'err'); }
 });
 
+document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
+  if (!confirm('Clear all time-spent data? This will not affect history. Cannot be undone.')) return;
+  try {
+    await send('CLEAR_TIME_DATA');
+    toast('Time data cleared', 'ok');
+    loadTimeSpent(curTimeDays || 15);
+  } catch (err) { toast(err.message, 'err'); }
+});
+
 // ── Context menu ──────────────────────────────────────────────────────────────
 let _ctxEntry = null;
 
@@ -1255,7 +1355,7 @@ document.addEventListener('click', hideCtxMenu);
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideCtxMenu(); });
 
 document.getElementById('ctx-open-tab').addEventListener('click', () => {
-  if (_ctxEntry?.url) window.open(_ctxEntry.url, '_blank'); hideCtxMenu();
+  if (_ctxEntry?.url) chrome.tabs.create({ url: _ctxEntry.url, active: false }); hideCtxMenu();
 });
 document.getElementById('ctx-open-incognito').addEventListener('click', () => {
   if (_ctxEntry?.url) send('OPEN_INCOGNITO', { url: _ctxEntry.url }); hideCtxMenu();
@@ -1304,6 +1404,41 @@ function switchPanel(name) {
   if (name === 'settings')  send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
 }
 
+// ══ DELETE HISTORY MODAL ═════════════════════════════════════════════════════
+let _dhSelectedRange = null;
+
+function rangeToTimes(range) {
+  const now = Date.now();
+  const map = {
+    '1h':  [now - 3600000,       now],
+    '24h': [now - 86400000,      now],
+    '7d':  [now - 7*86400000,    now],
+    '30d': [now - 30*86400000,   now],
+    '5mo': [now - 150*86400000,  now],
+    'all': [0,                   now],
+  };
+  return map[range] || null;
+}
+
+function openDeleteHistoryModal() {
+  _dhSelectedRange = null;
+  document.querySelectorAll('.dh-range-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dhConfirmBtn').disabled = true;
+  document.getElementById('dhCookies').checked = false;
+  document.getElementById('dhCache').checked = false;
+  document.getElementById('deleteHistoryModal').classList.add('open');
+}
+function closeDeleteHistoryModal() {
+  document.getElementById('deleteHistoryModal').classList.remove('open');
+  _dhSelectedRange = null;
+  const confirmBtn = document.getElementById('dhConfirmBtn');
+  if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = 'Delete'; confirmBtn.disabled = true; }
+  const warn = document.getElementById('dhConfirmWarn');
+  if (warn) warn.style.display = 'none';
+}
+
+
+
 // ══ INIT ════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   // Load settings first
@@ -1321,6 +1456,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup
   document.querySelectorAll('.nav-item[data-panel]').forEach(b =>
   b.addEventListener('click', () => switchPanel(b.dataset.panel)));
+
+  // Delete history nav button
+  document.getElementById('deleteHistoryNavBtn')?.addEventListener('click', openDeleteHistoryModal);
+
+  // Bookmark search
+  let _bmSearchTimer = null;
+  document.getElementById('bmSearch')?.addEventListener('input', ev => {
+    clearTimeout(_bmSearchTimer);
+    _bmSearchTimer = setTimeout(() => renderBookmarksWithFilter(ev.target.value), 1000);
+  });
 
   buildDateNav();
   buildHourNav();
@@ -1348,4 +1493,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (ev.key === 'Escape' && selMode) exitSelMode();
   });
+
+    // Delete History Modal events (wired here, after DOM ready)
+    document.getElementById('dhCancelBtn').addEventListener('click', closeDeleteHistoryModal);
+    document.getElementById('deleteHistoryModal').addEventListener('click', ev => {
+      if (ev.target === document.getElementById('deleteHistoryModal')) closeDeleteHistoryModal();
+    });
+
+      document.getElementById('dhRangeGrid').addEventListener('click', ev => {
+        const btn = ev.target.closest('.dh-range-btn');
+        if (!btn) return;
+        _dhSelectedRange = btn.dataset.range;
+        document.querySelectorAll('.dh-range-btn').forEach(b => b.classList.toggle('active', b === btn));
+        // Reset confirm state when user picks a new range
+        const confirmBtn = document.getElementById('dhConfirmBtn');
+        confirmBtn.disabled = false;
+        delete confirmBtn.dataset.confirmed;
+        const warn = document.getElementById('dhConfirmWarn');
+        if (warn) warn.style.display = 'none';
+      });
+
+        document.getElementById('dhConfirmBtn').addEventListener('click', async () => {
+          if (!_dhSelectedRange) return;
+
+          // Two-step confirm: first click shows the confirm warning, second click deletes
+          const btn = document.getElementById('dhConfirmBtn');
+          if (!btn.dataset.confirmed) {
+            // Step 1: show confirm state
+            const rangeLabels = { '1h':'last 1 hour','24h':'last 24 hours','7d':'last 7 days','30d':'last 30 days','5mo':'last 5 months','all':'ALL TIME' };
+            const label = rangeLabels[_dhSelectedRange] || _dhSelectedRange;
+            const warn = document.getElementById('dhConfirmWarn');
+            if (warn) { warn.textContent = `⚠ This will permanently delete history for the ${label}. Click Delete again to confirm.`; warn.style.display = 'block'; }
+            btn.dataset.confirmed = '1';
+            btn.style.animation = 'dhPulse 0.3s ease';
+            return;
+          }
+
+          // Step 2: actually delete
+          const times = rangeToTimes(_dhSelectedRange);
+          if (!times) return;
+          const [startTime, endTime] = times;
+          const clearCookies = document.getElementById('dhCookies').checked;
+          const clearCache   = document.getElementById('dhCache').checked;
+          btn.disabled = true;
+          btn.textContent = 'Deleting…';
+          try {
+            const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
+            if (r?.error) { toast(r.error, 'err'); }
+            else {
+              toast(`Deleted ${fmtNum(r.deleted || 0)} history entries${clearCookies ? ' + cookies' : ''}${clearCache ? ' + cache' : ''}`, 'ok');
+              allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+              buildVirtualList();
+            }
+          } catch(err) { toast(err.message, 'err'); }
+          btn.textContent = 'Delete';
+          closeDeleteHistoryModal();
+        });
+
 });
