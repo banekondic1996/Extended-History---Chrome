@@ -234,7 +234,8 @@ async function finishSession() {
   if (!sessionId) await loadSessionState();
   if (!sessionId) return; // truly no session
   const list = await getSessions();
-  const tabs = Object.values(sessionTabs).filter(t => t.url);
+  // Only include tabs still open when the session ended (closed === null)
+  const tabs = Object.values(sessionTabs).filter(t => t.url && t.closed === null);
   const uniq = new Set(tabs.map(t => t.url));
   if (tabs.length) list.push({ id: sessionId, start: sessionStart, end: Date.now(), tabCount: uniq.size, tabs });
   await saveSessions(list);
@@ -458,7 +459,7 @@ async function handle(msg) {
     case 'GET_SESSIONS': {
       const list=await getSessions();
       const maxSess=await getMaxSessions();
-      return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url)}:null,maxSessions:maxSess};
+      return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url&&t.closed===null)}:null,maxSessions:maxSess};
     }
     case 'SET_MAX_SESSIONS': {
       const val = Math.max(1, Math.min(20, parseInt(msg.value) || MAX_SESSIONS_DEFAULT));
