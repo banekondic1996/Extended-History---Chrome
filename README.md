@@ -6,7 +6,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Filter history by date, url, title
 -See time spent on websites and total page loads
 -Export and import history and bookmarks
--Export session tabs
+-Export session tabs and see previous sessions
 -Quick access to recent history by pressing extension button 
 -Change accent colors if you are into that
 -Delete history per day, based on filter, or selection
@@ -14,6 +14,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 **To do:**
 <pre>
 -Make popup load faster
+-Improve bookmarks moving speed within large folders and being able to move bookmark folders
 -Maybe remove lazy loading or improve scrolling for history
 -Store page even if page didn't load completely 
 -Change this bad logo
