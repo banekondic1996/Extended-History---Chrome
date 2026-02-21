@@ -17,8 +17,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Make popup load faster
 -Improve bookmarks moving speed within large folders and being able to move bookmark folders
 -Maybe remove lazy loading or improve scrolling for history
--Store page even if page didn't load completely 
--Change this bad logo
+-Store page even if page didn't load completely
 -Upload to store
 </pre>
 <br>
