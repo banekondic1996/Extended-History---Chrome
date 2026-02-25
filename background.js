@@ -92,6 +92,15 @@ async function addTime(domain, ms) {
 // - segment running → commit + restart
 // - no segment (e.g. after SW restart) → resumeActiveTab to self-heal
 chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
+
+const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
+let _lastAutoSave   = 0; // timestamp of last auto-save
+
+async function getAutoSaveInterval() {
+  const r = await chrome.storage.local.get(AUTO_SAVE_KEY);
+  return r[AUTO_SAVE_KEY] ?? 0;
+}
+
 chrome.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name !== 'eh_tick') return;
   if (activeDomain && segmentStart && windowFocused) {
@@ -100,7 +109,95 @@ chrome.alarms.onAlarm.addListener(async alarm => {
   } else if (!segmentStart) {
     await resumeActiveTab();
   }
+  // Only auto-save when browser window is focused — don't interrupt games etc.
+  const mins = await getAutoSaveInterval();
+  if (mins >= 1 && Date.now() - _lastAutoSave >= mins * 60 * 1000) {
+    try {
+      const win = await chrome.windows.getLastFocused({ populate: false });
+      if (win && win.focused) await doAutoSaveSession();
+    } catch { /* no window */ }
+  }
 });
+
+async function doAutoSaveSession() {
+  if (!sessionId) await loadSessionState();
+  const openTabs = sessionId
+    ? Object.values(sessionTabs).filter(t => t.url && t.closed === null)
+    : [];
+  if (!openTabs.length) return;
+
+  const label    = 'Current Session – ' + new Date().toLocaleString();
+  const htmlBody = buildSessionHtml(label, openTabs);
+  const extPageUrl = chrome.runtime.getURL('history.html');
+
+  // Check if the history page is already open
+  let tabId = null;
+  let didOpen = false;
+  try {
+    const existing = await chrome.tabs.query({ url: extPageUrl });
+    if (existing.length > 0) {
+      tabId = existing[0].id;
+    } else {
+      // Open it hidden in the background
+      const t = await chrome.tabs.create({ url: extPageUrl, active: false });
+      tabId = t.id;
+      didOpen = true;
+    }
+  } catch (e) {
+    console.warn('[EH] auto-save: could not get tab:', e.message);
+    return;
+  }
+
+  // Wait for the page to signal it's ready (it sends READY ping on load),
+  // or fall back to a fixed delay if it was already open
+  await new Promise(resolve => {
+    if (!didOpen) { resolve(); return; }
+    const timeout = setTimeout(resolve, 6000);
+    const listener = (msg, sender) => {
+      if (msg.type === 'AUTO_SAVE_READY' && sender.tab?.id === tabId) {
+        clearTimeout(timeout);
+        chrome.runtime.onMessage.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+  });
+
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: 'AUTO_SAVE_DOWNLOAD',
+      html: htmlBody,
+      filename: 'extended-history-session.html',
+    });
+    _lastAutoSave = Date.now();
+  } catch (e) {
+    console.warn('[EH] auto-save: send failed:', e.message);
+  }
+
+  // Close the tab we opened (leave user's existing tab alone)
+  if (didOpen) {
+    setTimeout(async () => {
+      try { await chrome.tabs.remove(tabId); } catch {}
+    }, 3000);
+  }
+}
+
+function buildSessionHtml(label, tabs) {
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const domainOf2 = url => { try { return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; } };
+  const rows = tabs.map(t => {
+    const dom = domainOf2(t.url);
+    return `<a href="${esc(t.url)}"><img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(dom)}" loading="lazy" onerror="this.style.display='none'"/><span class="title">${esc(t.title||t.url)}</span><span class="domain">${esc(dom)}</span></a>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${esc(label)}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:40px 32px}
+h1{font-size:1.3rem;font-weight:700;color:#3b9eff;margin-bottom:4px}.meta{font-size:.78rem;color:#a09eb0;margin-bottom:28px}
+.links{display:flex;flex-direction:column;gap:3px}a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}
+a:hover{background:#1f1f28}.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}footer{margin-top:36px;font-size:.7rem;color:#5a5870}</style></head>
+<body><h1>📋 ${esc(label)}</h1><div class="meta">${tabs.length} tabs · Saved ${new Date().toLocaleString()}</div>
+<div class="links">${rows}</div><footer>Auto-saved by Extended History</footer></body></html>`;
+}
 
 // ── Tab activated (user switches tabs) ───────────────────────────────────────
 chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
@@ -468,6 +565,20 @@ async function handle(msg) {
       const list = await getSessions();
       if (list.length > val) await chrome.storage.local.set({ [SESSIONS_KEY]: list.slice(-val) });
       return { success: true, value: val };
+    }
+    case 'SET_AUTO_SAVE_INTERVAL': {
+      const mins = parseInt(msg.minutes) || 0;
+      const safe = mins === 0 ? 0 : Math.max(1, Math.min(1440, mins));
+      await chrome.storage.local.set({ [AUTO_SAVE_KEY]: safe });
+      _lastAutoSave = 0; // reset so next tick recalculates
+      return { success: true, minutes: safe };
+    }
+    case 'GET_AUTO_SAVE_INTERVAL': {
+      return { minutes: await getAutoSaveInterval() };
+    }
+    case 'TRIGGER_AUTO_SAVE': {
+      await doAutoSaveSession();
+      return { success: true };
     }
     case 'RESTORE_SESSION': {
       const { tabs } = msg;

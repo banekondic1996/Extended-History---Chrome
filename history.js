@@ -137,13 +137,14 @@ function appendPage() {
     row.dataset.url = e.url;
     row.innerHTML = `
     <div class="entry-check" data-id="${esc(e.id)}" title="Select">✓</div>
-    <img class="e-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
+    <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
     <div class="e-body">
     <div class="e-title">${esc(e.title || e.url)}</div>
     <div class="e-url">${esc(e.url)}</div>
     </div>
     <div class="e-time">${fmtTime(e.visitTime)}</div>
     <button class="e-del-btn" data-id="${esc(e.id)}" title="Delete">✕</button>`;
+    row.querySelector('.e-fav').addEventListener('error', function(){ this.style.opacity='0'; });
 
     // Context menu
     row.addEventListener('contextmenu', ev => {
@@ -894,22 +895,39 @@ async function loadDevices() {
       const card = document.createElement('div');
       card.className = 'device-card';
 
+      // ── Header (always visible, click to expand) ──
       const head = document.createElement('div');
-      head.className = 'dc-head';
-      head.innerHTML = `<span class="dc-icon">${icon}</span>`;
+      head.className = 'dc-head dc-head-collapsible';
+
+      const headLeft = document.createElement('div');
+      headLeft.style.cssText = 'display:flex;align-items:center;gap:10px;flex:1;min-width:0';
+      headLeft.innerHTML = `<span class="dc-icon">${icon}</span>`;
+
       const nameWrap = document.createElement('div');
-      const nameEl   = document.createElement('div');
+      nameWrap.style.flex = '1';
+      const nameEl = document.createElement('div');
       nameEl.className   = 'dc-name';
       nameEl.textContent = dev.deviceName || 'Unknown';
-      const subEl    = document.createElement('div');
+      const subEl = document.createElement('div');
       subEl.className   = 'dc-sub';
-      subEl.textContent = `${tabs.length} recent tabs`;
+      subEl.textContent = `${tabs.length} tab${tabs.length !== 1 ? 's' : ''}`;
       nameWrap.appendChild(nameEl);
       nameWrap.appendChild(subEl);
-      head.appendChild(nameWrap);
+      headLeft.appendChild(nameWrap);
+
+      const toggle = document.createElement('span');
+      toggle.className = 'dc-toggle';
+      toggle.textContent = '▶';
+
+      head.appendChild(headLeft);
+      head.appendChild(toggle);
       card.appendChild(head);
 
-      tabs.slice(0, 30).forEach(t => {
+      // ── Tab list (collapsed by default) ──
+      const tabsEl = document.createElement('div');
+      tabsEl.className = 'dc-tabs-list';
+
+      tabs.slice(0, 50).forEach(t => {
         const dom = tryDomain(t.url || '');
         const row = document.createElement('div');
         row.className = 'dc-row';
@@ -926,12 +944,11 @@ async function loadDevices() {
         const titleEl = document.createElement('div');
         titleEl.className   = 'dc-rtitle';
         titleEl.textContent = t.title || t.url;
-        const urlEl   = document.createElement('div');
+        const urlEl = document.createElement('div');
         urlEl.className   = 'dc-rurl';
         urlEl.textContent = t.url;
         body.appendChild(titleEl);
         body.appendChild(urlEl);
-
         row.appendChild(img);
         row.appendChild(body);
 
@@ -941,15 +958,23 @@ async function loadDevices() {
           time.textContent = timeAgo(t.lastModified * 1000);
           row.appendChild(time);
         }
-        card.appendChild(row);
+        tabsEl.appendChild(row);
       });
 
       if (!tabs.length) {
         const empty = document.createElement('div');
         empty.className   = 'dc-empty';
         empty.textContent = 'No recent tabs';
-        card.appendChild(empty);
+        tabsEl.appendChild(empty);
       }
+
+      card.appendChild(tabsEl);
+
+      // Toggle expand/collapse on header click
+      head.addEventListener('click', () => {
+        const open = tabsEl.classList.toggle('open');
+        toggle.classList.toggle('open', open);
+      });
 
       el.appendChild(card);
     });
@@ -1210,8 +1235,8 @@ document.addEventListener('click', async ev => {
     if (!node) return;
     const count = (node.children || []).length;
     const msg = count > 0
-    ? `Delete folder "${node.title}" and its ${count} item${count !== 1 ? 's' : ''}? Cannot be undone.`
-    : `Delete empty folder "${node.title}"?`;
+      ? `Delete folder "${node.title}" and its ${count} item${count !== 1 ? 's' : ''}? Cannot be undone.`
+      : `Delete empty folder "${node.title}"?`;
     if (!confirm(msg)) return;
     const r = await send('DELETE_BOOKMARK', { id: node.id });
     if (r?.error) toast(r.error, 'err');
@@ -1270,8 +1295,9 @@ function renderBmItems(folderNode) {
     row.className = 'bm-item';
     row.dataset.url = n.url;
     row.draggable = true;
-    row.innerHTML = `<span class="bm-drag-handle" title="Drag to move">⠿</span><img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
-    <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.innerHTML = `<span class="bm-drag-handle" title="Drag to move">⠿</span><img class="bm-fav" src="${favUrl(dom)}" loading="lazy"/>
+      <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.querySelector('.bm-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('dragstart', ev => {
       _bmDragId = n.id;
       ev.dataTransfer.effectAllowed = 'move';
@@ -1322,8 +1348,9 @@ function renderBookmarksWithFilter(query) {
     const row = document.createElement('div');
     row.className = 'bm-item';
     row.dataset.url = n.url;
-    row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy" onerror="this.style.opacity='0'"/>
-    <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy"/>
+      <div class="bm-title">${esc(n.title || n.url)}</div>`;
+    row.querySelector('.bm-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('click', () => window.open(n.url, '_blank'));
     row.addEventListener('contextmenu', ev => {
       ev.preventDefault(); ev.stopPropagation();
@@ -1494,8 +1521,34 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     _curSettings = r.settings;
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
+    // Save auto-save interval
+    const autoSaveMins = parseInt(document.getElementById('autoSaveInput')?.value || '0');
+    await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
   } catch (err) { toast(err.message, 'err'); }
+});
+
+document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () => {
+  try {
+    await send('TRIGGER_AUTO_SAVE');
+    toast('Session saved to downloads folder', 'ok');
+  } catch (err) { toast(err.message, 'err'); }
+});
+
+// Signal SW that this page is loaded and ready to handle downloads
+chrome.runtime.sendMessage({ type: 'AUTO_SAVE_READY' }).catch(() => {});
+
+// SW sends the session HTML — use anchor click (bypasses browser "ask where to save")
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type !== 'AUTO_SAVE_DOWNLOAD') return;
+  const blob = new Blob([msg.html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: msg.filename || 'extended-history-session.html', target:"_blank",
+  });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 3000);
 });
 
 document.getElementById('exportDataBtn').addEventListener('click', async () => {
@@ -1630,6 +1683,10 @@ function switchPanel(name) {
       const el = document.getElementById('maxSessionsInput');
       if (el && r.maxSessions) el.value = r.maxSessions;
     }).catch(() => {});
+    send('GET_AUTO_SAVE_INTERVAL').then(r => {
+      const el = document.getElementById('autoSaveInput');
+      if (el) el.value = r.minutes || 0;
+    }).catch(() => {});
   }
 }
 
@@ -1723,60 +1780,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ev.key === 'Escape' && selMode) exitSelMode();
   });
 
-    // Delete History Modal events (wired here, after DOM ready)
-    document.getElementById('dhCancelBtn').addEventListener('click', closeDeleteHistoryModal);
-    document.getElementById('deleteHistoryModal').addEventListener('click', ev => {
-      if (ev.target === document.getElementById('deleteHistoryModal')) closeDeleteHistoryModal();
-    });
+  // Delete History Modal events (wired here, after DOM ready)
+  document.getElementById('dhCancelBtn').addEventListener('click', closeDeleteHistoryModal);
+  document.getElementById('deleteHistoryModal').addEventListener('click', ev => {
+    if (ev.target === document.getElementById('deleteHistoryModal')) closeDeleteHistoryModal();
+  });
 
-      document.getElementById('dhRangeGrid').addEventListener('click', ev => {
-        const btn = ev.target.closest('.dh-range-btn');
-        if (!btn) return;
-        _dhSelectedRange = btn.dataset.range;
-        document.querySelectorAll('.dh-range-btn').forEach(b => b.classList.toggle('active', b === btn));
-        // Reset confirm state when user picks a new range
-        const confirmBtn = document.getElementById('dhConfirmBtn');
-        confirmBtn.disabled = false;
-        delete confirmBtn.dataset.confirmed;
-        const warn = document.getElementById('dhConfirmWarn');
-        if (warn) warn.style.display = 'none';
-      });
+  document.getElementById('dhRangeGrid').addEventListener('click', ev => {
+    const btn = ev.target.closest('.dh-range-btn');
+    if (!btn) return;
+    _dhSelectedRange = btn.dataset.range;
+    document.querySelectorAll('.dh-range-btn').forEach(b => b.classList.toggle('active', b === btn));
+    // Reset confirm state when user picks a new range
+    const confirmBtn = document.getElementById('dhConfirmBtn');
+    confirmBtn.disabled = false;
+    delete confirmBtn.dataset.confirmed;
+    const warn = document.getElementById('dhConfirmWarn');
+    if (warn) warn.style.display = 'none';
+  });
 
-        document.getElementById('dhConfirmBtn').addEventListener('click', async () => {
-          if (!_dhSelectedRange) return;
+  document.getElementById('dhConfirmBtn').addEventListener('click', async () => {
+    if (!_dhSelectedRange) return;
 
-          // Two-step confirm: first click shows the confirm warning, second click deletes
-          const btn = document.getElementById('dhConfirmBtn');
-          if (!btn.dataset.confirmed) {
-            // Step 1: show confirm state
-            const rangeLabels = { '1h':'last 1 hour','24h':'last 24 hours','7d':'last 7 days','30d':'last 30 days','5mo':'last 5 months','all':'ALL TIME' };
-            const label = rangeLabels[_dhSelectedRange] || _dhSelectedRange;
-            const warn = document.getElementById('dhConfirmWarn');
-            if (warn) { warn.textContent = `⚠ This will permanently delete history for the ${label}. Click Delete again to confirm.`; warn.style.display = 'block'; }
-            btn.dataset.confirmed = '1';
-            btn.style.animation = 'dhPulse 0.3s ease';
-            return;
-          }
+    // Two-step confirm: first click shows the confirm warning, second click deletes
+    const btn = document.getElementById('dhConfirmBtn');
+    if (!btn.dataset.confirmed) {
+      // Step 1: show confirm state
+      const rangeLabels = { '1h':'last 1 hour','24h':'last 24 hours','7d':'last 7 days','30d':'last 30 days','5mo':'last 5 months','all':'ALL TIME' };
+      const label = rangeLabels[_dhSelectedRange] || _dhSelectedRange;
+      const warn = document.getElementById('dhConfirmWarn');
+      if (warn) { warn.textContent = `⚠ This will permanently delete history for the ${label}. Click Delete again to confirm.`; warn.style.display = 'block'; }
+      btn.dataset.confirmed = '1';
+      btn.style.animation = 'dhPulse 0.3s ease';
+      return;
+    }
 
-          // Step 2: actually delete
-          const times = rangeToTimes(_dhSelectedRange);
-          if (!times) return;
-          const [startTime, endTime] = times;
-          const clearCookies = document.getElementById('dhCookies').checked;
-          const clearCache   = document.getElementById('dhCache').checked;
-          btn.disabled = true;
-          btn.textContent = 'Deleting…';
-          try {
-            const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
-            if (r?.error) { toast(r.error, 'err'); }
-            else {
-              toast(`Deleted ${fmtNum(r.deleted || 0)} history entries${clearCookies ? ' + cookies' : ''}${clearCache ? ' + cache' : ''}`, 'ok');
-              allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
-              buildVirtualList();
-            }
-          } catch(err) { toast(err.message, 'err'); }
-          btn.textContent = 'Delete';
-          closeDeleteHistoryModal();
-        });
+    // Step 2: actually delete
+    const times = rangeToTimes(_dhSelectedRange);
+    if (!times) return;
+    const [startTime, endTime] = times;
+    const clearCookies = document.getElementById('dhCookies').checked;
+    const clearCache   = document.getElementById('dhCache').checked;
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    try {
+      const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
+      if (r?.error) { toast(r.error, 'err'); }
+      else {
+        toast(`Deleted ${fmtNum(r.deleted || 0)} history entries${clearCookies ? ' + cookies' : ''}${clearCache ? ' + cache' : ''}`, 'ok');
+        allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+        buildVirtualList();
+      }
+    } catch(err) { toast(err.message, 'err'); }
+    btn.textContent = 'Delete';
+    closeDeleteHistoryModal();
+  });
 
 });

@@ -12,10 +12,10 @@
 <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════════ -->
 <nav class="sidebar">
   <div class="logo-row">
-    <div class="logo-icon">🕐</div>
+    <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text">Extended History</div>
-      <div class="logo-sub">v3.0</div>
+      <div class="logo-sub">v4.0</div>
     </div>
   </div>
 
@@ -332,7 +332,7 @@
 
         <div class="s-card">
           <div class="s-card-title">Sessions</div>
-          <div class="s-row" style="border-bottom:none">
+          <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl">Sessions to keep</div>
               <div class="s-row-desc">How many past sessions are stored (1–20)</div>
@@ -340,6 +340,19 @@
             <div class="s-ctrl">
               <input type="number" id="maxSessionsInput" value="4" min="1" max="20" style="width:70px"/>
               <span class="unit">sessions</span>
+            </div>
+          </div>
+          <div class="s-row" style="border-bottom:none">
+            <div class="s-row-info">
+              <div class="s-row-lbl">Auto-save current session</div>
+              <div class="s-row-desc">Saves open tabs to <code style="font-size:0.78rem;background:var(--surf3);padding:1px 5px;border-radius:3px">extended-history-session.html</code> in your downloads folder. Set to 0 to disable.</div>
+            </div>
+            <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <input type="number" id="autoSaveInput" value="0" min="0" max="1440" step="1" style="width:70px"/>
+                <span class="unit">min</span>
+              </div>
+              <button class="action-btn" id="testAutoSaveBtn" style="font-size:0.75rem;padding:4px 10px">▶ Save now</button>
             </div>
           </div>
         </div>

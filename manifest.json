@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Extended History",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Replaces Chrome history. Unlimited retention, sessions, time tracking, bookmarks, multi-device.",
   "permissions": [
     "activeTab",
@@ -10,6 +10,7 @@
     "browsingData",
     "contextMenus",
     "favicon",
+    "downloads",
     "history",
     "scripting",
     "sessions",
