@@ -12,6 +12,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Change accent colors if you are into that
 -Delete history per day, based on filter, or selection
 -Option to periodically save session as html file
+-Keep history more then 90 days
 </pre>
 **To do:**
 <pre>
