@@ -4,10 +4,12 @@
  */
 
 const HISTORY_KEY  = 'eh_history';
+const TODAY_HISTORY_KEY = 'eh_today_history';  // Separate storage for today's history
 const TIME_KEY     = 'eh_time';
 const SETTINGS_KEY = 'eh_settings';
 const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
+const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -91,10 +93,23 @@ async function addTime(domain, ms) {
 // Safety-net alarm every 30s:
 // - segment running → commit + restart
 // - no segment (e.g. after SW restart) → resumeActiveTab to self-heal
+// - save current session (overwrite, not append)
 chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
 
 const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
+let _lastSessionSave = 0; // timestamp of last session save
+
+// Helper to update today's history separately
+async function updateTodayHistory() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayMs = todayStart.getTime();
+  
+  const all = await getAll();
+  const todayEntries = all.filter(e => e.visitTime >= todayMs);
+  await chrome.storage.local.set({ [TODAY_HISTORY_KEY]: todayEntries });
+}
 
 async function getAutoSaveInterval() {
   const r = await chrome.storage.local.get(AUTO_SAVE_KEY);
@@ -109,6 +124,14 @@ chrome.alarms.onAlarm.addListener(async alarm => {
   } else if (!segmentStart) {
     await resumeActiveTab();
   }
+  
+  // Save current session every 30s (overwrite same storage)
+  const now = Date.now();
+  if (now - _lastSessionSave >= 30000) { // 30 seconds
+    await saveCurrentSession();
+    _lastSessionSave = now;
+  }
+  
   // Only auto-save when browser window is focused — don't interrupt games etc.
   const mins = await getAutoSaveInterval();
   if (mins >= 1 && Date.now() - _lastAutoSave >= mins * 60 * 1000) {
@@ -180,6 +203,26 @@ async function doAutoSaveSession() {
       try { await chrome.tabs.remove(tabId); } catch {}
     }, 3000);
   }
+}
+
+// Save current session to storage (overwrite same location, don't pile data)
+async function saveCurrentSession() {
+  if (!sessionId) await loadSessionState();
+  const openTabs = sessionId
+    ? Object.values(sessionTabs).filter(t => t.url && t.closed === null)
+    : [];
+  
+  if (!openTabs.length) return;
+  
+  // Save to single storage location, overwriting previous
+  await chrome.storage.local.set({
+    [CURRENT_SESSION_KEY]: {
+      id: sessionId,
+      start: sessionStart,
+      tabs: openTabs,
+      lastSaved: Date.now()
+    }
+  });
 }
 
 function buildSessionHtml(label, tabs) {
@@ -388,19 +431,23 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   setupContextMenus();
   await beginSession();
   await resumeActiveTab();
-  const done = await chrome.storage.local.get(BACKFILL_KEY);
-  if (done[BACKFILL_KEY]) return;
+  
+  // Always backfill Chrome history on install/update to ensure we have all history
+  // This runs on first install, updates, and reinstalls
   try {
     const items   = await chrome.history.search({ text:'', startTime:0, maxResults:100000 });
     const entries = items.filter(i=>isTrackable(i.url)).map(i=>({
       id:`bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2,6)}`,
-                                                                url:normalizeUrl(i.url), rawUrl:i.url, title:i.title||'',
-                                                                visitTime:i.lastVisitTime||Date.now(), domain:domainOf(i.url), tabId:null, source:'backfill',
+      url:normalizeUrl(i.url), rawUrl:i.url, title:i.title||'',
+      visitTime:i.lastVisitTime||Date.now(), domain:domainOf(i.url), tabId:null, source:'backfill',
     }));
     const existing    = await getAll();
     const existingSet = new Set(existing.map(e=>`${e.url}|${Math.floor(e.visitTime/5000)}`));
     const newOnes     = entries.filter(e=>!existingSet.has(`${e.url}|${Math.floor(e.visitTime/5000)}`));
-    if (newOnes.length) await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
+    if (newOnes.length) {
+      await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
+      await updateTodayHistory();
+    }
     await chrome.storage.local.set({ [BACKFILL_KEY]:true });
     console.log(`[EH] Backfilled ${newOnes.length} entries`);
   } catch(e) { console.error('[EH] backfill',e); }
@@ -420,11 +467,12 @@ async function recordVisit(url, title, tabId) {
   let entries    = await getAll();
   const norm     = normalizeUrl(url);
   const dup      = entries.findIndex(e=>e.url===norm && (now-e.visitTime)<5000);
-  if (dup !== -1) { if (title && !entries[dup].title) { entries[dup].title=title; await setAll(entries); } return; }
+  if (dup !== -1) { if (title && !entries[dup].title) { entries[dup].title=title; await setAll(entries); await updateTodayHistory(); } return; }
   entries.push({ id:`${now}_${Math.random().toString(36).slice(2,6)}`, url:norm, rawUrl:url, title:title||'', visitTime:now, domain:domainOf(url), tabId:tabId||null });
   entries = entries.filter(e=>e.visitTime>=cutoff);
   if (entries.length>settings.maxEntries) entries=entries.slice(entries.length-settings.maxEntries);
   await setAll(entries);
+  await updateTodayHistory();
 }
 
 chrome.webNavigation.onCommitted.addListener(async details => {
@@ -553,6 +601,14 @@ async function handle(msg) {
       return {topSites:sorted,dailyMap};
     }
     case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
+    case 'GET_TODAY_HISTORY': {
+      const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
+      return { entries: r[TODAY_HISTORY_KEY] || [] };
+    }
+    case 'GET_CURRENT_SESSION': {
+      const r = await chrome.storage.local.get(CURRENT_SESSION_KEY);
+      return { session: r[CURRENT_SESSION_KEY] || null };
+    }
     case 'GET_SESSIONS': {
       const list=await getSessions();
       const maxSess=await getMaxSessions();

@@ -29,15 +29,13 @@ document.querySelectorAll('.flink[data-panel]').forEach(btn => {
     });
 });
 
-// ── Recent history — read directly from storage, no message round-trip ────────
-chrome.storage.local.get('eh_history', r => {
-    const all = r.eh_history || [];
-    // Sort descending, take top 30
-    const entries = all.slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
+// ── Recent history — read today's history only for fast loading ─────────────
+chrome.storage.local.get('eh_today_history', r => {
+    const entries = (r.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
     const el = document.getElementById('recent');
 
     if (!entries.length) {
-        el.innerHTML = '<div class="loading">No history yet</div>';
+        el.innerHTML = '<div class="loading">No history yet today</div>';
         return;
     }
 
