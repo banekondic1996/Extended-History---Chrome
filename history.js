@@ -1759,8 +1759,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSelActions();
 
   // Default to Today — activate silently so doSearch below picks up filterDate
-  const todayKey = new Date().toLocaleDateString('en-CA');
-  activateDatePill(todayKey, true);
+  //const todayKey = new Date().toLocaleDateString('en-CA');
+  activateDatePill('all', true);
 
   doSearch();
 
