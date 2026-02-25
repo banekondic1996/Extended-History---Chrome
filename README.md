@@ -11,10 +11,10 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Quick access to recent history by pressing extension button 
 -Change accent colors if you are into that
 -Delete history per day, based on filter, or selection
+-Option to periodically save session as html file
 </pre>
 **To do:**
 <pre>
--Make popup load faster
 -Improve bookmarks moving speed within large folders and being able to move bookmark folders
 -Maybe remove lazy loading or improve scrolling for history
 -Store page even if page didn't load completely
