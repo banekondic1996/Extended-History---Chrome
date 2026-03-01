@@ -30,51 +30,77 @@ document.querySelectorAll('.flink[data-panel]').forEach(btn => {
 });
 
 // ── Recent history — read today's history only for fast loading ─────────────
-chrome.storage.local.get('eh_today_history', r => {
-    const entries = (r.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
-    const el = document.getElementById('recent');
+function loadTodayHistory() {
+    chrome.storage.local.get('eh_today_history', r => {
+        const entries = (r.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
+        const el = document.getElementById('recent');
 
-    if (!entries.length) {
-        el.innerHTML = '<div class="loading">No history yet today</div>';
-        return;
-    }
+        if (!entries.length) {
+            el.innerHTML = '<div class="loading">No history yet today</div>';
+            return;
+        }
 
-    el.innerHTML = '';
-    for (const e of entries) {
-        const dom = e.domain || tryDomain(e.url);
-        const t   = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        el.innerHTML = '';
+        for (const e of entries) {
+            const dom = e.domain || tryDomain(e.url);
+            const t   = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        const row = document.createElement('div');
-        row.className = 'ritem';
-        row.addEventListener('click', () => chrome.tabs.create({ url: e.url }));
+            const row = document.createElement('div');
+            row.className = 'ritem';
+            row.addEventListener('click', () => chrome.tabs.create({ url: e.url }));
 
-        const img = document.createElement('img');
-        img.className = 'rfav';
-        img.loading   = 'lazy';
-        img.src       = favUrl(dom);
-        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+            const img = document.createElement('img');
+            img.className = 'rfav';
+            img.loading   = 'lazy';
+            img.src       = favUrl(dom);
+            img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
-        const body  = document.createElement('div');
-        body.className = 'rbody';
+            const body  = document.createElement('div');
+            body.className = 'rbody';
 
-        const title = document.createElement('div');
-        title.className   = 'rtitle';
-        title.textContent = e.title || e.url;
+            const title = document.createElement('div');
+            title.className   = 'rtitle';
+            title.textContent = e.title || e.url;
 
-        const url = document.createElement('div');
-        url.className   = 'rurl';
-        url.textContent = dom;
+            const url = document.createElement('div');
+            url.className   = 'rurl';
+            url.textContent = dom;
 
-        body.appendChild(title);
-        body.appendChild(url);
+            body.appendChild(title);
+            body.appendChild(url);
 
-        const time = document.createElement('div');
-        time.className   = 'rtime';
-        time.textContent = t;
+            const time = document.createElement('div');
+            time.className   = 'rtime';
+            time.textContent = t;
 
-        row.appendChild(img);
-        row.appendChild(body);
-        row.appendChild(time);
-        el.appendChild(row);
+            row.appendChild(img);
+            row.appendChild(body);
+            row.appendChild(time);
+            el.appendChild(row);
+        }
+    });
+}
+
+// Load initially
+loadTodayHistory();
+
+// Listen for storage changes to auto-refresh when history is deleted
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.eh_today_history) {
+        console.log('[Popup] Today history changed, refreshing...');
+        loadTodayHistory();
     }
 });
+
+// Polling fallback - check every 2 seconds if popup is visible
+// This ensures refresh even if storage event is missed
+let lastCount = 0;
+setInterval(() => {
+    chrome.storage.local.get('eh_today_history', r => {
+        const entries = r.eh_today_history || [];
+        if (entries.length !== lastCount) {
+            lastCount = entries.length;
+            loadTodayHistory();
+        }
+    });
+}, 2000);

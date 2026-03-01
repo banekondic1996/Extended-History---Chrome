@@ -10,6 +10,7 @@ const SETTINGS_KEY = 'eh_settings';
 const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
+const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS = {
   font:          'system-ui',
   fontSize:      15,
   theme:         'dark',
+  language:      'en', // Default language
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -28,6 +30,83 @@ function domainOf(url) { try { return new URL(url).hostname.replace(/^www\./, ''
 function isTrackable(url) {
   if (!url) return false;
   return !['chrome://','chrome-extension://','about:','data:','javascript:','moz-extension://','edge://','brave://'].some(p => url.startsWith(p));
+}
+
+// ── Ignore List ──────────────────────────────────────────────────────────────
+async function getIgnoreList() {
+  const r = await chrome.storage.local.get(IGNORE_LIST_KEY);
+  return r[IGNORE_LIST_KEY] || [];
+}
+
+async function setIgnoreList(list) {
+  await chrome.storage.local.set({ [IGNORE_LIST_KEY]: list });
+}
+
+// Check if URL matches any ignore pattern
+function matchesIgnorePattern(url, pattern) {
+  try {
+    const urlObj = new URL(url);
+    const urlHost = urlObj.hostname;
+    const urlPath = urlObj.pathname + urlObj.search;
+    const fullUrl = urlHost + urlPath;
+    
+    // Remove protocol if present in pattern
+    const cleanPattern = pattern.replace(/^https?:\/\//, '');
+    
+    // Pattern types:
+    // 1. *.example.com - all subdomains
+    if (cleanPattern.startsWith('*.')) {
+      const domain = cleanPattern.slice(2);
+      return urlHost === domain || urlHost.endsWith('.' + domain);
+    }
+    
+    // 2. example.com/path - specific path
+    if (cleanPattern.includes('/')) {
+      return fullUrl.startsWith(cleanPattern);
+    }
+    
+    // 3. example.com - exact domain and all its paths
+    return urlHost === cleanPattern || urlHost.endsWith('.' + cleanPattern);
+  } catch {
+    return false;
+  }
+}
+
+async function shouldIgnoreUrl(url) {
+  const ignoreList = await getIgnoreList();
+  return ignoreList.some(pattern => matchesIgnorePattern(url, pattern));
+}
+
+// Clean all ignored URLs from history
+async function cleanIgnoredFromHistory() {
+  const ignoreList = await getIgnoreList();
+  if (!ignoreList.length) return;
+  
+  let entries = await getAll();
+  const before = entries.length;
+  
+  // Filter out ignored entries
+  const toKeep = [];
+  const toDelete = [];
+  for (const e of entries) {
+    if (ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern))) {
+      toDelete.push(e);
+    } else {
+      toKeep.push(e);
+    }
+  }
+  
+  if (toDelete.length) {
+    await setAll(toKeep);
+    await updateTodayHistory();
+    
+    // Also remove from Chrome native history
+    for (const e of toDelete) {
+      try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+    }
+  }
+  
+  return { removed: toDelete.length };
 }
 
 // ── Time tracking ─────────────────────────────────────────────────────────────
@@ -461,6 +540,7 @@ function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toS
 
 async function recordVisit(url, title, tabId) {
   if (!isTrackable(url)) return;
+  if (await shouldIgnoreUrl(url)) return; // Skip if in ignore list
   const settings = await getSettings();
   const now      = Date.now();
   const cutoff   = now - settings.retentionDays * 86400000;
@@ -489,7 +569,12 @@ chrome.webNavigation.onCompleted.addListener(async details => {
     const tab=await chrome.tabs.get(details.tabId); if (!tab?.title) return;
     const entries=await getAll(); const norm=normalizeUrl(details.url);
     const idx=entries.findIndex(e=>e.url===norm&&(Date.now()-e.visitTime)<30000&&!e.title);
-    if (idx!==-1) { entries[idx].title=tab.title; await setAll(entries); }
+    if (idx!==-1) { 
+      entries[idx].title=tab.title; 
+      await setAll(entries); 
+      // Update today's history when title is updated
+      await updateTodayHistory();
+    }
   } catch {}
 });
 
@@ -524,6 +609,9 @@ async function handle(msg) {
       for (const e of toDelete) {
         try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
       }
+      // CRITICAL: Update today's history
+      console.log('[EH] Updating today history after deleting', toDelete.length, 'entries');
+      await updateTodayHistory();
       return {success:true};
     }
     case 'DELETE_MATCHING': {
@@ -545,6 +633,9 @@ async function handle(msg) {
       for (const e of toDelete) {
         try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
       }
+      // Update today's history
+      console.log('[EH] Updating today history after DELETE_MATCHING, deleted', toDelete.length, 'entries');
+      await updateTodayHistory();
       return {success:true,deleted:toDelete.length};
     }
     case 'DELETE_HISTORY_RANGE': {
@@ -565,11 +656,15 @@ async function handle(msg) {
         if (clearCache)   { dataTypes.cache = true; dataTypes.cacheStorage = true; }
         try { await chrome.browsingData.remove({ since }, dataTypes); } catch {}
       }
+      // Update today's history
+      await updateTodayHistory();
       return { success: true, deleted };
     }
     case 'CLEAR_ALL': {
       await setAll([]);
       try { await chrome.history.deleteAll(); } catch {}
+      // Update today's history
+      await updateTodayHistory();
       return { success: true };
     }
     case 'GET_STATS': {
@@ -648,8 +743,11 @@ async function handle(msg) {
     }
     case 'GET_SETTINGS': { return await getSettings(); }
     case 'SAVE_SETTINGS': {
-      const cur=await getSettings(); const next={...cur,...msg.settings};
-      await chrome.storage.local.set({[SETTINGS_KEY]:next}); return {success:true,settings:next};
+      const cur=await getSettings(); 
+      const next={...cur,...msg.settings};
+      console.log('[EH] SAVE_SETTINGS:', { current: cur, incoming: msg.settings, merged: next });
+      await chrome.storage.local.set({[SETTINGS_KEY]:next}); 
+      return {success:true,settings:next};
     }
     case 'EXPORT': {
       const entries=await getAll(); const tr=await chrome.storage.local.get(TIME_KEY); const sess=await getSessions();
@@ -671,6 +769,8 @@ async function handle(msg) {
         existingSet.add(key); count++;
       }
       existing.sort((a,b)=>b.visitTime-a.visitTime); await setAll(existing);
+      // Update today's history
+      await updateTodayHistory();
       return {success:true,imported:count};
     }
     case 'RE_BACKFILL': {
@@ -687,6 +787,8 @@ async function handle(msg) {
         const newOnes=entries.filter(e=>!existingSet.has(`${e.url}|${Math.floor(e.visitTime/5000)}`));
         if(newOnes.length) await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
         await chrome.storage.local.set({[BACKFILL_KEY]:true});
+        // Update today's history
+        await updateTodayHistory();
         return {success:true,imported:newOnes.length};
       } catch(e){return {error:e.message};}
     }
@@ -722,6 +824,31 @@ async function handle(msg) {
       return {success:true,imported};
     }
     case 'OPEN_INCOGNITO': { try{await chrome.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
+    case 'GET_IGNORE_LIST': {
+      return { list: await getIgnoreList() };
+    }
+    case 'ADD_IGNORE_PATTERN': {
+      const { pattern } = msg;
+      if (!pattern || typeof pattern !== 'string') return { success: false, error: 'Invalid pattern' };
+      const list = await getIgnoreList();
+      if (list.includes(pattern)) return { success: false, error: 'Pattern already exists' };
+      list.push(pattern);
+      await setIgnoreList(list);
+      // Remove matching entries from history and Chrome history
+      await cleanIgnoredFromHistory();
+      return { success: true };
+    }
+    case 'REMOVE_IGNORE_PATTERN': {
+      const { pattern } = msg;
+      let list = await getIgnoreList();
+      list = list.filter(p => p !== pattern);
+      await setIgnoreList(list);
+      return { success: true };
+    }
+    case 'CLEAN_IGNORED_HISTORY': {
+      await cleanIgnoredFromHistory();
+      return { success: true };
+    }
     case 'FLUSH_TIME': {
       // Commit whatever is running (if anything), then restart
       if (activeDomain && segmentStart && windowFocused) {

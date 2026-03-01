@@ -1,8 +1,3 @@
-/**
- * Extended History — history.js v3
- * Virtual scroll, click-to-open / checkbox-to-select, sessions, bookmarks,
- * dark/light mode, local fonts only.
- */
 
 // ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
@@ -234,6 +229,38 @@ async function doSearch() {
   listArea().innerHTML = `<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>`;
 
   try {
+    // Fast path: If no filters and no query, show today's history immediately
+    const isInitialLoad = !query && !startDate && !endDate;
+    
+    if (isInitialLoad) {
+      // Get today's history from fast storage (instant load)
+      const todayData = await chrome.storage.local.get('eh_today_history');
+      const todayEntries = todayData.eh_today_history || [];
+      
+      if (todayEntries.length > 0) {
+        // Show today's history immediately (fast!)
+        allResults = todayEntries.sort((a, b) => b.visitTime - a.visitTime);
+        buildVirtualList();
+        
+        // Then load full history in background and seamlessly replace
+        setTimeout(async () => {
+          try {
+            const r = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
+            // Only replace if user hasn't changed filters
+            const currentFilters = getFilters();
+            if (!currentFilters.query && !currentFilters.startDate && !currentFilters.endDate) {
+              allResults = r.entries;
+              buildVirtualList();
+            }
+          } catch (err) {
+            // Silently fail - we already have today's data showing
+          }
+        }, 100);
+        return;
+      }
+    }
+    
+    // Normal path: query with filters or no today's data
     const r   = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
     allResults = r.entries;
     buildVirtualList();
@@ -435,7 +462,15 @@ async function deleteIds(ids) {
 async function deleteMatching() {
   if (!allResults.length) { toast('No results to delete'); return; }
   const { query, mode, startDate, endDate } = getFilters();
-  if (!confirm(`Delete all ${fmtNum(allResults.length)} matching results?`)) return;
+  
+  // Check if "all time" is selected (no date filters)
+  const isAllTime = !startDate && !endDate;
+  const confirmMsg = isAllTime 
+    ? `⚠️ Confirm deleting results for all time\n\nThis will delete all ${fmtNum(allResults.length)} matching results from your entire history.\n\nAre you sure?`
+    : `Delete all ${fmtNum(allResults.length)} matching results?`;
+  
+  if (!confirm(confirmMsg)) return;
+  
   try {
     const r = await send('DELETE_MATCHING', { query, mode, startDate, endDate });
     toast(`Deleted ${fmtNum(r.deleted)} items`, 'ok');
@@ -1515,9 +1550,21 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const font    = document.getElementById('fontSel').value;
   const sz      = parseInt(document.getElementById('fontSzInput').value);
   const maxSess = parseInt(document.getElementById('maxSessionsInput')?.value || '4');
+  const lang    = document.getElementById('languageSelect')?.value || window._currentLang || 'en';
+  
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
-    const r = await send('SAVE_SETTINGS', { settings: { retentionDays: days, accentColor: c1, accentColor2: c2, font, fontSize: sz, theme: _curSettings.theme || 'dark' } });
+    const r = await send('SAVE_SETTINGS', { 
+      settings: { 
+        retentionDays: days, 
+        accentColor: c1, 
+        accentColor2: c2, 
+        font, 
+        fontSize: sz, 
+        theme: _curSettings.theme || 'dark',
+        language: lang  // ← PRESERVE LANGUAGE!
+      } 
+    });
     _curSettings = r.settings;
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
@@ -1837,3 +1884,54 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
 });
+
+// ══ LANGUAGE SUPPORT ════════════════════════════════════════════════════════
+async function initLanguage() {
+  try {
+    console.log('[EH] initLanguage: Loading settings...');
+    const settings = await send('GET_SETTINGS');
+    console.log('[EH] initLanguage: Settings received:', settings);
+    window._currentLang = settings.language || 'en';
+    const langSelect = document.getElementById('languageSelect');
+    if (langSelect) {
+      langSelect.value = window._currentLang;
+      console.log('[EH] initLanguage: Language selector set to:', window._currentLang);
+    } else {
+      console.warn('[EH] initLanguage: Language selector not found!');
+    }
+  } catch (err) {
+    console.error('[EH] initLanguage: Failed to load language:', err);
+    window._currentLang = 'en';
+  }
+}
+
+document.getElementById('languageSelect')?.addEventListener('change', async (e) => {
+  const newLang = e.target.value;
+  console.log('[EH] Language change requested:', newLang);
+  try {
+    // Update language in settings
+    const result = await send('SAVE_SETTINGS', { settings: { language: newLang } });
+    console.log('[EH] Save result:', result);
+    
+    // Verify it was saved
+    const verifySettings = await send('GET_SETTINGS');
+    console.log('[EH] Settings after save (verification):', verifySettings);
+    
+    window._currentLang = newLang;
+    
+    // Get language name
+    const langNames = {
+      en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français',
+      ru: 'Русский', zh: '中文', uk: 'Українська', tr: 'Türkçe',
+      it: 'Italiano', hi: 'हिन्दी', no: 'Norsk', he: 'עברית'
+    };
+    
+    toast(`Language set to ${langNames[newLang] || newLang}. (UI translation coming soon - language preference is saved)`, 'ok');
+  } catch (err) {
+    console.error('[EH] Language change failed:', err);
+    toast('Error: ' + err.message, 'err');
+  }
+});
+
+// Call initLanguage after a short delay to ensure DOM is ready
+setTimeout(initLanguage, 100);

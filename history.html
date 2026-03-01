@@ -48,11 +48,14 @@
     <button class="nav-item" id="deleteHistoryNavBtn" style="color:var(--danger)">
       <span class="ni-icon">🗑</span> Delete History
     </button>
+    <button class="nav-item" data-panel="ignorelist">
+      <span class="ni-icon">🚫</span> Ignore List
+    </button>
     <button class="nav-item" data-panel="settings">
       <span class="ni-icon">⚙</span> Settings
     </button>
     <button class="nav-item" data-panel="about">
-      <span class="ni-icon">ℹ</span> About
+      <span class="ni-icon">ℹ</span> More
     </button>
   </div>
 
@@ -242,6 +245,28 @@
           <div class="s-card-title">Appearance</div>
           <div class="s-row">
             <div class="s-row-info">
+              <div class="s-row-lbl">Language</div>
+              <div class="s-row-desc">Select your preferred language</div>
+            </div>
+            <div class="s-ctrl">
+              <select id="languageSelect">
+                <option value="en">English</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="uk">Українська</option>
+                <option value="tr">Türkçe</option>
+                <option value="it">Italiano</option>
+                <option value="hi">हिन्दी</option>
+                <option value="no">Norsk</option>
+                <option value="he">עברית</option>
+              </select>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
               <div class="s-row-lbl">Font family</div>
             </div>
             <div class="s-ctrl">
@@ -388,18 +413,92 @@
   <!-- ABOUT -->
   <div class="panel" id="panel-about">
     <div class="panel-scroll">
-      <div class="panel-heading">About</div>
-      <div style="max-width:560px;padding:8px 0 32px">
-        <div style="font-size:2.8rem;margin-bottom:16px">🕐</div>
-        <div style="font-size:1.35rem;font-weight:700;color:var(--text);margin-bottom:8px">Extended History</div>
-        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:24px">
-          Created by <strong style="color:var(--text)">Bane Kondić</strong>, cause Google doesn't want you to have more than 90 days of history in the browser.
+      <div class="panel-heading" style="margin-bottom: 0px;">About</div>
+      <div style="max-width:560px;padding:8px 0 8px"> <br>
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:5px">
+          Created by <strong style="color:var(--text)">Bane Kondić</strong>, cause he didn't like 90days history limit in Chromium.<br>
+          This extension  <strong style="color:var(--text)">does not send data</strong> and is completely <strong style="color:var(--text)">open source</strong>,<br> code is available on creators Github profile
         </div>
         <a href="https://github.com/banekondic1996/" target="_blank"
            style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
-          <span style="font-size:1.2rem">⌥</span>
-          github.com/banekondic1996
+          Github Profile
         </a>
+      </div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;">Feedback</div>
+      <div style="max-width:560px;padding:8px 0 8px"> <br>
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px">
+          Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in chrome store)
+        </div>
+        <a href="https://discord.gg/D4na6fbM" target="_blank"
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
+          Discord server
+        </a>
+      </div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;">Rate this extension </div>
+      <div style="max-width:560px;padding:8px 0 8px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px">
+          Link to <strong style="color:var(--text)">Chrome Web Store</strong> extensions page
+        </div>
+        <a href="" target="_blank"
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
+          Click to Rate 
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- IGNORE LIST -->
+  <div class="panel" id="panel-ignorelist">
+    <div class="panel-scroll">
+      <div class="panel-heading">🚫 Ignored Domains</div>
+      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
+        Domains added here will not be saved in history. Existing entries will be removed automatically.
+      </p>
+      
+      <div class="ignore-add">
+        <input type="text" id="ignorePatternInput" 
+               placeholder="example.com"
+               spellcheck="false">
+        <button id="addIgnoreBtn">Add Pattern</button>
+      </div>
+      
+      <div class="pattern-guide-toggle">
+        <button id="patternGuideToggle">▼ URL Pattern Guide</button>
+      </div>
+      
+      <div id="patternGuide" class="pattern-guide" style="display:none">
+        <table>
+          <tr>
+            <td><strong>Basic domain</strong></td>
+            <td><code>example.com</code></td>
+            <td>Blocks all of example.com</td>
+          </tr>
+          <tr>
+            <td><strong>All subdomains</strong></td>
+            <td><code>*.example.com</code></td>
+            <td>Blocks blog.example.com, shop.example.com, etc.</td>
+          </tr>
+          <tr>
+            <td><strong>Specific subdomain</strong></td>
+            <td><code>blog.example.com</code></td>
+            <td>Only blocks blog.example.com</td>
+          </tr>
+          <tr>
+            <td><strong>Specific path</strong></td>
+            <td><code>example.com/private</code></td>
+            <td>Only blocks URLs under /private</td>
+          </tr>
+          <tr>
+            <td><strong>Specific file</strong></td>
+            <td><code>example.com/file.html</code></td>
+            <td>Only blocks that specific file</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div id="ignoreList" class="ignore-list">
+        <div class="empty-msg">No patterns added yet</div>
       </div>
     </div>
   </div>
@@ -455,5 +554,9 @@
     </div>
   </div>
 </div>
+
+<script src="translations.js"></script>
+<script src="history.js"></script>
+<script src="ignore-list.js"></script>
 </body>
 </html>

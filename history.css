@@ -923,3 +923,160 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .dh-confirm { padding:9px 20px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:0.83rem;font-weight:700; }
 .dh-confirm:hover { opacity:0.88; }
 .dh-confirm:disabled { opacity:0.4;cursor:not-allowed; }
+
+/* ═══ IGNORE LIST ═══════════════════════════════════════════════════════════ */
+.ignore-add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ignore-add input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--surf1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.ignore-add button {
+  padding: 10px 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+}
+
+.ignore-add button:hover {
+  opacity: 0.9;
+}
+
+.pattern-guide-toggle {
+  margin-bottom: 12px;
+}
+
+.pattern-guide-toggle button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 0;
+  font-weight: 500;
+}
+
+.pattern-guide-toggle button:hover {
+  text-decoration: underline;
+}
+
+.pattern-guide {
+  background: var(--surf1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+
+.pattern-guide table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pattern-guide tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.pattern-guide tr:last-child {
+  border-bottom: none;
+}
+
+.pattern-guide td {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.pattern-guide td:first-child {
+  width: 150px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pattern-guide td:nth-child(2) {
+  width: 200px;
+}
+
+.pattern-guide code {
+  background: var(--surf2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.pattern-guide td:last-child {
+  color: var(--text2);
+}
+
+.ignore-list {
+  max-height: 500px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surf2) transparent;
+}
+
+.ignore-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surf1);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.ignore-item:hover {
+  background: var(--surf2);
+}
+
+.ignore-item code {
+  font-family: var(--font-mono);
+  color: var(--text);
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.ignore-remove-btn {
+  padding: 6px 14px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.ignore-remove-btn:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: white;
+}
+
+.empty-msg {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 0.95rem;
+}
