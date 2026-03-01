@@ -48,7 +48,7 @@
     <button class="nav-item" id="deleteHistoryNavBtn" style="color:var(--danger)">
       <span class="ni-icon">🗑</span> Delete History
     </button>
-    <button class="nav-item" data-panel="ignorelist">
+    <button disabled class="nav-item" style="opacity: 0.2;" data-panel="ignorelist">
       <span class="ni-icon">🚫</span> Ignore List
     </button>
     <button class="nav-item" data-panel="settings">
@@ -243,13 +243,13 @@
 
         <div class="s-card">
           <div class="s-card-title">Appearance</div>
-          <div class="s-row">
+          <div class="s-row" style="opacity: 0.2;" aria-disabled="true">
             <div class="s-row-info">
               <div class="s-row-lbl">Language</div>
               <div class="s-row-desc">Select your preferred language</div>
             </div>
             <div class="s-ctrl">
-              <select id="languageSelect">
+              <select id="languageSelect" disabled>
                 <option value="en">English</option>
                 <option value="de">Deutsch</option>
                 <option value="es">Español</option>

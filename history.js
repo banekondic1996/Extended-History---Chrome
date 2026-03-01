@@ -1,5 +1,5 @@
 
-// ── Messaging ──────────────────────────────────────────────────────────────
+  // ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
   return new Promise((res, rej) => {
     chrome.runtime.sendMessage({ type, ...extra }, r => {
@@ -1926,7 +1926,7 @@ document.getElementById('languageSelect')?.addEventListener('change', async (e) 
       it: 'Italiano', hi: 'हिन्दी', no: 'Norsk', he: 'עברית'
     };
     
-    toast(`Language set to ${langNames[newLang] || newLang}. (UI translation coming soon - language preference is saved)`, 'ok');
+    toast(`Language set to ${langNames[newLang] || newLang}.`, 'ok');
   } catch (err) {
     console.error('[EH] Language change failed:', err);
     toast('Error: ' + err.message, 'err');
