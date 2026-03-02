@@ -7,6 +7,8 @@ function tryDomain(url) {
 function favUrl(domain) {
     // Use Google's favicon service as primary — works for all sites including google.com/youtube.com
     return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
+    //return `${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + domain)}`)}`;
+
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────

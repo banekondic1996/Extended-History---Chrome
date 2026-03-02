@@ -310,6 +310,7 @@ function buildSessionHtml(label, tabs) {
   const domainOf2 = url => { try { return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; } };
   const rows = tabs.map(t => {
     const dom = domainOf2(t.url);
+    //return ${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + dom)}&size=16`)}
     return `<a href="${esc(t.url)}"><img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(dom)}" loading="lazy" onerror="this.style.display='none'"/><span class="title">${esc(t.title||t.url)}</span><span class="domain">${esc(dom)}</span></a>`;
   }).join('');
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${esc(label)}</title>

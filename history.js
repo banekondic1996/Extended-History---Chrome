@@ -48,6 +48,7 @@ function fmtDuration(ms) {
 }
 function favUrl(domain) {
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
+  //return `${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + domain)}`)}`;
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -1711,6 +1712,7 @@ function exportSessionAsHtml(label, tabs) {
   <body><h1>📋 ${esc(label)}</h1><div class="meta">${validTabs.length} tabs · Exported ${new Date().toLocaleString()}</div>
   <div class="links">${validTabs.map(t => {
     const dom = tryDomain(t.url);
+    //return ${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + dom)}&size=16`)}
     return `<a href="${esc(t.url)}"><img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(dom)}" loading="lazy" onerror="this.style.display='none'"/><span class="title">${esc(t.title||t.url)}</span><span class="domain">${esc(dom)}</span></a>`;
   }).join('')}</div><footer>Exported by Extended History</footer></body></html>`;
   Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([html],{type:'text/html'})), download: `session_${new Date().toISOString().slice(0,10)}.html` }).click();

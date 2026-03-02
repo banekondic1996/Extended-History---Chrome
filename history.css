@@ -1080,6 +1080,6 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   color: var(--text3);
   font-size: 0.95rem;
 }
-.tf-btn span {
+span {
   pointer-events: none;
 }
