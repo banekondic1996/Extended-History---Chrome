@@ -179,7 +179,7 @@ const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
 let _lastSessionSave = 0; // timestamp of last session save
 
-// Helper to update today's history separately
+// Helper to update today's history separately (stores ALL of today's entries)
 async function updateTodayHistory() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -187,6 +187,7 @@ async function updateTodayHistory() {
   
   const all = await getAll();
   const todayEntries = all.filter(e => e.visitTime >= todayMs);
+  //console.log('[EH] updateTodayHistory: Storing', todayEntries.length, 'entries from today');
   await chrome.storage.local.set({ [TODAY_HISTORY_KEY]: todayEntries });
 }
 
@@ -480,26 +481,9 @@ chrome.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
-// ── Context menus ────────────────────────────────────────────────────────────
-function setupContextMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id:'eh_open_tab',       title:'Open in new tab',         contexts:['link'] });
-    chrome.contextMenus.create({ id:'eh_open_incognito', title:'Open in incognito window', contexts:['link'] });
-    chrome.contextMenus.create({ id:'eh_copy_link',      title:'Copy link address',        contexts:['link'] });
-  });
-}
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  const url = info.linkUrl; if (!url) return;
-  if (info.menuItemId === 'eh_open_tab')       chrome.tabs.create({ url });
-  if (info.menuItemId === 'eh_open_incognito') chrome.windows.create({ url, incognito:true });
-  if (info.menuItemId === 'eh_copy_link')
-    chrome.scripting?.executeScript({ target:{tabId:tab.id}, func:u=>navigator.clipboard.writeText(u), args:[url] }).catch(()=>{});
-});
-
 // ── Startup / Install ────────────────────────────────────────────────────────
 chrome.runtime.onStartup.addListener(async () => {
   await migrateStorage();
-  setupContextMenus();
   await finishSession();
   await beginSession();
   await resumeActiveTab();
@@ -507,7 +491,6 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   await migrateStorage();
-  setupContextMenus();
   await beginSession();
   await resumeActiveTab();
   
@@ -528,7 +511,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
       await updateTodayHistory();
     }
     await chrome.storage.local.set({ [BACKFILL_KEY]:true });
-    console.log(`[EH] Backfilled ${newOnes.length} entries`);
+    //console.log(`[EH] Backfilled ${newOnes.length} entries`);
   } catch(e) { console.error('[EH] backfill',e); }
 });
 
@@ -610,7 +593,7 @@ async function handle(msg) {
         try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
       }
       // CRITICAL: Update today's history
-      console.log('[EH] Updating today history after deleting', toDelete.length, 'entries');
+      //console.log('[EH] Updating today history after deleting', toDelete.length, 'entries');
       await updateTodayHistory();
       return {success:true};
     }
@@ -634,7 +617,7 @@ async function handle(msg) {
         try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
       }
       // Update today's history
-      console.log('[EH] Updating today history after DELETE_MATCHING, deleted', toDelete.length, 'entries');
+      //console.log('[EH] Updating today history after DELETE_MATCHING, deleted', toDelete.length, 'entries');
       await updateTodayHistory();
       return {success:true,deleted:toDelete.length};
     }
@@ -745,7 +728,7 @@ async function handle(msg) {
     case 'SAVE_SETTINGS': {
       const cur=await getSettings(); 
       const next={...cur,...msg.settings};
-      console.log('[EH] SAVE_SETTINGS:', { current: cur, incoming: msg.settings, merged: next });
+      //console.log('[EH] SAVE_SETTINGS:', { current: cur, incoming: msg.settings, merged: next });
       await chrome.storage.local.set({[SETTINGS_KEY]:next}); 
       return {success:true,settings:next};
     }
@@ -834,8 +817,12 @@ async function handle(msg) {
       if (list.includes(pattern)) return { success: false, error: 'Pattern already exists' };
       list.push(pattern);
       await setIgnoreList(list);
-      // Remove matching entries from history and Chrome history
-      await cleanIgnoredFromHistory();
+      // Clean history in background (don't wait for it)
+      cleanIgnoredFromHistory().then(() => {
+        //console.log('[EH] Cleaned ignored URLs from history for pattern:', pattern);
+      }).catch(err => {
+        console.error('[EH] Error cleaning ignored history:', err);
+      });
       return { success: true };
     }
     case 'REMOVE_IGNORE_PATTERN': {

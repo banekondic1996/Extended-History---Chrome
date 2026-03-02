@@ -87,7 +87,7 @@ loadTodayHistory();
 // Listen for storage changes to auto-refresh when history is deleted
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.eh_today_history) {
-        console.log('[Popup] Today history changed, refreshing...');
+        //console.log('[Popup] Today history changed, refreshing...');
         loadTodayHistory();
     }
 });

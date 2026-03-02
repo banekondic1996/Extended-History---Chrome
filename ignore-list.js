@@ -18,16 +18,16 @@ function showToast(msg, type = 'ok') {
   if (typeof toast === 'function') {
     toast(msg, type);
   } else {
-    console.log(`[Toast] ${msg}`);
+    //console.log(`[Toast] ${msg}`);
   }
 }
 
 // ══ LOAD IGNORE LIST ════════════════════════════════════════════════════════
 async function loadIgnoreList() {
-  console.log('[IgnoreList] Loading ignore list...');
+  //console.log('[IgnoreList] Loading ignore list...');
   try {
     const { list } = await send('GET_IGNORE_LIST');
-    console.log('[IgnoreList] Loaded patterns:', list);
+    //console.log('[IgnoreList] Loaded patterns:', list);
     const container = document.getElementById('ignoreList');
     
     if (!container) {
@@ -87,7 +87,7 @@ async function addIgnorePattern() {
     return;
   }
   
-  console.log('[IgnoreList] Adding pattern:', pattern);
+  //console.log('[IgnoreList] Adding pattern:', pattern);
   try {
     await send('ADD_IGNORE_PATTERN', { pattern });
     input.value = '';
@@ -103,12 +103,9 @@ async function addIgnorePattern() {
 function togglePatternGuide() {
   const guide = document.getElementById('patternGuide');
   const btn = document.getElementById('patternGuideToggle');
-  
   if (!guide || !btn) {
-    console.error('[IgnoreList] Pattern guide elements not found!');
     return;
   }
-  
   if (guide.style.display === 'none') {
     guide.style.display = 'block';
     btn.textContent = '▲ URL Pattern Guide';
@@ -120,16 +117,14 @@ function togglePatternGuide() {
 
 // ══ OPEN IGNORE PANEL ═══════════════════════════════════════════════════════
 function openIgnorePanel() {
-  console.log('[IgnoreList] Opening panel...');
+  //console.log('[IgnoreList] Opening panel...');
   const panel = document.getElementById('ignorePanel');
   if (!panel) {
-    console.error('[IgnoreList] Panel #ignorePanel not found!');
     return;
   }
-  
   loadIgnoreList(); // Load current patterns
   panel.style.display = 'block';
-  console.log('[IgnoreList] Panel opened');
+  //console.log('[IgnoreList] Panel opened');
 }
 
 // ══ CLOSE IGNORE PANEL ══════════════════════════════════════════════════════
@@ -149,13 +144,11 @@ if (document.readyState === 'loading') {
 }
 
 function initIgnoreList() {
-  console.log('[IgnoreList] Initializing event listeners...');
-  
+  //console.log('[IgnoreList] Initializing event listeners...');
   // Add pattern button
   const addBtn = document.getElementById('addIgnoreBtn');
   if (addBtn) {
     addBtn.addEventListener('click', addIgnorePattern);
-    console.log('[IgnoreList] Add button listener attached');
   } else {
     console.warn('[IgnoreList] Add button #addIgnoreBtn not found');
   }
@@ -164,7 +157,6 @@ function initIgnoreList() {
   const guideToggle = document.getElementById('patternGuideToggle');
   if (guideToggle) {
     guideToggle.addEventListener('click', togglePatternGuide);
-    console.log('[IgnoreList] Guide toggle listener attached');
   } else {
     console.warn('[IgnoreList] Guide toggle #patternGuideToggle not found');
   }
@@ -177,7 +169,7 @@ function initIgnoreList() {
         addIgnorePattern();
       }
     });
-    console.log('[IgnoreList] Input Enter key listener attached');
+    //console.log('[IgnoreList] Input Enter key listener attached');
   } else {
     console.warn('[IgnoreList] Input #ignorePatternInput not found');
   }
@@ -186,7 +178,7 @@ function initIgnoreList() {
   const observer = new MutationObserver((mutations) => {
     const panel = document.getElementById('panel-ignorelist');
     if (panel && panel.classList.contains('active')) {
-      console.log('[IgnoreList] Panel is now active, loading patterns...');
+      //console.log('[IgnoreList] Panel is now active, loading patterns...');
       loadIgnoreList();
     }
   });
@@ -195,7 +187,7 @@ function initIgnoreList() {
   const ignorePanel = document.getElementById('panel-ignorelist');
   if (ignorePanel) {
     observer.observe(ignorePanel, { attributes: true, attributeFilter: ['class'] });
-    console.log('[IgnoreList] Panel observer attached');
+    //console.log('[IgnoreList] Panel observer attached');
     
     // Also load immediately if panel is already active
     if (ignorePanel.classList.contains('active')) {
@@ -203,7 +195,7 @@ function initIgnoreList() {
     }
   }
   
-  console.log('[IgnoreList] Initialization complete');
+  //console.log('[IgnoreList] Initialization complete');
 }
 
 // Make functions available globally

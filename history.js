@@ -1,5 +1,10 @@
+/**
+ * Extended History — history.js v3
+ * Virtual scroll, click-to-open / checkbox-to-select, sessions, bookmarks,
+ * dark/light mode, local fonts only.
+ */
 
-  // ── Messaging ──────────────────────────────────────────────────────────────
+// ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
   return new Promise((res, rej) => {
     chrome.runtime.sendMessage({ type, ...extra }, r => {
@@ -291,12 +296,12 @@ function buildDateNav() {
     return b;
   }
 
-  addBtn('All time', 'all', '');
+  addBtn(chrome.i18n.getMessage("all_time"), 'all', '');
   for (let i = 0; i < 60; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
-    if (i === 0) { addBtn('Today',     key, ''); continue; }
-    if (i === 1) { addBtn('Yesterday', key, ''); continue; }
+    if (i === 0) { addBtn(chrome.i18n.getMessage("today"),     key, ''); continue; }
+    if (i === 1) { addBtn(chrome.i18n.getMessage("yesterday"), key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
 
@@ -485,10 +490,10 @@ async function loadActivity() {
     const key  = new Date().toLocaleDateString('en-CA');
     const todayCt = s.dailyActivity?.[key] || 0;
     document.getElementById('actKpi').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total visits</div><div class="kpi-val">${fmtNum(s.totalEntries)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Today</div><div class="kpi-val">${fmtNum(todayCt)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Storage</div><div class="kpi-val sm">${s.storageMB} MB</div></div>
-    <div class="kpi-card"><div class="kpi-label">Since</div><div class="kpi-val sm">${s.oldestEntry ? new Date(s.oldestEntry).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : '—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label" data-i18n-key="total_visits">Total visits</div><div class="kpi-val">${fmtNum(s.totalEntries)}</div></div>
+    <div class="kpi-card"><div class="kpi-label" data-i18n-key="today">Today</div><div class="kpi-val">${fmtNum(todayCt)}</div></div>
+    <div class="kpi-card"><div class="kpi-label" data-i18n-key="storage">Storage</div><div class="kpi-val sm">${s.storageMB} MB</div></div>
+    <div class="kpi-card"><div class="kpi-label" data-i18n-key="since">Since</div><div class="kpi-val sm">${s.oldestEntry ? new Date(s.oldestEntry).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : '—'}</div></div>
     `;
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
@@ -761,12 +766,12 @@ function drawPie(topSites) {
 // ══ SESSIONS ═══════════════════════════════════════════════════════════════
 async function loadSessions() {
   const el = document.getElementById('sessionsContent');
-  el.innerHTML = '<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>';
+  el.innerHTML = '<div class="state-msg" style="color:var(--text3);font-size:0.85rem" data-i18n-key="loading">Loading…</div>';
   try {
     const { sessions, current } = await send('GET_SESSIONS');
 
     if (!sessions.length && !current) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📋</span>No sessions recorded yet</div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📋</span><span data-i18n-key="no_sessions_yet">No sessions recorded yet</span></div>';
       return;
     }
 
@@ -859,11 +864,11 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: 'Current session', sub: `Started ${timeAgo(current.start)} · ${dur}` },
-                                      'Active', current.tabs
+        { main: chrome.i18n.getMessage("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+                                      chrome.i18n.getMessage("active"), current.tabs
       ));
     }
-
+    
     sessions.forEach(sess => {
       const dur  = fmtDuration(sess.end - sess.start);
       const date = new Date(sess.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
@@ -1888,16 +1893,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ══ LANGUAGE SUPPORT ════════════════════════════════════════════════════════
 async function initLanguage() {
   try {
-    console.log('[EH] initLanguage: Loading settings...');
+    //console.log('[EH] initLanguage: Loading settings...');
     const settings = await send('GET_SETTINGS');
-    console.log('[EH] initLanguage: Settings received:', settings);
+    //console.log('[EH] initLanguage: Settings received:', settings);
     window._currentLang = settings.language || 'en';
     const langSelect = document.getElementById('languageSelect');
     if (langSelect) {
       langSelect.value = window._currentLang;
-      console.log('[EH] initLanguage: Language selector set to:', window._currentLang);
+      //console.log('[EH] initLanguage: Language selector set to:', window._currentLang);
     } else {
-      console.warn('[EH] initLanguage: Language selector not found!');
+      //console.warn('[EH] initLanguage: Language selector not found!');
+    }
+    
+    // Apply translations to UI
+    if (typeof window.applyTranslations === 'function') {
+      window.applyTranslations(window._currentLang);
     }
   } catch (err) {
     console.error('[EH] initLanguage: Failed to load language:', err);
@@ -1907,17 +1917,22 @@ async function initLanguage() {
 
 document.getElementById('languageSelect')?.addEventListener('change', async (e) => {
   const newLang = e.target.value;
-  console.log('[EH] Language change requested:', newLang);
+  //console.log('[EH] Language change requested:', newLang);
   try {
     // Update language in settings
     const result = await send('SAVE_SETTINGS', { settings: { language: newLang } });
-    console.log('[EH] Save result:', result);
+    //console.log('[EH] Save result:', result);
     
     // Verify it was saved
     const verifySettings = await send('GET_SETTINGS');
-    console.log('[EH] Settings after save (verification):', verifySettings);
+    //console.log('[EH] Settings after save (verification):', verifySettings);
     
     window._currentLang = newLang;
+    
+    // Apply translations to UI immediately
+    if (typeof window.applyTranslations === 'function') {
+      window.applyTranslations(newLang);
+    }
     
     // Get language name
     const langNames = {
@@ -1926,7 +1941,7 @@ document.getElementById('languageSelect')?.addEventListener('change', async (e) 
       it: 'Italiano', hi: 'हिन्दी', no: 'Norsk', he: 'עברית'
     };
     
-    toast(`Language set to ${langNames[newLang] || newLang}.`, 'ok');
+    toast(`Language changed to ${langNames[newLang] || newLang}`, 'ok');
   } catch (err) {
     console.error('[EH] Language change failed:', err);
     toast('Error: ' + err.message, 'err');

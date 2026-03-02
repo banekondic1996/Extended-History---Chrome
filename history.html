@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Extended History</title>
+<title data-i18n-key="ext_name">Extended History</title>
 <link rel="stylesheet" href="history.css"/>
 </head>
 <body>
@@ -14,60 +14,55 @@
   <div class="logo-row">
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
-      <div class="logo-text">Extended History</div>
-      <div class="logo-sub">v4.0</div>
+      <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
+      <div class="logo-sub">v4.0.1</div>
     </div>
   </div>
 
   <div class="nav-body">
-    <div class="nav-group-label">Browse</div>
+    <div class="nav-group-label" data-i18n-key="browse">Browse</div>
     <button class="nav-item active" data-panel="history">
-      <span class="ni-icon">🕐</span> History
+      <span class="ni-icon">🕐</span><span data-i18n-key="history"> History</span> 
     </button>
     <button class="nav-item" data-panel="sessions">
-      <span class="ni-icon">📋</span> Sessions
+      <span class="ni-icon">📋</span> <span data-i18n-key="sessions"> Sessions</span>
     </button>
     <button class="nav-item" data-panel="devices">
-      <span class="ni-icon">📡</span> Devices
+      <span class="ni-icon">📡</span> <span data-i18n-key="devices"> Devices</span> 
     </button>
-
-    <div class="nav-group-label">Insights</div>
+    <div class="nav-group-label" data-i18n-key="insights">Insights</div>
     <button class="nav-item" data-panel="activity">
-      <span class="ni-icon">📊</span> Activity
+      <span class="ni-icon">📊</span><span data-i18n-key="activity">Activity</span> 
     </button>
     <button class="nav-item" data-panel="timespent">
-      <span class="ni-icon">🕐</span> Time Spent
+      <span class="ni-icon">🕐</span> <span data-i18n-key="time_spent">Time Spent</span>
     </button>
-
-    <div class="nav-group-label">Library</div>
+    <div class="nav-group-label" data-i18n-key="library">Library</div>
     <button class="nav-item" data-panel="bookmarks">
-      <span class="ni-icon">🔖</span> Bookmarks
+      <span class="ni-icon">🔖</span><span data-i18n-key="bookmarks">Bookmarks</span> 
     </button>
-
-    <div class="nav-group-label">System</div>
+    <div class="nav-group-label" data-i18n-key="system">System</div>
     <button class="nav-item" id="deleteHistoryNavBtn" style="color:var(--danger)">
-      <span class="ni-icon">🗑</span> Delete History
+      <span class="ni-icon">🗑</span><span data-i18n-key="delete_history">Delete History</span>
     </button>
-    <button disabled class="nav-item" style="opacity: 0.2;" data-panel="ignorelist">
-      <span class="ni-icon">🚫</span> Ignore List
+    <button class="nav-item" data-panel="ignorelist">
+      <span class="ni-icon">🚫</span><span data-i18n-key="ignore_list">Ignore List</span>
     </button>
     <button class="nav-item" data-panel="settings">
-      <span class="ni-icon">⚙</span> Settings
+      <span class="ni-icon">⚙</span><span data-i18n-key="settings">Settings</span>
     </button>
     <button class="nav-item" data-panel="about">
-      <span class="ni-icon">ℹ</span> More
+      <span class="ni-icon">ℹ</span><span data-i18n-key="more">More</span> 
     </button>
   </div>
 
   <div class="sidebar-actions">
-    <button class="sa-btn active" id="themeLight">☀ Light</button>
-    <button class="sa-btn" id="themeDark">🌙 Dark</button>
+    <button class="sa-btn active" id="themeLight">☀ <span data-i18n-key="light">Light</span></button>
+    <button class="sa-btn" id="themeDark">🌙 <span data-i18n-key="dark">Dark</span></button>
   </div>
 </nav>
-
 <!-- ══ MAIN ══════════════════════════════════════════════════════════════════ -->
 <div class="main">
-
   <!-- HISTORY -->
   <div class="panel active" id="panel-history">
     <div class="topbar">
@@ -79,10 +74,8 @@
         </div>
         <button class="nav-arrow" id="dnRight">›</button>
       </div>
-
       <!-- Hour pills -->
       <div class="hour-nav-row" id="hourRow"></div>
-
       <!-- Search + controls -->
       <div class="search-row">
         <div class="search-box">
@@ -91,25 +84,25 @@
           <button class="search-clear-btn" id="searchClearBtn" title="Clear">✕</button>
         </div>
         <select class="mode-sel" id="searchMode">
-          <option value="all">All fields</option>
-          <option value="title">Title</option>
-          <option value="url">URL</option>
-          <option value="domain">Domain</option>
+          <option value="all" data-i18n-key="all_fields">All fields</option>
+          <option value="title" data-i18n-key="title">Title</option>
+          <option value="url" data-i18n-key="url">URL</option>
+          <option value="domain" data-i18n-key="domain">Domain</option>
         </select>
         <input type="date" id="dateFrom"/>
         <span style="color:var(--text3);flex-shrink:0">→</span>
         <input type="date" id="dateTo"/>
-        <button class="tb-btn" id="clearFiltersBtn">All time</button>
-        <button class="tb-btn danger" id="deleteResultsBtn">Delete results</button>
+        <button class="tb-btn" id="clearFiltersBtn" data-i18n-key="all_time">All time</button>
+        <button class="tb-btn danger" id="deleteResultsBtn" data-i18n-key="delete_results">Delete results</button>
       </div>
     </div>
 
     <div class="sel-bar" id="selBar">
-      <span class="sel-count" id="selCount">0 selected</span>
+      <span class="sel-count" id="selCount">0 <span data-i18n-key="selected_lower">selected</span></span>
       <div class="sel-actions">
-        <button class="sel-action-btn" id="selAllBtn">Select all visible</button>
-        <button class="sel-action-btn" id="selNoneBtn">Deselect all</button>
-        <button class="sel-action-btn del" id="selDelBtn">Delete selected</button>
+        <button class="sel-action-btn" id="selAllBtn" data-i18n-key="select_all_visible">Select all visible</button>
+        <button class="sel-action-btn" id="selNoneBtn" data-i18n-key="deselect_all">Deselect all</button>
+        <button class="sel-action-btn del" id="selDelBtn" data-i18n-key="delete_selected">Delete selected</button>
       </div>
     </div>
 
@@ -119,27 +112,27 @@
   <!-- SESSIONS -->
   <div class="panel" id="panel-sessions">
     <div class="panel-scroll">
-      <div class="panel-heading">Sessions</div>
-      <div id="sessionsContent"><div class="state-msg"><span class="state-msg-icon">⏳</span>Loading…</div></div>
+      <div class="panel-heading" data-i18n-key="sessions">Sessions</div>
+      <div id="sessionsContent"><div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
   </div>
 
   <!-- DEVICES -->
   <div class="panel" id="panel-devices">
     <div class="panel-scroll">
-      <div class="panel-heading">Devices</div>
-      <div id="devicesContent"><div class="state-msg"><span class="state-msg-icon">📡</span>Loading…</div></div>
+      <div class="panel-heading" data-i18n-key="devices">Devices</div>
+      <div id="devicesContent"><div class="state-msg"><span class="state-msg-icon">📡</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
   </div>
 
   <!-- ACTIVITY -->
   <div class="panel" id="panel-activity">
     <div class="panel-scroll">
-      <div class="panel-heading">Activity</div>
+      <div class="panel-heading" data-i18n-key="activity">Activity</div>
       <div class="kpi-grid" id="actKpi"></div>
 
       <div class="chart-card">
-        <div class="cc-header"><span class="cc-title">Daily visits — 90 days</span></div>
+        <div class="cc-header"><span class="cc-title" data-i18n-key="daily_visits_90">Daily visits — 90 days</span></div>
         <div style="position:relative" id="lineWrap">
           <svg class="chart-svg" id="lineSvg" height="160"></svg>
           <div class="chart-tooltip" id="lineTip"></div>
@@ -148,7 +141,7 @@
       </div>
 
       <div class="chart-card">
-        <div class="cc-header"><span class="cc-title">Daily visits — 30 days</span></div>
+        <div class="cc-header"><span class="cc-title" data-i18n-key="daily_visits_30">Daily visits — 30 days</span></div>
         <div class="bar30-wrap" id="bar30Wrap"></div>
         <div class="bar30-dates" id="bar30Dates"></div>
       </div>
@@ -158,19 +151,19 @@
   <!-- TIME SPENT -->
   <div class="panel" id="panel-timespent">
     <div class="panel-scroll">
-      <div class="panel-heading">Time Spent</div>
+      <div class="panel-heading" data-i18n-key="time_spent">Time Spent</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <div class="time-filter-row" id="timeFilters" style="margin-bottom:0">
-          <button class="tf-btn" data-days="1">24 hours</button>
-          <button class="tf-btn active" data-days="15">15 days</button>
-          <button class="tf-btn" data-days="30">30 days</button>
-          <button class="tf-btn" data-days="90">90 days</button>
+          <button class="tf-btn" data-days="1" >24 <span data-i18n-key="hours">hours</span></button>
+          <button class="tf-btn active" data-days="15">15 <span data-i18n-key="days">days</span></button>
+          <button class="tf-btn" data-days="30">30 <span data-i18n-key="days">days</span></button>
+          <button class="tf-btn" data-days="90">90 <span data-i18n-key="days">days</span></button>
         </div>
-        <button class="tb-btn danger" id="clearTimeBtn" title="Clear all time-spent data (does not affect history)">🗑 Clear time data</button>
+        <button class="tb-btn danger" id="clearTimeBtn" title="Clear all time-spent data (does not affect history)">🗑 <span data-i18n-key="clear_time_data">Clear time data</span></button>
       </div>
 
       <div class="chart-card">
-        <div class="cc-header"><span class="cc-title">Daily browsing time</span></div>
+        <div class="cc-header"><span class="cc-title" data-i18n-key="daily_browsing_time">Daily browsing time</span></div>
         <div style="position:relative">
           <svg class="chart-svg" id="timeSvg" height="130"></svg>
           <div class="chart-tooltip" id="timeTip"></div>
@@ -179,7 +172,7 @@
       </div>
 
       <div class="chart-card">
-        <div class="cc-header"><span class="cc-title">Top sites by time spent</span></div>
+        <div class="cc-header"><span class="cc-title" data-i18n-key="top_sites_by_time_spent">Top sites by time spent</span></div>
         <div class="timespent-grid">
           <div class="hbar-list" id="hbarList"></div>
           <div class="pie-container">
@@ -195,8 +188,8 @@
   <div class="panel" id="panel-bookmarks">
     <!-- Toolbar -->
     <div class="bm-toolbar">
-      <button class="action-btn" id="exportBmBtn" style="font-size:0.76rem;padding:6px 12px">⬇ Export</button>
-      <button class="action-btn" id="importBmBtn" style="font-size:0.76rem;padding:6px 12px">⬆ Import</button>
+      <button class="action-btn" id="exportBmBtn" style="font-size:0.76rem;padding:6px 12px">⬇ <span data-i18n-key="export">Export</span></button>
+      <button class="action-btn" id="importBmBtn" style="font-size:0.76rem;padding:6px 12px">⬆ <span data-i18n-key="import">Import</span></button>
       <input type="file" id="importBmFile" accept=".html" style="display:none"/>
       <div class="search-box" style="flex:1;min-width:160px;max-width:320px">
         <span class="search-box-icon">🔍</span>
@@ -207,7 +200,7 @@
     <div class="bm-split">
       <div class="bm-tree-pane" id="bmTreePane"></div>
       <div class="bm-items-pane" id="bookmarksContent">
-        <div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>
+        <div class="state-msg"><span class="state-msg-icon">🔖</span><span data-i18n-key="loading">Loading…</span></div>
       </div>
     </div>
   </div>
@@ -215,59 +208,59 @@
   <!-- SETTINGS -->
   <div class="panel" id="panel-settings">
     <div class="panel-scroll">
-      <div class="panel-heading">Settings</div>
+      <div class="panel-heading" data-i18n-key="settings">Settings</div>
       <div class="settings-stack">
 
         <div class="s-card">
-          <div class="s-card-title">History Retention</div>
+          <div class="s-card-title" data-i18n-key="history_retention">History Retention</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Keep history for</div>
-              <div class="s-row-desc">Older entries are automatically pruned</div>
+              <div class="s-row-lbl" data-i18n-key="keep_history_for">Keep history for</div>
+              <div class="s-row-desc" data-i18n-key="older_enteries_are_pruned">Older entries are automatically pruned</div>
             </div>
             <div class="s-ctrl">
               <input type="number" id="retDays" value="3650" min="1" max="999999"/>
-              <span class="unit">days</span>
+              <span class="unit" data-i18n-key="days">days</span>
             </div>
           </div>
           <div class="chips" id="retChips">
-            <button class="chip" data-d="90">90 days</button>
-            <button class="chip" data-d="180">6 months</button>
-            <button class="chip" data-d="365">1 year</button>
-            <button class="chip" data-d="730">2 years</button>
-            <button class="chip" data-d="1825">5 years</button>
-            <button class="chip on" data-d="3650">10 years</button>
-            <button class="chip" data-d="36500">Forever</button>
+            <button class="chip" data-d="90">90 <span data-i18n-key="days">days</span></button>
+            <button class="chip" data-d="180">6 <span data-i18n-key="months">months</span></button>
+            <button class="chip" data-d="365">1 <span data-i18n-key="year">year</span></button>
+            <button class="chip" data-d="730">2 <span data-i18n-key="years">years</span></button>
+            <button class="chip" data-d="1825">5 <span data-i18n-key="years">years</span></button>
+            <button class="chip on" data-d="3650">10 <span data-i18n-key="years">years</span></button>
+            <button class="chip" data-d="36500"><span data-i18n-key="forever">Forever</span></button>
           </div>
         </div>
 
         <div class="s-card">
-          <div class="s-card-title">Appearance</div>
-          <div class="s-row" style="opacity: 0.2;" aria-disabled="true">
+          <div class="s-card-title" data-i18n-key="appearance">Appearance</div>
+          <div class="s-row" style="opacity: 0.2;">
             <div class="s-row-info">
-              <div class="s-row-lbl">Language</div>
-              <div class="s-row-desc">Select your preferred language</div>
+              <div class="s-row-lbl" data-i18n-key="language">Language</div>
+              <div class="s-row-desc" data-i18n-key="select_pref_language">Select your preferred language</div>
             </div>
             <div class="s-ctrl">
-              <select id="languageSelect" disabled>
+              <select id="languageSelect">
                 <option value="en">English</option>
-                <option value="de">Deutsch</option>
+                <option value="nl">Dutch</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
+                <option value="sr">Српски</option>
                 <option value="ru">Русский</option>
                 <option value="zh">中文</option>
-                <option value="uk">Українська</option>
-                <option value="tr">Türkçe</option>
-                <option value="it">Italiano</option>
                 <option value="hi">हिन्दी</option>
+                <option value="la">Latin</option>
                 <option value="no">Norsk</option>
                 <option value="he">עברית</option>
               </select>
             </div>
           </div>
+            <a style="color: red;opacity: 0.6;margin: auto;display: flex;justify-content: center;"> Not ready yet! But you can partially translate</a>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Font family</div>
+              <div class="s-row-lbl" data-i18n-key="font_family">Font family</div>
             </div>
             <div class="s-ctrl">
               <select id="fontSel">
@@ -283,19 +276,19 @@
           </div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Font size</div>
-              <div class="s-row-desc">Base UI text size</div>
+              <div class="s-row-lbl" data-i18n-key="font_size">Font size</div>
+              <div class="s-row-desc" data-i18n-key="base_ui_text_size">Base UI text size</div>
             </div>
             <div class="s-ctrl">
               <input type="number" id="fontSzInput" value="15" min="11" max="22" style="width:70px"/>
-              <span class="unit">px</span>
+              <span class="unit"><span data-i18n-key="pixels">px</span></span>
             </div>
           </div>
           <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px">
-            <div class="s-row-lbl">Accent colors</div>
+            <div class="s-row-lbl" data-i18n-key="accent_colors">Accent colors</div>
             <div class="color-grid" style="width:100%;padding:0">
               <div class="color-block">
-                <div class="color-lbl">Primary</div>
+                <div class="color-lbl" data-i18n-key="primary">Primary</div>
                 <div class="color-row">
                   <div class="color-swatch" id="sw1" style="background:#3b9eff"></div>
                   <input type="color" id="cp1" value="#3b9eff"/>
@@ -312,7 +305,7 @@
                 </div>
               </div>
               <div class="color-block">
-                <div class="color-lbl">Secondary</div>
+                <div class="color-lbl" data-i18n-key="secondary">Secondary</div>
                 <div class="color-row">
                   <div class="color-swatch" id="sw2" style="background:#2dd4a0"></div>
                   <input type="color" id="cp2" value="#2dd4a0"/>
@@ -333,75 +326,75 @@
         </div>
 
         <div class="s-card">
-          <div class="s-card-title">Data</div>
+          <div class="s-card-title" data-i18n-key="data">Data</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Export history</div>
-              <div class="s-row-desc">Full JSON backup of all history + time data</div>
+              <div class="s-row-lbl" data-i18n-key="export_history">Export history</div>
+              <div class="s-row-desc" data-i18n-key="full_json_backup">Full JSON backup of all history + time data</div>
             </div>
             <div class="s-ctrl">
-              <button class="action-btn" id="exportDataBtn">⬇ Export JSON</button>
+              <button class="action-btn" id="exportDataBtn">⬇ <span data-i18n-key="export_json">Export JSON</span></button>
             </div>
           </div>
           <div class="s-row" style="border-top:1px solid var(--border)">
             <div class="s-row-info">
-              <div class="s-row-lbl">Import history</div>
-              <div class="s-row-desc">Merge entries from a previously exported JSON file</div>
+              <div class="s-row-lbl" data-i18n-key="import_history">Import history</div>
+              <div class="s-row-desc" data-i18n-key="merge_entries_json">Merge entries from a previously exported JSON file</div>
             </div>
             <div class="s-ctrl">
-              <button class="action-btn" id="importDataBtn">⬆ Import JSON</button>
+              <button class="action-btn" id="importDataBtn">⬆ <span data-i18n-key="import_json">Import JSON</span></button>
               <input type="file" id="importDataFile" accept=".json" style="display:none"/>
             </div>
           </div>
         </div>
 
         <div class="s-card">
-          <div class="s-card-title">Sessions</div>
+          <div class="s-card-title" data-i18n-key="sessions">Sessions</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Sessions to keep</div>
-              <div class="s-row-desc">How many past sessions are stored (1–20)</div>
+              <div class="s-row-lbl" data-i18n-key="sessions_to_keep">Sessions to keep</div>
+              <div class="s-row-desc" data-i18n-key="how_many_past_sessions">How many past sessions are stored (1–20)</div>
             </div>
             <div class="s-ctrl">
               <input type="number" id="maxSessionsInput" value="4" min="1" max="20" style="width:70px"/>
-              <span class="unit">sessions</span>
+              <span class="unit" data-i18n-key="sessions">sessions</span>
             </div>
           </div>
           <div class="s-row" style="border-bottom:none">
             <div class="s-row-info">
-              <div class="s-row-lbl">Auto-save current session</div>
-              <div class="s-row-desc">Saves open tabs to <code style="font-size:0.78rem;background:var(--surf3);padding:1px 5px;border-radius:3px">extended-history-session.html</code> in your downloads folder. Set to 0 to disable.</div>
+              <div class="s-row-lbl" data-i18n-key="auto_save_session">Auto-save current session</div>
+              <div class="s-row-desc" data-i18n-key="save_open_tabs_to">Saves open tabs to <code style="font-size:0.78rem;background:var(--surf3);padding:1px 5px;border-radius:3px">extended-history-session.html</code> in your downloads folder. Set to 0 to disable.</div>
             </div>
             <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
               <div style="display:flex;align-items:center;gap:6px">
                 <input type="number" id="autoSaveInput" value="0" min="0" max="1440" step="1" style="width:70px"/>
-                <span class="unit">min</span>
+                <span class="unit" data-i18n-key="min">min</span>
               </div>
-              <button class="action-btn" id="testAutoSaveBtn" style="font-size:0.75rem;padding:4px 10px">▶ Save now</button>
+              <button class="action-btn" id="testAutoSaveBtn" style="font-size:0.75rem;padding:4px 10px">▶ <span data-i18n-key="save_now">Save now</span></button>
             </div>
           </div>
         </div>
 
-        <button class="action-btn primary" id="saveSettingsBtn" style="align-self:flex-start">Save Settings</button>
+        <button class="action-btn primary" id="saveSettingsBtn" style="align-self:flex-start" data-i18n-key="save_settings">Save Settings</button>
 
         <div class="s-card" style="border-color: color-mix(in srgb, var(--danger) 30%, transparent); background: color-mix(in srgb, var(--danger) 4%, transparent)">
-          <div class="s-card-title" style="color:var(--danger)">Danger Zone</div>
+          <div class="s-card-title" style="color:var(--danger)" data-i18n-key="danger_zone">Danger Zone</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Re-import Chrome history</div>
-              <div class="s-row-desc">Pull all available Chrome native history again (merges, no duplicates)</div>
+              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Chrome history</div>
+              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Chrome native history again (merges, no duplicates)</div>
             </div>
             <div class="s-ctrl">
-              <button class="action-btn" id="reBackfillBtn">↺ Re-import</button>
+              <button class="action-btn" id="reBackfillBtn">↺ <span data-i18n-key="reimport">Re-import</span></button>
             </div>
           </div>
           <div class="s-row" style="border-top:1px solid color-mix(in srgb,var(--danger) 20%,transparent);border-bottom:none">
             <div class="s-row-info">
-              <div class="s-row-lbl">Clear all history</div>
-              <div class="s-row-desc">Permanently deletes all stored history. Cannot be undone.</div>
+              <div class="s-row-lbl" data-i18n-key="clear_all_history">Clear all history</div>
+              <div class="s-row-desc" data-i18n-key="permanently_delete_all_stored">Permanently deletes all stored history. Cannot be undone.</div>
             </div>
             <div class="s-ctrl">
-              <button class="action-btn danger" id="clearAllBtn">🗑 Clear All</button>
+              <button class="action-btn danger" id="clearAllBtn">🗑 <span data-i18n-key="clear_all">Clear All</span></button>
             </div>
           </div>
         </div>
@@ -413,34 +406,37 @@
   <!-- ABOUT -->
   <div class="panel" id="panel-about">
     <div class="panel-scroll">
-      <div class="panel-heading" style="margin-bottom: 0px;">About</div>
+      <div class="panel-heading" style="margin-bottom: 0px;" data-i18n-key="about">About</div>
       <div style="max-width:560px;padding:8px 0 8px"> <br>
-        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:5px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:5px" data-i18n-key="created_by">
           Created by <strong style="color:var(--text)">Bane Kondić</strong>, cause he didn't like 90days history limit in Chromium.<br>
           This extension  <strong style="color:var(--text)">does not send data</strong> and is completely <strong style="color:var(--text)">open source</strong>,<br> code is available on creators Github profile
         </div>
         <a href="https://github.com/banekondic1996/" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s" 
+           data-i18n-key="github_profile">
           Github Profile
         </a>
       </div>
-      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;">Feedback</div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="feedback">Feedback</div>
       <div style="max-width:560px;padding:8px 0 8px"> <br>
-        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_discord">
           Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in chrome store)
         </div>
         <a href="https://discord.gg/D4na6fbM" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           data-i18n-key="discord_server">
           Discord server
         </a>
       </div>
-      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;">Rate this extension </div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;" data-i18n-key="rate_extension">Rate this extension </div>
       <div style="max-width:560px;padding:8px 0 8px">
-        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_chrome_webstore"> 
           Link to <strong style="color:var(--text)">Chrome Web Store</strong> extensions page
         </div>
         <a href="" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s">
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           data-i18n-key="click_to_rate">
           Click to Rate 
         </a>
       </div>
@@ -451,8 +447,8 @@
   <!-- IGNORE LIST -->
   <div class="panel" id="panel-ignorelist">
     <div class="panel-scroll">
-      <div class="panel-heading">🚫 Ignored Domains</div>
-      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
+      <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
+      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px" data-i18n-key="domains_added_will_not_be">
         Domains added here will not be saved in history. Existing entries will be removed automatically.
       </p>
       
@@ -460,45 +456,45 @@
         <input type="text" id="ignorePatternInput" 
                placeholder="example.com"
                spellcheck="false">
-        <button id="addIgnoreBtn">Add Pattern</button>
+        <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
       </div>
       
       <div class="pattern-guide-toggle">
-        <button id="patternGuideToggle">▼ URL Pattern Guide</button>
+        <button id="patternGuideToggle">▼ <span data-i18n-key="pattern_guide">Pattern Guide</span></button>
       </div>
       
       <div id="patternGuide" class="pattern-guide" style="display:none">
         <table>
           <tr>
-            <td><strong>Basic domain</strong></td>
-            <td><code>example.com</code></td>
-            <td>Blocks all of example.com</td>
+            <td><strong><span data-i18n-key="basic_domain">Basic domain</span></strong></td>
+            <td><code><span data-i18n-key="example_com_1">example.com</span></code></td>
+            <td><span data-i18n-key="block_all_example_1">Blocks all of example.com</span></td>
           </tr>
           <tr>
-            <td><strong>All subdomains</strong></td>
-            <td><code>*.example.com</code></td>
-            <td>Blocks blog.example.com, shop.example.com, etc.</td>
+            <td><strong><span data-i18n-key="all_subdomains">All subdomains</span></strong></td>
+            <td><code><span data-i18n-key="example_com_2">*.example.com</span></code></td>
+            <td><span data-i18n-key="block_all_example_2">Blocks blog.example.com, shop.example.com, etc.</span></td>
           </tr>
           <tr>
-            <td><strong>Specific subdomain</strong></td>
-            <td><code>blog.example.com</code></td>
-            <td>Only blocks blog.example.com</td>
+            <td><strong><span data-i18n-key="specific_subdomain">Specific subdomain</span></strong></td>
+            <td><code><span data-i18n-key="example_com_3">blog.example.com</span></code></td>
+            <td><span data-i18n-key="block_all_example_3">Only blocks blog.example.com</span></td>
           </tr>
           <tr>
-            <td><strong>Specific path</strong></td>
-            <td><code>example.com/private</code></td>
-            <td>Only blocks URLs under /private</td>
+            <td><strong><span data-i18n-key="specific_path">Specific path</span></strong></td>
+            <td><code><span data-i18n-key="example_com_4">example.com/private</span></code></td>
+            <td><span data-i18n-key="block_all_example_4">Only blocks URLs under /private</span></td>
           </tr>
           <tr>
-            <td><strong>Specific file</strong></td>
-            <td><code>example.com/file.html</code></td>
-            <td>Only blocks that specific file</td>
+            <td><strong><span data-i18n-key="specific_file">Specific file</span></strong></td>
+            <td><code><span data-i18n-key="example_com_5">example.com/file.html</span></code></td>
+            <td><span data-i18n-key="block_all_example_5">Only blocks that specific file</span></td>
           </tr>
         </table>
       </div>
       
       <div id="ignoreList" class="ignore-list">
-        <div class="empty-msg">No patterns added yet</div>
+        <div class="empty-msg" data-i18n-key="no_patterns_added">No patterns added yet</div>
       </div>
     </div>
   </div>
@@ -510,53 +506,49 @@
 
 <!-- Context menu -->
 <div id="ctxMenu" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:200px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
-  <div class="ctx-item" id="ctx-open-tab">↗ Open in new tab</div>
-  <div class="ctx-item" id="ctx-open-incognito">🕵 Open in incognito</div>
+  <div class="ctx-item" id="ctx-open-tab">↗ <span data-i18n-key="open_in_new_tab">Open in new tab</span></div>
+  <div class="ctx-item" id="ctx-open-incognito">🕵 <span data-i18n-key="open_in_incognito">Open in incognito</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" id="ctx-copy-url">⎘ Copy URL</div>
-  <div class="ctx-item" id="ctx-copy-title">📋 Copy title</div>
+  <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
+  <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
-  <div class="ctx-item danger" id="ctx-delete">✕ Delete from history</div>
+  <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
 </div>
-
-
-<script src="history.js"></script>
 
 <!-- Bookmark folder context menu -->
 <div id="bmFolderCtx" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:190px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
-  <div class="ctx-item" id="bmCtxNewFolder">📁 New subfolder</div>
-  <div class="ctx-item" id="bmCtxRename">✏ Rename folder</div>
+  <div class="ctx-item" id="bmCtxNewFolder">📁 <span data-i18n-key="new_subfolder">New subfolder</span></div>
+  <div class="ctx-item" id="bmCtxRename">✏ <span data-i18n-key="rename_folder">Rename folder</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item danger" id="bmCtxDelete">✕ Delete folder</div>
+  <div class="ctx-item danger" id="bmCtxDelete">✕ <span data-i18n-key="delete_folder">Delete folder</span></div>
 </div>
 
 <!-- Delete History Modal -->
 <div class="modal-backdrop" id="deleteHistoryModal">
   <div class="modal-box">
-    <div class="modal-title">🗑 Delete History</div>
-    <div class="modal-sub">Choose a time range to delete. This will remove entries from both this extension and Chrome's native history.</div>
+    <div class="modal-title">🗑 <span data-i18n-key="delete_history">Delete History</span></div>
+    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Chrome's native history.</div>
     <div class="dh-range-grid" id="dhRangeGrid">
-      <button class="dh-range-btn" data-range="1h">Last 1 hour</button>
-      <button class="dh-range-btn" data-range="24h">Last 24 hours</button>
-      <button class="dh-range-btn" data-range="7d">Last 7 days</button>
-      <button class="dh-range-btn" data-range="30d">Last 30 days (month)</button>
-      <button class="dh-range-btn" data-range="5mo">Last 5 months</button>
-      <button class="dh-range-btn" data-range="all">All time</button>
+      <button class="dh-range-btn" data-range="1h" data-i18n-key="last_1_hour">Last 1 hour</button>
+      <button class="dh-range-btn" data-range="24h" data-i18n-key="last_24_hours">Last 24 hours</button>
+      <button class="dh-range-btn" data-range="7d" data-i18n-key="last_7_days">Last 7 days</button>
+      <button class="dh-range-btn" data-range="30d" data-i18n-key="last_30_days">Last 30 days (month)</button>
+      <button class="dh-range-btn" data-range="5mo" data-i18n-key="last_5_months">Last 5 months</button>
+      <button class="dh-range-btn" data-range="all" data-i18n-key="all_time">All time</button>
     </div>
     <div class="dh-options">
-      <label class="dh-option"><input type="checkbox" id="dhCookies"/> Clear cookies &amp; local storage</label>
-      <label class="dh-option"><input type="checkbox" id="dhCache"/> Clear cache</label>
+      <label class="dh-option"><input type="checkbox" id="dhCookies"/> <span data-i18n-key="clear_cookies_local_storage">Clear cookies &amp; local storage</span></label>
+      <label class="dh-option"><input type="checkbox" id="dhCache"/> <span data-i18n-key="clear_cache">Clear cache</span></label>
     </div>
     <div id="dhConfirmWarn" style="display:none;background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);border-radius:8px;padding:9px 13px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;line-height:1.5"></div>
     <div class="dh-actions">
-      <button class="dh-cancel" id="dhCancelBtn">Cancel</button>
-      <button class="dh-confirm" id="dhConfirmBtn" disabled>Delete</button>
+      <button class="dh-cancel" id="dhCancelBtn" data-i18n-key="cancel">Cancel</button>
+      <button class="dh-confirm" id="dhConfirmBtn" disabled data-i18n-key="delete">Delete</button>
     </div>
   </div>
 </div>
-
-<script src="translations.js"></script>
 <script src="history.js"></script>
 <script src="ignore-list.js"></script>
+<script src="ui-translate.js"></script>
 </body>
 </html>
