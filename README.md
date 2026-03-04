@@ -22,6 +22,8 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Upload to store
 -Fix translations
 -Fix ignore list speed
+-When searching something, add context menu for item to see all searches for that day
+-Add option to turn on/off ignore list filters
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/2d4a3445-28cb-40f6-9343-7237dee172dc" />
