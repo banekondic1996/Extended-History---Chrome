@@ -1,5 +1,5 @@
 /**
- * ignore-list.js - Ignore List UI functionality
+ * ignore-list.js - Ignore List UI functionality with enable/disable toggle
  */
 
 // Helper function for sending messages to background
@@ -26,8 +26,15 @@ function showToast(msg, type = 'ok') {
 async function loadIgnoreList() {
   //console.log('[IgnoreList] Loading ignore list...');
   try {
-    const { list } = await send('GET_IGNORE_LIST');
-    //console.log('[IgnoreList] Loaded patterns:', list);
+    const { list, enabled } = await send('GET_IGNORE_LIST');
+    //console.log('[IgnoreList] Loaded patterns:', list, 'Enabled:', enabled);
+    
+    // Update toggle state
+    const toggle = document.getElementById('ignoreListToggle');
+    if (toggle) {
+      toggle.checked = enabled !== false; // Default to true if not set
+    }
+    
     const container = document.getElementById('ignoreList');
     
     if (!container) {
@@ -99,6 +106,41 @@ async function addIgnorePattern() {
   }
 }
 
+// ══ TOGGLE IGNORE LIST ══════════════════════════════════════════════════════
+async function toggleIgnoreList() {
+  const toggle = document.getElementById('ignoreListToggle');
+  if (!toggle) {
+    console.error('[IgnoreList] Toggle #ignoreListToggle not found!');
+    return;
+  }
+  
+  const enabled = toggle.checked;
+  //console.log('[IgnoreList] Toggling ignore list to:', enabled);
+  
+  try {
+    const result = await send('TOGGLE_IGNORE_LIST');
+    const statusText = result.enabled ? 'enabled' : 'disabled';
+    showToast(`Ignore list ${statusText}`, 'ok');
+    
+    // If just enabled, clean history immediately
+    if (result.enabled) {
+      showToast('Cleaning ignored URLs from history...', 'ok');
+      const cleanResult = await send('CLEAN_IGNORED_HISTORY');
+      const count = cleanResult.removed || 0;
+      if (count > 0) {
+        showToast(`Removed ${count} ignored URL${count === 1 ? '' : 's'} from history`, 'ok');
+      } else {
+        showToast('No ignored URLs found in history', 'ok');
+      }
+    }
+  } catch (err) {
+    console.error('[IgnoreList] Toggle failed:', err);
+    showToast('Error: ' + err.message, 'err');
+    // Revert toggle state on error
+    toggle.checked = !enabled;
+  }
+}
+
 // ══ TOGGLE PATTERN GUIDE ════════════════════════════════════════════════════
 function togglePatternGuide() {
   const guide = document.getElementById('patternGuide');
@@ -145,12 +187,22 @@ if (document.readyState === 'loading') {
 
 function initIgnoreList() {
   //console.log('[IgnoreList] Initializing event listeners...');
+  
   // Add pattern button
   const addBtn = document.getElementById('addIgnoreBtn');
   if (addBtn) {
     addBtn.addEventListener('click', addIgnorePattern);
   } else {
     console.warn('[IgnoreList] Add button #addIgnoreBtn not found');
+  }
+  
+  // Toggle switch
+  const toggle = document.getElementById('ignoreListToggle');
+  if (toggle) {
+    toggle.addEventListener('change', toggleIgnoreList);
+    //console.log('[IgnoreList] Toggle switch listener attached');
+  } else {
+    console.warn('[IgnoreList] Toggle #ignoreListToggle not found');
   }
   
   // Pattern guide toggle
@@ -202,6 +254,7 @@ function initIgnoreList() {
 window.IgnoreList = {
   load: loadIgnoreList,
   add: addIgnorePattern,
+  toggle: toggleIgnoreList,
   toggleGuide: togglePatternGuide,
   open: openIgnorePanel,
   close: closeIgnorePanel

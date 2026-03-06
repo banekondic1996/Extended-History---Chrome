@@ -1083,3 +1083,12 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 span {
   pointer-events: none;
 }
+.ignore-toggle-wrapper{
+    display: flex;
+    padding: 10px;
+    margin-bottom: 10px;
+    place-items: center;
+}
+.ignore-toggle-label{
+    margin-left: 20px;
+}

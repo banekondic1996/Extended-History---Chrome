@@ -11,6 +11,7 @@ const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
+const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -22,68 +23,169 @@ const DEFAULT_SETTINGS = {
   fontSize:      15,
   theme:         'dark',
   language:      'en', // Default language
+  ignoreListEnabled: true, // NEW: Toggle for ignore list
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function todayKey() { return new Date().toLocaleDateString('en-CA'); }
 function domainOf(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function isTrackable(url) {
   if (!url) return false;
   return !['chrome://','chrome-extension://','about:','data:','javascript:','moz-extension://','edge://','brave://'].some(p => url.startsWith(p));
 }
 
 // ── Ignore List ──────────────────────────────────────────────────────────────
+function normalizeIgnorePattern(pattern) {
+  if (typeof pattern !== 'string') return '';
+  let out = pattern.trim();
+  if (!out) return '';
+  out = out.replace(/^['"`]+|['"`]+$/g, ''); // allow users to paste quoted values
+  out = out.replace(/^https?:\/\//i, '');
+  out = out.replace(/\.+$/g, '');
+  out = out.trim();
+  if (!out) return '';
+
+  const slashIdx = out.indexOf('/');
+  const hostPart = (slashIdx === -1 ? out : out.slice(0, slashIdx)).toLowerCase();
+  const pathPart = slashIdx === -1 ? '' : out.slice(slashIdx).replace(/\/+$/, '');
+  if (!hostPart) return '';
+  return hostPart + pathPart;
+}
+
+function parseIgnorePattern(pattern) {
+  const cleanPattern = normalizeIgnorePattern(pattern);
+  if (!cleanPattern) return null;
+
+  const slashIdx = cleanPattern.indexOf('/');
+  const hostPart = slashIdx === -1 ? cleanPattern : cleanPattern.slice(0, slashIdx);
+  const pathPart = slashIdx === -1 ? '' : cleanPattern.slice(slashIdx);
+  const wildcard = hostPart.startsWith('*.');
+  const host = wildcard ? hostPart.slice(2) : hostPart;
+  if (!host) return null;
+
+  return { host, path: pathPart, wildcard };
+}
+
+function stripWww(host) {
+  return String(host || '').toLowerCase().replace(/\.+$/, '').replace(/^www\./, '');
+}
+
+function hostMatchesPattern(urlHost, patternHost, allowSubdomains = true) {
+  const u = stripWww(urlHost);
+  const p = stripWww(patternHost);
+  if (!u || !p) return false;
+  if (u === p) return true;
+  return allowSubdomains ? u.endsWith('.' + p) : false;
+}
+
 async function getIgnoreList() {
   const r = await chrome.storage.local.get(IGNORE_LIST_KEY);
-  return r[IGNORE_LIST_KEY] || [];
+  const list = r[IGNORE_LIST_KEY] || [];
+  return list
+    .map(normalizeIgnorePattern)
+    .filter(Boolean);
 }
 
 async function setIgnoreList(list) {
-  await chrome.storage.local.set({ [IGNORE_LIST_KEY]: list });
+  const seen = new Set();
+  const normalized = [];
+  for (const pattern of (list || [])) {
+    const clean = normalizeIgnorePattern(pattern);
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    normalized.push(clean);
+  }
+  await chrome.storage.local.set({ [IGNORE_LIST_KEY]: normalized });
 }
-
+// Check if ignore list is enabled
+async function isIgnoreListEnabled() {
+  const r = await chrome.storage.local.get(SETTINGS_KEY);
+  const settings = r[SETTINGS_KEY] || DEFAULT_SETTINGS;
+  return settings.ignoreListEnabled !== false; // Default to true if not set
+}
 // Check if URL matches any ignore pattern
 function matchesIgnorePattern(url, pattern) {
   try {
+    const parsed = parseIgnorePattern(pattern);
+    if (!parsed) return false;
+
     const urlObj = new URL(url);
     const urlHost = urlObj.hostname;
-    const urlPath = urlObj.pathname + urlObj.search;
-    const fullUrl = urlHost + urlPath;
-    
-    // Remove protocol if present in pattern
-    const cleanPattern = pattern.replace(/^https?:\/\//, '');
-    
-    // Pattern types:
-    // 1. *.example.com - all subdomains
-    if (cleanPattern.startsWith('*.')) {
-      const domain = cleanPattern.slice(2);
-      return urlHost === domain || urlHost.endsWith('.' + domain);
+    const allowSubdomains = parsed.wildcard || !parsed.path;
+    if (!hostMatchesPattern(urlHost, parsed.host, allowSubdomains)) return false;
+
+    if (parsed.path) {
+      const urlPath = urlObj.pathname + urlObj.search;
+      return urlPath.startsWith(parsed.path);
     }
-    
-    // 2. example.com/path - specific path
-    if (cleanPattern.includes('/')) {
-      return fullUrl.startsWith(cleanPattern);
-    }
-    
-    // 3. example.com - exact domain and all its paths
-    return urlHost === cleanPattern || urlHost.endsWith('.' + cleanPattern);
+    return true;
   } catch {
     return false;
   }
 }
 
 async function shouldIgnoreUrl(url) {
+  const enabled = await isIgnoreListEnabled();
+  if (!enabled) return false;
   const ignoreList = await getIgnoreList();
   return ignoreList.some(pattern => matchesIgnorePattern(url, pattern));
 }
 
+async function addIgnorePattern(pattern) {
+  const clean = normalizeIgnorePattern(pattern);
+  if (!clean) return { success: false, error: 'Invalid pattern' };
+
+  const list = await getIgnoreList();
+  if (list.includes(clean)) return { success: false, error: 'Pattern already exists' };
+
+  list.push(clean);
+  await setIgnoreList(list);
+  return { success: true, pattern: clean };
+}
+
+async function deleteUrlFromNativeHistory(url) {
+  const urls = [...new Set([url, normalizeUrl(url)])].filter(Boolean);
+  for (const target of urls) {
+    try { await chrome.history.deleteUrl({ url: target }); } catch {}
+  }
+}
+
+// Ignore cleanup needs retries because some sites commit through redirect chains
+// and native history records may appear slightly after onCommitted.
+async function cleanupIgnoredUrlFromNativeHistory(url) {
+  const host = domainOf(url);
+  const passes = [0, 250, 1200];
+  for (const waitMs of passes) {
+    if (waitMs) await sleep(waitMs);
+    await deleteUrlFromNativeHistory(url);
+  }
+
+  if (!host) return;
+  try {
+    const ignoreList = await getIgnoreList();
+    const recent = await chrome.history.search({
+      text: host,
+      startTime: Date.now() - 10 * 60 * 1000,
+      maxResults: 250,
+    });
+
+    for (const item of recent) {
+      if (!item.url || !isTrackable(item.url)) continue;
+      if (!ignoreList.some(pattern => matchesIgnorePattern(item.url, pattern))) continue;
+      await deleteUrlFromNativeHistory(item.url);
+    }
+  } catch {}
+}
+
 // Clean all ignored URLs from history
 async function cleanIgnoredFromHistory() {
+  const enabled = await isIgnoreListEnabled();
+  if (!enabled) return { removed: 0 };
   const ignoreList = await getIgnoreList();
-  if (!ignoreList.length) return;
+  if (!ignoreList.length) return { removed: 0 };
   
   let entries = await getAll();
-  const before = entries.length;
   
   // Filter out ignored entries
   const toKeep = [];
@@ -482,8 +584,46 @@ chrome.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
+function ensureContextMenus() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_IGNORE_DOMAIN_ID,
+      title: "Don't keep this domain in history",
+      contexts: ['page', 'frame'],
+      documentUrlPatterns: ['http://*/*', 'https://*/*'],
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('[EH] context menu create failed:', chrome.runtime.lastError.message);
+      }
+    });
+  });
+}
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== CONTEXT_MENU_IGNORE_DOMAIN_ID) return;
+
+  const pageUrl = info.pageUrl || info.frameUrl || tab?.url || '';
+  if (!isTrackable(pageUrl)) return;
+
+  const domain = domainOf(pageUrl);
+  if (!domain) return;
+
+  const result = await addIgnorePattern(domain);
+  if (!result.success && result.error !== 'Pattern already exists') {
+    console.warn('[EH] Failed to add ignore pattern from context menu:', result.error);
+    return;
+  }
+
+  const enabled = await isIgnoreListEnabled();
+  if (enabled) {
+    await cleanIgnoredFromHistory();
+    await cleanupIgnoredUrlFromNativeHistory(pageUrl);
+  }
+});
+
 // ── Startup / Install ────────────────────────────────────────────────────────
 chrome.runtime.onStartup.addListener(async () => {
+  ensureContextMenus();
   await migrateStorage();
   await finishSession();
   await beginSession();
@@ -491,6 +631,7 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  ensureContextMenus();
   await migrateStorage();
   await beginSession();
   await resumeActiveTab();
@@ -520,6 +661,20 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 async function getAll() { const r=await chrome.storage.local.get(HISTORY_KEY); return r[HISTORY_KEY]||[]; }
 async function setAll(e) { await chrome.storage.local.set({ [HISTORY_KEY]:e }); }
 async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
+async function saveSettings(newSettings) {
+  const current = await getSettings();
+  const merged = { ...current, ...newSettings };
+  await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
+  
+  // NEW: If ignore list was just enabled/disabled, clean history immediately if enabled
+  if (newSettings.hasOwnProperty('ignoreListEnabled')) {
+    if (newSettings.ignoreListEnabled) {
+      // Just enabled - clean ignored URLs from history
+      await cleanIgnoredFromHistory();
+    }
+    // If disabled, we don't need to do anything - URLs will just be allowed
+  }
+}
 function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toString().replace(/\/$/,''); } catch { return url; } }
 
 async function recordVisit(url, title, tabId) {
@@ -543,12 +698,23 @@ chrome.webNavigation.onCommitted.addListener(async details => {
   if (details.frameId!==0||!isTrackable(details.url)) return;
   if (['auto_subframe','manual_subframe'].includes(details.transitionType)) return;
   let title='';
+  const url = details.url;
+  // Check ignore list FIRST - before Chrome commits to history
+  if (await shouldIgnoreUrl(url)) {
+    await cleanupIgnoredUrlFromNativeHistory(url);
+    return; // Don't record in extension
+  }
   try { const tab=await chrome.tabs.get(details.tabId); title=tab?.title||''; } catch {}
   await recordVisit(details.url, title, details.tabId);
 });
 
 chrome.webNavigation.onCompleted.addListener(async details => {
   if (details.frameId!==0||!isTrackable(details.url)) return;
+   // Skip if ignored (shouldn't be in our storage, but double-check)
+  if (await shouldIgnoreUrl(details.url)) {
+    await cleanupIgnoredUrlFromNativeHistory(details.url);
+    return;
+  }
   try {
     const tab=await chrome.tabs.get(details.tabId); if (!tab?.title) return;
     const entries=await getAll(); const norm=normalizeUrl(details.url);
@@ -809,33 +975,39 @@ async function handle(msg) {
     }
     case 'OPEN_INCOGNITO': { try{await chrome.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
     case 'GET_IGNORE_LIST': {
-      return { list: await getIgnoreList() };
+      return { list: await getIgnoreList(), enabled: await isIgnoreListEnabled() };
     }
     case 'ADD_IGNORE_PATTERN': {
-      const { pattern } = msg;
-      if (!pattern || typeof pattern !== 'string') return { success: false, error: 'Invalid pattern' };
-      const list = await getIgnoreList();
-      if (list.includes(pattern)) return { success: false, error: 'Pattern already exists' };
-      list.push(pattern);
-      await setIgnoreList(list);
+      const result = await addIgnorePattern(msg.pattern);
+      if (!result.success) return result;
       // Clean history in background (don't wait for it)
-      cleanIgnoredFromHistory().then(() => {
-        //console.log('[EH] Cleaned ignored URLs from history for pattern:', pattern);
-      }).catch(err => {
-        console.error('[EH] Error cleaning ignored history:', err);
-      });
-      return { success: true };
+      const enabled = await isIgnoreListEnabled();
+      if (enabled) {
+        cleanIgnoredFromHistory().then(() => {
+          //console.log('[EH] Cleaned ignored URLs from history for pattern:', result.pattern);
+        }).catch(err => {
+          console.error('[EH] Error cleaning ignored history:', err);
+        });
+      }
+      return result;
     }
     case 'REMOVE_IGNORE_PATTERN': {
       const { pattern } = msg;
+      const cleanPattern = normalizeIgnorePattern(pattern);
       let list = await getIgnoreList();
-      list = list.filter(p => p !== pattern);
+      list = list.filter(p => p !== cleanPattern);
       await setIgnoreList(list);
       return { success: true };
     }
     case 'CLEAN_IGNORED_HISTORY': {
-      await cleanIgnoredFromHistory();
-      return { success: true };
+      const res = await cleanIgnoredFromHistory();
+      return { success: true, removed: res.removed || 0 };
+    }
+    case 'TOGGLE_IGNORE_LIST': {
+      const settings = await getSettings();
+      const newEnabled = !settings.ignoreListEnabled;
+      await saveSettings({ ignoreListEnabled: newEnabled });
+      return { success: true, enabled: newEnabled };
     }
     case 'FLUSH_TIME': {
       // Commit whatever is running (if anything), then restart
