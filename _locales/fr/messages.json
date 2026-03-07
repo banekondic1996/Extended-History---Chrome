@@ -10,6 +10,34 @@
   "ph_search_history": { "message": "Rechercher dans l’historique…" },
   "ph_search_bookmarks": { "message": "Rechercher dans les favoris…" },
 
+  "most_visited": {"message": "Les plus visités"},
+  "tabs": {"message": "onglets"},
+  "since": {"message": "depuis"},
+  "most_visited_URLS_all_time": {"message": "URLs les plus visitées — Depuis toujours"},
+  "urls": {"message": "URLs"},
+  "domains": {"message": "Domaines"},
+  "enable_ignore": {"message": "Activer la liste d’ignorés"},
+  "filter_urls": {"message": "Filtrer les URLs correspondant aux modèles ci-dessous"},
+
+   "confirm_delete_all_time": {
+    "message": "⚠️ Confirmer la suppression des résultats pour toute la période\n\nCela supprimera $COUNT$ résultats correspondants de tout votre historique.\n\nÊtes-vous sûr ?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "Supprimer $COUNT$ résultats correspondants ?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "$COUNT$ éléments supprimés",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "today": { "message": "Aujourd’hui" },
+  "storage": { "message": "Stockage" },
+  "total_visits": { "message": "Total des visites" },
+  "restore": { "message": "Restaurer" },
+  "most_visited_URLS": { "message": "URLs les plus visitées" },
+
   "browse": { "message": "Parcourir" },
   "history": { "message": "Historique" },
   "sessions": { "message": "Sessions" },

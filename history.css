@@ -27,8 +27,8 @@
 }
 
 [data-theme="light"] {
-  --bg:      #f5f5f7;
-  --surf0:   #ffffff;
+  --bg:      #ffffff;
+  --surf0:   #f8f8f8;
   --surf1:   #f9f9fb;
   --surf2:   #f0f0f4;
   --surf3:   #e8e8ee;
@@ -53,25 +53,15 @@ body {
   overflow: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   position: relative;
 }
+
+[data-theme="light"] body { -webkit-font-smoothing: subpixel-antialiased; -moz-osx-font-smoothing: auto; }
 
 /* Background tint overlay */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-tint, transparent);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.layout {
-  position: relative;
-  z-index: 1;
+[data-bg-tint="true"] body {
+  background-color: var(--bg-tint, var(--bg));
 }
 
 button { cursor: pointer; font-family: inherit; font-size: inherit; }
@@ -706,6 +696,39 @@ input[type="date"]:focus { border-color: var(--accent); }
 .s-row-lbl  { font-size: 0.9rem; font-weight: 500; color: var(--text); }
 .s-row-desc { font-size: 0.74rem; color: var(--text3); margin-top: 2px; line-height: 1.4; }
 .s-ctrl     { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ── Settings toggle: accent-colored square checkbox ───────────────────────── */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.toggle-switch input {
+  /* appearance: none;
+  -webkit-appearance: none; */
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  margin: 0;
+}
+.toggle-switch input:checked {
+  /* border-color: var(--accent);
+  box-shadow: inset 0 0 1px 2px var(--bg), inset 0 0 0 10px var(--accent); */
+}
+.toggle-switch input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.toggle-slider { display: none; }
 
 input[type="number"] {
   background: var(--surf1);

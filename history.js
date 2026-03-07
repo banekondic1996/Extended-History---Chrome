@@ -1569,6 +1569,14 @@ function populateSettings(s) {
     if (bgTintOpacityVal) bgTintOpacityVal.textContent = bgTintOpacity.value + '%';
   }
   updateBgTintPreview();
+
+  // Populate popup settings
+  const popupSearchToggle = document.getElementById('popupSearchToggle');
+  const popupTabsToggle   = document.getElementById('popupTabsToggle');
+  const popupHeightInput  = document.getElementById('popupHeightInput');
+  if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
+  if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
+  if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
 }
 
 function applyVisuals(s) {
@@ -1599,6 +1607,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const bgTintEnabled = document.getElementById('bgTintToggle')?.checked || false;
   const bgTintHue = parseInt(document.getElementById('bgTintHue')?.value || '220');
   const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
+  const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
+  const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
+  const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
@@ -1613,7 +1624,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         language: lang,
         bgTintEnabled,
         bgTintHue,
-        bgTintOpacity
+        bgTintOpacity,
+        popupShowSearch,
+        popupShowTabs,
+        popupHeight
       } 
     });
     _curSettings = r.settings;

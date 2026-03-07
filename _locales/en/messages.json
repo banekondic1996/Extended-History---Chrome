@@ -11,8 +11,33 @@
   "domain": { "message": "Domain" },
   "ph_search_history": { "message": "Search history..." },
   "ph_search_bookmarks": { "message": "Search bookmarks..." },
+  "most_visited": {"message": "Most Visited"},
+  "tabs": {"message": "tabs"},
+  "since": {"message": "since"},
+  "most_visited_URLS_all_time": {"message": "Most Visited URLs — All Time"},
+  "urls": {"message": "URLs"},
+  "domains": {"message": "Domains"},
+  "enable_ignore": {"message": "Enable Ignore List"},
+  "filter_urls": {"message": "Filter URLs matching patterns below"},
 
+  "confirm_delete_all_time": {
+    "message": "⚠️ Confirm deleting results for all time\n\nThis will delete all $COUNT$ matching results from your entire history.\n\nAre you sure?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "Delete all $COUNT$ matching results?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "Deleted $COUNT$ items",
+    "placeholders": { "count": { "content": "$1" } }
+  },
 
+  "storage": { "message": "Storage" },
+  "total_visits": { "message": "Total visits" },
+  "restore": { "message": "Restore" },
+  "most_visited_URLS": { "message": "Most visited URLs" },
+  
 
   "browse": { "message": "Browse" },
   "history": { "message": "History" },

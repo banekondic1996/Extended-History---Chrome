@@ -10,6 +10,17 @@
   "ph_search_history": { "message": "इतिहास खोजें…" },
   "ph_search_bookmarks": { "message": "बुकमार्क खोजें…" },
 
+  "most_visited": {"message": "सबसे अधिक देखे गए"},
+  "tabs": {"message": "टैब"},
+  "since": {"message": "से"},
+  "most_visited_URLS_all_time": {"message": "सबसे अधिक देखे गए URL — पूरे समय"},
+  "urls": {"message": "URL"},
+  "domains": {"message": "डोमेन"},
+  "enable_ignore": {"message": "इग्नोर सूची सक्षम करें"},
+  "filter_urls": {"message": "नीचे दिए गए पैटर्न से मेल खाने वाले URL फ़िल्टर करें"},
+
+
+
   "browse": { "message": "ब्राउज़ करें" },
   "history": { "message": "इतिहास" },
   "sessions": { "message": "सत्र" },

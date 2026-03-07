@@ -10,6 +10,34 @@
   "ph_search_history": { "message": "Geschiedenis zoeken…" },
   "ph_search_bookmarks": { "message": "Bladwijzers zoeken…" },
 
+  "most_visited": {"message": "Meest bezocht"},
+  "tabs": {"message": "tabbladen"},
+  "since": {"message": "sinds"},
+  "most_visited_URLS_all_time": {"message": "Meest bezochte URL's — Altijd"},
+  "urls": {"message": "URL's"},
+  "domains": {"message": "Domeinen"},
+  "enable_ignore": {"message": "Negeerlijst inschakelen"},
+  "filter_urls": {"message": "Filter URL's die overeenkomen met onderstaande patronen"},
+  "confirm_delete_all_time": {
+    "message": "⚠️ Bevestig verwijderen van resultaten voor alle tijd\n\nDit zal $COUNT$ overeenkomende resultaten uit je volledige geschiedenis verwijderen.\n\nWeet je het zeker?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "$COUNT$ overeenkomende resultaten verwijderen?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "$COUNT$ items verwijderd",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "today": { "message": "Vandaag" },
+  "storage": { "message": "Opslag" },
+  "total_visits": { "message": "Totaal bezoeken" },
+  "restore": { "message": "Herstellen" },
+  "most_visited_URLS": { "message": "Meest bezochte URL's" },
+
+
   "browse": { "message": "Bladeren" },
   "history": { "message": "Geschiedenis" },
   "sessions": { "message": "Sessies" },

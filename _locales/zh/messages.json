@@ -10,6 +10,33 @@
   "ph_search_history": { "message": "搜索历史…" },
   "ph_search_bookmarks": { "message": "搜索书签…" },
 
+  "most_visited": {"message": "最常访问"},
+  "tabs": {"message": "标签页"},
+  "since": {"message": "自从"},
+  "most_visited_URLS_all_time": {"message": "最常访问的 URL — 全部时间"},
+  "urls": {"message": "URL"},
+  "domains": {"message": "域名"},
+  "enable_ignore": {"message": "启用忽略列表"},
+  "filter_urls": {"message": "过滤匹配以下模式的 URL"},
+
+   "confirm_delete_all_time": {
+    "message": "⚠️ 确认删除所有时间的结果\n\n这将从你的全部历史记录中删除 $COUNT$ 个匹配结果。\n\n确定吗？",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "删除 $COUNT$ 个匹配结果？",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "已删除 $COUNT$ 个项目",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "today": { "message": "今天" },
+  "storage": { "message": "存储" },
+  "total_visits": { "message": "总访问次数" },
+  "restore": { "message": "恢复" },
+  "most_visited_URLS": { "message": "访问最多的 URL" },
   "browse": { "message": "浏览" },
   "history": { "message": "历史" },
   "sessions": { "message": "会话" },

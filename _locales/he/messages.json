@@ -9,6 +9,17 @@
   "domain": { "message": "דומיין" },
   "ph_search_history": { "message": "חפש בהיסטוריה…" },
   "ph_search_bookmarks": { "message": "חפש בסימניות…" },
+  
+  "most_visited": {"message": "הנצפים ביותר"},
+  "tabs": {"message": "כרטיסיות"},
+  "since": {"message": "מאז"},
+  "most_visited_URLS_all_time": {"message": "כתובות ה-URL הנצפות ביותר — כל הזמן"},
+  "urls": {"message": "כתובות URL"},
+  "domains": {"message": "דומיינים"},
+  "enable_ignore": {"message": "הפעל רשימת התעלמות"},
+  "filter_urls": {"message": "סנן כתובות URL לפי התבניות למטה"},
+
+
 
   "browse": { "message": "עיון" },
   "history": { "message": "היסטוריה" },

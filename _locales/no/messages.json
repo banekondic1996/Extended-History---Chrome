@@ -9,6 +9,34 @@
   "domain": { "message": "Domene" },
   "ph_search_history": { "message": "Søk i historikk…" },
   "ph_search_bookmarks": { "message": "Søk i bokmerker…" },
+  "most_visited": {"message": "Mest besøkt"},
+
+  "tabs": {"message": "faner"},
+  "since": {"message": "siden"},
+  "most_visited_URLS_all_time": {"message": "Mest besøkte URL-er — Hele tiden"},
+  "urls": {"message": "URL-er"},
+  "domains": {"message": "Domener"},
+  "enable_ignore": {"message": "Aktiver ignoreringsliste"},
+  "filter_urls": {"message": "Filtrer URL-er som matcher mønstrene nedenfor"},
+
+  "confirm_delete_all_time": {
+    "message": "⚠️ Bekreft sletting av resultater for hele perioden\n\nDette vil slette $COUNT$ samsvarende resultater fra hele historikken din.\n\nEr du sikker?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "Slette $COUNT$ samsvarende resultater?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "$COUNT$ elementer slettet",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "today": { "message": "I dag" },
+  "storage": { "message": "Lagring" },
+  "total_visits": { "message": "Totale besøk" },
+  "restore": { "message": "Gjenopprett" },
+  "most_visited_URLS": { "message": "Mest besøkte URL-er" },
 
   "browse": { "message": "Bla gjennom" },
   "history": { "message": "Historikk" },

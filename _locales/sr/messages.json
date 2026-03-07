@@ -1,5 +1,5 @@
 {
-  "ext_name": { "message": "Extended History" },
+  "ext_name": { "message": "Проширена историја" },
 
   "choose_a_time_range": { "message": "Изабери временски опсег за брисанје. Ово ће обрсати историју у Хрому и екстензији" },
   "all_fields": { "message": "Сва поља" },
@@ -9,7 +9,36 @@
   "ph_search_history": { "message": "Претражи историју" },
   "ph_search_bookmarks": { "message": "Претражи обележено" },
   "yesterday": { "message": "Јуче" },
+
+ "confirm_delete_all_time": {
+    "message": "⚠️ Потврдите брисање резултата за цео период\n\nОво ће обрисати $COUNT$ одговарајућих резултата из целе ваше историје.\n\nДа ли сте сигурни?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "Обрисати $COUNT$ одговарајућих резултата?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "Обрисано $COUNT$ ставки",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
   "today": { "message": "Данас" },
+  "storage": { "message": "Складиште" },
+  "total_visits": { "message": "Укупно посета" },
+  "restore": { "message": "Поврати" },
+  "most_visited_URLS": { "message": "Најпосећенији URL-ови" },
+ 
+
+  "most_visited": {"message": "Најпосећеније"},
+  "tabs": {"message": "картице"},
+  "since": {"message": "од"},
+  "urls": {"message": "URL-ови"},
+  "domains": {"message": "Домени"},
+  "enable_ignore": {"message": "Омогући листу игнорисања"},
+  "filter_urls": {"message": "Филтрирај URL-ове који одговарају обрасцима испод"},
+
+
 
   
   "last_1_hour": { "message": "Протеклих сат времена" },
@@ -34,7 +63,7 @@
   "bookmarks": { "message": "Обележивачи" },
   "system": { "message": "Систем" },
   "delete_history": { "message": "Обриши историју" },
-  "ignore_list": { "message": "Игнорисане странице" },
+  "ignore_list": { "message": "Игнорисани сајтови" },
   "settings": { "message": "Подешавања" },
   "more": { "message": "Више" },
   "light": { "message": "Светла" },
@@ -60,7 +89,7 @@
   "older_enteries_are_pruned": { "message": "Старији записи се аутоматски бришу" },
   "months": { "message": "месеци" },
   "year": { "message": "година" },
-  "years": { "message": "године" },
+  "years": { "message": "година" },
   "forever": { "message": "Заувек" },
   "appearance": { "message": "Изглед" },
   "language": { "message": "Језик" },
@@ -102,7 +131,7 @@
   "rate_extension": { "message": "Оцените екстензију" },
   "link_to_chrome_webstore": { "message": "Линк до Хром Веб Продавнице екстензија" },
   "click_to_rate": { "message": "Кликните да оцените" },
-  "ignored_domains": { "message": "Игнорисани домени" },
+  "ignored_domains": { "message": "Игнорисани сајтови" },
   "domains_added_will_not_be": { "message": "Домени додати овде неће бити сачувани у историји. Постојећи записи ће бити аутоматски обрисани." },
   "add_patern": { "message": "Додај шаблон" },
   "pattern_guide": { "message": "Водич за шаблоне" },

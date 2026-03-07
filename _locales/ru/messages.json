@@ -10,6 +10,33 @@
   "ph_search_history": { "message": "Поиск в истории…" },
   "ph_search_bookmarks": { "message": "Поиск в закладках…" },
 
+  "most_visited": {"message": "Самые посещаемые"},
+  "tabs": {"message": "вкладки"},
+  "since": {"message": "с"},
+  "most_visited_URLS_all_time": {"message": "Самые посещаемые URL — за всё время"},
+  "urls": {"message": "URL"},
+  "domains": {"message": "Домены"},
+  "enable_ignore": {"message": "Включить список игнорирования"},
+  "filter_urls": {"message": "Фильтровать URL по шаблонам ниже"},
+  "confirm_delete_all_time": {
+    "message": "⚠️ Подтвердите удаление результатов за всё время\n\nЭто удалит $COUNT$ совпадающих результатов из всей вашей истории.\n\nВы уверены?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "confirm_delete_filtered": {
+    "message": "Удалить $COUNT$ совпадающих результатов?",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleted_items": {
+    "message": "Удалено $COUNT$ элементов",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "today": { "message": "Сегодня" },
+  "storage": { "message": "Хранилище" },
+  "total_visits": { "message": "Всего посещений" },
+  "restore": { "message": "Восстановить" },
+  "most_visited_URLS": { "message": "Самые посещаемые URL" },
+
   "browse": { "message": "Просмотр" },
   "history": { "message": "История" },
   "sessions": { "message": "Сессии" },

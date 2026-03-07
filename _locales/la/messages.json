@@ -10,6 +10,17 @@
   "ph_search_history": { "message": "Quaerere in historia…" },
   "ph_search_bookmarks": { "message": "Quaerere in signis…" },
 
+  "most_visited": {"message": "Frequentissime Visitata"},
+  "tabs": {"message": "schedae"},
+  "since": {"message": "ab"},
+  "most_visited_URLS_all_time": {"message": "URL Frequentissime Visitata — Omne Tempus"},
+  "urls": {"message": "URL"},
+  "domains": {"message": "Dominii"},
+  "enable_ignore": {"message": "Indicem Ignorandum Activa"},
+  "filter_urls": {"message": "Filtra URL quae formis infra congruunt"},
+
+
+
   "browse": { "message": "Perlustrare" },
   "history": { "message": "Historia" },
   "sessions": { "message": "Sessiones" },
