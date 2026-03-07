@@ -16,8 +16,6 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do:**
 <pre>
--Add Most visited tab in insights, to display most visited pages/url and number of visits (filter by domain or url)
--Split popup into recent tab + recent history
 -Improve bookmarks moving speed within large folders and being able to move bookmark folders
 -Maybe remove lazy loading or improve scrolling for history
 -Store page even if page didn't load completely
