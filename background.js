@@ -15,7 +15,7 @@ const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
-  retentionDays: 3650,
+  retentionDays: 365,
   maxEntries:    2000000,
   accentColor:   '#3b9eff',
   accentColor2:  '#2dd4a0',
@@ -331,7 +331,7 @@ async function doAutoSaveSession() {
     : [];
   if (!openTabs.length) return;
 
-  const label    = 'Current Session – ' + new Date().toLocaleString();
+  const label    = chrome.i18n.getMessage("current_session") + ' – ' + new Date().toLocaleString();
   const htmlBody = buildSessionHtml(label, openTabs);
   const extPageUrl = chrome.runtime.getURL('history.html');
 
@@ -986,7 +986,7 @@ async function handle(msg) {
         cleanIgnoredFromHistory().then(() => {
           //console.log('[EH] Cleaned ignored URLs from history for pattern:', result.pattern);
         }).catch(err => {
-          console.error('[EH] Error cleaning ignored history:', err);
+          //console.error('[EH] Error cleaning ignored history:', err);
         });
       }
       return result;
@@ -1020,6 +1020,33 @@ async function handle(msg) {
     case 'CLEAR_TIME_DATA': {
       await chrome.storage.local.remove(TIME_KEY);
       return {success:true};
+    }
+        case 'GET_MOST_VISITED': {
+      const {viewType='url',period='all'}=msg;
+      const entries=await getAll();
+      const now=Date.now();
+      let cutoffTime=0;
+      if(period==='10') cutoffTime=now-10*86400000;
+      else if(period==='30') cutoffTime=now-30*86400000;
+      
+      const filtered=period==='all'?entries:entries.filter(e=>e.visitTime>=cutoffTime);
+      const counts={};
+      
+      for(const e of filtered){
+        let key;
+        if(viewType==='domain'){
+          try{key=new URL(e.url).hostname.replace(/^www\./,'');}catch{continue;}
+        }else{
+          key=e.url;
+        }
+        if(!counts[key]){
+          counts[key]={identifier:key,count:0,title:viewType==='url'?e.title:key};
+        }
+        counts[key].count++;
+      }
+      
+      const sorted=Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,50);
+      return {items:sorted};
     }
     default: return {error:`Unknown: ${msg.type}`};
   }

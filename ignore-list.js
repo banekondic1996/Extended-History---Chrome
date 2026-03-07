@@ -38,7 +38,7 @@ async function loadIgnoreList() {
     const container = document.getElementById('ignoreList');
     
     if (!container) {
-      console.error('[IgnoreList] Container #ignoreList not found!');
+      //console.error('[IgnoreList] Container #ignoreList not found!');
       return;
     }
     
@@ -74,7 +74,7 @@ async function loadIgnoreList() {
       container.appendChild(item);
     }
   } catch (err) {
-    console.error('[IgnoreList] Load failed:', err);
+    //console.error('[IgnoreList] Load failed:', err);
     showToast('Error loading ignore list: ' + err.message, 'err');
   }
 }
@@ -83,7 +83,7 @@ async function loadIgnoreList() {
 async function addIgnorePattern() {
   const input = document.getElementById('ignorePatternInput');
   if (!input) {
-    console.error('[IgnoreList] Input #ignorePatternInput not found!');
+    //console.error('[IgnoreList] Input #ignorePatternInput not found!');
     return;
   }
   
@@ -101,7 +101,7 @@ async function addIgnorePattern() {
     showToast(`Pattern added: ${pattern}`, 'ok');
     loadIgnoreList(); // Reload list
   } catch (err) {
-    console.error('[IgnoreList] Add failed:', err);
+    //console.error('[IgnoreList] Add failed:', err);
     showToast('Error: ' + err.message, 'err');
   }
 }
@@ -110,7 +110,7 @@ async function addIgnorePattern() {
 async function toggleIgnoreList() {
   const toggle = document.getElementById('ignoreListToggle');
   if (!toggle) {
-    console.error('[IgnoreList] Toggle #ignoreListToggle not found!');
+    //console.error('[IgnoreList] Toggle #ignoreListToggle not found!');
     return;
   }
   
@@ -134,7 +134,7 @@ async function toggleIgnoreList() {
       }
     }
   } catch (err) {
-    console.error('[IgnoreList] Toggle failed:', err);
+    //console.error('[IgnoreList] Toggle failed:', err);
     showToast('Error: ' + err.message, 'err');
     // Revert toggle state on error
     toggle.checked = !enabled;

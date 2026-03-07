@@ -29,9 +29,16 @@ function timeAgo(t) {
 }
 function dayLabel(ts) {
   const d = new Date(ts), now = new Date();
-  const diff = Math.floor((now - d) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
+  
+  // Compare calendar dates, not timestamps
+  // Strip time component to get midnight of each day
+  const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const nDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const diff = Math.round((nDate - dDate) / 86400000);
+  
+  if (diff === 0) return chrome.i18n.getMessage("today") || 'Today';
+  if (diff === 1) return chrome.i18n.getMessage("yesterday") || 'Yesterday';
   if (diff < 7)   return d.toLocaleDateString(undefined, { weekday: 'long' });
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -472,8 +479,8 @@ async function deleteMatching() {
   // Check if "all time" is selected (no date filters)
   const isAllTime = !startDate && !endDate;
   const confirmMsg = isAllTime 
-    ? `⚠️ Confirm deleting results for all time\n\nThis will delete all ${fmtNum(allResults.length)} matching results from your entire history.\n\nAre you sure?`
-    : `Delete all ${fmtNum(allResults.length)} matching results?`;
+   ? chrome.i18n.getMessage("confirm_delete_all_time", fmtNum(allResults.length))
+  : chrome.i18n.getMessage("confirm_delete_filtered", fmtNum(allResults.length));
   
   if (!confirm(confirmMsg)) return;
   
@@ -496,6 +503,10 @@ async function loadActivity() {
     <div class="kpi-card"><div class="kpi-label" data-i18n-key="storage">Storage</div><div class="kpi-val sm">${s.storageMB} MB</div></div>
     <div class="kpi-card"><div class="kpi-label" data-i18n-key="since">Since</div><div class="kpi-val sm">${s.oldestEntry ? new Date(s.oldestEntry).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : '—'}</div></div>
     `;
+    // Reapply translations to dynamically added content
+    if (typeof window.applyTranslations === 'function' && window._currentLang) {
+      window.applyTranslations(window._currentLang);
+    }
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
   } catch (err) { console.error(err); }
@@ -813,6 +824,7 @@ async function loadSessions() {
       const exportBtn = document.createElement('button');
       exportBtn.className   = 'tb-btn';
       exportBtn.textContent = '⬇ Export';
+      exportBtn.setAttribute('data-i18n-key', 'export');
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px';
       exportBtn.addEventListener('click', ev => {
         ev.stopPropagation();
@@ -824,6 +836,7 @@ async function loadSessions() {
         const restoreBtn = document.createElement('button');
         restoreBtn.className   = 'tb-btn';
         restoreBtn.textContent = '↺ Restore';
+        restoreBtn.setAttribute('data-i18n-key', 'restore');
         restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
         restoreBtn.addEventListener('click', async ev => {
           ev.stopPropagation();
@@ -1538,6 +1551,24 @@ function populateSettings(s) {
   document.getElementById('ch1').textContent = c1;
   document.getElementById('ch2').textContent = c2;
   syncCps();
+  
+  // Populate background tint settings
+  const bgTintToggle = document.getElementById('bgTintToggle');
+  const bgTintHue = document.getElementById('bgTintHue');
+  const bgTintOpacity = document.getElementById('bgTintOpacity');
+  const bgTintHueVal = document.getElementById('bgTintHueVal');
+  const bgTintOpacityVal = document.getElementById('bgTintOpacityVal');
+  
+  if (bgTintToggle) bgTintToggle.checked = s.bgTintEnabled || false;
+  if (bgTintHue) {
+    bgTintHue.value = s.bgTintHue !== undefined ? s.bgTintHue : 220;
+    if (bgTintHueVal) bgTintHueVal.textContent = bgTintHue.value + '°';
+  }
+  if (bgTintOpacity) {
+    bgTintOpacity.value = s.bgTintOpacity !== undefined ? s.bgTintOpacity : 8;
+    if (bgTintOpacityVal) bgTintOpacityVal.textContent = bgTintOpacity.value + '%';
+  }
+  updateBgTintPreview();
 }
 
 function applyVisuals(s) {
@@ -1547,6 +1578,14 @@ function applyVisuals(s) {
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
+  
+  // Apply background tint
+  if (s.bgTintEnabled && s.bgTintHue !== undefined && s.bgTintOpacity !== undefined) {
+    const tintColor = `hsla(${s.bgTintHue}, 70%, 60%, ${s.bgTintOpacity / 100})`;
+    r.style.setProperty('--bg-tint', tintColor);
+  } else {
+    r.style.removeProperty('--bg-tint');
+  }
 }
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
@@ -1557,6 +1596,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const sz      = parseInt(document.getElementById('fontSzInput').value);
   const maxSess = parseInt(document.getElementById('maxSessionsInput')?.value || '4');
   const lang    = document.getElementById('languageSelect')?.value || window._currentLang || 'en';
+  const bgTintEnabled = document.getElementById('bgTintToggle')?.checked || false;
+  const bgTintHue = parseInt(document.getElementById('bgTintHue')?.value || '220');
+  const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
   
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
@@ -1568,7 +1610,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         font, 
         fontSize: sz, 
         theme: _curSettings.theme || 'dark',
-        language: lang  // ← PRESERVE LANGUAGE!
+        language: lang,
+        bgTintEnabled,
+        bgTintHue,
+        bgTintOpacity
       } 
     });
     _curSettings = r.settings;
@@ -1731,6 +1776,7 @@ function switchPanel(name) {
   if (name === 'devices')   loadDevices();
   if (name === 'sessions')  loadSessions();
   if (name === 'bookmarks') loadBookmarks();
+   if (name === 'mostvisited') loadMostVisited();
   if (name === 'settings') {
     send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
     send('GET_SESSIONS').then(r => {
@@ -1779,6 +1825,54 @@ function closeDeleteHistoryModal() {
 
 
 
+// ══ BACKGROUND TINT ═════════════════════════════════════════════════════════
+function updateBgTintPreview() {
+  const toggle = document.getElementById('bgTintToggle');
+  const hue = document.getElementById('bgTintHue');
+  const opacity = document.getElementById('bgTintOpacity');
+  const preview = document.getElementById('bgTintPreview');
+  
+  if (!preview || !hue || !opacity || !toggle) return;
+  
+  const enabled = toggle.checked;
+  const hueVal = parseInt(hue.value);
+  const opacityVal = parseInt(opacity.value);
+  
+  if (enabled) {
+    const tintColor = `hsla(${hueVal}, 70%, 60%, ${opacityVal / 100})`;
+    preview.style.background = `linear-gradient(${tintColor}, ${tintColor}), var(--bg)`;
+  } else {
+    preview.style.background = 'var(--bg)';
+  }
+}
+
+// Setup background tint event listeners
+function setupBgTintListeners() {
+  const toggle = document.getElementById('bgTintToggle');
+  const hue = document.getElementById('bgTintHue');
+  const opacity = document.getElementById('bgTintOpacity');
+  const hueVal = document.getElementById('bgTintHueVal');
+  const opacityVal = document.getElementById('bgTintOpacityVal');
+  
+  if (toggle) {
+    toggle.addEventListener('change', updateBgTintPreview);
+  }
+  
+  if (hue && hueVal) {
+    hue.addEventListener('input', () => {
+      hueVal.textContent = hue.value + '°';
+      updateBgTintPreview();
+    });
+  }
+  
+  if (opacity && opacityVal) {
+    opacity.addEventListener('input', () => {
+      opacityVal.textContent = opacity.value + '%';
+      updateBgTintPreview();
+    });
+  }
+}
+
 // ══ INIT ════════════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   // Load settings first
@@ -1811,6 +1905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildHourNav();
   setupToolbar();
   setupSelActions();
+  setupBgTintListeners();
 
   // Default to Today — activate silently so doSearch below picks up filterDate
   //const todayKey = new Date().toLocaleDateString('en-CA');
@@ -1820,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Hash routing — only switch away from history if explicitly requested; clear hash so refresh = history
   const hash = location.hash.slice(1);
-  if (hash && hash !== 'history' && ['sessions','devices','activity','timespent','bookmarks','settings','about'].includes(hash)) {
+  if (hash && hash !== 'history' && ['sessions','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
     switchPanel(hash);
   }
   history.replaceState(null, '', location.pathname);
@@ -1912,7 +2007,7 @@ async function initLanguage() {
       window.applyTranslations(window._currentLang);
     }
   } catch (err) {
-    console.error('[EH] initLanguage: Failed to load language:', err);
+    //console.error('[EH] initLanguage: Failed to load language:', err);
     window._currentLang = 'en';
   }
 }
@@ -1945,10 +2040,103 @@ document.getElementById('languageSelect')?.addEventListener('change', async (e) 
     
     toast(`Language changed to ${langNames[newLang] || newLang}`, 'ok');
   } catch (err) {
-    console.error('[EH] Language change failed:', err);
+    //console.error('[EH] Language change failed:', err);
     toast('Error: ' + err.message, 'err');
   }
 });
+
+// ══ MOST VISITED START ════════════════════════════════════════════════════════════
+let curMvType = 'url';     // 'url' or 'domain'
+let curMvPeriod = 'all';   // '10', '30', or 'all'
+
+async function loadMostVisited() {
+  curMvType = curMvType || 'url';
+  curMvPeriod = curMvPeriod || 'all';
+  
+  // Update filter button states
+  document.querySelectorAll('#mvTypeFilter .tf-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.type === curMvType));
+  document.querySelectorAll('#mvPeriodFilter .tf-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.period === curMvPeriod));
+  
+  // Update chart title
+  const typeLabel = curMvType === 'url' ? chrome.i18n.getMessage("urls")  : chrome.i18n.getMessage("domains") ;
+  const periodLabel = curMvPeriod === 'all' ? chrome.i18n.getMessage("all_time") : `${curMvPeriod} `+ chrome.i18n.getMessage("days");
+  document.getElementById('mvChartTitle').textContent = chrome.i18n.getMessage("most_visited") +` ${typeLabel} — ${periodLabel}`;
+
+  const el = document.getElementById('mvContent');
+  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div>';
+  
+  try {
+    const data = await send('GET_MOST_VISITED', { viewType: curMvType, period: curMvPeriod });
+    renderMostVisited(data.items);
+  } catch (err) {
+    //console.error('[MostVisited] Error:', err);
+    el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⚠</span>Error loading data</div>';
+  }
+}
+
+function renderMostVisited(items) {
+  const el = document.getElementById('mvContent');
+  
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔥</span>No visits yet. Keep browsing!</div>';
+    return;
+  }
+  
+  el.innerHTML = items.map((item, idx) => {
+    const rank = idx + 1;
+    const isTop3 = rank <= 3;
+    const domain = curMvType === 'url' ? tryDomain(item.identifier) : item.identifier;
+    const displayTitle = curMvType === 'url' ? (item.title || item.identifier) : item.identifier;
+    const displayUrl = curMvType === 'url' ? item.identifier : '';
+    const visitLabel = item.count === 1 ? 'visit' : 'visits';
+    
+    return `<div class="mv-item" data-url="${esc(curMvType === 'url' ? item.identifier : `https://${item.identifier}`)}">
+      <div class="mv-rank ${isTop3 ? 'top3' : ''}">${rank}</div>
+      <img class="mv-favicon" src="${favUrl(domain)}" loading="lazy"/>
+      <div class="mv-info">
+        <div class="mv-title">${esc(displayTitle)}</div>
+        ${displayUrl ? `<div class="mv-url">${esc(displayUrl)}</div>` : ''}
+      </div>
+      <div class="mv-count">
+        <div class="mv-count-number">${fmtNum(item.count)}</div>
+        <div class="mv-count-label">${visitLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+  
+  // Add click handlers and favicon error handlers
+  el.querySelectorAll('.mv-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const url = item.dataset.url;
+      if (url) chrome.tabs.create({ url });
+    });
+  });
+  
+  // Add favicon error handlers
+  el.querySelectorAll('.mv-favicon').forEach(img => {
+    img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+  });
+}
+
+// Most Visited filter handlers
+document.getElementById('mvTypeFilter')?.addEventListener('click', ev => {
+  const btn = ev.target.closest('.tf-btn');
+  if (btn && btn.dataset.type) {
+    curMvType = btn.dataset.type;
+    loadMostVisited();
+  }
+});
+
+document.getElementById('mvPeriodFilter')?.addEventListener('click', ev => {
+  const btn = ev.target.closest('.tf-btn');
+  if (btn && btn.dataset.period) {
+    curMvPeriod = btn.dataset.period;
+    loadMostVisited();
+  }
+});
+// ══ MOST VISITED END ════════════════════════════════════════════════════════════
 
 // Call initLanguage after a short delay to ensure DOM is ready
 setTimeout(initLanguage, 100);

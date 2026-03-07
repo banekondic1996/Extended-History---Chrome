@@ -53,7 +53,27 @@ body {
   overflow: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  position: relative;
 }
+
+/* Background tint overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-tint, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+}
+
 button { cursor: pointer; font-family: inherit; font-size: inherit; }
 input, select { font-family: inherit; font-size: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -1091,4 +1111,100 @@ span {
 }
 .ignore-toggle-label{
     margin-left: 20px;
+}
+
+/* ═══ MOST VISITED ══════════════════════════════════════════════════════════ */
+.mv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.mv-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surf1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.mv-item:hover {
+  background: var(--surf2);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.mv-rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 6px;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.mv-rank.top3 {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+}
+
+.mv-favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mv-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mv-title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.mv-url {
+  font-size: 0.75rem;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mv-count {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.mv-count-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.mv-count-label {
+  font-size: 0.7rem;
+  color: var(--text3);
+  margin-top: 2px;
+  font-family: var(--font-mono);
 }

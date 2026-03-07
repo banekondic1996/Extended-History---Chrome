@@ -55,7 +55,7 @@ async function applyTranslations(lang = 'en') {
     //console.log('[Translate] UI translation complete for:', lang);
 
   } catch (err) {
-    console.error('[Translate] Failed to load translations:', err);
+    //console.error('[Translate] Failed to load translations:', err);
   }
 }
 
