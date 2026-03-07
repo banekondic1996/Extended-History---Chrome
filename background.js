@@ -11,7 +11,10 @@ const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
+const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
+const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
+const TAB_STORAGE_KEY               = 'eh_tab_storage';
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -525,6 +528,18 @@ async function clearSessionState() {
   await chrome.storage.local.remove('eh_cur_session');
 }
 
+// ── Tab Storage helpers ──────────────────────────────────────────────────────
+async function getTabStorage() {
+  const r = await chrome.storage.local.get(TAB_STORAGE_KEY);
+  return r[TAB_STORAGE_KEY] || [];
+}
+async function removeTabStorageEntry(id) {
+  const stored = await getTabStorage();
+  const next = stored.filter(e => e.id !== id);
+  await chrome.storage.local.set({ [TAB_STORAGE_KEY]: next });
+  return next;
+}
+
 async function getSessions() {
   const r = await chrome.storage.local.get(SESSIONS_KEY);
   return r[SESSIONS_KEY] || [];
@@ -547,7 +562,7 @@ async function beginSession() {
     const tabs = await chrome.tabs.query({});
     for (const t of tabs) {
       if (isTrackable(t.url))
-        sessionTabs[t.id] = { url: t.url, title: t.title||'', domain: domainOf(t.url), opened: Date.now(), closed: null };
+        sessionTabs[t.id] = { url: t.url, title: t.title||'', domain: domainOf(t.url), windowId: t.windowId||null, opened: Date.now(), closed: null };
     }
   } catch {}
   await saveSessionState();
@@ -568,13 +583,13 @@ async function finishSession() {
 
 chrome.tabs.onCreated.addListener(async tab => {
   if (!sessionId || !isTrackable(tab.url)) return;
-  sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), opened: Date.now(), closed: null };
+  sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
   await saveSessionState();
 });
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (!sessionId || !info.url || !isTrackable(info.url)) return;
   const prev = sessionTabs[tabId];
-  sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), opened: prev?.opened||Date.now(), closed: null };
+  sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
   await saveSessionState();
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
@@ -587,37 +602,65 @@ chrome.tabs.onRemoved.addListener(async tabId => {
 function ensureContextMenus() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
+      id: CONTEXT_MENU_PARENT_ID,
+      title: 'Extended History',
+      contexts: ['page', 'frame'],
+      documentUrlPatterns: ['http://*/*', 'https://*/*'],
+    }, () => { if (chrome.runtime.lastError) console.warn('[EH] context menu parent failed:', chrome.runtime.lastError.message); });
+
+    chrome.contextMenus.create({
       id: CONTEXT_MENU_IGNORE_DOMAIN_ID,
+      parentId: CONTEXT_MENU_PARENT_ID,
       title: "Don't keep this domain in history",
       contexts: ['page', 'frame'],
       documentUrlPatterns: ['http://*/*', 'https://*/*'],
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.warn('[EH] context menu create failed:', chrome.runtime.lastError.message);
-      }
-    });
+    }, () => { if (chrome.runtime.lastError) console.warn('[EH] ignore menu failed:', chrome.runtime.lastError.message); });
+
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_STORE_TAB_ID,
+      parentId: CONTEXT_MENU_PARENT_ID,
+      title: 'Store this tab',
+      contexts: ['page', 'frame'],
+      documentUrlPatterns: ['http://*/*', 'https://*/*'],
+    }, () => { if (chrome.runtime.lastError) console.warn('[EH] store tab menu failed:', chrome.runtime.lastError.message); });
   });
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== CONTEXT_MENU_IGNORE_DOMAIN_ID) return;
-
   const pageUrl = info.pageUrl || info.frameUrl || tab?.url || '';
-  if (!isTrackable(pageUrl)) return;
 
-  const domain = domainOf(pageUrl);
-  if (!domain) return;
-
-  const result = await addIgnorePattern(domain);
-  if (!result.success && result.error !== 'Pattern already exists') {
-    console.warn('[EH] Failed to add ignore pattern from context menu:', result.error);
-    return;
+  if (info.menuItemId === CONTEXT_MENU_IGNORE_DOMAIN_ID) {
+    if (!isTrackable(pageUrl)) return;
+    const domain = domainOf(pageUrl);
+    if (!domain) return;
+    const result = await addIgnorePattern(domain);
+    if (!result.success && result.error !== 'Pattern already exists') {
+      console.warn('[EH] Failed to add ignore pattern from context menu:', result.error);
+      return;
+    }
+    const enabled = await isIgnoreListEnabled();
+    if (enabled) {
+      await cleanIgnoredFromHistory();
+      await cleanupIgnoredUrlFromNativeHistory(pageUrl);
+    }
   }
 
-  const enabled = await isIgnoreListEnabled();
-  if (enabled) {
-    await cleanIgnoredFromHistory();
-    await cleanupIgnoredUrlFromNativeHistory(pageUrl);
+  if (info.menuItemId === CONTEXT_MENU_STORE_TAB_ID) {
+    if (!pageUrl) return;
+    const stored = await getTabStorage();
+    if (!stored.find(e => e.url === pageUrl)) {
+      stored.push({
+        id: `ts_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+        url: pageUrl,
+        title: tab?.title || pageUrl,
+        domain: domainOf(pageUrl),
+        savedAt: Date.now(),
+      });
+      await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored });
+    }
+    if (tab?.id) {
+      try { await chrome.tabs.remove(tab.id); } catch {}
+    }
   }
 });
 
@@ -858,6 +901,17 @@ async function handle(msg) {
       const list=await getSessions();
       const maxSess=await getMaxSessions();
       return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url&&t.closed===null)}:null,maxSessions:maxSess};
+    }
+    case 'GET_TAB_STORAGE': {
+      return { entries: await getTabStorage() };
+    }
+    case 'REMOVE_TAB_STORAGE_ENTRY': {
+      const next = await removeTabStorageEntry(msg.id);
+      return { success: true, entries: next };
+    }
+    case 'CLEAR_TAB_STORAGE': {
+      await chrome.storage.local.set({ [TAB_STORAGE_KEY]: [] });
+      return { success: true };
     }
     case 'SET_MAX_SESSIONS': {
       const val = Math.max(1, Math.min(20, parseInt(msg.value) || MAX_SESSIONS_DEFAULT));

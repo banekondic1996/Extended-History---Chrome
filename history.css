@@ -1231,3 +1231,28 @@ span {
   margin-top: 2px;
   font-family: var(--font-mono);
 }
+.sess-window-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 10px 18px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.sess-window-header:first-child { padding-top: 6px; }
+/* ── Tab Storage ──────────────────────────────────────────────────────────── */
+.ts-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 10px; border-bottom:1px solid var(--border); }
+.ts-count { font-size:0.78rem; color:var(--text2); }
+.ts-list { display:flex; flex-direction:column; }
+.ts-row { display:flex; align-items:center; gap:10px; padding:10px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.08s; }
+.ts-row:hover { background:var(--surf1); }
+.ts-row:last-child { border-bottom:none; }
+.ts-fav { width:15px; height:15px; border-radius:3px; flex-shrink:0; opacity:0.8; }
+.ts-body { flex:1; min-width:0; }
+.ts-title { font-size:0.84rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ts-meta  { font-size:0.72rem; color:var(--text3); margin-top:1px; }

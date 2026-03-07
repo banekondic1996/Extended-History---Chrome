@@ -31,6 +31,35 @@ document.getElementById('openBtn').addEventListener('click', () => {
     chrome.tabs.create({ url: 'history.html' });
 });
 
+// ── Header "Store" button — save current tab to Tab Storage ──────────────────
+document.getElementById('storeBtn').addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs[0];
+        if (!tab || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            return;
+        }
+        chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
+            const stored = (r && r.entries) || [];
+            if (stored.find(e => e.url === tab.url)) {
+                // Already stored — just close
+                chrome.tabs.remove(tab.id);
+                return;
+            }
+            const entry = {
+                id: 'ts_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                url: tab.url,
+                title: tab.title || tab.url,
+                domain: (() => { try { return new URL(tab.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(),
+                savedAt: Date.now(),
+            };
+            stored.push(entry);
+            chrome.storage.local.set({ eh_tab_storage: stored }, () => {
+                chrome.tabs.remove(tab.id);
+            });
+        });
+    });
+});
+
 // ── Tab switcher ──────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -250,7 +279,45 @@ function getTimeAgo(timestamp) {
     return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-// Load initially
+// ── Tab Storage ───────────────────────────────────────────────────────────────
+function loadTabStoragePopup() {
+    const el = document.getElementById('tabStoragePopup');
+    if (!el) return;
+
+    chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
+        if (chrome.runtime.lastError || !response) {
+            el.innerHTML = '<div class="empty">Error loading tab storage</div>';
+            return;
+        }
+
+        const entries = response.entries || [];
+
+        if (!entries.length) {
+            el.innerHTML = '<div class="empty">No stored tabs.<br><small style="opacity:0.6">Right-click a page → Options → Store this tab</small></div>';
+            return;
+        }
+
+        el.innerHTML = '';
+        for (const entry of entries) {
+            const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
+                chrome.tabs.create({ url: entry.url, active: false });
+                chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
+                    loadTabStoragePopup();
+                });
+            });
+            el.appendChild(row);
+        }
+    });
+}
+
+// Load Tab Storage when its panel becomes active
+document.querySelectorAll('.tab').forEach(tab => {
+    if (tab.dataset.tab === 'tabstorage') {
+        tab.addEventListener('click', () => loadTabStoragePopup());
+    }
+});
+
+// Initial load for all panels
 loadRecentTabs();
 loadTodayHistory();
 
@@ -276,3 +343,207 @@ setInterval(() => {
         }
     });
 }, 2000);
+// ── Right-click Sessions button → export latest session as HTML ───────────────
+(function () {
+  function tryDomainLocal(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Build the full export HTML (two-tab: Sessions + Tab Storage) ────────────
+  function buildExportHtml(label, tabs, tsEntries) {
+    tsEntries = tsEntries || [];
+    const validTabs = tabs.filter(t => t.url);
+    const windowIds = [...new Set(validTabs.map(t => t.windowId).filter(Boolean))];
+    const hasMultiWindow = windowIds.length > 1;
+
+    function tabLink(t) {
+      const dom = tryDomainLocal(t.url);
+      return '<a href="' + esc(t.url) + '">'
+        + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain='
+        + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+        + '<span class="title">' + esc(t.title || t.url) + '</span>'
+        + '<span class="domain">' + esc(dom) + '</span></a>';
+    }
+
+    // ── Sessions tab content ────────────────────────────────────────────────
+    let sessHtml = '';
+    if (hasMultiWindow) {
+      const windowMap = new Map();
+      for (const t of validTabs) {
+        const wid = t.windowId || 'unknown';
+        if (!windowMap.has(wid)) windowMap.set(wid, []);
+        windowMap.get(wid).push(t);
+      }
+      let wi = 1;
+      for (const [, winTabs] of windowMap) {
+        const urlsJson = JSON.stringify(winTabs.map(t => t.url)).replace(/"/g, '&quot;');
+        sessHtml += '<div class="win-header">'
+          + '<span class="win-label">Window ' + wi + '</span>'
+          + '<span class="win-count">' + winTabs.length + ' tab' + (winTabs.length !== 1 ? 's' : '') + '</span>'
+          + '<button class="restore-btn" data-urls="' + urlsJson + '">\u21BA Restore Window</button>'
+          + '</div>';
+        sessHtml += winTabs.map(tabLink).join('');
+        wi++;
+      }
+    } else {
+      const allUrls = JSON.stringify(validTabs.map(t => t.url)).replace(/"/g, '&quot;');
+      sessHtml = '<div class="restore-bar">'
+        + '<button class="restore-btn" data-urls="' + allUrls + '">\u21BA Restore all ' + validTabs.length + ' tabs</button>'
+        + '</div>';
+      sessHtml += validTabs.map(tabLink).join('');
+    }
+
+    // ── Tab Storage tab content (embedded at export time) ───────────────────
+    let tsHtml = tsEntries.length
+      ? tsEntries.map(e => { try { return tabLink(e); } catch(x) { return ''; } }).join('')
+      : '';
+    const tsContent = tsEntries.length
+      ? '<div class="links">' + tsHtml + '</div>'
+      : '<div class="ts-empty">No stored tabs.</div>';
+
+    // ── Styles ──────────────────────────────────────────────────────────────
+    const CSS = ':root{--accent:#3b9eff}'
+      + '*{box-sizing:border-box;margin:0;padding:0}'
+      + 'body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:0}'
+      + '.page-header{padding:32px 32px 0}'
+      + 'h1{font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:4px}'
+      + '.meta{font-size:.78rem;color:#a09eb0;margin-bottom:20px}'
+      + '.tabs-nav{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.08);padding:0 32px}'
+      + '.tab-btn{padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;'
+      +   'color:#a09eb0;font-size:.82rem;font-weight:600;cursor:pointer;'
+      +   'transition:color .15s,border-color .15s;margin-bottom:-1px}'
+      + '.tab-btn:hover{color:#f0eee8}'
+      + '.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}'
+      + '.tab-panel{display:none;padding:20px 32px 40px}'
+      + '.tab-panel.active{display:block}'
+      + '.links{display:flex;flex-direction:column;gap:3px}'
+      + 'a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;'
+      +   'text-decoration:none;color:#f0eee8;background:#18181f;'
+      +   'border:1px solid rgba(255,255,255,.06);transition:background .1s}'
+      + 'a:hover{background:#1f1f28}'
+      + '.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}'
+      + '.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+      + '.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}'
+      + '.win-header{font-size:.75rem;font-weight:700;color:var(--accent);padding:20px 0 6px;'
+      +   'display:flex;align-items:center;gap:10px;'
+      +   'border-bottom:1px solid rgba(59,158,255,.2);margin-bottom:4px}'
+      + '.win-header:first-child{padding-top:4px}'
+      + '.win-label{font-weight:700}'
+      + '.win-count{font-weight:400;color:#a09eb0;flex:1}'
+      + '.restore-bar{padding:0 0 14px}'
+      + '.restore-btn{padding:6px 14px;background:rgba(59,158,255,.12);'
+      +   'border:1px solid rgba(59,158,255,.35);border-radius:6px;'
+      +   'color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;'
+      +   'transition:background .1s;flex-shrink:0}'
+      + '.restore-btn:hover{background:rgba(59,158,255,.22)}'
+      + '.ts-empty{color:#a09eb0;font-size:.85rem;padding:20px 0}'
+      + 'footer{padding:16px 32px 32px;font-size:.7rem;color:#5a5870}';
+
+    // ── Inline script (IIFE so no globals needed) ───────────────────────────
+    const SCRIPT = '(function(){'
+      + 'function st(n){'
+      +   '["sessions","tabstorage"].forEach(function(x){'
+      +     'document.getElementById("tab-"+x).classList.toggle("active",x===n);'
+      +     'document.getElementById("btn-"+x).classList.toggle("active",x===n);'
+      +   '});'
+      + '}'
+      + 'document.getElementById("btn-sessions")'
+      +   '.addEventListener("click",function(){st("sessions");});'
+      + 'document.getElementById("btn-tabstorage")'
+      +   '.addEventListener("click",function(){st("tabstorage");});'
+      + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
+      +   'btn.addEventListener("click",function(){'
+      +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+      +     'if(!u.length)return;'
+      +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
+      +     'u.forEach(function(x){window.open(x,"_blank");});'
+      +   '});'
+      + '});'
+      + '})();';
+
+    return '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"/>'
+      + '<title>Session \u2013 ' + esc(label) + '</title>'
+      + '<style>' + CSS + '</style></head>\n<body>\n'
+      + '<div class="page-header">'
+      +   '<h1>\uD83D\uDCCB ' + esc(label) + '</h1>'
+      +   '<div class="meta">' + validTabs.length + ' tabs \u00B7 Exported ' + new Date().toLocaleString() + '</div>'
+      + '</div>\n'
+      + '<div class="tabs-nav">'
+      +   '<button class="tab-btn active" id="btn-sessions">Sessions</button>'
+      +   '<button class="tab-btn" id="btn-tabstorage">Tab Storage</button>'
+      + '</div>\n'
+      + '<div class="tab-panel active" id="tab-sessions">'
+      +   '<div class="links">' + sessHtml + '</div>'
+      + '</div>\n'
+      + '<div class="tab-panel" id="tab-tabstorage">' + tsContent + '</div>\n'
+      + '<footer>Exported by Extended History</footer>\n'
+      + '<script>' + SCRIPT + '<\/script>\n'
+      + '</body></html>';
+  }
+
+  // ── Context-menu handler ────────────────────────────────────────────────────
+  const sessionsBtn = document.querySelector('.flink[data-panel="sessions"]');
+  if (!sessionsBtn) return;
+
+  sessionsBtn.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    chrome.runtime.sendMessage({ type: 'GET_SESSIONS' }, (sessResp) => {
+      if (chrome.runtime.lastError || !sessResp) return;
+      const { sessions, current } = sessResp;
+      const target = sessions && sessions.length ? sessions[sessions.length - 1] : null;
+      const tabs = target
+        ? target.tabs
+        : (current ? current.tabs.filter(t => t.url && t.closed === null) : null);
+      if (!tabs || !tabs.length) {
+        chrome.tabs.create({ url: 'history.html#sessions' });
+        return;
+      }
+      const label = target
+        ? new Date(target.start).toLocaleString(undefined, {
+            weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+          })
+        : 'Current Session';
+      // Fetch Tab Storage then build export
+      chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (tsResp) => {
+        const tsEntries = (tsResp && tsResp.entries) || [];
+        const html = buildExportHtml(label, tabs, tsEntries);
+        Object.assign(document.createElement('a'), {
+          href: URL.createObjectURL(new Blob([html], { type: 'text/html' })),
+          download: 'session_' + new Date().toISOString().slice(0,10) + '.html'
+        }).click();
+      });
+    });
+  });
+})();
+// ── Tab Storage in popup ──────────────────────────────────────────────────────
+function loadTabStoragePopup() {
+  const el = document.getElementById('tabStoragePopup');
+  if (!el) return;
+  chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
+    if (chrome.runtime.lastError || !response) {
+      el.innerHTML = '<div class="empty">Error loading tab storage</div>';
+      return;
+    }
+    const entries = response.entries || [];
+    if (!entries.length) {
+      el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click → Extended History → Store this tab</small></div>';
+      return;
+    }
+    el.innerHTML = '';
+    for (const entry of entries) {
+      const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
+        chrome.tabs.create({ url: entry.url, active: false });
+        chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
+          loadTabStoragePopup();
+        });
+      });
+      el.appendChild(row);
+    }
+  });
+}
+document.querySelectorAll('.tab').forEach(tab => {
+  if (tab.dataset.tab === 'tabstorage') tab.addEventListener('click', () => loadTabStoragePopup());
+});

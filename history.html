@@ -15,7 +15,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.0.5</div>
+      <div class="logo-sub">v4.0.6</div>
     </div>
   </div>
 
@@ -27,8 +27,11 @@
     <button class="nav-item" data-panel="sessions">
       <span class="ni-icon">📋</span> <span data-i18n-key="sessions"> Sessions</span>
     </button>
+    <button class="nav-item" data-panel="tabstorage">
+      <span class="ni-icon">📑</span> <span>Tab Storage</span>
+    </button>
     <button class="nav-item" data-panel="devices">
-      <span class="ni-icon">📡</span> <span data-i18n-key="devices"> Devices</span> 
+      <span class="ni-icon">📱</span> <span data-i18n-key="devices"> Devices</span> 
     </button>
     <div class="nav-group-label" data-i18n-key="insights">Insights</div>
     <button class="nav-item" data-panel="activity">
@@ -117,6 +120,14 @@
     <div class="panel-scroll">
       <div class="panel-heading" data-i18n-key="sessions">Sessions</div>
       <div id="sessionsContent"><div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div></div>
+    </div>
+  </div>
+
+  <!-- TAB STORAGE -->
+  <div class="panel" id="panel-tabstorage">
+    <div class="panel-scroll">
+      <div class="panel-heading">Tab Storage</div>
+      <div id="tabStorageContent"><div class="state-msg"><span class="state-msg-icon">📌</span>Loading…</div></div>
     </div>
   </div>
 

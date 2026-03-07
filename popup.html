@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <title>Extended History</title>
 <style>
-:root { --accent:#3b9eff; --accent2:#2dd4a0; }
+:root { --accent:#3b9eff; }
 [data-theme="dark"]  { --bg:#131318; --s1:#18181f; --s2:#1f1f28; --border:rgba(255,255,255,0.08); --text:#f0eee8; --text2:#a09eb0; --text3:#5a5870; }
 [data-theme="light"] { --bg:#ffffff; --s1:#f5f5f7; --s2:#eeeef2; --border:rgba(0,0,0,0.08); --text:#111118; --text2:#555568; --text3:#aaaabc; }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -13,9 +13,11 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .hico { width:26px;height:26px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:6px; display:flex;align-items:center;justify-content:center; font-size:13px; }
 .htitle { font-weight:600; font-size:0.9rem; flex:1; }
 .open-btn { padding:5px 11px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.75rem; font-weight:600; cursor:pointer; }
+.store-btn { padding:5px 11px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.1s; }
+.store-btn:hover { border-color:var(--accent); color:var(--accent); }
 .tabs { display:flex; gap:4px; padding:8px 14px; background:var(--bg); border-bottom:1px solid var(--border); transition:opacity 0.2s, transform 0.2s; }
 .tabs.hidden { opacity:0; transform:scaleY(0); height:0; overflow:hidden; padding:0; border:none; }
-.tab { flex:1; padding:6px 8px; background:transparent; border:none; border-radius:6px; color:var(--text2); font-size:0.75rem; font-weight:500; cursor:pointer; transition:color 0.15s; text-align:center; }
+.tab { flex:1; padding:6px 4px; background:transparent; border:none; border-radius:6px; color:var(--text2); font-size:0.7rem; font-weight:500; cursor:pointer; transition:color 0.15s; text-align:center; }
 .tab:hover { background:var(--s1); color:var(--text); }
 .tab.active { background:var(--s1); color:var(--accent); font-weight:600; }
 .content-wrapper { position:relative; }
@@ -23,7 +25,7 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .content::-webkit-scrollbar { width:6px; }
 .content::-webkit-scrollbar-track { background:transparent; }
 .content::-webkit-scrollbar-thumb { background:var(--s2); border-radius:3px; }
-.tab-panel { display:none; }
+.tab-panel { display:none;min-height: 300px; }
 .tab-panel.active { display:block; }
 .ritem { display:flex; align-items:center; gap:9px; padding:8px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.08s; text-decoration:none; color:inherit; }
 .ritem:hover { background:var(--s1); }
@@ -58,11 +60,13 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 <div class="header">
   <img src="/icons/icon128.png" class="hico">
   <div class="htitle">Extended History</div>
+  <button class="store-btn" id="storeBtn">Store</button>
   <button class="open-btn" id="openBtn">Open</button>
 </div>
 <div class="tabs" id="tabsRow">
   <button class="tab active" data-tab="history">Recent History</button>
   <button class="tab" data-tab="tabs">Closed Tabs</button>
+  <button class="tab" data-tab="tabstorage">Tab Storage</button>
 </div>
 <div class="content-wrapper">
   <div class="content" id="mainContent">
@@ -71,6 +75,9 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
     </div>
     <div class="tab-panel" id="panel-tabs">
       <div id="recentTabs"><div class="loading">Loading…</div></div>
+    </div>
+     <div class="tab-panel" id="panel-tabstorage">
+      <div id="tabStoragePopup"><div class="loading">Loading…</div></div>
     </div>
   </div>
   <div class="search-overlay" id="searchOverlay">
@@ -85,7 +92,7 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 <div class="footer">
   <button class="flink" data-panel="activity">Activity</button>
   <button class="flink" data-panel="bookmarks">Bookmarks</button>
-  <button class="flink" data-panel="sessions">Sessions</button>
+  <button class="flink" data-panel="sessions" title="Right-click to export latest session">Sessions</button>
   <button class="flink" data-panel="settings">Settings</button>
 </div>
 <div class="search-bar">

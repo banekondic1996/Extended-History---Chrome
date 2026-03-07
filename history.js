@@ -828,7 +828,7 @@ async function loadSessions() {
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px';
       exportBtn.addEventListener('click', ev => {
         ev.stopPropagation();
-        exportSessionAsHtml(dateLabel.main, tabsArr);
+        send('GET_TAB_STORAGE').then(function(r){exportSessionAsHtml(dateLabel.main, tabsArr, r.entries||[]);}).catch(function(){exportSessionAsHtml(dateLabel.main, tabsArr, []);});
       });
 
       // Restore button — only for past sessions (not current)
@@ -862,7 +862,31 @@ async function loadSessions() {
 
       const tabsEl = document.createElement('div');
       tabsEl.className = 'sess-tabs';
-      tabsArr.slice(0, 200).forEach(t => tabsEl.appendChild(buildSessTabEl(t)));
+
+      // Group tabs by windowId if multiple windows present
+      const windowIds = [...new Set(tabsArr.map(t => t.windowId).filter(Boolean))];
+      const hasMultiWindow = windowIds.length > 1;
+
+      if (hasMultiWindow) {
+        // Group tabs by window
+        const windowMap = new Map();
+        for (const t of tabsArr) {
+          const wid = t.windowId || 'unknown';
+          if (!windowMap.has(wid)) windowMap.set(wid, []);
+          windowMap.get(wid).push(t);
+        }
+        let winIndex = 1;
+        for (const [wid, winTabs] of windowMap) {
+          const winHeader = document.createElement('div');
+          winHeader.className = 'sess-window-header';
+          winHeader.textContent = `Window ${winIndex} — ${winTabs.length} tab${winTabs.length !== 1 ? 's' : ''}`;
+          tabsEl.appendChild(winHeader);
+          winTabs.slice(0, 200).forEach(t => tabsEl.appendChild(buildSessTabEl(t)));
+          winIndex++;
+        }
+      } else {
+        tabsArr.slice(0, 200).forEach(t => tabsEl.appendChild(buildSessTabEl(t)));
+      }
 
       head.addEventListener('click', ev => {
         if (ev.target === exportBtn) return;
@@ -929,6 +953,84 @@ function buildSessTabEl(t) {
 }
 
 
+
+// ══ TAB STORAGE ══════════════════════════════════════════════════════════════
+async function loadTabStorage() {
+  const el = document.getElementById('tabStorageContent');
+  if (!el) return;
+  el.innerHTML = '<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>';
+  try {
+    const { entries } = await send('GET_TAB_STORAGE');
+    if (!entries || !entries.length) {
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📌</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+      return;
+    }
+    el.innerHTML = '';
+    const header = document.createElement('div');
+    header.className = 'ts-header';
+    const countEl = document.createElement('span');
+    countEl.className = 'ts-count';
+    countEl.textContent = `${entries.length} stored tab${entries.length !== 1 ? 's' : ''}`;
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'tb-btn';
+    clearBtn.textContent = '🗑 Clear all';
+    clearBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)';
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm(`Clear all ${entries.length} stored tabs?`)) return;
+      await send('CLEAR_TAB_STORAGE');
+      toast('Tab storage cleared', 'ok');
+      loadTabStorage();
+    });
+    header.appendChild(countEl);
+    header.appendChild(clearBtn);
+    el.appendChild(header);
+    const list = document.createElement('div');
+    list.className = 'ts-list';
+    for (const entry of entries) {
+      const dom = tryDomain(entry.url);
+      const row = document.createElement('div');
+      row.className = 'ts-row';
+      row.title = entry.url;
+      const fav = document.createElement('img');
+      fav.className = 'ts-fav';
+      fav.src = favUrl(dom);
+      fav.loading = 'lazy';
+      fav.addEventListener('error', () => { fav.style.opacity = '0'; });
+      const body = document.createElement('div');
+      body.className = 'ts-body';
+      const title = document.createElement('div');
+      title.className = 'ts-title';
+      title.textContent = entry.title || entry.url;
+      const meta = document.createElement('div');
+      meta.className = 'ts-meta';
+      meta.textContent = dom + ' · Saved ' + timeAgo(entry.savedAt);
+      body.appendChild(title);
+      body.appendChild(meta);
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'tb-btn';
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove from storage';
+      removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 8px;flex-shrink:0;color:var(--text3)';
+      removeBtn.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
+        loadTabStorage();
+      });
+      row.addEventListener('click', async () => {
+        chrome.tabs.create({ url: entry.url, active: false });
+        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
+        loadTabStorage();
+      });
+      row.appendChild(fav);
+      row.appendChild(body);
+      row.appendChild(removeBtn);
+      list.appendChild(row);
+    }
+    el.appendChild(list);
+  } catch (err) {
+    el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+  }
+}
 
 // ══ DEVICES ═════════════════════════════════════════════════════════════════
 async function loadDevices() {
@@ -1760,21 +1862,132 @@ document.getElementById('ctx-delete').addEventListener('click', () => {
 });
 
 // ── Session export as HTML ────────────────────────────────────────────────────
-function exportSessionAsHtml(label, tabs) {
+function exportSessionAsHtml(label, tabs, tabStorageEntries) {
+  tabStorageEntries = tabStorageEntries || [];
   const validTabs = tabs.filter(t => t.url);
-  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Session – ${esc(label)}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:40px 32px}
-  h1{font-size:1.3rem;font-weight:700;color:#3b9eff;margin-bottom:4px}.meta{font-size:.78rem;color:#a09eb0;margin-bottom:28px}
-  .links{display:flex;flex-direction:column;gap:3px}a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}
-  a:hover{background:#1f1f28}.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}footer{margin-top:36px;font-size:.7rem;color:#5a5870}</style></head>
-  <body><h1>📋 ${esc(label)}</h1><div class="meta">${validTabs.length} tabs · Exported ${new Date().toLocaleString()}</div>
-  <div class="links">${validTabs.map(t => {
-    const dom = tryDomain(t.url);
-    //return ${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + dom)}&size=16`)}
-    return `<a href="${esc(t.url)}"><img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(dom)}" loading="lazy" onerror="this.style.display='none'"/><span class="title">${esc(t.title||t.url)}</span><span class="domain">${esc(dom)}</span></a>`;
-  }).join('')}</div><footer>Exported by Extended History</footer></body></html>`;
-  Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([html],{type:'text/html'})), download: `session_${new Date().toISOString().slice(0,10)}.html` }).click();
+  const windowIds = [...new Set(validTabs.map(t => t.windowId).filter(Boolean))];
+  const hasMultiWindow = windowIds.length > 1;
+
+  function tabLink(t, domFn) {
+    const dom = domFn(t.url);
+    return '<a href="' + esc(t.url) + '">'
+      + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+      + '<span class="title">' + esc(t.title || t.url) + '</span>'
+      + '<span class="domain">' + esc(dom) + '</span></a>';
+  }
+
+  let sessHtml = '';
+  if (hasMultiWindow) {
+    const windowMap = new Map();
+    for (const t of validTabs) {
+      const wid = t.windowId || 'unknown';
+      if (!windowMap.has(wid)) windowMap.set(wid, []);
+      windowMap.get(wid).push(t);
+    }
+    let wi = 1;
+    for (const [, winTabs] of windowMap) {
+      const urlsJson = JSON.stringify(winTabs.map(t => t.url)).replace(/"/g, '&quot;');
+      sessHtml += '<div class="win-header">'
+        + '<span class="win-label">Window ' + wi + '</span>'
+        + '<span class="win-count">' + winTabs.length + ' tab' + (winTabs.length !== 1 ? 's' : '') + '</span>'
+        + '<button class="restore-btn" data-urls="' + urlsJson + '">\u21BA Restore Window</button>'
+        + '</div>';
+      sessHtml += winTabs.map(t => tabLink(t, tryDomain)).join('');
+      wi++;
+    }
+  } else {
+    const allUrls = JSON.stringify(validTabs.map(t => t.url)).replace(/"/g, '&quot;');
+    sessHtml += '<div class="restore-bar">'
+      + '<button class="restore-btn" data-urls="' + allUrls + '">\u21BA Restore all ' + validTabs.length + ' tabs</button>'
+      + '</div>';
+    sessHtml += validTabs.map(t => tabLink(t, tryDomain)).join('');
+  }
+
+  let tsHtml = '';
+  if (tabStorageEntries.length) {
+    tsHtml = tabStorageEntries.map(e => {
+      try {
+        const dom = tryDomain(e.url);
+        return '<a href="' + esc(e.url) + '">'
+          + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+          + '<span class="title">' + esc(e.title || e.url) + '</span>'
+          + '<span class="domain">' + esc(dom) + '</span></a>';
+      } catch(ex) { return ''; }
+    }).join('');
+  }
+
+  const tsContent = tabStorageEntries.length
+    ? '<div class="links">' + tsHtml + '</div>'
+    : '<div class="ts-empty">No stored tabs.</div>';
+
+  const CSS = ':root{--accent:#3b9eff}'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:0}'
+    + '.page-header{padding:32px 32px 0}'
+    + 'h1{font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:4px}'
+    + '.meta{font-size:.78rem;color:#a09eb0;margin-bottom:20px}'
+    + '.tabs-nav{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.08);padding:0 32px}'
+    + '.tab-btn{padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:#a09eb0;font-size:.82rem;font-weight:600;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px}'
+    + '.tab-btn:hover{color:#f0eee8}'
+    + '.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}'
+    + '.tab-panel{display:none;padding:20px 32px 40px}'
+    + '.tab-panel.active{display:block}'
+    + '.links{display:flex;flex-direction:column;gap:3px}'
+    + 'a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}'
+    + 'a:hover{background:#1f1f28}'
+    + '.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}'
+    + '.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}'
+    + '.win-header{font-size:.75rem;font-weight:700;color:var(--accent);padding:20px 0 6px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(59,158,255,.2);margin-bottom:4px}'
+    + '.win-header:first-child{padding-top:4px}'
+    + '.win-label{font-weight:700}'
+    + '.win-count{font-weight:400;color:#a09eb0;flex:1}'
+    + '.restore-bar{padding:0 0 14px}'
+    + '.restore-btn{padding:6px 14px;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:6px;color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;transition:background .1s;flex-shrink:0}'
+    + '.restore-btn:hover{background:rgba(59,158,255,.22)}'
+    + '.ts-empty{color:#a09eb0;font-size:.85rem;padding:20px 0}'
+    + 'footer{padding:16px 32px 32px;font-size:.7rem;color:#5a5870}';
+
+  const SCRIPT = '(function(){'
+    + 'function st(name){'
+    +   '["sessions","tabstorage"].forEach(function(n){'
+    +     'document.getElementById("tab-"+n).classList.toggle("active",n===name);'
+    +     'document.getElementById("btn-"+n).classList.toggle("active",n===name);'
+    +   '});'
+    + '}'
+    + 'document.getElementById("btn-sessions").addEventListener("click",function(){st("sessions");});'
+    + 'document.getElementById("btn-tabstorage").addEventListener("click",function(){st("tabstorage");});'
+    + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
+    +   'btn.addEventListener("click",function(){'
+    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+    +     'if(!u.length)return;'
+    +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
+    +     'u.forEach(function(x){window.open(x,"_blank");});'
+    +   '});'
+    + '});'
+    + '})();';
+
+  const html = '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"/>'
+    + '<title>Session \u2013 ' + esc(label) + '</title>'
+    + '<style>' + CSS + '</style></head>\n<body>\n'
+    + '<div class="page-header">'
+    +   '<h1>\uD83D\uDCCB ' + esc(label) + '</h1>'
+    +   '<div class="meta">' + validTabs.length + ' tabs \u00B7 Exported ' + new Date().toLocaleString() + '</div>'
+    + '</div>\n'
+    + '<div class="tabs-nav">'
+    +   '<button class="tab-btn active" id="btn-sessions">Sessions</button>'
+    +   '<button class="tab-btn" id="btn-tabstorage">Tab Storage</button>'
+    + '</div>\n'
+    + '<div class="tab-panel active" id="tab-sessions"><div class="links">' + sessHtml + '</div></div>\n'
+    + '<div class="tab-panel" id="tab-tabstorage">' + tsContent + '</div>\n'
+    + '<footer>Exported by Extended History</footer>\n'
+    + '<script>' + SCRIPT + '<\/script>\n'
+    + '</body></html>';
+
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([html], {type: 'text/html'})),
+    download: 'session_' + new Date().toISOString().slice(0,10) + '.html'
+  }).click();
   toast('Session exported', 'ok');
 }
 
@@ -1787,8 +2000,9 @@ function switchPanel(name) {
 
   if (name === 'activity')  loadActivity();
   if (name === 'timespent') loadTimeSpent(curTimeDays || 15);
-  if (name === 'devices')   loadDevices();
-  if (name === 'sessions')  loadSessions();
+  if (name === 'devices')    loadDevices();
+  if (name === 'sessions')   loadSessions();
+  if (name === 'tabstorage') loadTabStorage();
   if (name === 'bookmarks') loadBookmarks();
    if (name === 'mostvisited') loadMostVisited();
   if (name === 'settings') {
@@ -1929,7 +2143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Hash routing — only switch away from history if explicitly requested; clear hash so refresh = history
   const hash = location.hash.slice(1);
-  if (hash && hash !== 'history' && ['sessions','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
+  if (hash && hash !== 'history' && ['sessions','tabstorage','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
     switchPanel(hash);
   }
   history.replaceState(null, '', location.pathname);
