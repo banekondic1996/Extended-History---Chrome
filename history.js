@@ -305,7 +305,7 @@ function buildDateNav() {
   }
 
   addBtn(chrome.i18n.getMessage("all_time"), 'all', '');
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 1000; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
     if (i === 0) { addBtn(chrome.i18n.getMessage("today"),     key, ''); continue; }
