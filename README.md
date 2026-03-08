@@ -13,6 +13,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Delete history per day, based on filter, or selection
 -Option to periodically save session as html file
 -Keep history more then 90 days
+-Store tabs
 </pre>
 **To do:**
 <pre>
@@ -27,6 +28,9 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Thin top scroll bar for dates to be added, for easier scrolling
 -Add context "Jump to date" when right clicking link in history you searched for to see what you did that day
 -Auto focus on search bar when page opens, so that you can use keyboard instantly after CTRL+H
+-Add option in settings "Favicon resolver", options Google or Browser cache.
+-Add reading mode, so you can read exported history without importing it
+-Add encryption for exported history and decryption to read it
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/2d4a3445-28cb-40f6-9343-7237dee172dc" />
