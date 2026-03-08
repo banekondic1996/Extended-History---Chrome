@@ -528,6 +528,16 @@ async function clearSessionState() {
   await chrome.storage.local.remove('eh_cur_session');
 }
 
+// Debounced wrapper — coalesces rapid tab open/close events into one write
+let _saveSessionTimer = null;
+function debouncedSaveSession() {
+  if (_saveSessionTimer) clearTimeout(_saveSessionTimer);
+  _saveSessionTimer = setTimeout(() => {
+    _saveSessionTimer = null;
+    saveSessionState().catch(() => {});
+  }, 1000);
+}
+
 // ── Tab Storage helpers ──────────────────────────────────────────────────────
 async function getTabStorage() {
   const r = await chrome.storage.local.get(TAB_STORAGE_KEY);
@@ -584,18 +594,18 @@ async function finishSession() {
 chrome.tabs.onCreated.addListener(async tab => {
   if (!sessionId || !isTrackable(tab.url)) return;
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
-  await saveSessionState();
+  debouncedSaveSession();
 });
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (!sessionId || !info.url || !isTrackable(info.url)) return;
   const prev = sessionTabs[tabId];
   sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
-  await saveSessionState();
+  debouncedSaveSession();
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
   if (sessionTabs[tabId]) {
     sessionTabs[tabId].closed = Date.now();
-    await saveSessionState();
+    debouncedSaveSession();
   }
 });
 

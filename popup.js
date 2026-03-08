@@ -211,9 +211,28 @@ function loadTodayHistory() {
     });
 }
 
+// ── Ignore pattern matching (mirrors background.js logic) ────────────────────
+function matchesIgnorePatternPopup(url, pattern) {
+    try {
+        const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+        const pat = pattern.replace(/^\*\./, '').replace(/^www\./, '').toLowerCase();
+        const slashIdx = pat.indexOf('/');
+        const patHost = slashIdx === -1 ? pat : pat.slice(0, slashIdx);
+        const patPath = slashIdx === -1 ? '' : pat.slice(slashIdx);
+        if (!patHost) return false;
+        const hostMatch = host === patHost || host.endsWith('.' + patHost);
+        if (!hostMatch) return false;
+        if (patPath) {
+            const urlPath = new URL(url).pathname + new URL(url).search;
+            return urlPath.startsWith(patPath);
+        }
+        return true;
+    } catch { return false; }
+}
+
 // ── Recent closed tabs ────────────────────────────────────────────────────────
 function loadRecentTabs() {
-    chrome.sessions.getRecentlyClosed({ maxResults: 15 }, sessions => {
+    chrome.sessions.getRecentlyClosed({ maxResults: 25 }, sessions => {
         const el = document.getElementById('recentTabs');
 
         if (!sessions || !sessions.length) {
@@ -247,26 +266,37 @@ function loadRecentTabs() {
             return;
         }
 
-        const validTabs = tabs.filter(tab => {
-            if (!tab.lastModified) return false;
-            const ageInDays = (Date.now() - tab.lastModified * 1000) / (1000 * 60 * 60 * 24);
-            return ageInDays >= 0 && ageInDays <= 30;
-        }).sort((a, b) => b.lastModified - a.lastModified);
+        // Fetch ignore list and filter before rendering
+        chrome.runtime.sendMessage({ type: 'GET_IGNORE_LIST' }, (ignoreResp) => {
+            const ignoreList = (ignoreResp && ignoreResp.list) || [];
+            const ignoreEnabled = ignoreResp && ignoreResp.enabled !== false;
 
-        if (!validTabs.length) {
-            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
-            return;
-        }
+            const validTabs = tabs.filter(tab => {
+                if (!tab.url || !tab.lastModified) return false;
+                const ageInDays = (Date.now() - tab.lastModified * 1000) / (1000 * 60 * 60 * 24);
+                if (ageInDays < 0 || ageInDays > 30) return false;
+                // Filter out ignored URLs
+                if (ignoreEnabled && ignoreList.length) {
+                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern))) return false;
+                }
+                return true;
+            }).sort((a, b) => b.lastModified - a.lastModified);
 
-        el.innerHTML = '';
-        for (const tab of validTabs.slice(0, 15)) {
-            const timeAgo = getTimeAgo(tab.lastModified);
-            const onLeftClick = tab.sessionId
-                ? () => chrome.sessions.restore(tab.sessionId)
-                : () => chrome.tabs.create({ url: tab.url });
-            const row = makeRow(tab.url, tab.title, timeAgo, onLeftClick);
-            el.appendChild(row);
-        }
+            if (!validTabs.length) {
+                el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+                return;
+            }
+
+            el.innerHTML = '';
+            for (const tab of validTabs.slice(0, 15)) {
+                const timeAgo = getTimeAgo(tab.lastModified);
+                const onLeftClick = tab.sessionId
+                    ? () => chrome.sessions.restore(tab.sessionId)
+                    : () => chrome.tabs.create({ url: tab.url });
+                const row = makeRow(tab.url, tab.title, timeAgo, onLeftClick);
+                el.appendChild(row);
+            }
+        });
     });
 }
 
