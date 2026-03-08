@@ -22,6 +22,11 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Fix translations
 -Fix exporting in popup and autoexport to include grouping by window
 -Fix Tab Storage loading speed in popup
+-Multiple word search like "Bread Butter" should find all links that contain both words, even if not in same order "Butter Bread"
+-Youtube titles sometimes don't get saved
+-Thin top scroll bar for dates to be added, for easier scrolling
+-Add context "Jump to date" when right clicking link in history you searched for to see what you did that day
+-Auto focus on search bar when page opens, so that you can use keyboard instantly after CTRL+H
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/2d4a3445-28cb-40f6-9343-7237dee172dc" />
