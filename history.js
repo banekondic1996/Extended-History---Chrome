@@ -15,7 +15,44 @@ function send(type, extra = {}) {
   });
 }
 
-// ── Utils ──────────────────────────────────────────────────────────────────
+// ── Crypto helpers (AES-GCM + PBKDF2) ─────────────────────────────────────
+function _u8toB64(buf) {
+  // Cannot spread large Uint8Arrays — chunk to avoid "maximum call stack" error
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+function _b64toU8(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+async function ehEncrypt(plaintext, password) {
+  const enc  = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const km   = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key  = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['encrypt']
+  );
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+  return { salt: _u8toB64(salt), iv: _u8toB64(iv), ct: _u8toB64(ct) };
+}
+
+async function ehDecrypt({ salt, iv, ct }, password) {
+  const enc = new TextEncoder();
+  const km  = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: _b64toU8(salt), iterations: 100000, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+  );
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _b64toU8(iv) }, key, _b64toU8(ct));
+  return new TextDecoder().decode(plain);
+}
+
+
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -54,8 +91,10 @@ function fmtDuration(ms) {
   return `${Math.floor(m/60)}h ${m%60}m`;
 }
 function favUrl(domain) {
+  if (_curSettings && _curSettings.faviconResolver === 'browser') {
+    return chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent('https://' + domain)}`);
+  }
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
-  //return `${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + domain)}`)}`;
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -304,21 +343,43 @@ function buildDateNav() {
     return b;
   }
 
-  addBtn(chrome.i18n.getMessage("all_time"), 'all', '');
+  // "All" is a static pill in HTML (outside the scroll), just wire it
+  const allPill = document.getElementById('dnAllPill');
+  if (allPill) allPill.addEventListener('click', () => activateDatePill('all'));
+
+  // Date pills: today, yesterday, then remaining days — "All" is NOT in the scroll
   for (let i = 0; i < 1000; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
-    if (i === 0) { addBtn(chrome.i18n.getMessage("today"),     key, ''); continue; }
-    if (i === 1) { addBtn(chrome.i18n.getMessage("yesterday"), key, ''); continue; }
+    if (i === 0) { addBtn(chrome.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
+    if (i === 1) { addBtn(chrome.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
 
-  document.getElementById('dnLeft').addEventListener('click', () => {
-    document.getElementById('dateScrollWrap').scrollBy({ left: -240, behavior: 'smooth' });
-  });
-  document.getElementById('dnRight').addEventListener('click', () => {
-    document.getElementById('dateScrollWrap').scrollBy({ left: 240, behavior: 'smooth' });
-  });
+  // Arrow buttons: click scrolls; hold scrolls continuously
+  (function setupArrows() {
+    const wrap = document.getElementById('dateScrollWrap');
+    let _holdTimer = null, _holdInterval = null;
+    function startHold(dir) {
+      stopHold();
+      wrap.scrollBy({ left: dir * 220, behavior: 'smooth' });
+      _holdTimer = setTimeout(() => {
+        _holdInterval = setInterval(() => wrap.scrollBy({ left: dir * 120 }), 80);
+      }, 400);
+    }
+    function stopHold() {
+      clearTimeout(_holdTimer); clearInterval(_holdInterval);
+      _holdTimer = null; _holdInterval = null;
+    }
+    const L = document.getElementById('dnLeft');
+    const R = document.getElementById('dnRight');
+    L.addEventListener('mousedown', () => startHold(-1));
+    R.addEventListener('mousedown', () => startHold(1));
+    ['mouseup','mouseleave'].forEach(ev => { L.addEventListener(ev, stopHold); R.addEventListener(ev, stopHold); });
+    L.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(-1); }, { passive: false });
+    R.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(1);  }, { passive: false });
+    ['touchend','touchcancel'].forEach(ev => { L.addEventListener(ev, stopHold); R.addEventListener(ev, stopHold); });
+  })();
 }
 
 function activateDatePill(key, silent) {
@@ -327,17 +388,34 @@ function activateDatePill(key, silent) {
   document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
 
   filterDate = key === 'all' ? null : key;
-  // Sync date inputs but never clear search text
   document.getElementById('dateFrom').value = filterDate || '';
   document.getElementById('dateTo').value   = filterDate || '';
 
-  document.querySelectorAll('.dn-pill').forEach(b => b.classList.remove('active'));
-  const t = document.querySelector(`.dn-pill[data-date="${key}"]`);
-  if (t) {
-    t.classList.add('active');
-    if (!silent) {
-      const wrap = document.getElementById('dateScrollWrap');
-      wrap.scrollTo({ left: t.offsetLeft - wrap.offsetWidth / 2 + t.offsetWidth / 2, behavior: 'smooth' });
+  // Clear all pills in scroll + the external All pill
+  document.querySelectorAll('#dateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+  const allPill = document.getElementById('dnAllPill');
+  if (allPill) allPill.classList.remove('active');
+
+  if (key === 'all') {
+    if (allPill) allPill.classList.add('active');
+  } else {
+    const t = document.querySelector(`#dateScroll .dn-pill[data-date="${key}"]`);
+    if (t) {
+      t.classList.add('active');
+      if (!silent) {
+        const wrap = document.getElementById('dateScrollWrap');
+        // Collect all pills and measure the combined width of up to 4 pills before
+        // the active one (including their gaps), so the active pill lands with
+        // 4 visible pills to its left.
+        const allPills = Array.from(document.querySelectorAll('#dateScroll .dn-pill'));
+        const idx = allPills.indexOf(t);
+        const pillsBack = wrap.offsetWidth < 700 ? 2 : 6;
+        const precedingPills = allPills.slice(Math.max(0, idx - pillsBack), idx);
+        const gap = 5; // matches CSS gap: 5px on .date-scroll
+        const offsetBefore = precedingPills.reduce((sum, p) => sum + p.offsetWidth + gap, 0);
+        const pillLeft = t.getBoundingClientRect().left - wrap.getBoundingClientRect().left + wrap.scrollLeft;
+        wrap.scrollTo({ left: pillLeft - offsetBefore, behavior: 'smooth' });
+      }
     }
   }
   if (!silent) doSearch();
@@ -407,9 +485,10 @@ function setupToolbar() {
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value   = '';
     filterDate = null; filterHour = null;
-    document.querySelectorAll('.dn-pill').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#dateScroll .dn-pill').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
-    document.querySelector('.dn-pill[data-date="all"]')?.classList.add('active');
+    const allPill = document.getElementById('dnAllPill');
+    if (allPill) { document.querySelectorAll('#dateScroll .dn-pill').forEach(b=>b.classList.remove('active')); allPill.classList.add('active'); }
     document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
     doSearch();
   });
@@ -1679,6 +1758,12 @@ function populateSettings(s) {
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
   if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
+
+  // Populate UI settings
+  const faviconSel = document.getElementById('faviconResolverSel');
+  if (faviconSel) faviconSel.value = s.faviconResolver || 'google';
+  const autoFocusTgl = document.getElementById('searchAutoFocusToggle');
+  if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
 }
 
 function applyVisuals(s) {
@@ -1712,6 +1797,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
+  const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
+  const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
   
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
@@ -1729,7 +1816,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         bgTintOpacity,
         popupShowSearch,
         popupShowTabs,
-        popupHeight
+        popupHeight,
+        faviconResolver,
+        searchAutoFocus
       } 
     });
     _curSettings = r.settings;
@@ -1768,9 +1857,23 @@ chrome.runtime.onMessage.addListener((msg) => {
 document.getElementById('exportDataBtn').addEventListener('click', async () => {
   try {
     const data = await send('EXPORT');
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `extended-history_${new Date().toISOString().slice(0,10)}.json` }).click();
-    toast(`Exported ${fmtNum(data.totalEntries)} entries`, 'ok');
+    const useEncrypt = confirm('Encrypt export with a password?\n\nClick OK to encrypt, Cancel to export as plain JSON.');
+    let blob, filename;
+    if (useEncrypt) {
+      const pw = prompt('Enter encryption password:');
+      if (!pw) { toast('Export cancelled', 'err'); return; }
+      const pw2 = prompt('Confirm password:');
+      if (pw !== pw2) { toast('Passwords do not match', 'err'); return; }
+      const encrypted = await ehEncrypt(JSON.stringify(data), pw);
+      blob = new Blob([JSON.stringify({ __eh_encrypted: true, ...encrypted })], { type: 'application/json' });
+      filename = `extended-history_${new Date().toISOString().slice(0,10)}_enc.json`;
+      toast(`Exported ${fmtNum(data.totalEntries)} entries (encrypted)`, 'ok');
+    } else {
+      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      filename = `extended-history_${new Date().toISOString().slice(0,10)}.json`;
+      toast(`Exported ${fmtNum(data.totalEntries)} entries`, 'ok');
+    }
+    Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename }).click();
   } catch (err) { toast(err.message, 'err'); }
 });
 
@@ -1781,7 +1884,20 @@ document.getElementById('importDataFile')?.addEventListener('change', async ev =
   const file = ev.target.files[0];
   if (!file) return;
   try {
-    const data    = JSON.parse(await file.text());
+    const raw = JSON.parse(await file.text());
+    let data = raw;
+    if (raw.__eh_encrypted) {
+      const pw = prompt('This file is encrypted. Enter the password to decrypt:');
+      if (!pw) { toast('Import cancelled', 'err'); ev.target.value = ''; return; }
+      try {
+        const decrypted = await ehDecrypt(raw, pw);
+        data = JSON.parse(decrypted);
+      } catch {
+        toast('Wrong password or corrupted file', 'err');
+        ev.target.value = '';
+        return;
+      }
+    }
     const entries = data.entries || (Array.isArray(data) ? data : null);
     if (!entries) { toast('Invalid file format', 'err'); return; }
     const r = await send('IMPORT_HISTORY', { entries });
@@ -1825,14 +1941,19 @@ let _ctxEntry = null;
 
 function showCtxMenu(x, y, entry) {
   _ctxEntry = entry;
-  const menu   = document.getElementById('ctxMenu');
-  const delEl  = document.getElementById('ctx-delete');
-  const delSep = document.getElementById('ctx-del-sep');
-  const hasId  = !!entry.id;
-  if (delEl)  delEl.style.display  = hasId ? '' : 'none';
-  if (delSep) delSep.style.display = hasId ? '' : 'none';
+  const menu    = document.getElementById('ctxMenu');
+  const delEl   = document.getElementById('ctx-delete');
+  const delSep  = document.getElementById('ctx-del-sep');
+  const jumpEl  = document.getElementById('ctx-jump-to-date');
+  const jumpSep = document.getElementById('ctx-jump-sep');
+  const hasId   = !!entry.id;
+  const hasDate = !!entry.visitTime;
+  if (delEl)   delEl.style.display   = hasId   ? '' : 'none';
+  if (delSep)  delSep.style.display  = hasId   ? '' : 'none';
+  if (jumpEl)  jumpEl.style.display  = hasDate ? '' : 'none';
+  if (jumpSep) jumpSep.style.display = hasDate ? '' : 'none';
   menu.style.display = 'block';
-  const mw = 210, mh = 180;
+  const mw = 210, mh = 200;
   menu.style.left = Math.min(x, window.innerWidth  - mw - 6) + 'px';
   menu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
 }
@@ -1849,6 +1970,14 @@ document.getElementById('ctx-open-tab').addEventListener('click', () => {
 });
 document.getElementById('ctx-open-incognito').addEventListener('click', () => {
   if (_ctxEntry?.url) send('OPEN_INCOGNITO', { url: _ctxEntry.url }); hideCtxMenu();
+});
+document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
+  if (!_ctxEntry?.visitTime) { hideCtxMenu(); return; }
+  const dateKey = new Date(_ctxEntry.visitTime).toLocaleDateString('en-CA');
+  hideCtxMenu();
+  const si = document.getElementById('searchInput');
+  if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
+  activateDatePill(dateKey);
 });
 document.getElementById('ctx-copy-url').addEventListener('click', () => {
   if (_ctxEntry?.url) navigator.clipboard.writeText(_ctxEntry.url).then(() => toast('URL copied', 'ok')); hideCtxMenu();
@@ -1992,6 +2121,243 @@ function exportSessionAsHtml(label, tabs, tabStorageEntries) {
 }
 
 // ══ PANEL NAV ════════════════════════════════════════════════════════════════
+// ══ READING MODE ════════════════════════════════════════════════════════════
+let _rmEntries    = [];   // all entries from loaded file
+let _rmFiltered   = [];   // after date/search filter
+let _rmFilterDate = null; // 'YYYY-MM-DD' | null = all
+let _rmSearchVal  = '';
+let _rmVsOffset   = 0;
+let _rmVsLoading  = false;
+
+function rmListArea()  { return document.getElementById('rmListArea'); }
+
+// ── Load file ────────────────────────────────────────────────────────────────
+async function rmLoadFile(file) {
+  try {
+    const text = await file.text();
+    const raw = JSON.parse(text);
+    let data = raw;
+
+    // Auto-detect encrypted export
+    if (raw.__eh_encrypted) {
+      const pw = prompt('This file is encrypted. Enter the password to decrypt:');
+      if (!pw) { toast('Cancelled', 'err'); return; }
+      try {
+        const decrypted = await ehDecrypt(raw, pw);
+        data = JSON.parse(decrypted);
+      } catch {
+        toast('Wrong password or corrupted file', 'err');
+        return;
+      }
+    }
+
+    // Support both raw array and {entries:[...]} exports
+    const entries = Array.isArray(data) ? data : (data.entries || []);
+    if (!entries.length) { toast('No entries found in file', 'err'); return; }
+
+    _rmEntries = entries.sort((a, b) => b.visitTime - a.visitTime);
+    _rmFilterDate = null;
+    _rmSearchVal  = '';
+
+    document.getElementById('rm-filename').textContent   = file.name;
+    document.getElementById('rm-entrycount').textContent = `${fmtNum(_rmEntries.length)} entries`;
+    document.getElementById('rm-dropzone').style.display = 'none';
+    document.getElementById('rm-reader').style.display   = 'flex';    document.getElementById('rmSearchInput').value = '';
+    document.getElementById('rmSearchClearBtn')?.classList.remove('visible');
+
+    rmBuildDateNav();
+    rmDoFilter();
+  } catch (err) {
+    toast('Could not read file: ' + err.message, 'err');
+  }
+}
+
+function rmUnload() {
+  _rmEntries = []; _rmFiltered = []; _rmFilterDate = null; _rmSearchVal = '';
+  document.getElementById('rm-dropzone').style.display = 'flex';
+  document.getElementById('rm-reader').style.display   = 'none';
+  document.getElementById('rmDateScroll').innerHTML    = '';
+  if (rmListArea()) rmListArea().innerHTML             = '';
+}
+
+// ── Date nav ─────────────────────────────────────────────────────────────────
+function rmBuildDateNav() {
+  const scroll = document.getElementById('rmDateScroll');
+  scroll.innerHTML = '';
+
+  // "All" is a static pill in HTML (outside the scroll), just wire it once
+  const allPill = document.getElementById('rmAllPill');
+  if (allPill) {
+    // Replace listener by cloning to avoid duplicates on reload
+    const fresh = allPill.cloneNode(true);
+    allPill.parentNode.replaceChild(fresh, allPill);
+    fresh.addEventListener('click', () => rmActivateDatePill('all'));
+  }
+
+  // Collect unique dates in the file, newest first — no "All" in scroll
+  const dateSet = new Set(_rmEntries.map(e => new Date(e.visitTime).toLocaleDateString('en-CA')));
+  const dates   = [...dateSet].sort((a, b) => b.localeCompare(a));
+
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  for (const key of dates) {
+    const d   = new Date(key + 'T12:00:00');
+    const lbl = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const sub = DAYS[d.getDay()];
+    const b = document.createElement('button');
+    b.className = 'dn-pill';
+    b.dataset.date = key;
+    b.innerHTML = `<span class="dn-pill-label">${esc(lbl)}</span><span class="dn-pill-day">${esc(sub)}</span>`;
+    b.addEventListener('click', () => rmActivateDatePill(key));
+    scroll.appendChild(b);
+  }
+
+  rmActivateDatePill('all', true);
+
+  // Arrow hold-scroll
+  (function() {
+    const wrap = document.getElementById('rmDateScrollWrap');
+    let _t = null, _i = null;
+    function startH(dir) { stopH(); wrap.scrollBy({left:dir*220,behavior:'smooth'}); _t=setTimeout(()=>{_i=setInterval(()=>wrap.scrollBy({left:dir*120}),80);},400); }
+    function stopH()  { clearTimeout(_t); clearInterval(_i); _t=_i=null; }
+    const L = document.getElementById('rmDnLeft');
+    const R = document.getElementById('rmDnRight');
+    L.addEventListener('mousedown',()=>startH(-1)); R.addEventListener('mousedown',()=>startH(1));
+    ['mouseup','mouseleave'].forEach(ev=>{L.addEventListener(ev,stopH);R.addEventListener(ev,stopH);});
+  })();
+}
+
+function rmActivateDatePill(key, silent) {
+  _rmFilterDate = key === 'all' ? null : key;
+  // Clear scroll pills + external All pill
+  document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+  const rmAllPill = document.getElementById('rmAllPill');
+  if (rmAllPill) rmAllPill.classList.remove('active');
+
+  if (key === 'all') {
+    if (rmAllPill) rmAllPill.classList.add('active');
+  } else {
+    const t = document.querySelector(`#rmDateScroll .dn-pill[data-date="${key}"]`);
+    if (t) {
+      t.classList.add('active');
+      if (!silent) {
+        const wrap = document.getElementById('rmDateScrollWrap');
+        wrap.scrollTo({ left: t.offsetLeft, behavior: 'smooth' });
+      }
+    }
+  }
+  if (!silent) rmDoFilter();
+}
+
+// ── Filter + render ──────────────────────────────────────────────────────────
+function rmDoFilter() {
+  const q     = _rmSearchVal.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+
+  _rmFiltered = _rmEntries.filter(e => {
+    if (_rmFilterDate) {
+      const eDate = new Date(e.visitTime).toLocaleDateString('en-CA');
+      if (eDate !== _rmFilterDate) return false;
+    }
+    if (words.length) {
+      const hay = [e.url, e.title||'', e.domain||tryDomain(e.url)].join(' ').toLowerCase();
+      if (!words.every(w => hay.includes(w))) return false;
+    }
+    return true;
+  });
+
+  _rmVsOffset = 0; _rmVsLoading = false;
+  const area = rmListArea();
+  if (!_rmFiltered.length) {
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No entries found</div>`;
+    return;
+  }
+  area.innerHTML = '';
+  rmAppendPage();
+  area.onscroll = () => {
+    if (area.scrollTop + area.clientHeight >= area.scrollHeight - 400) rmAppendPage();
+  };
+}
+
+function rmAppendPage() {
+  if (_rmVsLoading) return;
+  if (_rmVsOffset >= _rmFiltered.length) return;
+  _rmVsLoading = true;
+  const area  = rmListArea();
+  const slice = _rmFiltered.slice(_rmVsOffset, _rmVsOffset + PAGE_SIZE);
+  let prevDay = _rmVsOffset > 0 ? dayLabel(_rmFiltered[_rmVsOffset - 1].visitTime) : null;
+
+  for (const e of slice) {
+    const dl  = dayLabel(e.visitTime);
+    const dom = e.domain || tryDomain(e.url);
+
+    if (dl !== prevDay) {
+      const hdr = document.createElement('div');
+      hdr.className = 'day-label';
+      hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
+      area.appendChild(hdr);
+      prevDay = dl;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'entry';
+    row.innerHTML = `
+      <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
+      <div class="e-body">
+        <div class="e-title">${esc(e.title || e.url)}</div>
+        <div class="e-url">${esc(e.url)}</div>
+      </div>
+      <div class="e-time">${fmtTime(e.visitTime)}</div>`;
+    row.querySelector('.e-fav').addEventListener('error', function(){ this.style.opacity='0'; });
+    row.addEventListener('click', () => window.open(e.url, '_blank'));
+    area.appendChild(row);
+  }
+
+  _rmVsOffset += slice.length;
+  _rmVsLoading = false;
+}
+
+// ── Wire up drop zone + file input ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const dropzone = document.getElementById('rm-dropzone');
+  const fileInput = document.getElementById('rmFileInput');
+
+  document.getElementById('rmPickBtn')?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', ev => {
+    const f = ev.target.files[0]; if (f) rmLoadFile(f); ev.target.value = '';
+  });
+  document.getElementById('rmCloseBtn')?.addEventListener('click', rmUnload);
+
+  // Drag-and-drop on the dropzone
+  dropzone?.addEventListener('dragover', ev => {
+    ev.preventDefault(); dropzone.classList.add('drag-over');
+  });
+  dropzone?.addEventListener('dragleave', ev => {
+    if (!dropzone.contains(ev.relatedTarget)) dropzone.classList.remove('drag-over');
+  });
+  dropzone?.addEventListener('drop', ev => {
+    ev.preventDefault(); dropzone.classList.remove('drag-over');
+    const f = ev.dataTransfer.files[0];
+    if (f) rmLoadFile(f);
+  });
+
+  // Search input
+  let _rmTimer = null;
+  document.getElementById('rmSearchInput')?.addEventListener('input', ev => {
+    _rmSearchVal = ev.target.value;
+    document.getElementById('rmSearchClearBtn')?.classList.toggle('visible', !!ev.target.value);
+    clearTimeout(_rmTimer);
+    _rmTimer = setTimeout(rmDoFilter, 260);
+  });
+  document.getElementById('rmSearchClearBtn')?.addEventListener('click', () => {
+    _rmSearchVal = '';
+    document.getElementById('rmSearchInput').value = '';
+    document.getElementById('rmSearchClearBtn')?.classList.remove('visible');
+    rmDoFilter();
+  });
+});
+
+// ══ END READING MODE ═════════════════════════════════════════════════════════
+
 function switchPanel(name) {
   document.querySelectorAll('.nav-item[data-panel]').forEach(b =>
   b.classList.toggle('active', b.dataset.panel === name));
@@ -2141,9 +2507,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   doSearch();
 
+  // Auto-focus the search input if enabled in settings (default: on)
+  if (_curSettings.searchAutoFocus !== false) {
+    setTimeout(() => { document.getElementById('searchInput')?.focus(); }, 120);
+  }
+
   // Hash routing — only switch away from history if explicitly requested; clear hash so refresh = history
   const hash = location.hash.slice(1);
-  if (hash && hash !== 'history' && ['sessions','tabstorage','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
+  if (hash && hash !== 'history' && ['sessions','readingmode','tabstorage','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
     switchPanel(hash);
   }
   history.replaceState(null, '', location.pathname);

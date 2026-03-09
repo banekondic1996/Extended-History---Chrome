@@ -310,42 +310,134 @@ function getTimeAgo(timestamp) {
 }
 
 // ── Tab Storage ───────────────────────────────────────────────────────────────
-function loadTabStoragePopup() {
-    const el = document.getElementById('tabStoragePopup');
-    if (!el) return;
 
-    chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
-        if (chrome.runtime.lastError || !response) {
-            el.innerHTML = '<div class="empty">Error loading tab storage</div>';
-            return;
-        }
-
-        const entries = response.entries || [];
-
-        if (!entries.length) {
-            el.innerHTML = '<div class="empty">No stored tabs.<br><small style="opacity:0.6">Right-click a page → Options → Store this tab</small></div>';
-            return;
-        }
-
-        el.innerHTML = '';
-        for (const entry of entries) {
-            const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
-                chrome.tabs.create({ url: entry.url, active: false });
-                chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
-                    loadTabStoragePopup();
-                });
-            });
-            el.appendChild(row);
-        }
-    });
+// Show stored-tabs sub-view
+function showTsStored() {
+  document.getElementById('ts-stored').classList.add('active');
+  document.getElementById('ts-quickstore').classList.remove('active');
 }
 
-// Load Tab Storage when its panel becomes active
-document.querySelectorAll('.tab').forEach(tab => {
-    if (tab.dataset.tab === 'tabstorage') {
-        tab.addEventListener('click', () => loadTabStoragePopup());
+// Show quick-store sub-view (right-click)
+function showTsQuickStore() {
+  document.getElementById('ts-stored').classList.remove('active');
+  document.getElementById('ts-quickstore').classList.add('active');
+  renderQuickStoreList();
+}
+
+function renderQuickStoreList() {
+  const list = document.getElementById('ts-quickstore-list');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Loading…</div>';
+
+  chrome.tabs.query({ currentWindow: true }, (tabs) => {
+    chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
+      const stored = new Set(((r && r.entries) || []).map(e => e.url));
+      const validTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('chrome-extension://'));
+
+      list.innerHTML = '';
+
+      if (!validTabs.length) {
+        list.innerHTML = '<div class="empty">No storable tabs open</div>';
+        return;
+      }
+
+      for (const tab of validTabs) {
+        const alreadyStored = stored.has(tab.url);
+        const item = document.createElement('div');
+        item.className = 'ts-quick-item' + (alreadyStored ? ' stored' : '');
+        item.title = tab.url;
+
+        const fav = document.createElement('img');
+        fav.className = 'ts-quick-fav';
+        try { fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${new URL(tab.url).hostname}`; } catch {}
+        fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
+
+        const title = document.createElement('span');
+        title.className = 'ts-quick-title';
+        title.textContent = tab.title || tab.url;
+
+        item.appendChild(fav);
+        item.appendChild(title);
+
+        if (alreadyStored) {
+          const badge = document.createElement('span');
+          badge.className = 'ts-quick-badge';
+          badge.textContent = 'stored';
+          item.appendChild(badge);
+        } else {
+          item.addEventListener('click', () => {
+            const entry = {
+              id: 'ts_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              url: tab.url,
+              title: tab.title || tab.url,
+              domain: (() => { try { return new URL(tab.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(),
+              savedAt: Date.now(),
+            };
+            chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (resp) => {
+              const existing = (resp && resp.entries) || [];
+              if (!existing.find(x => x.url === tab.url)) existing.push(entry);
+              chrome.storage.local.set({ eh_tab_storage: existing }, () => {
+                chrome.tabs.remove(tab.id, () => renderQuickStoreList());
+              });
+            });
+          });
+        }
+        list.appendChild(item);
+      }
+    });
+  });
+}
+
+function loadTabStoragePopup() {
+  const el = document.getElementById('tabStoragePopup');
+  if (!el) return;
+
+  chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
+    if (chrome.runtime.lastError || !response) {
+      el.innerHTML = '<div class="empty">Error loading tab storage</div>';
+      return;
     }
-});
+
+    const entries = response.entries || [];
+
+    if (!entries.length) {
+      el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
+      return;
+    }
+
+    el.innerHTML = '';
+    for (const entry of entries) {
+      const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
+        chrome.tabs.create({ url: entry.url, active: false });
+        chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
+          loadTabStoragePopup();
+        });
+      });
+      el.appendChild(row);
+    }
+  });
+}
+
+// Wire the Tab Storage tab: left-click → stored view, right-click → quick-store view
+(function () {
+  const tabStorageTab = document.querySelector('.tab[data-tab="tabstorage"]');
+  if (!tabStorageTab) return;
+
+  tabStorageTab.addEventListener('click', () => {
+    showTsStored();
+    loadTabStoragePopup();
+  });
+
+  tabStorageTab.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    // Make sure the tab panel is active
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tabStorageTab.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-tabstorage').classList.add('active');
+    showTsQuickStore();
+  });
+})();
 
 // Initial load for all panels
 loadRecentTabs();

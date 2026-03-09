@@ -21,10 +21,10 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .tab:hover { background:var(--s1); color:var(--text); }
 .tab.active { background:var(--s1); color:var(--accent); font-weight:600; }
 .content-wrapper { position:relative; }
-.content { max-height:320px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--s2) transparent; }
-.content::-webkit-scrollbar { width:6px; }
+.content { max-height:320px; overflow-y:auto; scrollbar-width:auto; scrollbar-color:var(--s2) transparent; }
+.content::-webkit-scrollbar { width:10px; }
 .content::-webkit-scrollbar-track { background:transparent; }
-.content::-webkit-scrollbar-thumb { background:var(--s2); border-radius:3px; }
+.content::-webkit-scrollbar-thumb { background:var(--s2); border-radius:5px; }
 .tab-panel { display:none;min-height: 300px; }
 .tab-panel.active { display:block; }
 .ritem { display:flex; align-items:center; gap:9px; padding:8px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.08s; text-decoration:none; color:inherit; }
@@ -39,10 +39,10 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .search-overlay.active { transform:translateX(0); visibility:visible; }
 .search-header { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
 .search-title { font-size:0.8rem; font-weight:600; color:var(--text2); }
-.search-list { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--s2) transparent; max-height:320px; }
-.search-list::-webkit-scrollbar { width:6px; }
+.search-list { flex:1; overflow-y:auto; scrollbar-width:auto; scrollbar-color:var(--s2) transparent; max-height:320px; }
+.search-list::-webkit-scrollbar { width:10px; }
 .search-list::-webkit-scrollbar-track { background:transparent; }
-.search-list::-webkit-scrollbar-thumb { background:var(--s2); border-radius:3px; }
+.search-list::-webkit-scrollbar-thumb { background:var(--s2); border-radius:5px; }
 .search-bar { padding:8px 14px; background:var(--bg); border-top:1px solid var(--border); position:relative; }
 .search-input { width:100%; padding:8px 32px 8px 12px; background:var(--s1); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.8rem; outline:none; transition:border-color 0.15s; }
 .search-input:focus { border-color:var(--accent); }
@@ -54,6 +54,16 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .flink { flex:1; padding:10px 8px; text-align:center; font-size:0.72rem; color:var(--text2); cursor:pointer; border:none; background:none; transition:all 0.1s; }
 .flink:hover { background:var(--s1); color:var(--accent); }
 .flink + .flink { border-left:1px solid var(--border); }
+/* Tab Storage subviews */
+.ts-view { display:none; width:100%; }
+.ts-view.active { display:block; }
+.ts-quick-item { display:flex; align-items:center; gap:9px; padding:8px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.08s; }
+.ts-quick-item:hover { background:var(--s1); }
+.ts-quick-item.stored { opacity:0.4; cursor:default; }
+.ts-quick-item.stored:hover { background:transparent; }
+.ts-quick-fav { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+.ts-quick-title { flex:1; font-size:0.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ts-quick-badge { font-size:0.63rem; color:var(--text3); flex-shrink:0; padding:1px 5px; border:1px solid var(--border); border-radius:3px; }
 </style>
 </head>
 <body>
@@ -77,7 +87,14 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
       <div id="recentTabs"><div class="loading">Loading…</div></div>
     </div>
      <div class="tab-panel" id="panel-tabstorage">
-      <div id="tabStoragePopup"><div class="loading">Loading…</div></div>
+      <!-- Stored tabs view (default, left click) -->
+      <div class="ts-view active" id="ts-stored">
+        <div id="tabStoragePopup"><div class="loading">Loading…</div></div>
+      </div>
+      <!-- Quick-store view (right click) -->
+      <div class="ts-view" id="ts-quickstore">
+        <div id="ts-quickstore-list"></div>
+      </div>
     </div>
   </div>
   <div class="search-overlay" id="searchOverlay">

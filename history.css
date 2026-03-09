@@ -197,9 +197,9 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 10px;
 }
 .nav-arrow {
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   border: 1px solid var(--border2);
-  border-radius: 8px;
+  border-radius: 50%;
   background: var(--surf1);
   color: var(--text2);
   display: flex; align-items: center; justify-content: center;
@@ -1256,3 +1256,31 @@ span {
 .ts-body { flex:1; min-width:0; }
 .ts-title { font-size:0.84rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ts-meta  { font-size:0.72rem; color:var(--text3); margin-top:1px; }
+/* ═══ READING MODE ══════════════════════════════════════════════════════════ */
+#rm-dropzone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  transition: background 0.15s;
+}
+#rm-dropzone.drag-over {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  outline: 2px dashed var(--accent);
+  outline-offset: -12px;
+  border-radius: var(--r);
+}
+.rm-drop-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  max-width: 420px;
+}
+.rm-drop-icon  { font-size: 48px; opacity: 0.4; }
+.rm-drop-title { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.rm-drop-desc  { font-size: 0.85rem; color: var(--text2); line-height: 1.6; }
+.rm-drop-hint  { font-size: 0.75rem; color: var(--text3); }
+#rm-reader { display: flex; flex-direction: column; flex: 1; overflow: hidden; }

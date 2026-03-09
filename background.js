@@ -596,11 +596,32 @@ chrome.tabs.onCreated.addListener(async tab => {
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
   debouncedSaveSession();
 });
+// ── Title backfill queue — serializes concurrent storage writes ───────────────
+let _titleQueue = Promise.resolve();
+function queuedBackfillTitle(url, title) {
+  _titleQueue = _titleQueue.then(() => backfillTitle(url, title)).catch(() => {});
+}
+
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
-  if (!sessionId || !info.url || !isTrackable(info.url)) return;
-  const prev = sessionTabs[tabId];
-  sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
-  debouncedSaveSession();
+  // ── Sessions ──
+  if (sessionId) {
+    if (info.url && isTrackable(info.url)) {
+      const prev = sessionTabs[tabId];
+      sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
+      debouncedSaveSession();
+    } else if (info.title && sessionTabs[tabId]) {
+      sessionTabs[tabId].title = info.title;
+      debouncedSaveSession();
+    }
+  }
+
+  // ── History title back-fill ──
+  // info.title fires whenever Chrome updates the tab title — including SPA navigations.
+  // Skip transient/loading titles. Queue writes so opening many tabs simultaneously
+  // doesn't cause concurrent storage overwrites that lose each other's changes.
+  const _badTitles = ['New Tab', 'Loading…', 'Loading...', ''];
+  if (!info.title || _badTitles.includes(info.title) || !tab?.url || !isTrackable(tab.url)) return;
+  queuedBackfillTitle(tab.url, info.title);
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
   if (sessionTabs[tabId]) {
@@ -728,6 +749,35 @@ async function saveSettings(newSettings) {
     // If disabled, we don't need to do anything - URLs will just be allowed
   }
 }
+// ── Title back-fill from Chrome history ──────────────────────────────────────
+// Chrome's own history DB has the correct title for every URL it has seen.
+// We query it and write the result into any recent entry that still lacks a title.
+// Write title for the most recent entry matching this URL within the last 2 minutes.
+// Always overwrites — if tabs.onUpdated fires twice, the second (final) title wins.
+// If no entry exists yet (title fired before recordVisit), retry once after 1.5s.
+async function backfillTitle(url, title, _isRetry = false) {
+  if (!url || !title || !isTrackable(url)) return;
+  if (title === 'New Tab' || title === 'Loading…' || title === 'Loading...') return;
+  const norm = normalizeUrl(url);
+  const entries = await getAll();
+  const now = Date.now();
+  let bestIdx = -1, bestTime = 0;
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    if (e.url !== norm) continue;
+    if ((now - e.visitTime) > 300000) continue; // 5 min window (was 2 min)
+    if (e.visitTime > bestTime) { bestTime = e.visitTime; bestIdx = i; }
+  }
+  if (bestIdx === -1) {
+    // Entry not recorded yet — retry once after 1.5s (covers fast title updates like Google Search)
+    if (!_isRetry) setTimeout(() => backfillTitle(url, title, true), 1500);
+    return;
+  }
+  entries[bestIdx].title = title;
+  await setAll(entries);
+  await updateTodayHistory();
+}
+
 function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toString().replace(/\/$/,''); } catch { return url; } }
 
 async function recordVisit(url, title, tabId) {
@@ -763,22 +813,19 @@ chrome.webNavigation.onCommitted.addListener(async details => {
 
 chrome.webNavigation.onCompleted.addListener(async details => {
   if (details.frameId!==0||!isTrackable(details.url)) return;
-   // Skip if ignored (shouldn't be in our storage, but double-check)
   if (await shouldIgnoreUrl(details.url)) {
     await cleanupIgnoredUrlFromNativeHistory(details.url);
-    return;
   }
-  try {
-    const tab=await chrome.tabs.get(details.tabId); if (!tab?.title) return;
-    const entries=await getAll(); const norm=normalizeUrl(details.url);
-    const idx=entries.findIndex(e=>e.url===norm&&(Date.now()-e.visitTime)<30000&&!e.title);
-    if (idx!==-1) { 
-      entries[idx].title=tab.title; 
-      await setAll(entries); 
-      // Update today's history when title is updated
-      await updateTodayHistory();
-    }
-  } catch {}
+  // Title back-fill is handled by tabs.onUpdated — no timer needed here.
+});
+
+// ── SPA / pushState navigation (YouTube, etc.) ──────────────────────────────
+// onCommitted doesn't fire for history.pushState — use onHistoryStateUpdated.
+chrome.webNavigation.onHistoryStateUpdated.addListener(async details => {
+  if (details.frameId !== 0 || !isTrackable(details.url)) return;
+  if (await shouldIgnoreUrl(details.url)) return;
+  await recordVisit(details.url, '', details.tabId);
+  // Title will arrive via tabs.onUpdated
 });
 
 // ── Message API ──────────────────────────────────────────────────────────────
@@ -792,12 +839,13 @@ async function handle(msg) {
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
       if (endDate)   entries=entries.filter(e=>e.visitTime<=endDate);
       if (query) {
-        const q=query.toLowerCase();
+        const words=query.toLowerCase().split(/\s+/).filter(Boolean);
         entries=entries.filter(e=>{
-          if (mode==='title')  return (e.title||'').toLowerCase().includes(q);
-          if (mode==='url')    return e.url.toLowerCase().includes(q);
-          if (mode==='domain') return (e.domain||'').toLowerCase().includes(q);
-          return e.url.toLowerCase().includes(q)||(e.title||'').toLowerCase().includes(q)||(e.domain||'').toLowerCase().includes(q);
+          const hay = (mode==='title')  ? (e.title||'').toLowerCase()
+                    : (mode==='url')    ? e.url.toLowerCase()
+                    : (mode==='domain') ? (e.domain||'').toLowerCase()
+                    : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
+          return words.every(w => hay.includes(w));
         });
       }
       entries.sort((a,b)=>b.visitTime-a.visitTime);
@@ -820,13 +868,15 @@ async function handle(msg) {
     case 'DELETE_MATCHING': {
       const {query='',mode='all',startDate,endDate}=msg;
       let entries=await getAll(); const q=query.toLowerCase();
+      const words=q?q.split(/\s+/).filter(Boolean):[];
       const toDelete=entries.filter(e=>{
         const ms=!startDate||e.visitTime>=startDate; const me=!endDate||e.visitTime<=endDate;
-        let mq=true; if(q){
-          if(mode==='title') mq=(e.title||'').toLowerCase().includes(q);
-          else if(mode==='url') mq=e.url.toLowerCase().includes(q);
-          else if(mode==='domain') mq=(e.domain||'').toLowerCase().includes(q);
-          else mq=e.url.toLowerCase().includes(q)||(e.title||'').toLowerCase().includes(q)||(e.domain||'').toLowerCase().includes(q);
+        let mq=true; if(words.length){
+          const hay=(mode==='title')?(e.title||'').toLowerCase()
+                   :(mode==='url')?e.url.toLowerCase()
+                   :(mode==='domain')?(e.domain||'').toLowerCase()
+                   :(e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
+          mq=words.every(w=>hay.includes(w));
         }
         return ms&&me&&mq;
       });
@@ -990,21 +1040,25 @@ async function handle(msg) {
     case 'RE_BACKFILL': {
       try {
         await chrome.storage.local.remove(BACKFILL_KEY);
-        const items=await chrome.history.search({text:'',startTime:0,maxResults:100000});
-        const entries=items.filter(i=>isTrackable(i.url)).map(i=>({
-          id:`bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2,6)}`,
-                                                                  url:normalizeUrl(i.url),rawUrl:i.url,title:i.title||'',
-                                                                  visitTime:i.lastVisitTime||Date.now(),domain:domainOf(i.url),tabId:null,source:'backfill',
+        const items = await chrome.history.search({ text: '', startTime: 0, maxResults: 100000 });
+        const entries = items.filter(i => isTrackable(i.url)).map(i => ({
+          id:        `bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
+          url:       normalizeUrl(i.url),
+          rawUrl:    i.url,
+          title:     i.title || '',
+          visitTime: i.lastVisitTime || Date.now(),
+          domain:    domainOf(i.url),
+          tabId:     null,
+          source:    'backfill',
         }));
-        const existing=await getAll();
-        const existingSet=new Set(existing.map(e=>`${e.url}|${Math.floor(e.visitTime/5000)}`));
-        const newOnes=entries.filter(e=>!existingSet.has(`${e.url}|${Math.floor(e.visitTime/5000)}`));
-        if(newOnes.length) await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
-        await chrome.storage.local.set({[BACKFILL_KEY]:true});
-        // Update today's history
+        const existing    = await getAll();
+        const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
+        const newOnes     = entries.filter(e => !existingSet.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
+        if (newOnes.length) await setAll([...existing, ...newOnes].sort((a, b) => b.visitTime - a.visitTime));
+        await chrome.storage.local.set({ [BACKFILL_KEY]: true });
         await updateTodayHistory();
-        return {success:true,imported:newOnes.length};
-      } catch(e){return {error:e.message};}
+        return { success: true, imported: newOnes.length };
+      } catch (e) { return { error: e.message }; }
     }
     case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
     case 'MOVE_BOOKMARK': {
