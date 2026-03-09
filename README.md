@@ -25,7 +25,8 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Fix translations
 -Fix exporting in popup and autoexport to include grouping by window
 -Fix Tab Storage loading speed in popup
--Improve perfomance and efficiency
+-Improve perfomance and efficiency (maybe by listing chrome history, then daily backing up to local storage instead?)
+-Fix scroll when removing tabs from tab storage, scroll should stay at same position
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/2d4a3445-28cb-40f6-9343-7237dee172dc" />
