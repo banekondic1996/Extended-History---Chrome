@@ -22,7 +22,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Improve bookmarks moving speed within large folders and being able to move bookmark folders
 -Maybe remove lazy loading or improve scrolling for history
 -Store page even if page didn't load completely
--Fix translations
+-Fix translations (i need help with this, i can't translate dynamic parts)
 -Fix exporting in popup and autoexport to include grouping by window
 -Fix Tab Storage loading speed in popup
 -Improve perfomance and efficiency (maybe by listing chrome history, then daily backing up to local storage instead?)
