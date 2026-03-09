@@ -14,6 +14,8 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Option to periodically save session as html file
 -Keep history more then 90 days
 -Store tabs
+-Encrypt history exports
+-Read exported history, without import, even encrypted ones
 </pre>
 **To do:**
 <pre>
