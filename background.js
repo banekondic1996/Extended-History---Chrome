@@ -11,6 +11,7 @@ const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
+const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history flushes
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
@@ -26,7 +27,8 @@ const DEFAULT_SETTINGS = {
   fontSize:      15,
   theme:         'dark',
   language:      'en', // Default language
-  ignoreListEnabled: true, // NEW: Toggle for ignore list
+  ignoreListEnabled: true, // Toggle for ignore list
+  syncInterval: 30,        // Minutes between flushing today's Chrome history → local storage (0 = every visit)
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -279,21 +281,100 @@ async function addTime(domain, ms) {
 // - no segment (e.g. after SW restart) → resumeActiveTab to self-heal
 // - save current session (overwrite, not append)
 chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
+// Flush alarm: fire every minute; actual flush only runs when syncInterval has elapsed
+chrome.alarms.create('eh_flush', { periodInMinutes: 1 });
 
 const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
 let _lastSessionSave = 0; // timestamp of last session save
 
-// Helper to update today's history separately (stores ALL of today's entries)
-async function updateTodayHistory() {
+// ── Today's history: read live from Chrome API (no per-visit storage writes) ──
+// Returns entries in the same shape as eh_history entries.
+// For the popup and history page we query Chrome's native history for today —
+// this is always up-to-date with zero extra storage writes while browsing.
+async function getTodayFromChromeApi() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const todayMs = todayStart.getTime();
-  
-  const all = await getAll();
-  const todayEntries = all.filter(e => e.visitTime >= todayMs);
-  //console.log('[EH] updateTodayHistory: Storing', todayEntries.length, 'entries from today');
-  await chrome.storage.local.set({ [TODAY_HISTORY_KEY]: todayEntries });
+  const startTime = todayStart.getTime();
+
+  try {
+    const items = await chrome.history.search({
+      text: '',
+      startTime,
+      maxResults: 10000,
+    });
+
+    const ignoreEnabled = await isIgnoreListEnabled();
+    const ignoreList = ignoreEnabled ? await getIgnoreList() : [];
+
+    const entries = [];
+    for (const item of items) {
+      if (!item.url || !isTrackable(item.url)) continue;
+      if (ignoreList.some(p => matchesIgnorePattern(item.url, p))) continue;
+      entries.push({
+        id: `live_${item.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
+        url: normalizeUrl(item.url),
+        rawUrl: item.url,
+        title: item.title || '',
+        visitTime: item.lastVisitTime || Date.now(),
+        domain: domainOf(item.url),
+        tabId: null,
+        source: 'live',
+      });
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+// Legacy no-op shim — callers that still call updateTodayHistory() are safe.
+// Today's data is now served live from Chrome API; we don't need to cache it.
+async function updateTodayHistory() {
+  // No-op: today's history is read live via getTodayFromChromeApi().
+  // The periodic flush (flushTodayToHistory) handles persisting to eh_history.
+}
+
+// ── Periodic flush: merge today's Chrome history into eh_history ──────────────
+// Runs every `syncInterval` minutes (default 30). Pulls all of today's visits
+// from the Chrome history API and merges them into local storage, deduplicating
+// by (normalizedUrl, 5-second bucket). This replaces per-visit storage writes.
+let _lastFlush = 0;
+
+async function flushTodayToHistory() {
+  const settings = await getSettings();
+  const now = Date.now();
+  const cutoff = now - settings.retentionDays * 86400000;
+
+  const todayEntries = await getTodayFromChromeApi();
+  if (!todayEntries.length) return;
+
+  let existing = await getAll();
+  const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
+
+  let added = 0;
+  for (const e of todayEntries) {
+    const key = `${e.url}|${Math.floor(e.visitTime / 5000)}`;
+    if (existingSet.has(key)) continue;
+    existingSet.add(key);
+    existing.push({ ...e, id: `flush_${e.visitTime}_${Math.random().toString(36).slice(2, 6)}`, source: 'flush' });
+    added++;
+  }
+
+  if (!added) return;
+
+  // Apply retention/max cap then save
+  existing = existing.filter(e => e.visitTime >= cutoff);
+  if (existing.length > settings.maxEntries) existing = existing.slice(existing.length - settings.maxEntries);
+  existing.sort((a, b) => b.visitTime - a.visitTime);
+  await setAll(existing);
+  _lastFlush = now;
+  //console.log(`[EH] Flushed ${added} new entries from today into history`);
+}
+
+async function getSyncInterval() {
+  const settings = await getSettings();
+  return typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
 }
 
 async function getAutoSaveInterval() {
@@ -302,6 +383,14 @@ async function getAutoSaveInterval() {
 }
 
 chrome.alarms.onAlarm.addListener(async alarm => {
+  if (alarm.name === 'eh_flush') {
+    const intervalMins = await getSyncInterval();
+    // intervalMins === 0 means "flush on every visit" (legacy mode) — skip timer flush
+    if (intervalMins > 0 && Date.now() - _lastFlush >= intervalMins * 60 * 1000) {
+      await flushTodayToHistory().catch(() => {});
+    }
+    return;
+  }
   if (alarm.name !== 'eh_tick') return;
   if (activeDomain && segmentStart && windowFocused) {
     await commitSegment();
@@ -775,26 +864,44 @@ async function backfillTitle(url, title, _isRetry = false) {
   }
   entries[bestIdx].title = title;
   await setAll(entries);
-  await updateTodayHistory();
 }
 
 function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toString().replace(/\/$/,''); } catch { return url; } }
 
 async function recordVisit(url, title, tabId) {
   if (!isTrackable(url)) return;
-  if (await shouldIgnoreUrl(url)) return; // Skip if in ignore list
+  if (await shouldIgnoreUrl(url)) return;
   const settings = await getSettings();
   const now      = Date.now();
+  const syncInterval = typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
+
+  // ── Deferred mode (syncInterval > 0): today's visits are served live from
+  //    the Chrome history API and flushed in bulk on a timer. No per-visit write.
+  if (syncInterval > 0) {
+    // Still backfill title into existing entries if we have one within 5 min
+    if (title) {
+      const cutoff5 = now - 5000;
+      const norm = normalizeUrl(url);
+      const entries = await getAll();
+      const idx = entries.findLastIndex(e => e.url === norm && e.visitTime >= cutoff5);
+      if (idx !== -1 && !entries[idx].title) {
+        entries[idx].title = title;
+        await setAll(entries);
+      }
+    }
+    return;
+  }
+
+  // ── Legacy mode (syncInterval === 0): write every visit immediately ──────
   const cutoff   = now - settings.retentionDays * 86400000;
   let entries    = await getAll();
   const norm     = normalizeUrl(url);
   const dup      = entries.findIndex(e=>e.url===norm && (now-e.visitTime)<5000);
-  if (dup !== -1) { if (title && !entries[dup].title) { entries[dup].title=title; await setAll(entries); await updateTodayHistory(); } return; }
+  if (dup !== -1) { if (title && !entries[dup].title) { entries[dup].title=title; await setAll(entries); } return; }
   entries.push({ id:`${now}_${Math.random().toString(36).slice(2,6)}`, url:norm, rawUrl:url, title:title||'', visitTime:now, domain:domainOf(url), tabId:tabId||null });
   entries = entries.filter(e=>e.visitTime>=cutoff);
   if (entries.length>settings.maxEntries) entries=entries.slice(entries.length-settings.maxEntries);
   await setAll(entries);
-  await updateTodayHistory();
 }
 
 chrome.webNavigation.onCommitted.addListener(async details => {
@@ -835,7 +942,21 @@ async function handle(msg) {
   switch(msg.type) {
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
-      let entries=await getAll();
+
+      // Split source: today live from Chrome API, past days from local storage.
+      // This ensures today's entries are always current (no per-visit storage writes)
+      // while older history is served from the fast local store.
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const todayMs = todayStart.getTime();
+
+      const [todayEntries, allStored] = await Promise.all([
+        getTodayFromChromeApi(),
+        getAll(),
+      ]);
+      // Only keep past days from local storage — today comes from Chrome API
+      const pastEntries = allStored.filter(e => e.visitTime < todayMs);
+      let entries = [...todayEntries, ...pastEntries];
+
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
       if (endDate)   entries=entries.filter(e=>e.visitTime<=endDate);
       if (query) {
@@ -950,6 +1071,10 @@ async function handle(msg) {
     }
     case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
     case 'GET_TODAY_HISTORY': {
+      // Serve today's history live from Chrome API — no storage read needed.
+      // Falls back to eh_today_history in storage if Chrome API fails.
+      const liveEntries = await getTodayFromChromeApi();
+      if (liveEntries.length) return { entries: liveEntries };
       const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
     }
@@ -987,6 +1112,20 @@ async function handle(msg) {
       await chrome.storage.local.set({ [AUTO_SAVE_KEY]: safe });
       _lastAutoSave = 0; // reset so next tick recalculates
       return { success: true, minutes: safe };
+    }
+    case 'GET_SYNC_INTERVAL': {
+      return { minutes: await getSyncInterval() };
+    }
+    case 'SET_SYNC_INTERVAL': {
+      const mins = parseInt(msg.minutes);
+      const safe = isNaN(mins) ? 30 : Math.max(0, Math.min(1440, mins));
+      await saveSettings({ syncInterval: safe });
+      _lastFlush = 0; // reset so next alarm tick re-evaluates
+      return { success: true, minutes: safe };
+    }
+    case 'FORCE_FLUSH': {
+      await flushTodayToHistory();
+      return { success: true };
     }
     case 'GET_AUTO_SAVE_INTERVAL': {
       return { minutes: await getAutoSaveInterval() };

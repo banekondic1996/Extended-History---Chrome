@@ -191,24 +191,33 @@ function performSearch(query) {
     });
 }
 
-// ── Recent history — read today's history only for fast loading ───────────────
+// ── Recent history — read today's history live from Chrome API via background ──
 function loadTodayHistory() {
-    chrome.storage.local.get('eh_today_history', r => {
-        const entries = (r.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 15);
-        const el = document.getElementById('recent');
-
-        if (!entries.length) {
-            el.innerHTML = '<div class="empty">No history yet today</div>';
+    chrome.runtime.sendMessage({ type: 'GET_TODAY_HISTORY' }, r => {
+        if (chrome.runtime.lastError || !r) {
+            // Fallback: read directly from storage (handles SW not running yet)
+            chrome.storage.local.get('eh_today_history', s => {
+                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 15));
+            });
             return;
         }
-
-        el.innerHTML = '';
-        for (const e of entries) {
-            const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const row = makeRow(e.url, e.title, t, () => chrome.tabs.create({ url: e.url }));
-            el.appendChild(row);
-        }
+        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 15);
+        renderTodayHistory(entries);
     });
+}
+
+function renderTodayHistory(entries) {
+    const el = document.getElementById('recent');
+    if (!entries.length) {
+        el.innerHTML = '<div class="empty">No history yet today</div>';
+        return;
+    }
+    el.innerHTML = '';
+    for (const e of entries) {
+        const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const row = makeRow(e.url, e.title, t, () => chrome.tabs.create({ url: e.url }));
+        el.appendChild(row);
+    }
 }
 
 // ── Ignore pattern matching (mirrors background.js logic) ────────────────────
@@ -332,7 +341,13 @@ function renderQuickStoreList() {
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
     chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
       const stored = new Set(((r && r.entries) || []).map(e => e.url));
-      const validTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('chrome-extension://'));
+      // Only show tabs that haven't been stored yet
+      const validTabs = tabs.filter(t =>
+        t.url &&
+        !t.url.startsWith('chrome://') &&
+        !t.url.startsWith('chrome-extension://') &&
+        !stored.has(t.url)
+      );
 
       list.innerHTML = '';
 
@@ -342,9 +357,8 @@ function renderQuickStoreList() {
       }
 
       for (const tab of validTabs) {
-        const alreadyStored = stored.has(tab.url);
         const item = document.createElement('div');
-        item.className = 'ts-quick-item' + (alreadyStored ? ' stored' : '');
+        item.className = 'ts-quick-item';
         item.title = tab.url;
 
         const fav = document.createElement('img');
@@ -359,29 +373,28 @@ function renderQuickStoreList() {
         item.appendChild(fav);
         item.appendChild(title);
 
-        if (alreadyStored) {
-          const badge = document.createElement('span');
-          badge.className = 'ts-quick-badge';
-          badge.textContent = 'stored';
-          item.appendChild(badge);
-        } else {
-          item.addEventListener('click', () => {
-            const entry = {
-              id: 'ts_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-              url: tab.url,
-              title: tab.title || tab.url,
-              domain: (() => { try { return new URL(tab.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(),
-              savedAt: Date.now(),
-            };
-            chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (resp) => {
-              const existing = (resp && resp.entries) || [];
-              if (!existing.find(x => x.url === tab.url)) existing.push(entry);
-              chrome.storage.local.set({ eh_tab_storage: existing }, () => {
-                chrome.tabs.remove(tab.id, () => renderQuickStoreList());
-              });
+        item.addEventListener('click', () => {
+          const entry = {
+            id: 'ts_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            url: tab.url,
+            title: tab.title || tab.url,
+            domain: (() => { try { return new URL(tab.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(),
+            savedAt: Date.now(),
+          };
+          chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (resp) => {
+            const existing = (resp && resp.entries) || [];
+            if (!existing.find(x => x.url === tab.url)) existing.push(entry);
+            chrome.storage.local.set({ eh_tab_storage: existing }, () => {
+              // Remove just this item from DOM — no full re-render, no scroll jump
+              item.remove();
+              chrome.tabs.remove(tab.id);
+              if (!list.querySelector('.ts-quick-item')) {
+                list.innerHTML = '<div class="empty">No storable tabs open</div>';
+              }
             });
           });
-        }
+        });
+
         list.appendChild(item);
       }
     });
@@ -391,6 +404,7 @@ function renderQuickStoreList() {
 function loadTabStoragePopup() {
   const el = document.getElementById('tabStoragePopup');
   if (!el) return;
+  const prevScroll = el.scrollTop;
 
   chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
     if (chrome.runtime.lastError || !response) {
@@ -415,6 +429,7 @@ function loadTabStoragePopup() {
       });
       el.appendChild(row);
     }
+    requestAnimationFrame(() => { el.scrollTop = prevScroll; });
   });
 }
 

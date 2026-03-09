@@ -284,33 +284,7 @@ async function doSearch() {
     // Fast path: If no filters and no query, show today's history immediately
     const isInitialLoad = !query && !startDate && !endDate;
     
-    if (isInitialLoad) {
-      // Get today's history from fast storage (instant load)
-      const todayData = await chrome.storage.local.get('eh_today_history');
-      const todayEntries = todayData.eh_today_history || [];
-      
-      if (todayEntries.length > 0) {
-        // Show today's history immediately (fast!)
-        allResults = todayEntries.sort((a, b) => b.visitTime - a.visitTime);
-        buildVirtualList();
-        
-        // Then load full history in background and seamlessly replace
-        setTimeout(async () => {
-          try {
-            const r = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
-            // Only replace if user hasn't changed filters
-            const currentFilters = getFilters();
-            if (!currentFilters.query && !currentFilters.startDate && !currentFilters.endDate) {
-              allResults = r.entries;
-              buildVirtualList();
-            }
-          } catch (err) {
-            // Silently fail - we already have today's data showing
-          }
-        }, 100);
-        return;
-      }
-    }
+    // (no special fast-path needed: SEARCH now merges live today + past storage in one call)
     
     // Normal path: query with filters or no today's data
     const r   = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
@@ -1037,6 +1011,9 @@ function buildSessTabEl(t) {
 async function loadTabStorage() {
   const el = document.getElementById('tabStorageContent');
   if (!el) return;
+  // The actual scrollable container is .panel-scroll (parent of tabStorageContent)
+  const scrollEl = el.closest('.panel-scroll');
+  const prevScroll = scrollEl ? scrollEl.scrollTop : 0;
   el.innerHTML = '<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>';
   try {
     const { entries } = await send('GET_TAB_STORAGE');
@@ -1106,6 +1083,8 @@ async function loadTabStorage() {
       list.appendChild(row);
     }
     el.appendChild(list);
+    // Restore scroll position after re-render
+    requestAnimationFrame(() => { if (scrollEl) scrollEl.scrollTop = prevScroll; });
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
