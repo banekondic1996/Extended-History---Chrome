@@ -1,3 +1,4 @@
+<pre>
 Fixed/changed in version 4.0.4:
 -Added Most Visited tab
 -Fixed and added few translations
@@ -27,7 +28,7 @@ Fixed/changed in version 4.0.7:
 -Added more translations
 -Changed scrolling arrow positions and added option to hold buttons to scroll
 -"All" button is always at the begining now at dates bar
-
+</pre>
 
 
 
