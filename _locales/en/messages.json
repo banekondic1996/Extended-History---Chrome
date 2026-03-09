@@ -19,6 +19,14 @@
   "domains": {"message": "Domains"},
   "enable_ignore": {"message": "Enable Ignore List"},
   "filter_urls": {"message": "Filter URLs matching patterns below"},
+  
+  "reading_mode": {"message": "Reading Mode"},
+  "tab_storage": {"message": "Tab Storage"},
+  "load_exported_history_read": {"message": "Load an exported history file (.json) to browse it without importing it.<br>The UI works exactly like the History tab — date pills, search, everything."},
+  "choose_file": {"message": "Choose file…"},
+  "choose_file_hint": {"message": "or drag & drop a .json file anywhere here"},
+  "leave_reading_mode": {"message": "✕ Leave reading mode"},
+  "reading": {"message": "Reading:"},
 
   "confirm_delete_all_time": {
     "message": "⚠️ Confirm deleting results for all time\n\nThis will delete all $COUNT$ matching results from your entire history.\n\nAre you sure?",

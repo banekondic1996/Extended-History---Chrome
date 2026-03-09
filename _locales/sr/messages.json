@@ -38,6 +38,13 @@
   "enable_ignore": {"message": "Омогући листу игнорисања"},
   "filter_urls": {"message": "Филтрирај URL-ове који одговарају обрасцима испод"},
 
+  "reading_mode": {"message": "Режим читања"},
+  "tab_storage": {"message": "Складиште картица"},
+  "load_exported_history_read": {"message": "Учитај извезену датотеку историје (.json) да је прегледаш без увоза.<br>Интерфејс ради исто као картица Историја — филтери датума, претрага и све остало."},
+  "choose_file": {"message": "Изабери датотеку…"},
+  "choose_file_hint": {"message": "или превуци .json датотеку овде"},
+  "leave_reading_mode": {"message": "✕ Напусти режим читања"},
+  "reading": {"message": "Читање:"},
 
 
   

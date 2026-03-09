@@ -19,6 +19,14 @@
   "enable_ignore": {"message": "启用忽略列表"},
   "filter_urls": {"message": "过滤匹配以下模式的 URL"},
 
+  "reading_mode": {"message": "阅读模式"},
+  "tab_storage": {"message": "标签存储"},
+  "load_exported_history_read": {"message": "加载导出的历史记录文件 (.json) 以浏览它，而无需导入。<br>界面与历史记录标签完全相同——日期筛选、搜索等。"},
+  "choose_file": {"message": "选择文件…"},
+  "choose_file_hint": {"message": "或将 .json 文件拖放到这里"},
+  "leave_reading_mode": {"message": "✕ 退出阅读模式"},
+  "reading": {"message": "正在阅读："},
+
    "confirm_delete_all_time": {
     "message": "⚠️ 确认删除所有时间的结果\n\n这将从你的全部历史记录中删除 $COUNT$ 个匹配结果。\n\n确定吗？",
     "placeholders": { "count": { "content": "$1" } }

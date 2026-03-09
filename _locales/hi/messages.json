@@ -19,7 +19,13 @@
   "enable_ignore": {"message": "इग्नोर सूची सक्षम करें"},
   "filter_urls": {"message": "नीचे दिए गए पैटर्न से मेल खाने वाले URL फ़िल्टर करें"},
 
-
+  "reading_mode": {"message": "रीडिंग मोड"},
+  "tab_storage": {"message": "टैब स्टोरेज"},
+  "load_exported_history_read": {"message": "एक एक्सपोर्ट की गई हिस्ट्री फ़ाइल (.json) लोड करें ताकि बिना इम्पोर्ट किए उसे ब्राउज़ किया जा सके।<br>इंटरफ़ेस बिल्कुल हिस्ट्री टैब जैसा काम करता है — तारीख फ़िल्टर, खोज आदि।"},
+  "choose_file": {"message": "फ़ाइल चुनें…"},
+  "choose_file_hint": {"message": "या .json फ़ाइल यहाँ ड्रैग और ड्रॉप करें"},
+  "leave_reading_mode": {"message": "✕ रीडिंग मोड छोड़ें"},
+  "reading": {"message": "पढ़ रहे हैं:"},
 
   "browse": { "message": "ब्राउज़ करें" },
   "history": { "message": "इतिहास" },

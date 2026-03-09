@@ -31,6 +31,14 @@
     "placeholders": { "count": { "content": "$1" } }
   },
 
+  "reading_mode": {"message": "Режим чтения"},
+  "tab_storage": {"message": "Хранилище вкладок"},
+  "load_exported_history_read": {"message": "Загрузите экспортированный файл истории (.json), чтобы просматривать его без импорта.<br>Интерфейс работает точно так же, как вкладка История — фильтры дат, поиск и всё остальное."},
+  "choose_file": {"message": "Выбрать файл…"},
+  "choose_file_hint": {"message": "или перетащите .json файл сюда"},
+  "leave_reading_mode": {"message": "✕ Выйти из режима чтения"},
+  "reading": {"message": "Чтение:"},
+
   "today": { "message": "Сегодня" },
   "storage": { "message": "Хранилище" },
   "total_visits": { "message": "Всего посещений" },
