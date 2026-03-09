@@ -12,7 +12,7 @@
 
   "reading_mode": {"message": "Modo de lectura"},
   "tab_storage": {"message": "Almacenamiento de pestañas"},
-  "load_exported_history_read": {"message": "Carga un archivo de historial exportado (.json) para explorarlo sin importarlo.<br>La interfaz funciona exactamente como la pestaña Historial — filtros de fecha, búsqueda, todo."},
+  "load_exported_history_read": {"message": "Carga un archivo de historial exportado (.json) para explorarlo sin importarlo. La interfaz funciona exactamente como la pestaña Historial — filtros de fecha, búsqueda, todo."},
   "choose_file": {"message": "Elegir archivo…"},
   "choose_file_hint": {"message": "o arrastra y suelta un archivo .json aquí"},
   "leave_reading_mode": {"message": "✕ Salir del modo de lectura"},

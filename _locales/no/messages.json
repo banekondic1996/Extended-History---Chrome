@@ -21,7 +21,7 @@
 
   "reading_mode": {"message": "Lesemodus"},
   "tab_storage": {"message": "Fanearkiv"},
-  "load_exported_history_read": {"message": "Last inn en eksportert historikkfil (.json) for å bla i den uten å importere den.<br>Grensesnittet fungerer akkurat som Historikk-fanen — datofiltre, søk, alt."},
+  "load_exported_history_read": {"message": "Last inn en eksportert historikkfil (.json) for å bla i den uten å importere den. Grensesnittet fungerer akkurat som Historikk-fanen — datofiltre, søk, alt."},
   "choose_file": {"message": "Velg fil…"},
   "choose_file_hint": {"message": "eller dra og slipp en .json-fil her"},
   "leave_reading_mode": {"message": "✕ Forlat lesemodus"},

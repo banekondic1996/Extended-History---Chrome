@@ -21,7 +21,7 @@
 
   "reading_mode": {"message": "Mode lecture"},
   "tab_storage": {"message": "Stockage des onglets"},
-  "load_exported_history_read": {"message": "Chargez un fichier d’historique exporté (.json) pour le parcourir sans l’importer.<br>L’interface fonctionne exactement comme l’onglet Historique — filtres de date, recherche, tout."},
+  "load_exported_history_read": {"message": "Chargez un fichier d’historique exporté (.json) pour le parcourir sans l’importer. L’interface fonctionne exactement comme l’onglet Historique — filtres de date, recherche, tout."},
   "choose_file": {"message": "Choisir un fichier…"},
   "choose_file_hint": {"message": "ou glissez-déposez un fichier .json ici"},
   "leave_reading_mode": {"message": "✕ Quitter le mode lecture"},

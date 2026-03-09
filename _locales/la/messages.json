@@ -21,7 +21,7 @@
 
   "reading_mode": {"message": "Modus Lectionis"},
   "tab_storage": {"message": "Repositio Schedae"},
-  "load_exported_history_read": {"message": "Onus fasciculi historiae exportati (.json) ad eum inspiciendum sine importatione.<br>Interfacies eadem est ac tabula Historiae — dies, quaerere, omnia."},
+  "load_exported_history_read": {"message": "Onus fasciculi historiae exportati (.json) ad eum inspiciendum sine importatione. Interfacies eadem est ac tabula Historiae — dies, quaerere, omnia."},
   "choose_file": {"message": "Elige fasciculum…"},
   "choose_file_hint": {"message": "aut trahe fasciculum .json huc"},
   "leave_reading_mode": {"message": "✕ Relinque modum lectionis"},

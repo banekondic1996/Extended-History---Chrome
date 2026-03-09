@@ -21,7 +21,7 @@
 
   "reading_mode": {"message": "מצב קריאה"},
   "tab_storage": {"message": "אחסון כרטיסיות"},
-  "load_exported_history_read": {"message": "טען קובץ היסטוריה מיוצא (.json) כדי לעיין בו בלי לייבא אותו.<br>הממשק פועל בדיוק כמו לשונית ההיסטוריה — פילטרים לפי תאריך, חיפוש ועוד."},
+  "load_exported_history_read": {"message": "טען קובץ היסטוריה מיוצא (.json) כדי לעיין בו בלי לייבא אותו.הממשק פועל בדיוק כמו לשונית ההיסטוריה — פילטרים לפי תאריך, חיפוש ועוד."},
   "choose_file": {"message": "בחר קובץ…"},
   "choose_file_hint": {"message": "או גרור ושחרר קובץ .json כאן"},
   "leave_reading_mode": {"message": "✕ יציאה ממצב קריאה"},

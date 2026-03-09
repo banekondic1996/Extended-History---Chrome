@@ -12,7 +12,7 @@
 
   "reading_mode": {"message": "Leesmodus"},
   "tab_storage": {"message": "Tabopslag"},
-  "load_exported_history_read": {"message": "Laad een geëxporteerd geschiedenisbestand (.json) om het te bekijken zonder het te importeren.<br>De interface werkt precies zoals het Geschiedenis-tabblad — datumfilters, zoeken, alles."},
+  "load_exported_history_read": {"message": "Laad een geëxporteerd geschiedenisbestand (.json) om het te bekijken zonder het te importeren. De interface werkt precies zoals het Geschiedenis-tabblad — datumfilters, zoeken, alles."},
   "choose_file": {"message": "Bestand kiezen…"},
   "choose_file_hint": {"message": "of sleep een .json-bestand hierheen"},
   "leave_reading_mode": {"message": "✕ Leesmodus verlaten"},
