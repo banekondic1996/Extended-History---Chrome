@@ -614,20 +614,13 @@ setInterval(() => {
     ev.preventDefault();
     chrome.runtime.sendMessage({ type: 'GET_SESSIONS' }, (sessResp) => {
       if (chrome.runtime.lastError || !sessResp) return;
-      const { sessions, current } = sessResp;
-      const target = sessions && sessions.length ? sessions[sessions.length - 1] : null;
-      const tabs = target
-        ? target.tabs
-        : (current ? current.tabs.filter(t => t.url && t.closed === null) : null);
+      const { current } = sessResp;
+      const tabs = current ? current.tabs.filter(t => t.url && t.closed === null) : null;
       if (!tabs || !tabs.length) {
         chrome.tabs.create({ url: 'history.html#sessions' });
         return;
       }
-      const label = target
-        ? new Date(target.start).toLocaleString(undefined, {
-            weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
-          })
-        : 'Current Session';
+      const label = 'Current Session';
       // Fetch Tab Storage then build export
       chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (tsResp) => {
         const tsEntries = (tsResp && tsResp.entries) || [];
