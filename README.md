@@ -27,6 +27,8 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Add date added label for bookmarks
+-Add better timestamp labels when brwosing history
+-Disable hour pills when in "All" history
 -Put scroll to buttom button and little bigger scroll bars
 </pre>
 <br>
