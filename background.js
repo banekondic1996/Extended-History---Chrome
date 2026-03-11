@@ -802,6 +802,9 @@ chrome.runtime.onStartup.addListener(async () => {
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   ensureContextMenus();
   await migrateStorage();
+  if (reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('tutorial.html') });
+  }
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   await beginSession();

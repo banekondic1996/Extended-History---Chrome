@@ -759,7 +759,7 @@ select:focus { border-color: var(--accent); }
 
 .unit { font-size: 0.8rem; color: var(--text3); }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px 14px; }
 .chip {
   padding: 5px 13px; border-radius: 20px;
   border: 1.5px solid var(--border2);
@@ -840,6 +840,11 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   white-space: nowrap; overflow: hidden;
   border-radius: 0;
 }
+/* While dragging: kill transitions on tree rows so highlight snaps instantly,
+   and kill pointer-events on the items pane so its hundreds of rows don't
+   receive hover/dragover events and trigger style recalc at 60fps */
+.bm-dragging-active .bm-tree-row { transition: none; }
+.bm-dragging-active .bm-items-pane { pointer-events: none; visibility: none; }
 .bm-tree-row:hover { background: var(--surf2); color: var(--text); }
 .bm-tree-row.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);

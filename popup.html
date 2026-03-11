@@ -20,6 +20,19 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .tab { flex:1; padding:6px 4px; background:transparent; border:none; border-radius:6px; color:var(--text2); font-size:0.7rem; font-weight:500; cursor:pointer; transition:color 0.15s; text-align:center; }
 .tab:hover { background:var(--s1); color:var(--text); }
 .tab.active { background:var(--s1); color:var(--accent); font-weight:600; }
+/* Selection mode tab row */
+.sel-mode-row { display:none; gap:6px; padding:8px 14px; background:var(--bg); border-bottom:1px solid var(--border); }
+.sel-mode-row:not(.hidden) { display:flex; }
+.sel-mode-btn { flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.72rem; font-weight:600; cursor:pointer; background:transparent; transition:all 0.1s; }
+.sel-mode-btn:hover { border-color:var(--accent); color:var(--accent); }
+.sel-mode-btn.del { border-color:rgba(224,82,82,0.4); color:#e05252; }
+.sel-mode-btn.del:hover { background:rgba(224,82,82,0.12); }
+/* Selection mode item styles */
+.ritem-check { display:none; width:16px; height:16px; border-radius:50%; border:1.5px solid var(--text3); flex-shrink:0; align-items:center; justify-content:center; font-size:0.6rem; color:transparent; transition:all 0.12s; }
+.ritem.sel-mode .ritem-check { display:flex; }
+.ritem.sel-checked .ritem-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+.ritem.sel-mode { cursor:default; user-select:none; }
+.ritem.sel-checked { background:rgba(59,158,255,0.08); }
 .content-wrapper { position:relative; }
 .content { max-height:320px; overflow-y:auto; scrollbar-width:auto; scrollbar-color:var(--s2) transparent; }
 .content::-webkit-scrollbar { width:10px; }
@@ -83,6 +96,10 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
   <button class="tab active" data-tab="history" id="historyTab">Recent History</button>
   <button class="tab" data-tab="tabs">Closed Tabs</button>
   <button class="tab" data-tab="tabstorage">Tab Storage</button>
+</div>
+<div class="sel-mode-row hidden" id="selModeRow">
+  <button class="sel-mode-btn" id="selUnselectBtn">Unselect All</button>
+  <button class="sel-mode-btn del" id="selDelBtn">Delete</button>
 </div>
 <div class="content-wrapper">
   <div class="content" id="mainContent">

@@ -1297,41 +1297,65 @@ function renderBmTree() {
   rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
   pane.appendChild(rootRow);
 
-  // Helper: make a tree row a drop target
-  // Track last highlighted drop row to avoid querySelectorAll on every dragover
+  // ── Delegated drag-and-drop for entire tree pane ──────────────────────────
+  // Using a SINGLE dragover/dragleave/drop listener on the pane instead of one
+  // per row eliminates the per-row overhead that caused lag in large trees.
   let _lastDropRow = null;
+  const _rowNodeMap = new WeakMap(); // maps DOM row → bookmark node (or null for root)
+
   function clearDropHighlight() {
     if (_lastDropRow) { _lastDropRow.classList.remove('bm-drop-target'); _lastDropRow = null; }
   }
 
-  function makeDropTarget(row, targetNode) {
-    row.addEventListener('dragover', ev => {
-      if (!_bmDragId) return;
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = 'move';
-      if (_lastDropRow !== row) {
-        clearDropHighlight();
-        row.classList.add('bm-drop-target');
-        _lastDropRow = row;
-      }
-    });
-    row.addEventListener('dragleave', ev => {
-      if (!row.contains(ev.relatedTarget)) {
-        row.classList.remove('bm-drop-target');
-        if (_lastDropRow === row) _lastDropRow = null;
-      }
-    });
-    row.addEventListener('drop', async ev => {
-      ev.preventDefault();
+  // Attach delegated listeners once on the pane
+  // ev.preventDefault() must be called synchronously (browser requirement for drop to work),
+  // but the highlight DOM update is deferred via rAF so it runs at most once per frame.
+  let _rafPending = false;
+  let _pendingRow = null;
+  pane.addEventListener('dragover', ev => {
+    if (!_bmDragId) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    _pendingRow = ev.target.closest('.bm-tree-row');
+    if (!_rafPending) {
+      _rafPending = true;
+      requestAnimationFrame(() => {
+        _rafPending = false;
+        const row = _pendingRow;
+        if (row && row !== _lastDropRow && _rowNodeMap.has(row)) {
+          clearDropHighlight();
+          row.classList.add('bm-drop-target');
+          _lastDropRow = row;
+        }
+      });
+    }
+  });
+
+  pane.addEventListener('dragleave', ev => {
+    if (_lastDropRow && !pane.contains(ev.relatedTarget)) {
       clearDropHighlight();
-      if (!_bmDragId) return;
-      const dragId = _bmDragId;
-      _bmDragId = null;
-      const parentId = targetNode ? targetNode.id : '1';
-      const r = await send('MOVE_BOOKMARK', { id: dragId, parentId });
-      if (r?.error) toast(r.error, 'err');
-      else { toast('Bookmark moved', 'ok'); await reloadBookmarksKeepState(); }
-    });
+    } else if (_lastDropRow && ev.target === _lastDropRow && !_lastDropRow.contains(ev.relatedTarget)) {
+      clearDropHighlight();
+    }
+  });
+
+  pane.addEventListener('drop', async ev => {
+    ev.preventDefault();
+    const row = ev.target.closest('.bm-tree-row');
+    const targetNode = row ? _rowNodeMap.get(row) : undefined;
+    clearDropHighlight();
+    if (!_bmDragId || targetNode === undefined) return;
+    const dragId = _bmDragId;
+    _bmDragId = null;
+    const parentId = targetNode ? targetNode.id : '1';
+    const r = await send('MOVE_BOOKMARK', { id: dragId, parentId });
+    if (r?.error) toast(r.error, 'err');
+    else { toast('Bookmark moved', 'ok'); await reloadBookmarksKeepState(); }
+  });
+
+  // Register a row as a drop target (just records it in the map)
+  function makeDropTarget(row, targetNode) {
+    _rowNodeMap.set(row, targetNode);
   }
 
   // Folder right-click context menu
@@ -1522,13 +1546,106 @@ function renderBmItems(folderNode) {
       _bmDragId = n.id;
       ev.dataTransfer.effectAllowed = 'move';
       ev.dataTransfer.setData('text/plain', n.id);
-      // Use setTimeout so the drag image is captured before the class is applied
-      setTimeout(() => row.classList.add('bm-dragging'), 0);
+      setTimeout(() => {
+        row.classList.add('bm-dragging');
+        document.getElementById('panel-bookmarks')?.classList.add('bm-dragging-active');
+        const itemsPane = document.getElementById('bookmarksContent');
+        if (itemsPane && !itemsPane._dragCanvas) {
+          const W = itemsPane.clientWidth;
+          const H = itemsPane.clientHeight;
+          const dpr = devicePixelRatio || 1;
+          const canvas = document.createElement('canvas');
+          canvas.width  = W * dpr;
+          canvas.height = H * dpr;
+          canvas.style.cssText = `position:absolute;inset:0;width:${W}px;height:${H}px;pointer-events:none;z-index:222;display:block;background:black`;
+          const ctx = canvas.getContext('2d');
+          ctx.scale(dpr, dpr);
+
+          // Read computed colours from the live document
+          const cs       = getComputedStyle(document.documentElement);
+          const bgColor  = cs.getPropertyValue('--surf0').trim()  || '#18181f';
+          const rowBg    = cs.getPropertyValue('--surf0').trim()  || '#18181f';
+          const textCol  = cs.getPropertyValue('--text').trim()   || '#f0eee8';
+          const sepCol   = cs.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
+          const text3    = cs.getPropertyValue('--text3').trim()  || '#5a5870';
+
+          // Fill background
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, W, H);
+
+          // Measure row height from a real row
+          const firstRow = itemsPane.querySelector('.bm-item');
+          const rowH = firstRow ? firstRow.getBoundingClientRect().height : 34;
+          const scrollTop = itemsPane.scrollTop;
+          const firstVisible = Math.floor(scrollTop / rowH);
+          const rows = Array.from(itemsPane.querySelectorAll('.bm-item'));
+
+          ctx.font = `13px system-ui,-apple-system,'Segoe UI',sans-serif`;
+          ctx.textBaseline = 'middle';
+
+          rows.forEach((r, i) => {
+            const y = i * rowH - scrollTop;
+            if (y + rowH < 0 || y > H) return; // outside viewport, skip
+
+            // Row background
+            ctx.fillStyle = rowBg;
+            ctx.fillRect(0, y, W, rowH);
+
+            // Favicon
+            const img = r.querySelector('img');
+            if (img && img.complete && img.naturalWidth > 0) {
+              try {
+                ctx.globalAlpha = 0.8;
+                ctx.drawImage(img, 32, y + (rowH - 15) / 2, 15, 15);
+                ctx.globalAlpha = 1;
+              } catch {}
+            } else {
+              // Placeholder circle when favicon missing
+              ctx.fillStyle = text3;
+              ctx.beginPath();
+              ctx.arc(39, y + rowH / 2, 5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Title
+            const titleEl = r.querySelector('.bm-title');
+            if (titleEl) {
+              ctx.fillStyle = textCol;
+              ctx.fillText(titleEl.textContent, 57, y + rowH / 2, W - 75);
+            }
+
+            // Separator
+            ctx.fillStyle = sepCol;
+            ctx.fillRect(0, y + rowH - 1, W, 1);
+          });
+
+          // Place canvas over pane, detach real rows into fragment
+          itemsPane.style.position = 'relative';
+          itemsPane._dragScrollTop = scrollTop;
+          const frag = document.createDocumentFragment();
+          while (itemsPane.firstChild) frag.appendChild(itemsPane.firstChild);
+          itemsPane._dragFragment = frag;
+          itemsPane._dragCanvas   = canvas;
+          itemsPane.appendChild(canvas);
+        }
+      }, 0);
     });
     row.addEventListener('dragend', () => {
       row.classList.remove('bm-dragging');
       _bmDragId = null;
+      document.getElementById('panel-bookmarks')?.classList.remove('bm-dragging-active');
       document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
+      const itemsPane = document.getElementById('bookmarksContent');
+      if (itemsPane && itemsPane._dragCanvas) {
+        itemsPane._dragCanvas.remove();
+        itemsPane._dragCanvas = null;
+        const savedScroll = itemsPane._dragScrollTop || 0;
+        itemsPane.appendChild(itemsPane._dragFragment);
+        itemsPane._dragFragment = null;
+        itemsPane._dragScrollTop = null;
+        itemsPane.style.position = '';
+        itemsPane.scrollTop = savedScroll;
+      }
     });
     row.addEventListener('click', () => window.open(n.url, '_blank'));
     row.addEventListener('contextmenu', ev => {
@@ -2247,7 +2364,14 @@ function rmActivateDatePill(key, silent) {
       t.classList.add('active');
       if (!silent) {
         const wrap = document.getElementById('rmDateScrollWrap');
-        wrap.scrollTo({ left: t.offsetLeft, behavior: 'smooth' });
+        const allPills = Array.from(document.querySelectorAll('#rmDateScroll .dn-pill'));
+        const idx = allPills.indexOf(t);
+        const pillsBack = wrap.offsetWidth < 700 ? 2 : 6;
+        const precedingPills = allPills.slice(Math.max(0, idx - pillsBack), idx);
+        const gap = 5;
+        const offsetBefore = precedingPills.reduce((sum, p) => sum + p.offsetWidth + gap, 0);
+        const pillLeft = t.getBoundingClientRect().left - wrap.getBoundingClientRect().left + wrap.scrollLeft;
+        wrap.scrollTo({ left: pillLeft - offsetBefore, behavior: 'smooth' });
       }
     }
   }

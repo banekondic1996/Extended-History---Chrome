@@ -1,6 +1,9 @@
 // popup.js — fast, reads storage directly (no message round-trip for history list)
 
 let _searchTimer = null;
+// ── Selection mode state ──────────────────────────────────────────────────────
+let _selMode = false;
+let _selItems = new Set(); // selected entry IDs
 
 function tryDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -35,7 +38,19 @@ document.getElementById('openBtn').addEventListener('click', () => {
 document.getElementById('storeBtn').addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tab = tabs[0];
-        if (!tab || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        if (!tab || !tab.url) return;
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
+            const btn = document.getElementById('storeBtn');
+            const orig = btn.textContent;
+            btn.textContent = "Can't store this page";
+            btn.style.background = '#c0392b';
+            btn.style.color = 'var(--text1)';
+            btn.style.fontSize = '0.62rem';
+            setTimeout(() => {
+                btn.textContent = orig;
+                btn.style.background = '';
+                btn.style.fontSize = '';
+            }, 2200);
             return;
         }
         chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
@@ -209,6 +224,32 @@ function loadTodayHistory() {
     });
 }
 
+// ── Selection mode helpers ──────────────────────────────────────────────────
+function enterSelMode() {
+    _selMode = true;
+    _selItems.clear();
+    document.getElementById('tabsRow').classList.add('hidden');
+    document.getElementById('selModeRow').classList.remove('hidden');
+    updateSelModeBar();
+    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.add('sel-mode'));
+}
+function exitSelMode() {
+    _selMode = false;
+    _selItems.clear();
+    document.getElementById('tabsRow').classList.remove('hidden');
+    document.getElementById('selModeRow').classList.add('hidden');
+    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.remove('sel-mode', 'sel-checked'));
+}
+function updateSelModeBar() {
+    const delBtn = document.getElementById('selDelBtn');
+    if (delBtn) delBtn.textContent = _selItems.size > 0 ? `Delete (${_selItems.size})` : 'Delete';
+}
+function toggleSelItem(id, row) {
+    if (_selItems.has(id)) { _selItems.delete(id); row.classList.remove('sel-checked'); }
+    else { _selItems.add(id); row.classList.add('sel-checked'); }
+    updateSelModeBar();
+}
+
 function renderTodayHistory(entries) {
     const el = document.getElementById('recent');
     if (!entries.length) {
@@ -216,9 +257,74 @@ function renderTodayHistory(entries) {
         return;
     }
     el.innerHTML = '';
+    el._entries = entries;
     for (const e of entries) {
         const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const row = makeRow(e.url, e.title, t, () => chrome.tabs.create({ url: e.url }));
+
+        const row = document.createElement('a');
+        row.className = 'ritem' + (_selMode ? ' sel-mode' : '') + (_selItems.has(e.id) ? ' sel-checked' : '');
+        row.href = e.url;
+        row.title = (e.title || e.url) + '\n' + e.url;
+
+        const chk = document.createElement('div');
+        chk.className = 'ritem-check';
+        chk.textContent = '\u2713';
+
+        const img = document.createElement('img');
+        img.className = 'rfav';
+        img.loading = 'lazy';
+        img.src = favUrl(tryDomain(e.url));
+        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+
+        const body = document.createElement('div');
+        body.className = 'rbody';
+        const titleEl = document.createElement('div');
+        titleEl.className = 'rtitle';
+        titleEl.textContent = e.title || e.url;
+        body.appendChild(titleEl);
+
+        const time = document.createElement('div');
+        time.className = 'rtime';
+        time.textContent = t;
+
+        row.appendChild(chk);
+        row.appendChild(img);
+        row.appendChild(body);
+        row.appendChild(time);
+
+        // Long-press (500ms) to enter selection mode
+        let _holdT = null;
+        let _suppressNextClick = false;
+        const startHold = () => {
+            _holdT = setTimeout(() => {
+                _holdT = null;
+                _suppressNextClick = true; // prevent the upcoming click from toggling it back off
+                if (!_selMode) enterSelMode();
+                toggleSelItem(e.id, row);
+            }, 500);
+        };
+        const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
+        row.addEventListener('mousedown', startHold);
+        row.addEventListener('mouseup', cancelHold);
+        row.addEventListener('mouseleave', cancelHold);
+        row.addEventListener('touchstart', () => {
+            _holdT = setTimeout(() => {
+                _holdT = null;
+                _suppressNextClick = true;
+                if (!_selMode) enterSelMode();
+                toggleSelItem(e.id, row);
+            }, 500);
+        }, { passive: true });
+        row.addEventListener('touchend', cancelHold);
+        row.addEventListener('touchcancel', cancelHold);
+
+        row.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            if (_suppressNextClick) { _suppressNextClick = false; return; }
+            if (_selMode) { toggleSelItem(e.id, row); }
+            else { chrome.tabs.create({ url: e.url }); }
+        });
+
         el.appendChild(row);
     }
 }
@@ -543,6 +649,34 @@ function loadMostVisitedPopup() {
     });
 })();
 
+// ── Selection mode button wiring ──────────────────────────────────────────────
+document.getElementById('selUnselectBtn').addEventListener('click', () => {
+    exitSelMode();
+});
+document.getElementById('selDelBtn').addEventListener('click', () => {
+    if (!_selItems.size) { exitSelMode(); return; }
+    const ids = [..._selItems];
+    const recentEl = document.getElementById('recent');
+    const entries = recentEl._entries || [];
+    const matched = entries.filter(e => ids.includes(e.id));
+    // Include all URL variants so chrome.history.deleteUrl finds the exact stored URL
+    const urlSet = new Set();
+    for (const e of matched) {
+        for (const u of [e.url, e.rawUrl].filter(Boolean)) {
+            urlSet.add(u);
+            // with/without trailing slash
+            urlSet.add(u.endsWith('/') ? u.slice(0, -1) : u + '/');
+            // without query string
+            try { const p = new URL(u); p.search = ''; urlSet.add(p.toString()); } catch {}
+        }
+    }
+    const urls = [...urlSet];
+    chrome.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }, () => {
+        exitSelMode();
+        loadTodayHistory();
+    });
+});
+
 // Initial load for all panels
 loadRecentTabs();
 loadTodayHistory();
@@ -550,7 +684,7 @@ loadTodayHistory();
 // Auto-refresh on storage change
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.eh_today_history) {
-        loadTodayHistory();
+        if (!_selMode) loadTodayHistory(); // don't disrupt selection mode
     }
 });
 
@@ -558,9 +692,10 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 chrome.tabs.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
 chrome.windows.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
 
-// Polling fallback
+// Polling fallback — skip while in selection mode to avoid wiping checked state
 let lastCount = 0;
 setInterval(() => {
+    if (_selMode) return;
     chrome.storage.local.get('eh_today_history', r => {
         const entries = r.eh_today_history || [];
         if (entries.length !== lastCount) {
