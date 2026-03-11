@@ -68,6 +68,9 @@ document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.add('active');
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
         document.getElementById(`panel-${tabName}`).classList.add('active');
+        // Reset sub-views when switching tabs
+        if (tabName !== 'history') showHistoryRecent();
+        if (tabName !== 'tabstorage') showTsStoredLabel();
     });
 });
 
@@ -326,6 +329,11 @@ function showTsStored() {
   document.getElementById('ts-quickstore').classList.remove('active');
 }
 
+function showTsStoredLabel() {
+  const t = document.querySelector('.tab[data-tab="tabstorage"]');
+  if (t) t.textContent = 'Tab Storage';
+}
+
 // Show quick-store sub-view (right-click)
 function showTsQuickStore() {
   document.getElementById('ts-stored').classList.remove('active');
@@ -433,25 +441,106 @@ function loadTabStoragePopup() {
   });
 }
 
+// ── History tab sub-views ────────────────────────────────────────────────────
+function showHistoryRecent() {
+    document.getElementById('h-recent').classList.add('active');
+    document.getElementById('h-mostvisited').classList.remove('active');
+    const tab = document.getElementById('historyTab');
+    if (tab) tab.textContent = 'Recent History';
+}
+
+function showHistoryMostVisited() {
+    document.getElementById('h-recent').classList.remove('active');
+    document.getElementById('h-mostvisited').classList.add('active');
+    const tab = document.getElementById('historyTab');
+    if (tab) tab.textContent = 'Most Visited';
+    loadMostVisitedPopup();
+}
+
+function loadMostVisitedPopup() {
+    const el = document.getElementById('mvPopup');
+    if (!el) return;
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    chrome.runtime.sendMessage({ type: 'GET_MOST_VISITED', viewType: 'domain', period: '10' }, (r) => {
+        if (chrome.runtime.lastError || !r || !r.items || !r.items.length) {
+            el.innerHTML = '<div class="empty">No data yet</div>';
+            return;
+        }
+        el.innerHTML = '';
+        r.items.slice(0, 15).forEach((item, i) => {
+            const row = document.createElement('div');
+            row.className = 'mv-row';
+
+            const rank = document.createElement('span');
+            rank.className = 'mv-rank';
+            rank.textContent = i + 1;
+
+            const fav = document.createElement('img');
+            fav.className = 'mv-fav';
+            fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(item.identifier)}`;
+            fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
+
+            const domain = document.createElement('span');
+            domain.className = 'mv-domain';
+            domain.textContent = item.identifier;
+
+            const count = document.createElement('span');
+            count.className = 'mv-count';
+            count.textContent = item.count + 'x';
+
+            row.appendChild(rank);
+            row.appendChild(fav);
+            row.appendChild(domain);
+            row.appendChild(count);
+
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', () => {
+                chrome.tabs.create({ url: 'https://' + item.identifier });
+            });
+
+            el.appendChild(row);
+        });
+    });
+}
+
 // Wire the Tab Storage tab: left-click → stored view, right-click → quick-store view
 (function () {
   const tabStorageTab = document.querySelector('.tab[data-tab="tabstorage"]');
   if (!tabStorageTab) return;
 
   tabStorageTab.addEventListener('click', () => {
+    tabStorageTab.textContent = 'Tab Storage';
     showTsStored();
     loadTabStoragePopup();
   });
 
   tabStorageTab.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
-    // Make sure the tab panel is active
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tabStorageTab.classList.add('active');
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-tabstorage').classList.add('active');
+    tabStorageTab.textContent = 'Active Tabs';
     showTsQuickStore();
   });
+})();
+
+// Wire history tab: left-click → recent, right-click → most visited
+(function () {
+    const historyTab = document.getElementById('historyTab');
+    if (!historyTab) return;
+    historyTab.addEventListener('contextmenu', (ev) => {
+        ev.preventDefault();
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        historyTab.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-history').classList.add('active');
+        showTsStoredLabel();
+        showHistoryMostVisited();
+    });
+    historyTab.addEventListener('click', () => {
+        showHistoryRecent();
+    });
 })();
 
 // Initial load for all panels

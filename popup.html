@@ -64,6 +64,12 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
 .ts-quick-fav { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
 .ts-quick-title { flex:1; font-size:0.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ts-quick-badge { font-size:0.63rem; color:var(--text3); flex-shrink:0; padding:1px 5px; border:1px solid var(--border); border-radius:3px; }
+/* Most visited sub-view */
+.mv-row { display:flex; align-items:center; gap:9px; padding:7px 14px; border-bottom:1px solid var(--border); }
+.mv-rank { font-size:0.62rem; color:var(--text3); font-family:monospace; width:16px; text-align:right; flex-shrink:0; }
+.mv-fav { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
+.mv-domain { flex:1; font-size:0.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mv-count { font-size:0.65rem; color:var(--text3); flex-shrink:0; font-family:monospace; }
 </style>
 </head>
 <body>
@@ -74,14 +80,15 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
   <button class="open-btn" id="openBtn">Open</button>
 </div>
 <div class="tabs" id="tabsRow">
-  <button class="tab active" data-tab="history">Recent History</button>
+  <button class="tab active" data-tab="history" id="historyTab">Recent History</button>
   <button class="tab" data-tab="tabs">Closed Tabs</button>
   <button class="tab" data-tab="tabstorage">Tab Storage</button>
 </div>
 <div class="content-wrapper">
   <div class="content" id="mainContent">
     <div class="tab-panel active" id="panel-history">
-      <div id="recent"><div class="loading">Loading…</div></div>
+      <div class="ts-view active" id="h-recent"><div id="recent"><div class="loading">Loading…</div></div></div>
+      <div class="ts-view" id="h-mostvisited"><div id="mvPopup"><div class="loading">Loading…</div></div></div>
     </div>
     <div class="tab-panel" id="panel-tabs">
       <div id="recentTabs"><div class="loading">Loading…</div></div>

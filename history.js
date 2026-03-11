@@ -502,7 +502,9 @@ function exitSelMode() {
 // ── Delete helpers ────────────────────────────────────────────────────────────
 async function deleteSingle(id) {
   try {
-    await send('DELETE_IDS', { ids: [id] });
+    const entry = allResults.find(e => e.id === id);
+    const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
+    await send('DELETE_IDS', { ids: [id], urls });
     allResults = allResults.filter(e => e.id !== id);
     selected.delete(id);
     if (selected.size === 0) exitSelMode();
@@ -516,7 +518,11 @@ async function deleteIds(ids) {
   if (!ids.length) return;
   if (!confirm(`Delete ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}?`)) return;
   try {
-    await send('DELETE_IDS', { ids });
+    const idSet = new Set(ids);
+    const urls = allResults
+      .filter(e => idSet.has(e.id))
+      .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
+    await send('DELETE_IDS', { ids, urls });
     const s = new Set(ids);
     allResults = allResults.filter(e => !s.has(e.id));
     exitSelMode();
@@ -1743,6 +1749,21 @@ function populateSettings(s) {
   if (faviconSel) faviconSel.value = s.faviconResolver || 'google';
   const autoFocusTgl = document.getElementById('searchAutoFocusToggle');
   if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
+
+  // Performance
+  const timeTrackTgl = document.getElementById('timeTrackingToggle');
+  if (timeTrackTgl) timeTrackTgl.checked = s.timeTrackingEnabled !== false;
+  applyTimeTrackingState(s.timeTrackingEnabled !== false);
+  const syncIntervalInput = document.getElementById('syncIntervalInput');
+  if (syncIntervalInput) syncIntervalInput.value = typeof s.syncInterval === 'number' ? s.syncInterval : 30;
+}
+
+function applyTimeTrackingState(enabled) {
+  const navItem = document.querySelector('.nav-item[data-panel="timespent"]');
+  if (!navItem) return;
+  navItem.style.opacity = enabled ? '' : '0.2';
+  navItem.style.pointerEvents = enabled ? '' : 'none';
+  navItem.title = enabled ? '' : 'Time Spent tracking is disabled in Settings';
 }
 
 function applyVisuals(s) {
@@ -1797,7 +1818,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         popupShowTabs,
         popupHeight,
         faviconResolver,
-        searchAutoFocus
+        searchAutoFocus,
+        timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
+        syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30))
       } 
     });
     _curSettings = r.settings;
@@ -1808,6 +1831,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
   } catch (err) { toast(err.message, 'err'); }
+});
+
+document.getElementById('timeTrackingToggle')?.addEventListener('change', (e) => {
+  applyTimeTrackingState(e.target.checked);
 });
 
 document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () => {

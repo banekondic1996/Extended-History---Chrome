@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
   language:      'en', // Default language
   ignoreListEnabled: true, // Toggle for ignore list
   syncInterval: 30,        // Minutes between flushing today's Chrome history → local storage (0 = every visit)
+  timeTrackingEnabled: true, // Whether to track time spent per domain
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -225,12 +226,14 @@ let activeTabId    = null;
 let activeDomain   = null;
 let segmentStart   = null;
 let windowFocused  = true; // corrected by resumeActiveTab
+let _timeTrackingEnabled = true; // cached in-memory, updated on SAVE_SETTINGS
 
 async function commitSegment() {
   if (!activeDomain || !segmentStart || !windowFocused) {
     segmentStart = null;
     return;
   }
+  if (!_timeTrackingEnabled) { segmentStart = null; return; }
   const now = Date.now();
   const ms  = now - segmentStart;
   segmentStart = null; // clear immediately to prevent double-commit
@@ -247,9 +250,10 @@ async function commitSegment() {
 }
 
 function startSegment(tabId, domain) {
-  activeTabId   = tabId;
-  activeDomain  = domain;
-  segmentStart  = Date.now();
+  activeTabId  = tabId;
+  activeDomain = domain;
+  // segmentStart stays null if tracking is disabled; commitSegment checks too
+  segmentStart = Date.now();
 }
 
 // Called on startup/install to pick up wherever we are
@@ -261,7 +265,7 @@ async function resumeActiveTab() {
     windowFocused = true;
     const [tab] = await chrome.tabs.query({ active: true, windowId: focused.id });
     if (tab && isTrackable(tab.url)) {
-      startSegment(tab.id, domainOf(tab.url));
+      if (_timeTrackingEnabled) startSegment(tab.id, domainOf(tab.url));
     }
   } catch {}
 }
@@ -392,11 +396,13 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     return;
   }
   if (alarm.name !== 'eh_tick') return;
-  if (activeDomain && segmentStart && windowFocused) {
-    await commitSegment();
-    segmentStart = Date.now();
-  } else if (!segmentStart) {
-    await resumeActiveTab();
+  if (_timeTrackingEnabled) {
+    if (activeDomain && segmentStart && windowFocused) {
+      await commitSegment();
+      segmentStart = Date.now();
+    } else if (!segmentStart) {
+      await resumeActiveTab();
+    }
   }
   
   // Save current session every 30s (overwrite same storage)
@@ -519,54 +525,49 @@ a:hover{background:#1f1f28}.fav{width:16px;height:16px;border-radius:3px;flex-sh
 
 // ── Tab activated (user switches tabs) ───────────────────────────────────────
 chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
-  await commitSegment();
+  if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
 
-  if (!windowFocused) return;            // window not focused — don't start timing
+  if (!windowFocused || !_timeTrackingEnabled) return;
 
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (tab && isTrackable(tab.url)) {
-      startSegment(tabId, domainOf(tab.url));
-    }
+    if (tab && isTrackable(tab.url)) startSegment(tabId, domainOf(tab.url));
   } catch {}
 });
 
 // ── Tab URL changed (navigation within same tab) ─────────────────────────────
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (tabId !== activeTabId) return;
-  if (!info.url) return;                 // not a URL change, ignore
+  if (!info.url) return;
   if (!isTrackable(info.url)) {
-    await commitSegment();
+    if (_timeTrackingEnabled) await commitSegment();
     activeDomain = null;
     return;
   }
-  await commitSegment();
-  startSegment(tabId, domainOf(info.url));
+  if (_timeTrackingEnabled) await commitSegment();
+  if (_timeTrackingEnabled) startSegment(tabId, domainOf(info.url));
 });
 
 // ── Tab closed ───────────────────────────────────────────────────────────────
 chrome.tabs.onRemoved.addListener(async tabId => {
   if (tabId !== activeTabId) return;
-  await commitSegment();
+  if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
 });
 
 // ── Window focus changes (alt-tab away / back) ────────────────────────────────
 chrome.windows.onFocusChanged.addListener(async wid => {
   if (wid === chrome.windows.WINDOW_ID_NONE) {
-    // User left Chrome entirely
     windowFocused = false;
-    await commitSegment();
+    if (_timeTrackingEnabled) await commitSegment();
     activeTabId = null; activeDomain = null;
   } else {
-    // User came back to Chrome — find the active tab in this window
     windowFocused = true;
+    if (!_timeTrackingEnabled) return;
     try {
       const [tab] = await chrome.tabs.query({ active: true, windowId: wid });
-      if (tab && isTrackable(tab.url)) {
-        startSegment(tab.id, domainOf(tab.url));
-      }
+      if (tab && isTrackable(tab.url)) startSegment(tab.id, domainOf(tab.url));
     } catch {}
   }
 });
@@ -788,6 +789,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 chrome.runtime.onStartup.addListener(async () => {
   ensureContextMenus();
   await migrateStorage();
+  const _s0 = await getSettings();
+  _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
+  // Flush any history from the previous session that wasn't saved by the periodic timer
+  // (e.g. user browsed then shut down before the next flush interval ran)
+  await flushTodayToHistory().catch(() => {});
   await finishSession();
   await beginSession();
   await resumeActiveTab();
@@ -796,6 +802,8 @@ chrome.runtime.onStartup.addListener(async () => {
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   ensureContextMenus();
   await migrateStorage();
+  const _s0 = await getSettings();
+  _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   await beginSession();
   await resumeActiveTab();
   
@@ -973,24 +981,31 @@ async function handle(msg) {
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
     }
     case 'DELETE_IDS': {
-      const s=new Set(msg.ids);
+      const s = new Set(msg.ids);
+
+      // 1. Remove from local storage
       const all = await getAll();
-      const toDelete = all.filter(e => s.has(e.id));
+      const removed = all.filter(e => s.has(e.id));
       await setAll(all.filter(e => !s.has(e.id)));
-      // Remove from Chrome native history too
-      for (const e of toDelete) {
-        try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+
+      // 2. Delete from Chrome history — every URL variant we know about:
+      //    - urls passed directly from the UI (covers today's live entries)
+      //    - url + rawUrl from local storage entries
+      const urlsToDelete = new Set([
+        ...(msg.urls || []),
+        ...removed.flatMap(e => [e.url, e.rawUrl]),
+      ].filter(Boolean));
+      for (const url of urlsToDelete) {
+        try { await chrome.history.deleteUrl({ url }); } catch {}
       }
-      // CRITICAL: Update today's history
-      //console.log('[EH] Updating today history after deleting', toDelete.length, 'entries');
-      await updateTodayHistory();
-      return {success:true};
+      return { success: true };
     }
     case 'DELETE_MATCHING': {
       const {query='',mode='all',startDate,endDate}=msg;
-      let entries=await getAll(); const q=query.toLowerCase();
+      const q=query.toLowerCase();
       const words=q?q.split(/\s+/).filter(Boolean):[];
-      const toDelete=entries.filter(e=>{
+
+      function matchesFilter(e) {
         const ms=!startDate||e.visitTime>=startDate; const me=!endDate||e.visitTime<=endDate;
         let mq=true; if(words.length){
           const hay=(mode==='title')?(e.title||'').toLowerCase()
@@ -1000,17 +1015,25 @@ async function handle(msg) {
           mq=words.every(w=>hay.includes(w));
         }
         return ms&&me&&mq;
-      });
-      const toDeleteIds=new Set(toDelete.map(e=>e.id));
-      await setAll(entries.filter(e=>!toDeleteIds.has(e.id)));
-      // Remove from Chrome native history too
-      for (const e of toDelete) {
-        try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
       }
-      // Update today's history
-      //console.log('[EH] Updating today history after DELETE_MATCHING, deleted', toDelete.length, 'entries');
-      await updateTodayHistory();
-      return {success:true,deleted:toDelete.length};
+
+      // 1. Remove matching entries from local storage
+      const allStored = await getAll();
+      const toDelete = allStored.filter(matchesFilter);
+      await setAll(allStored.filter(e => !toDelete.find(d => d.id === e.id)));
+
+      // 2. Also match today's live entries from Chrome API
+      const todayLive = await getTodayFromChromeApi();
+      const toDeleteToday = todayLive.filter(matchesFilter);
+
+      // 3. Delete every URL variant from Chrome history (covers both past + today)
+      const urlsToDelete = new Set(
+        [...toDelete, ...toDeleteToday].flatMap(e => [e.url, e.rawUrl]).filter(Boolean)
+      );
+      for (const url of urlsToDelete) {
+        try { await chrome.history.deleteUrl({ url }); } catch {}
+      }
+      return { success: true, deleted: toDelete.length + toDeleteToday.length };
     }
     case 'DELETE_HISTORY_RANGE': {
       const { startTime, endTime, clearCookies, clearCache } = msg;
@@ -1149,7 +1172,9 @@ async function handle(msg) {
       const cur=await getSettings(); 
       const next={...cur,...msg.settings};
       //console.log('[EH] SAVE_SETTINGS:', { current: cur, incoming: msg.settings, merged: next });
-      await chrome.storage.local.set({[SETTINGS_KEY]:next}); 
+      await chrome.storage.local.set({[SETTINGS_KEY]:next});
+      // Update in-memory cache so event listeners pick it up immediately
+      if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
       return {success:true,settings:next};
     }
     case 'EXPORT': {
