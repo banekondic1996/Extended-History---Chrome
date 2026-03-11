@@ -23,6 +23,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Add multiple selection for bookmarks and multiple items moving into bookmarks folder
 -Fix auto exporting of session .html file. To include window grouping and stored tabs
 -Add option to delete history that's searched in popup
+-Fix browser cache based favicon resolver
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Put scroll to buttom button and little bigger scroll bars
