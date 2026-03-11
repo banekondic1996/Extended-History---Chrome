@@ -22,7 +22,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Fix translations (i need help with this, i can't translate dynamic parts)
 -Add multiple selection for bookmarks and multiple items moving into bookmarks folder
 -Fix auto exporting .html file. It's old version
--Add option to delete history that's searched
+-Add option to delete history that's searched in popup
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Put scroll to buttom button and little bigger scroll bars
