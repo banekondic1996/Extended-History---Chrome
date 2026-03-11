@@ -40,8 +40,9 @@ Fixed/changed in version 4.0.8:
 -"Tab Storage" and "Recent History" now change text on right click,
   and "Recent History" on right click shows most visited sites in last 10 days.
 -Restoring tabs from tab storage doesn't reset scroll position anymore
--Scroll positioning for date pills is fixed now and works even if browser width is lower, 6 pills away on large width, 2 pills away on small width.
--Clicking "Store" on while on extension page now warns that page can't be stored (idea based on feedback, to reduce confusion)
+-Scroll positioning for date pills is fixed now and works even if browser width is lower,
+  6 pills away on large width, 2 pills away on small width.
+-Clicking "Store" while on extension page now warns that page can't be stored (idea based on feedback, to reduce confusion)
 -Added option select and delete history inside popup, just for "Recent History" for now.
 -Added option to turn of time tracking to reduce cpu usage (a little bit) if option not needed
 -Fixed deleting, it didn't work well
