@@ -30,10 +30,15 @@ Fixed/changed in version 4.0.7:
 -"All" button is always at the begining now at dates bar
 
 Fixed/changed in version 4.0.8: 
--Architectural change for perfomance, fast url chanigng doesn't trigger saving to local storage anymore, instead todays history is shown via chrome api, 
-  and merged every half hour into local history and on browser startup. Interval can be increased in settings, if PC is used for longer hours.
--Bookmarks moving trickery to improve speed, having large folders makes moving bookmarks laggy, so hide panel, but show it as image drawn on canvas (my idea)
--"Tab Storage" and "Recent History" now change text on right click, and "Recent History" on right click shows most visited sites in last 10 days.
+-Architectural change for perfomance, 
+  fast url chanigng doesn't trigger saving to local storage anymore, 
+  instead todays history is shown via chrome api, 
+  and merged every half hour into local history and on browser startup. 
+  Interval can be increased in settings, if PC is used for longer hours.
+-Bookmarks moving trickery to improve speed, having large folders makes moving bookmarks laggy,
+  so hide panel, but show it as image drawn on canvas (my idea)
+-"Tab Storage" and "Recent History" now change text on right click,
+  and "Recent History" on right click shows most visited sites in last 10 days.
 -Restoring tabs from tab storage doesn't reset scroll position anymore
 -Scroll positioning for date pills is fixed now and works even if browser width is lower, 6 pills away on large width, 2 pills away on small width.
 -Clicking "Store" on while on extension page now warns that page can't be stored (idea based on feedback, to reduce confusion)
