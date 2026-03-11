@@ -26,6 +26,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Fix browser cache based favicon resolver
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
+-Add date added label for bookmarks
 -Put scroll to buttom button and little bigger scroll bars
 </pre>
 <br>
