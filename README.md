@@ -17,16 +17,15 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Encrypt history exports
 -Read exported history, without import, even encrypted ones
 </pre>
-**To do:**
+**To do (ordered by importance):**
 <pre>
--Improve bookmarks moving speed within large folders and being able to move bookmark folders
--Maybe remove lazy loading or improve scrolling for history
--Store page even if page didn't load completely
 -Fix translations (i need help with this, i can't translate dynamic parts)
--Fix exporting in popup and autoexport to include grouping by window
+-Add multiple selection for bookmarks and multiple items moving into bookmarks folder
+-Fix auto exporting .html file. It's old version
+-Add option to delete history that's searched
+-Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
--Improve perfomance and efficiency (maybe by listing chrome history, then daily backing up to local storage instead?)
--Fix scroll when removing tabs from tab storage, scroll should stay at same position
+-Put scroll to buttom button and little bigger scroll bars
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
