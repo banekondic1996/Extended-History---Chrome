@@ -46,6 +46,15 @@ Fixed/changed in version 4.0.8:
 -Added option select and delete history inside popup, just for "Recent History" for now.
 -Added option to turn of time tracking to reduce cpu usage (a little bit) if option not needed
 -Fixed deleting, it didn't work well
+
+Fixed/changed in version 4.0.9 (not released on Giithub or Store yet, until tested):
+-Ignore lists now require password to be seen (easy password reset)
+-Searched results in popup can now be deleten
+-Stored tabs can be unstored now inside popup
+-Fixed auto session export .html file to include windows grouping and tab storage now
+-Bookmarks now show date added next to them
+-Disabled time pills when using "All" filter
+-Added keyword option in ignore lists, to ignore history storing based on keyword in title or url
 </pre>
 
 
