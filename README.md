@@ -27,7 +27,6 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Check does having date labels for bookmarks affect perfomance
--Add better timestamp labels when browsing history
 -Lazy load bookmarks instead of canvas trick
 -Put scroll to buttom button and little bigger scroll bars
 </pre>
