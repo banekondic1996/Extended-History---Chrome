@@ -20,16 +20,14 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 **To do (ordered by importance):**
 <pre>
 -Fix translations (i need help with this, i can't translate dynamic parts)
--Add multiple selection for bookmarks and multiple items moving into bookmarks folder
--Fix auto exporting of session .html file. To include window grouping and stored tabs
--Add option to delete history that's searched in popup
+-Add multiple selection for bookmarks and multiple items moving into bookmarks folder, multi link copy also
+-Add whole history encryption and UI locking
+-Add better timestamp labels when browsing history
 -Fix browser cache based favicon resolver
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
--Add date added label for bookmarks
+-Check does having date labels for bookmarks affect perfomance
 -Add better timestamp labels when browsing history
--Disable hour pills when in "All" history
--Add remove bookmark button
 -Lazy load bookmarks instead of canvas trick
 -Put scroll to buttom button and little bigger scroll bars
 </pre>
