@@ -55,6 +55,7 @@ Fixed/changed in version 4.0.9 (not released on Github or Store yet, until teste
 -Bookmarks now show date added next to them
 -Disabled time pills when using "All" filter
 -Added keyword option in ignore lists, to ignore history storing based on keyword in title or url
+-Clicking items in Recent History inside popup now opens them in new tab, without focusing on that page
 </pre>
 
 
