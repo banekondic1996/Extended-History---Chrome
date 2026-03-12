@@ -29,6 +29,8 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Add date added label for bookmarks
 -Add better timestamp labels when browsing history
 -Disable hour pills when in "All" history
+-Add remove bookmark button
+-Lazy load bookmarks instead of canvas trick
 -Put scroll to buttom button and little bigger scroll bars
 </pre>
 <br>
