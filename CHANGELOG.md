@@ -29,7 +29,7 @@ Fixed/changed in version 4.0.7:
 -Changed scrolling arrow positions and added option to hold buttons to scroll
 -"All" button is always at the begining now at dates bar
 
-Fixed/changed in version 4.0.8: 
+Fixed/changed in version 4.0.8 (waiting for Chrome Store to review and approve update): 
 -Architectural change for perfomance, 
   fast url chanigng doesn't trigger saving to local storage anymore, 
   instead todays history is shown via chrome api, 
