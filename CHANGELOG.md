@@ -47,7 +47,7 @@ Fixed/changed in version 4.0.8:
 -Added option to turn of time tracking to reduce cpu usage (a little bit) if option not needed
 -Fixed deleting, it didn't work well
 
-Fixed/changed in version 4.0.9 (not released on Giithub or Store yet, until tested):
+Fixed/changed in version 4.0.9 (not released on Github or Store yet, until tested):
 -Ignore lists now require password to be seen (easy password reset)
 -Searched results in popup can now be deleten
 -Stored tabs can be unstored now inside popup
