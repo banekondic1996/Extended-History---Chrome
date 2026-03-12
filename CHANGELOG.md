@@ -48,7 +48,7 @@ Fixed/changed in version 4.0.8 (waiting for Chrome Store to review and approve u
 -Fixed deleting, it didn't work well
 
 Fixed/changed in version 4.0.9 (not released on Github or Store yet, until tested):
--Ignore lists now require password to be seen (easy password reset)
+-Ignore lists now require password to be seen (easy password reset, just resets ignore list if you forgot password)
 -Searched results in popup can now be deleten
 -Stored tabs can be unstored now inside popup
 -Fixed auto session export .html file to include windows grouping and tab storage now
