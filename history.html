@@ -15,7 +15,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.0.8</div>
+      <div class="logo-sub">v4.0.9</div>
     </div>
   </div>
 
@@ -654,71 +654,8 @@
 
   <!-- IGNORE LIST -->
   <div class="panel" id="panel-ignorelist">
-    <div class="panel-scroll">
-      <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
-      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px" data-i18n-key="domains_added_will_not_be">
-        Domains added here will not be saved in history. Existing entries will be removed automatically.
-      </p>
-      
-      <!-- Toggle Switch for Enable/Disable -->
-      <div class="ignore-toggle-wrapper">
-        <label class="toggle-switch">
-          <input type="checkbox" id="ignoreListToggle" checked>
-          <span class="toggle-slider"></span>
-        </label>
-        <label class="ignore-toggle-label" for="ignoreListToggle">
-          <div class="ignore-toggle-text">
-            <div class="ignore-toggle-title" data-i18n-key="enable_ignore">Enable Ignore List</div>
-            <div class="ignore-toggle-subtitle" data-i18n-key="filter_urls">Filter URLs matching patterns below</div>
-          </div>
-        </label>
-      </div>
-      
-      <div class="ignore-add">
-        <input type="text" id="ignorePatternInput" 
-               placeholder="example.com"
-               spellcheck="false">
-        <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
-      </div>
-      
-      <div class="pattern-guide-toggle">
-        <button id="patternGuideToggle">▼ <span data-i18n-key="pattern_guide">Pattern Guide</span></button>
-      </div>
-      
-      <div id="patternGuide" class="pattern-guide" style="display:none">
-        <table>
-          <tr>
-            <td><strong><span data-i18n-key="basic_domain">Basic domain</span></strong></td>
-            <td><code><span data-i18n-key="example_com_1">example.com</span></code></td>
-            <td><span data-i18n-key="block_all_example_1">Blocks all of example.com</span></td>
-          </tr>
-          <tr>
-            <td><strong><span data-i18n-key="all_subdomains">All subdomains</span></strong></td>
-            <td><code><span data-i18n-key="example_com_2">*.example.com</span></code></td>
-            <td><span data-i18n-key="block_all_example_2">Blocks blog.example.com, shop.example.com, etc.</span></td>
-          </tr>
-          <tr>
-            <td><strong><span data-i18n-key="specific_subdomain">Specific subdomain</span></strong></td>
-            <td><code><span data-i18n-key="example_com_3">blog.example.com</span></code></td>
-            <td><span data-i18n-key="block_all_example_3">Only blocks blog.example.com</span></td>
-          </tr>
-          <tr>
-            <td><strong><span data-i18n-key="specific_path">Specific path</span></strong></td>
-            <td><code><span data-i18n-key="example_com_4">example.com/private</span></code></td>
-            <td><span data-i18n-key="block_all_example_4">Only blocks URLs under /private</span></td>
-          </tr>
-          <tr>
-            <td><strong><span data-i18n-key="specific_file">Specific file</span></strong></td>
-            <td><code><span data-i18n-key="example_com_5">example.com/file.html</span></code></td>
-            <td><span data-i18n-key="block_all_example_5">Only blocks that specific file</span></td>
-          </tr>
-        </table>
-      </div>
-      
-      <div id="ignoreList" class="ignore-list">
-        <div class="empty-msg" data-i18n-key="no_patterns_added">No patterns added yet</div>
-      </div>
-    </div>
+    <!-- Content injected by JS after password verification — nothing shown here until unlocked -->
+    <div id="ignoreListInner" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
   </div>
 
 </div><!-- /main -->
@@ -735,6 +672,8 @@
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
+  <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
+  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none">🗑 Remove bookmark</div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
 </div>
@@ -774,5 +713,19 @@
 <script src="history.js"></script>
 <script src="ignore-list.js"></script>
 <script src="ui-translate.js"></script>
+<!-- Ignore List Password Modal -->
+<div class="modal-backdrop" id="ignorePasswordModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-title" id="ignorePwTitle">🔒 Ignore List Access</div>
+    <div class="modal-sub" id="ignorePwDesc">Enter your master password to view the ignore list.</div>
+    <input type="password" id="ignorePwInput" placeholder="Master password" style="width:100%;padding:8px 12px;margin-top:12px;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none"/>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)">Reset</button>
+      <button class="sa-btn" id="ignorePwCancelBtn">Cancel</button>
+      <button class="sa-btn" id="ignorePwOkBtn">OK</button>
+    </div>
+    <div id="ignorePwError" style="color:#e05252;font-size:0.78rem;margin-top:8px;display:none"></div>
+  </div>
+</div>
 </body>
 </html>

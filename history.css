@@ -726,7 +726,6 @@ input[type="date"]:focus { border-color: var(--accent); }
 }
 .toggle-switch input:disabled {
   opacity: 0.4;
-  cursor: not-allowed;
 }
 .toggle-slider { display: none; }
 
@@ -879,6 +878,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .bm-item:hover { background: var(--surf1); }
 .bm-fav   { width: 15px; height: 15px; border-radius: 3px; opacity: 0.8; flex-shrink: 0; }
 .bm-title { font-size: 0.87rem; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bm-date  { font-size: 0.72rem; color: var(--text3); flex-shrink: 0; white-space: nowrap; font-family: monospace; margin-left: 6px; }
 
 /* Drag handle */
 .bm-drag-handle {
@@ -940,7 +940,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 
 /* ── Delete History Modal ── */
 .modal-backdrop {
-  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;
+  position:fixed;inset:0;background:var(--surf1) ;z-index:10000;
   display:flex;align-items:center;justify-content:center;
   opacity:0;pointer-events:none;transition:opacity 0.2s;
 }
@@ -953,7 +953,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 }
 .modal-backdrop.open .modal-box { transform:translateY(0); }
 .modal-title { font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px; }
-.modal-sub   { font-size:0.8rem;color:var(--text3);margin-bottom:20px; }
+.modal-sub   { font-size:0.8rem;color:var(--text3);margin-bottom: 5px;margin-top: 20px; }
 .dh-range-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px; }
 .dh-range-btn {
   padding:11px 10px;border-radius:8px;
@@ -970,7 +970,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .dh-cancel:hover { background:var(--surf2);color:var(--text); }
 .dh-confirm { padding:9px 20px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:0.83rem;font-weight:700; }
 .dh-confirm:hover { opacity:0.88; }
-.dh-confirm:disabled { opacity:0.4;cursor:not-allowed; }
+.dh-confirm:disabled { opacity:0.4;}
 
 /* ═══ IGNORE LIST ═══════════════════════════════════════════════════════════ */
 .ignore-add {

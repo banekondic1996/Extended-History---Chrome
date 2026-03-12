@@ -392,6 +392,7 @@ function activateDatePill(key, silent) {
       }
     }
   }
+  updateHourPillsState();
   if (!silent) doSearch();
 }
 
@@ -426,6 +427,18 @@ function buildHourNav() {
     const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
     addPill(lbl, h);
   }
+  updateHourPillsState();
+}
+
+// Enable/disable hour pills based on whether a date filter is active
+function updateHourPillsState() {
+  const hasDate = !!filterDate;
+  document.querySelectorAll('.hn-pill:not([data-h="all"])').forEach(b => {
+    b.disabled = !hasDate;
+    b.style.opacity = hasDate ? '' : '0.35';
+    b.style.cursor  = hasDate ? '' : 'default';
+    b.title = hasDate ? '' : 'Select a date first to filter by hour';
+  });
 }
 
 // ── Toolbar ─────────────────────────────────────────────────────────────────
@@ -451,8 +464,8 @@ function setupToolbar() {
   });
 
   document.getElementById('searchMode').addEventListener('change', doSearch);
-  document.getElementById('dateFrom').addEventListener('change', () => { filterDate = null; doSearch(); });
-  document.getElementById('dateTo').addEventListener('change', () => { filterDate = null; doSearch(); });
+  document.getElementById('dateFrom').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
+  document.getElementById('dateTo').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
 
   // "All time" — clears only date/hour filters, NOT the search text
   document.getElementById('clearFiltersBtn').addEventListener('click', () => {
@@ -464,6 +477,7 @@ function setupToolbar() {
     const allPill = document.getElementById('dnAllPill');
     if (allPill) { document.querySelectorAll('#dateScroll .dn-pill').forEach(b=>b.classList.remove('active')); allPill.classList.add('active'); }
     document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
+    updateHourPillsState();
     doSearch();
   });
 
@@ -1539,8 +1553,9 @@ function renderBmItems(folderNode) {
     row.className = 'bm-item';
     row.dataset.url = n.url;
     row.draggable = true;
+    const dateAdded = n.dateAdded ? new Date(n.dateAdded).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
     row.innerHTML = `<span class="bm-drag-handle" title="Drag to move">⠿</span><img class="bm-fav" src="${favUrl(dom)}" loading="lazy"/>
-      <div class="bm-title">${esc(n.title || n.url)}</div>`;
+      <div class="bm-title">${esc(n.title || n.url)}</div>${dateAdded ? `<span class="bm-date">${esc(dateAdded)}</span>` : ''}`;
     row.querySelector('.bm-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('dragstart', ev => {
       _bmDragId = n.id;
@@ -1650,7 +1665,7 @@ function renderBmItems(folderNode) {
     row.addEventListener('click', () => window.open(n.url, '_blank'));
     row.addEventListener('contextmenu', ev => {
       ev.preventDefault(); ev.stopPropagation();
-      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title });
+      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
     });
     pane.appendChild(row);
   }
@@ -1685,13 +1700,14 @@ function renderBookmarksWithFilter(query) {
     const row = document.createElement('div');
     row.className = 'bm-item';
     row.dataset.url = n.url;
+    const dateAdded2 = n.dateAdded ? new Date(n.dateAdded).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
     row.innerHTML = `<img class="bm-fav" src="${favUrl(dom)}" loading="lazy"/>
-      <div class="bm-title">${esc(n.title || n.url)}</div>`;
+      <div class="bm-title">${esc(n.title || n.url)}</div>${dateAdded2 ? `<span class="bm-date">${esc(dateAdded2)}</span>` : ''}`;
     row.querySelector('.bm-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('click', () => window.open(n.url, '_blank'));
     row.addEventListener('contextmenu', ev => {
       ev.preventDefault(); ev.stopPropagation();
-      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title });
+      showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
     });
     pane.appendChild(row);
   }
@@ -2064,19 +2080,24 @@ let _ctxEntry = null;
 
 function showCtxMenu(x, y, entry) {
   _ctxEntry = entry;
-  const menu    = document.getElementById('ctxMenu');
-  const delEl   = document.getElementById('ctx-delete');
-  const delSep  = document.getElementById('ctx-del-sep');
-  const jumpEl  = document.getElementById('ctx-jump-to-date');
-  const jumpSep = document.getElementById('ctx-jump-sep');
+  const menu       = document.getElementById('ctxMenu');
+  const delEl      = document.getElementById('ctx-delete');
+  const delSep     = document.getElementById('ctx-del-sep');
+  const jumpEl     = document.getElementById('ctx-jump-to-date');
+  const jumpSep    = document.getElementById('ctx-jump-sep');
+  const bmRemove   = document.getElementById('ctx-remove-bookmark');
+  const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
-  if (delEl)   delEl.style.display   = hasId   ? '' : 'none';
-  if (delSep)  delSep.style.display  = hasId   ? '' : 'none';
-  if (jumpEl)  jumpEl.style.display  = hasDate ? '' : 'none';
-  if (jumpSep) jumpSep.style.display = hasDate ? '' : 'none';
+  const hasBmId = !!entry.bmId;
+  if (delEl)        delEl.style.display        = hasId   ? '' : 'none';
+  if (delSep)       delSep.style.display       = hasId   ? '' : 'none';
+  if (jumpEl)       jumpEl.style.display       = hasDate ? '' : 'none';
+  if (jumpSep)      jumpSep.style.display      = hasDate ? '' : 'none';
+  if (bmRemove)     bmRemove.style.display     = hasBmId ? '' : 'none';
+  if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
-  const mw = 210, mh = 200;
+  const mw = 210, mh = 240;
   menu.style.left = Math.min(x, window.innerWidth  - mw - 6) + 'px';
   menu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
 }
@@ -2111,6 +2132,16 @@ document.getElementById('ctx-copy-title').addEventListener('click', () => {
 });
 document.getElementById('ctx-delete').addEventListener('click', () => {
   if (_ctxEntry?.id) deleteSingle(_ctxEntry.id); hideCtxMenu();
+});
+document.getElementById('ctx-remove-bookmark').addEventListener('click', () => {
+  if (!_ctxEntry?.bmId) { hideCtxMenu(); return; }
+  if (!confirm('Remove this bookmark?')) { hideCtxMenu(); return; }
+  chrome.bookmarks.remove(_ctxEntry.bmId, () => {
+    hideCtxMenu();
+    toast('Bookmark removed', 'ok');
+    // Reload bookmarks panel
+    reloadBookmarksKeepState().catch(() => loadBookmarks());
+  });
 });
 
 // ── Session export as HTML ────────────────────────────────────────────────────
@@ -2488,11 +2519,237 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ══ END READING MODE ═════════════════════════════════════════════════════════
 
+// ── Ignore List Password Gate ─────────────────────────────────────────────────
+const IGNORE_PW_KEY = 'eh_ignore_pw_hash';
+
+async function hashPassword(pw) {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest('SHA-256', enc.encode('EH_IGNORE:' + pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleIgnoreListAccess() {
+  const stored = await chrome.storage.local.get([IGNORE_PW_KEY, 'eh_ignore_list']);
+  const pwHash = stored[IGNORE_PW_KEY];
+  const list   = stored['eh_ignore_list'] || [];
+  const isFirstTime = !pwHash || list.length === 0;
+
+  const modal    = document.getElementById('ignorePasswordModal');
+  const title    = document.getElementById('ignorePwTitle');
+  const desc     = document.getElementById('ignorePwDesc');
+  const input    = document.getElementById('ignorePwInput');
+  const errEl    = document.getElementById('ignorePwError');
+  const okBtn    = document.getElementById('ignorePwOkBtn');
+  const resetBtn = document.getElementById('ignorePwResetBtn');
+  const cancelBtn= document.getElementById('ignorePwCancelBtn');
+
+  input.value = '';
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+
+  let mode = isFirstTime ? 'setup' : 'unlock'; // 'setup' | 'unlock' | 'reset-new'
+  let _resolvePw = null;
+
+  function setMode(m) {
+    mode = m;
+    if (m === 'setup') {
+      title.textContent = '🔒 Set Up Ignore List';
+      desc.textContent  = 'No password is set yet. Create a master password to protect your ignore list.';
+      resetBtn.style.display = 'none';
+      okBtn.textContent = 'Create Password';
+    } else if (m === 'unlock') {
+      title.textContent = '🔒 Ignore List Access';
+      desc.textContent  = 'Enter your master password to view the ignore list.';
+      resetBtn.style.display = '';
+      okBtn.textContent = 'OK';
+    } else if (m === 'reset-new') {
+      title.textContent = '🔑 Reset Ignore List';
+      desc.textContent  = 'Ignore list has been cleared. Enter a new master password to continue.';
+      resetBtn.style.display = 'none';
+      okBtn.textContent = 'Set New Password';
+    }
+    input.value = '';
+    errEl.style.display = 'none';
+  }
+
+  setMode(mode);
+  modal.classList.add('open');
+  setTimeout(() => input.focus(), 50);
+
+  function cleanup() {
+    modal.classList.remove('open');
+    okBtn.removeEventListener('click', onOk);
+    resetBtn.removeEventListener('click', onReset);
+    cancelBtn.removeEventListener('click', onCancel);
+    input.removeEventListener('keydown', onKey);
+  }
+
+  async function onOk() {
+    const pw = input.value.trim();
+    if (!pw) { errEl.textContent = 'Please enter a password.'; errEl.style.display = ''; return; }
+
+    if (mode === 'setup' || mode === 'reset-new') {
+      // Set new password
+      const hash = await hashPassword(pw);
+      await chrome.storage.local.set({ [IGNORE_PW_KEY]: hash });
+      cleanup();
+      // Now show the ignore list panel
+      _showIgnorePanel();
+    } else {
+      // Verify password
+      const hash = await hashPassword(pw);
+      if (hash !== pwHash) {
+        errEl.textContent = 'Incorrect password. Try again.';
+        errEl.style.display = '';
+        input.value = '';
+        input.focus();
+        return;
+      }
+      cleanup();
+      _showIgnorePanel();
+    }
+  }
+
+  async function onReset() {
+    if (!confirm('This will clear your entire ignore list and remove the password. Continue?')) return;
+    // Clear ignore list and password
+    await chrome.storage.local.remove([IGNORE_PW_KEY, 'eh_ignore_list']);
+    await send('SET_IGNORE_LIST', { list: [] }).catch(() => {});
+    setMode('reset-new');
+    input.focus();
+  }
+
+  function onCancel() {
+    cleanup();
+    // Go back to history panel
+    switchPanel('history');
+  }
+
+  function onKey(e) {
+    if (e.key === 'Enter') onOk();
+    if (e.key === 'Escape') onCancel();
+  }
+
+  okBtn.addEventListener('click', onOk);
+  resetBtn.addEventListener('click', onReset);
+  cancelBtn.addEventListener('click', onCancel);
+  input.addEventListener('keydown', onKey);
+}
+
+function _showIgnorePanel() {
+  // Inject real content into the locked container (only now, after auth)
+  const inner = document.getElementById('ignoreListInner');
+  if (inner && !inner.dataset.loaded) {
+    inner.dataset.loaded = '1';
+    inner.innerHTML = `
+      <div class="panel-scroll">
+        <div class="panel-heading">🚫 Ignored Domains</div>
+        <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
+          Domains added here will not be saved in history. Existing entries will be removed automatically.
+          Words without a dot are treated as <strong>keywords</strong> — they match any URL or page title containing that word.
+        </p>
+        <div class="ignore-toggle-wrapper">
+          <label class="toggle-switch">
+            <input type="checkbox" id="ignoreListToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="ignore-toggle-label" for="ignoreListToggle">
+            <div class="ignore-toggle-text">
+              <div class="ignore-toggle-title">Enable Ignore List</div>
+              <div class="ignore-toggle-subtitle">Filter URLs matching patterns below</div>
+            </div>
+          </label>
+        </div>
+        <div class="ignore-add">
+          <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
+          <button id="addIgnoreBtn">Add Pattern</button>
+        </div>
+        <div class="pattern-guide-toggle">
+          <button id="patternGuideToggle">▼ URL Pattern Guide</button>
+        </div>
+        <div id="patternGuide" class="pattern-guide" style="display:none">
+      <table>
+              <tr>
+                <!-- Needs translations (TODO) START-->
+                <td><strong><span data-i18n-key="specific_word">Specific keyword</span></strong></td> 
+                <td><code><span data-i18n-key="example_com_6">example</span></code></td>
+                <td><span data-i18n-key="block_all_example_7">Only blocks that keyword</span></td>
+                <!-- Needs translations (TODO) END-->
+              </tr>
+              <tr>
+                <td><strong><span data-i18n-key="basic_domain">Basic domain</span></strong></td>
+                <td><code><span data-i18n-key="example_com_1">example.com</span></code></td>
+                <td><span data-i18n-key="block_all_example_1">Blocks all of example.com</span></td>
+              </tr>
+              <tr>
+                <td><strong><span data-i18n-key="all_subdomains">All subdomains</span></strong></td>
+                <td><code><span data-i18n-key="example_com_2">*.example.com</span></code></td>
+                <td><span data-i18n-key="block_all_example_2">Blocks blog.example.com, shop.example.com, etc.</span></td>
+              </tr>
+              <tr>
+                <td><strong><span data-i18n-key="specific_subdomain">Specific subdomain</span></strong></td>
+                <td><code><span data-i18n-key="example_com_3">blog.example.com</span></code></td>
+                <td><span data-i18n-key="block_all_example_3">Only blocks blog.example.com</span></td>
+              </tr>
+              <tr>
+                <td><strong><span data-i18n-key="specific_path">Specific path</span></strong></td>
+                <td><code><span data-i18n-key="example_com_4">example.com/private</span></code></td>
+                <td><span data-i18n-key="block_all_example_4">Only blocks URLs under /private</span></td>
+              </tr>
+              <tr>
+                <td><strong><span data-i18n-key="specific_file">Specific file</span></strong></td>
+                <td><code><span data-i18n-key="example_com_5">example.com/file.html</span></code></td>
+                <td><span data-i18n-key="block_all_example_5">Only blocks that specific file</span></td>
+              </tr>
+            </table>
+        </div>
+        <div id="ignoreList" class="ignore-list">
+          <div class="empty-msg">No patterns added yet</div>
+        </div>
+      </div>`;
+    inner.style.display = 'flex';
+    // Re-init ignore-list.js listeners now that the DOM elements exist
+    if (window.IgnoreList) {
+      // Re-wire buttons manually since initIgnoreList already ran before elements existed
+      const addBtn = document.getElementById('addIgnoreBtn');
+      if (addBtn) addBtn.addEventListener('click', window.IgnoreList.add);
+      const toggle = document.getElementById('ignoreListToggle');
+      if (toggle) toggle.addEventListener('change', window.IgnoreList.toggle);
+      const guideToggle = document.getElementById('patternGuideToggle');
+      if (guideToggle) guideToggle.addEventListener('click', window.IgnoreList.toggleGuide);
+      const input = document.getElementById('ignorePatternInput');
+      if (input) input.addEventListener('keypress', e => { if (e.key === 'Enter') window.IgnoreList.add(); });
+    }
+  } else if (inner) {
+    inner.style.display = 'flex';
+  }
+
+  // Activate the panel
+  document.querySelectorAll('.panel').forEach(p =>
+    p.classList.toggle('active', p.id === 'panel-ignorelist'));
+
+  // Load patterns
+  if (window.IgnoreList) window.IgnoreList.load();
+}
+
 function switchPanel(name) {
+  // Lock the ignore list whenever navigating away from it
+  if (name !== 'ignorelist') {
+    const inner = document.getElementById('ignoreListInner');
+    if (inner) {
+      inner.style.display = 'none';
+      delete inner.dataset.loaded; // force content re-injection on next unlock
+      inner.innerHTML = '';        // clear DOM so devtools sees nothing
+    }
+  }
+
   document.querySelectorAll('.nav-item[data-panel]').forEach(b =>
   b.classList.toggle('active', b.dataset.panel === name));
   document.querySelectorAll('.panel').forEach(p =>
   p.classList.toggle('active', p.id === `panel-${name}`));
+
+  // Ignorelist: show panel then overlay modal on top (modal is position:fixed)
+  if (name === 'ignorelist') { handleIgnoreListAccess(); return; }
 
   if (name === 'activity')  loadActivity();
   if (name === 'timespent') loadTimeSpent(curTimeDays || 15);
