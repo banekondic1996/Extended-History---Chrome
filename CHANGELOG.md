@@ -36,7 +36,7 @@ Fixed/changed in version 4.0.8:
   and merged every half hour into local history and on browser startup. 
   Interval can be increased in settings, if PC is used for longer hours.
 -Bookmarks moving trickery to improve speed, having large folders makes moving bookmarks laggy,
-  so hide panel, but show it as image drawn on canvas (my idea)
+  so hide panel, but show it as image drawn on canvas (my idea). Will lazy load in future.
 -"Tab Storage" and "Recent History" now change text on right click,
   and "Recent History" on right click shows most visited sites in last 10 days.
 -Restoring tabs from tab storage doesn't reset scroll position anymore
