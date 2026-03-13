@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Extended History  | 90+ days of history",
-  "version": "4.0.9",
+  "version": "4.1.0",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "permissions": [

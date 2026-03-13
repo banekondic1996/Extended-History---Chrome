@@ -1322,6 +1322,55 @@ async function handle(msg) {
       existing.sort((a,b)=>b.visitTime-a.visitTime); await setAll(existing);
       // Update today's history
       await updateTodayHistory();
+
+      // ── Bookmark top domains into "Extended History" folder ──────────────
+      try {
+        // Count visits per domain across all history (imported + existing)
+        const allEntries = await getAll();
+        const domainCounts = {};
+        for (const e of allEntries) {
+          const d = e.domain || domainOf(e.url);
+          if (d) domainCounts[d] = (domainCounts[d] || 0) + 1;
+        }
+        const topDomains = Object.entries(domainCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([domain]) => domain);
+
+        if (topDomains.length) {
+          // Find or create "Extended History" bookmark folder
+          const tree = await chrome.bookmarks.getTree();
+          function findFolder(nodes, title) {
+            for (const n of nodes) {
+              if (!n.url && n.title === title) return n;
+              if (n.children) { const f = findFolder(n.children, title); if (f) return f; }
+            }
+            return null;
+          }
+          let folder = findFolder(tree, 'Extended History');
+          if (!folder) {
+            // Create at top-level bookmarks bar (id '1') or Other Bookmarks (id '2')
+            const parentId = tree[0]?.children?.[0]?.id || '1';
+            folder = await chrome.bookmarks.create({ parentId, title: 'Extended History' });
+          }
+
+          // Collect URLs already in the folder to avoid duplicates
+          const folderChildren = await chrome.bookmarks.getChildren(folder.id);
+          const existingUrls = new Set(folderChildren.map(c => c.url).filter(Boolean));
+
+          for (const domain of topDomains) {
+            const url = `https://${domain}`;
+            if (!existingUrls.has(url)) {
+              try {
+                await chrome.bookmarks.create({ parentId: folder.id, title: domain, url });
+                existingUrls.add(url);
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+      // ────────────────────────────────────────────────────────────────────
+
       return {success:true,imported:count};
     }
     case 'RE_BACKFILL': {
