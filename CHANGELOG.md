@@ -60,6 +60,7 @@ Fixed/changed in version 4.0.9 (in testing branch):
 Fixed/changed in version 4.1.0 (not released on Github or Store yet, until tested):
 -Bookmarks loading speed fixed
 -Added scroll to bottom which scrolls by 1 visible page length
+-Added more translations
 
 </pre>
 
