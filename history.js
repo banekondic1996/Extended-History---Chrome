@@ -1038,7 +1038,7 @@ async function loadTabStorage() {
   try {
     const { entries } = await send('GET_TAB_STORAGE');
     if (!entries || !entries.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📌</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
       return;
     }
     el.innerHTML = '';
@@ -1225,6 +1225,7 @@ let _bmOffset      = 0;      // pagination offset
 let _bmLoading     = false;  // pagination in-flight guard
 const BM_PAGE      = 80;     // bookmarks per page
 let _bmNodeMap     = new Map(); // id → node, rebuilt whenever tree loads
+let _bmFlat        = [];        // precomputed flat search index — rebuilt with tree
 
 // Build flat id→node map from the full tree (call after every tree load)
 function _bmBuildNodeMap(nodes) {
@@ -1233,6 +1234,36 @@ function _bmBuildNodeMap(nodes) {
     for (const n of ns) { _bmNodeMap.set(n.id, n); if (n.children) walk(n.children); }
   }
   walk(nodes || []);
+}
+
+// Build flat search index: one entry per bookmark url-node, with precomputed
+// lowercase search fields and resolved folder name so search is a plain filter().
+function _bmBuildFlat() {
+  _bmFlat = [];
+  function walk(ns) {
+    for (const n of ns) {
+      if (n.url) {
+        const parentNode   = n.parentId ? _bmNodeMap.get(n.parentId) : null;
+        const isTopRoot    = !parentNode || parentNode.parentId === '0' || !parentNode.parentId;
+        const folderName   = (!isTopRoot && parentNode) ? (parentNode.title || '') : '';
+        _bmFlat.push({
+          node:       n,
+          _title:     (n.title || '').toLowerCase(),
+          _url:       (n.url   || '').toLowerCase(),
+          _folder:    folderName.toLowerCase(),
+          folderName: folderName,
+        });
+      } else if (n.children) {
+        walk(n.children);
+      }
+    }
+  }
+  // Walk from real roots (skip chrome's synthetic root wrapper)
+  const roots = [];
+  for (const r of (_bmTree || [])) {
+    if (r.children) roots.push(...r.children);
+  }
+  walk(roots);
 }
 
 async function loadBookmarks() {
@@ -1261,6 +1292,7 @@ async function loadBookmarks() {
     const { tree } = await send('GET_BOOKMARKS');
     _bmTree = tree;
     _bmBuildNodeMap(_bmTree);
+    _bmBuildFlat();
     _bmActiveNode = null;
     renderBmTree();
     renderBmItems(null);
@@ -1270,7 +1302,7 @@ async function loadBookmarks() {
 }
 
 // Reload tree data but preserve the currently selected folder, expanded states, scroll position, and active search
-async function reloadBookmarksKeepState() {
+async function reloadBookmarksKeepState(resetScroll = true) {
   // Snapshot which node IDs are expanded and which is active
   const expandedIds = new Set();
   function collectExpanded(nodes) {
@@ -1293,6 +1325,7 @@ async function reloadBookmarksKeepState() {
     const { tree } = await send('GET_BOOKMARKS');
     _bmTree = tree;
     _bmBuildNodeMap(_bmTree);
+    _bmBuildFlat();
     function restoreExpanded(nodes) {
       for (const n of nodes) {
         if (!n.url) {
@@ -1325,8 +1358,8 @@ async function reloadBookmarksKeepState() {
       renderBmItems(_bmActiveNode);
     }
 
-    // Restore scroll position after render
-    if (itemsPane) requestAnimationFrame(() => { itemsPane.scrollTop = savedScroll; });
+    // Restore scroll position after render (only when preserving state, e.g. after a move)
+    if (!resetScroll && itemsPane) requestAnimationFrame(() => { itemsPane.scrollTop = savedScroll; });
   } catch (err) {
     toast(err.message, 'err');
   }
@@ -1782,7 +1815,9 @@ function _buildBmRow(n) {
     folderLabel.style.display = folderName ? '' : 'none';
   } else {
     // Show date added
-    const dateText = n.dateAdded ? '' : '';
+    const dateText = n.dateAdded
+      ? new Date(n.dateAdded).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+      : '';
     folderLabel.textContent = dateText;
     folderLabel.style.display = dateText ? '' : 'none';
   }
@@ -1895,6 +1930,7 @@ function _bmInitList(items) {
   const pane = document.getElementById('bookmarksContent');
   pane.innerHTML = '';
   pane.onscroll = null;
+  pane.scrollTop = 0;
   _bmItems = items;
   _bmOffset = 0;
 
@@ -1933,27 +1969,40 @@ function renderBmItems(folderNode) {
   _bmInitList(items);
 }
 
-// Search: flat list across all bookmarks
+// Search: flat list across all bookmarks — uses precomputed _bmFlat index for speed
 function renderBookmarksWithFilter(query) {
   const q = query.trim().toLowerCase();
   if (!_bmTree) return;
   if (!q) { _bmIsSearch = false; renderBmItems(_bmActiveNode); return; }
-  const results = [];
-  function walk(nodes) {
-    for (const n of nodes) {
-      if (n.url) {
-        if ((n.title || '').toLowerCase().includes(q) || n.url.toLowerCase().includes(q)) results.push(n);
-      } else if (n.children) walk(n.children);
-    }
-  }
-  walk(bmRootChildren());
+
+  // Multi-word: every word must appear in title, url, or folder name
+  const words = q.split(/\s+/).filter(Boolean);
+  const results = _bmFlat.filter(({ _title, _url, _folder }) =>
+    words.every(w => _title.includes(w) || _url.includes(w) || _folder.includes(w))
+  ).map(e => e.node);
+
   const pane = document.getElementById('bookmarksContent');
   if (!results.length) {
+    _bmItems  = [];
+    _bmOffset = 0;
+    _bmIsSearch = true;
     pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No matching bookmarks</div>';
     return;
   }
+
   _bmIsSearch = true;
-  _bmInitList(results);
+
+  // Render synchronously — search result sets are small, no need for batched pagination
+  if (_bmSelMode) _exitBmSelMode();
+  _bmItems  = results;
+  _bmOffset = results.length;
+  pane.onscroll  = null;
+  pane.scrollTop = 0;
+
+  const frag = document.createDocumentFragment();
+  for (const n of results) frag.appendChild(_buildBmRow(n));
+  pane.innerHTML = '';
+  pane.appendChild(frag);
 }
 // ── Bookmark multiselect bar buttons ────────────────────────────────────────
 document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
@@ -2066,7 +2115,7 @@ document.getElementById('bmMoveConfirmBtn')?.addEventListener('click', async () 
   document.getElementById('bmMoveModal').classList.remove('open');
   _exitBmSelMode();
   toast(failed ? `Moved with ${failed} error(s)` : `Moved ${ids.length} bookmark${ids.length === 1 ? '' : 's'}`, failed ? 'err' : 'ok');
-  await reloadBookmarksKeepState();
+  await reloadBookmarksKeepState(false);
 });
 
 // Close modal on backdrop click
@@ -3256,7 +3305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('bmSearch')?.addEventListener('input', ev => {
     document.getElementById('bmSearchClearBtn')?.classList.toggle('visible', ev.target.value.length > 0);
     clearTimeout(_bmSearchTimer);
-    _bmSearchTimer = setTimeout(() => renderBookmarksWithFilter(ev.target.value), 1000);
+    _bmSearchTimer = setTimeout(() => renderBookmarksWithFilter(ev.target.value), 150);
   });
 
   buildDateNav();

@@ -885,7 +885,6 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   font-size: 0.68rem; color: var(--text3); flex-shrink: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 100px; font-family: monospace;
-  border: 1px solid var(--border); border-radius: 3px;
   padding: 1px 5px; margin-left: 4px;
 }
 
@@ -908,7 +907,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 /* ── Bookmark multiselect bar ───────────────────────────────────────────── */
 .bm-sel-bar {
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
-  padding: 10px 14px; background: var(--surf0);
+  padding: 14px 14px; background: var(--surf0);
   border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
 .bm-sel-count { font-size: 0.82rem; color: var(--accent); font-weight: 600; flex: 1; min-width: 0; }
