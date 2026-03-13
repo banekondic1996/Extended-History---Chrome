@@ -47,7 +47,7 @@ Fixed/changed in version 4.0.8 (waiting for Chrome Store to review and approve u
 -Added option to turn of time tracking to reduce cpu usage (a little bit) if option not needed
 -Fixed deleting, it didn't work well
 
-Fixed/changed in version 4.0.9 (not released on Github or Store yet, until tested):
+Fixed/changed in version 4.0.9 (in testing branch):
 -Ignore lists now require password to be seen (easy password reset, just resets ignore list if you forgot password)
 -Searched results in popup can now be deleten
 -Stored tabs can be unstored now inside popup
@@ -56,6 +56,11 @@ Fixed/changed in version 4.0.9 (not released on Github or Store yet, until teste
 -Disabled time pills when using "All" filter
 -Added keyword option in ignore lists, to ignore history storing based on keyword in title or url
 -Clicking items in Recent History inside popup now opens them in new tab, without focusing on that page
+
+Fixed/changed in version 4.1.0 (not released on Github or Store yet, until tested):
+-Bookmarks loading speed fixed
+-Added scroll to bottom which scrolls by 1 visible page length
+
 </pre>
 
 
