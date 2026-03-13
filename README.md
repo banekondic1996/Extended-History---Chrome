@@ -20,7 +20,6 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 **To do (ordered by importance):**
 <pre>
 -Fix translations (i need help with this, i can't translate dynamic parts)
--Add multiple selection for bookmarks and multiple items moving into bookmarks folder, multi link copy also
 -Add whole history encryption and UI locking
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Add better timestamp labels when browsing history
