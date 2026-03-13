@@ -5,6 +5,16 @@ let _searchTimer = null;
 let _selMode = false;
 let _selItems = new Set(); // selected entry IDs
 
+// ── Tab Storage selection mode state ─────────────────────────────────────────
+let _tsSelMode = false;
+let _tsSelItems = new Set(); // selected tab storage entry IDs
+let _tsEntries = []; // current tab storage entries (for delete)
+
+// ── Search overlay selection mode state ──────────────────────────────────────
+let _srchSelMode = false;
+let _srchSelItems = new Set(); // selected search result entry IDs
+let _srchEntries = []; // current search result entries
+
 function tryDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
@@ -171,12 +181,19 @@ function openSearchOverlay() {
     requestAnimationFrame(() => {
         overlay.classList.add('active');
         document.getElementById('tabsRow').classList.add('hidden');
+        if (!_srchSelMode) document.getElementById('srchModeRow').classList.add('hidden');
     });
 }
 
 function closeSearchOverlay() {
     document.getElementById('searchOverlay').classList.remove('active');
     document.getElementById('tabsRow').classList.remove('hidden');
+    // Exit search selection mode when closing overlay
+    if (_srchSelMode) {
+        _srchSelMode = false;
+        _srchSelItems.clear();
+        document.getElementById('srchModeRow').classList.add('hidden');
+    }
 }
 
 function performSearch(query) {
@@ -194,6 +211,7 @@ function performSearch(query) {
         }
 
         const matches = response.entries || [];
+        _srchEntries = matches;
 
         if (!matches.length) {
             resultsEl.innerHTML = '<div class="empty">No results found</div>';
@@ -203,7 +221,71 @@ function performSearch(query) {
         resultsEl.innerHTML = '';
         for (const e of matches) {
             const t = new Date(e.visitTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
-            const row = makeRow(e.url, e.title, t, () => chrome.tabs.create({ url: e.url }));
+
+            const row = document.createElement('a');
+            row.className = 'ritem' + (_srchSelMode ? ' sel-mode' : '') + (_srchSelItems.has(e.id) ? ' sel-checked' : '');
+            row.href = e.url;
+            row.title = (e.title || e.url) + '\n' + e.url;
+
+            const chk = document.createElement('div');
+            chk.className = 'ritem-check';
+            chk.textContent = '✓';
+
+            const img = document.createElement('img');
+            img.className = 'rfav';
+            img.loading = 'lazy';
+            img.src = favUrl(tryDomain(e.url));
+            img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+
+            const body = document.createElement('div');
+            body.className = 'rbody';
+            const titleEl = document.createElement('div');
+            titleEl.className = 'rtitle';
+            titleEl.textContent = e.title || e.url;
+            body.appendChild(titleEl);
+
+            const time = document.createElement('div');
+            time.className = 'rtime';
+            time.textContent = t;
+
+            row.appendChild(chk);
+            row.appendChild(img);
+            row.appendChild(body);
+            row.appendChild(time);
+
+            // Long-press to enter selection mode
+            let _holdT = null;
+            let _suppressNextClick = false;
+            const startHold = () => {
+                _holdT = setTimeout(() => {
+                    _holdT = null;
+                    _suppressNextClick = true;
+                    if (!_srchSelMode) enterSrchSelMode();
+                    toggleSrchSelItem(e.id, row);
+                }, 500);
+            };
+            const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
+            row.addEventListener('mousedown', startHold);
+            row.addEventListener('mouseup', cancelHold);
+            row.addEventListener('mouseleave', cancelHold);
+            row.addEventListener('touchstart', () => {
+                _holdT = setTimeout(() => {
+                    _holdT = null;
+                    _suppressNextClick = true;
+                    if (!_srchSelMode) enterSrchSelMode();
+                    toggleSrchSelItem(e.id, row);
+                }, 500);
+            }, { passive: true });
+            row.addEventListener('touchend', cancelHold);
+            row.addEventListener('touchcancel', cancelHold);
+
+            row.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                if (_suppressNextClick) { _suppressNextClick = false; return; }
+                if (_srchSelMode) { toggleSrchSelItem(e.id, row); }
+                else { chrome.tabs.create({ url: e.url, active: false }); }
+            });
+
             resultsEl.appendChild(row);
         }
     });
@@ -247,6 +329,7 @@ function updateSelModeBar() {
 function toggleSelItem(id, row) {
     if (_selItems.has(id)) { _selItems.delete(id); row.classList.remove('sel-checked'); }
     else { _selItems.add(id); row.classList.add('sel-checked'); }
+    if (_selItems.size === 0) { exitSelMode(); return; }
     updateSelModeBar();
 }
 
@@ -322,7 +405,7 @@ function renderTodayHistory(entries) {
             ev.preventDefault();
             if (_suppressNextClick) { _suppressNextClick = false; return; }
             if (_selMode) { toggleSelItem(e.id, row); }
-            else { chrome.tabs.create({ url: e.url }); }
+            else { chrome.tabs.create({ url: e.url, active: false }); }
         });
 
         el.appendChild(row);
@@ -330,8 +413,14 @@ function renderTodayHistory(entries) {
 }
 
 // ── Ignore pattern matching (mirrors background.js logic) ────────────────────
-function matchesIgnorePatternPopup(url, pattern) {
+function matchesIgnorePatternPopup(url, pattern, title) {
     try {
+        // Keyword pattern
+        if (pattern.startsWith('kw:')) {
+            const kw = pattern.slice(3).toLowerCase();
+            if (!kw) return false;
+            return (url || '').toLowerCase().includes(kw) || (title || '').toLowerCase().includes(kw);
+        }
         const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
         const pat = pattern.replace(/^\*\./, '').replace(/^www\./, '').toLowerCase();
         const slashIdx = pat.indexOf('/');
@@ -395,7 +484,7 @@ function loadRecentTabs() {
                 if (ageInDays < 0 || ageInDays > 30) return false;
                 // Filter out ignored URLs
                 if (ignoreEnabled && ignoreList.length) {
-                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern))) return false;
+                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title))) return false;
                 }
                 return true;
             }).sort((a, b) => b.lastModified - a.lastModified);
@@ -515,6 +604,33 @@ function renderQuickStoreList() {
   });
 }
 
+// ── Tab Storage selection mode helpers ────────────────────────────────────────
+function enterTsSelMode() {
+    _tsSelMode = true;
+    _tsSelItems.clear();
+    document.getElementById('tabsRow').classList.add('hidden');
+    document.getElementById('tsModeRow').classList.remove('hidden');
+    updateTsModeBar();
+    document.querySelectorAll('#tabStoragePopup .ritem').forEach(r => r.classList.add('sel-mode'));
+}
+function exitTsSelMode() {
+    _tsSelMode = false;
+    _tsSelItems.clear();
+    document.getElementById('tabsRow').classList.remove('hidden');
+    document.getElementById('tsModeRow').classList.add('hidden');
+    document.querySelectorAll('#tabStoragePopup .ritem').forEach(r => r.classList.remove('sel-mode', 'sel-checked'));
+}
+function updateTsModeBar() {
+    const btn = document.getElementById('tsUnstoreBtn');
+    if (btn) btn.textContent = _tsSelItems.size > 0 ? `Unstore (${_tsSelItems.size})` : 'Unstore';
+}
+function toggleTsSelItem(id, row) {
+    if (_tsSelItems.has(id)) { _tsSelItems.delete(id); row.classList.remove('sel-checked'); }
+    else { _tsSelItems.add(id); row.classList.add('sel-checked'); }
+    if (_tsSelItems.size === 0) { exitTsSelMode(); return; }
+    updateTsModeBar();
+}
+
 function loadTabStoragePopup() {
   const el = document.getElementById('tabStoragePopup');
   if (!el) return;
@@ -527,6 +643,7 @@ function loadTabStoragePopup() {
     }
 
     const entries = response.entries || [];
+    _tsEntries = entries;
 
     if (!entries.length) {
       el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
@@ -535,12 +652,72 @@ function loadTabStoragePopup() {
 
     el.innerHTML = '';
     for (const entry of entries) {
-      const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
-        chrome.tabs.create({ url: entry.url, active: false });
-        chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
-          loadTabStoragePopup();
-        });
+      const row = document.createElement('a');
+      row.className = 'ritem' + (_tsSelMode ? ' sel-mode' : '') + (_tsSelItems.has(entry.id) ? ' sel-checked' : '');
+      row.href = entry.url;
+      row.title = (entry.title || entry.url) + '\n' + entry.url;
+
+      const chk = document.createElement('div');
+      chk.className = 'ritem-check';
+      chk.textContent = '✓';
+
+      const img = document.createElement('img');
+      img.className = 'rfav';
+      img.loading = 'lazy';
+      img.src = favUrl(tryDomain(entry.url));
+      img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+
+      const body = document.createElement('div');
+      body.className = 'rbody';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'rtitle';
+      titleEl.textContent = entry.title || entry.url;
+      body.appendChild(titleEl);
+
+      const time = document.createElement('div');
+      time.className = 'rtime';
+      time.textContent = getTimeAgo(Math.floor(entry.savedAt / 1000));
+
+      row.appendChild(chk);
+      row.appendChild(img);
+      row.appendChild(body);
+      row.appendChild(time);
+
+      // Long-press to enter TS selection mode
+      let _tsHoldT = null;
+      let _tsHoldFired = false;
+
+      row.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0 && ev.pointerType === 'mouse') return;
+        _tsHoldFired = false;
+        row.setPointerCapture(ev.pointerId);
+        _tsHoldT = setTimeout(() => {
+          _tsHoldFired = true;
+          _tsHoldT = null;
+          if (!_tsSelMode) enterTsSelMode();
+          toggleTsSelItem(entry.id, row);
+        }, 600);
       });
+
+      row.addEventListener('pointerup', () => {
+        if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+      });
+      row.addEventListener('pointercancel', () => {
+        if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+      });
+
+      row.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        if (_tsHoldFired) { _tsHoldFired = false; return; }
+        if (_tsSelMode) { toggleTsSelItem(entry.id, row); }
+        else {
+          chrome.tabs.create({ url: entry.url, active: false });
+          chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
+            loadTabStoragePopup();
+          });
+        }
+      });
+
       el.appendChild(row);
     }
     requestAnimationFrame(() => { el.scrollTop = prevScroll; });
@@ -676,6 +853,87 @@ document.getElementById('selDelBtn').addEventListener('click', () => {
         loadTodayHistory();
     });
 });
+
+// ── Tab Storage selection mode button wiring ─────────────────────────────────
+document.getElementById('tsUnselectBtn').addEventListener('click', () => {
+    exitTsSelMode();
+    loadTabStoragePopup();
+});
+document.getElementById('tsUnstoreBtn').addEventListener('click', () => {
+    if (!_tsSelItems.size) { exitTsSelMode(); return; }
+    const ids = [..._tsSelItems];
+    chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRIES', ids }, () => {
+        exitTsSelMode();
+        loadTabStoragePopup();
+    });
+});
+
+// ── Search selection mode helpers ─────────────────────────────────────────────
+function enterSrchSelMode() {
+    _srchSelMode = true;
+    _srchSelItems.clear();
+    document.getElementById('srchModeRow').classList.remove('hidden');
+    document.getElementById('tabsRow').classList.add('hidden');
+    updateSrchModeBar();
+    document.querySelectorAll('#searchResults .ritem').forEach(r => r.classList.add('sel-mode'));
+}
+function exitSrchSelMode() {
+    _srchSelMode = false;
+    _srchSelItems.clear();
+    document.getElementById('srchModeRow').classList.add('hidden');
+    // tabsRow stays hidden during search overlay - closeSearchOverlay handles it
+    updateSrchModeBar();
+    document.querySelectorAll('#searchResults .ritem').forEach(r => r.classList.remove('sel-mode', 'sel-checked'));
+}
+function updateSrchModeBar() {
+    const selBtn = document.getElementById('srchSelAllBtn');
+    const delBtn = document.getElementById('srchDelBtn');
+    const allSelected = _srchEntries.length > 0 && _srchSelItems.size === _srchEntries.length;
+    if (selBtn) selBtn.textContent = allSelected ? 'Unselect All' : 'Select All';
+    if (delBtn) delBtn.textContent = _srchSelItems.size > 0 ? `Delete (${_srchSelItems.size})` : 'Delete';
+}
+function toggleSrchSelItem(id, row) {
+    if (_srchSelItems.has(id)) { _srchSelItems.delete(id); row.classList.remove('sel-checked'); }
+    else { _srchSelItems.add(id); row.classList.add('sel-checked'); }
+    if (_srchSelItems.size === 0) { exitSrchSelMode(); return; }
+    updateSrchModeBar();
+}
+
+document.getElementById('srchSelAllBtn').addEventListener('click', () => {
+    const allSelected = _srchEntries.length > 0 && _srchSelItems.size === _srchEntries.length;
+    if (allSelected) {
+        // Unselect all → exit sel mode
+        exitSrchSelMode();
+    } else {
+        // Select all
+        _srchEntries.forEach(e => { _srchSelItems.add(e.id); });
+        document.querySelectorAll('#searchResults .ritem').forEach(r => {
+            r.classList.add('sel-mode', 'sel-checked');
+        });
+        updateSrchModeBar();
+    }
+});
+document.getElementById('srchDelBtn').addEventListener('click', () => {
+    if (!_srchSelItems.size) { exitSrchSelMode(); return; }
+    const ids = [..._srchSelItems];
+    const matched = _srchEntries.filter(e => ids.includes(e.id));
+    const urlSet = new Set();
+    for (const e of matched) {
+        for (const u of [e.url, e.rawUrl].filter(Boolean)) {
+            urlSet.add(u);
+            urlSet.add(u.endsWith('/') ? u.slice(0, -1) : u + '/');
+            try { const p = new URL(u); p.search = ''; urlSet.add(p.toString()); } catch {}
+        }
+    }
+    const urls = [...urlSet];
+    chrome.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }, () => {
+        exitSrchSelMode();
+        // Re-run current search to refresh results
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) performSearch(query);
+    });
+});
+
 
 // Initial load for all panels
 loadRecentTabs();
@@ -872,32 +1130,3 @@ setInterval(() => {
     });
   });
 })();
-// ── Tab Storage in popup ──────────────────────────────────────────────────────
-function loadTabStoragePopup() {
-  const el = document.getElementById('tabStoragePopup');
-  if (!el) return;
-  chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
-    if (chrome.runtime.lastError || !response) {
-      el.innerHTML = '<div class="empty">Error loading tab storage</div>';
-      return;
-    }
-    const entries = response.entries || [];
-    if (!entries.length) {
-      el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click → Extended History → Store this tab</small></div>';
-      return;
-    }
-    el.innerHTML = '';
-    for (const entry of entries) {
-      const row = makeRow(entry.url, entry.title, getTimeAgo(Math.floor(entry.savedAt / 1000)), () => {
-        chrome.tabs.create({ url: entry.url, active: false });
-        chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
-          loadTabStoragePopup();
-        });
-      });
-      el.appendChild(row);
-    }
-  });
-}
-document.querySelectorAll('.tab').forEach(tab => {
-  if (tab.dataset.tab === 'tabstorage') tab.addEventListener('click', () => loadTabStoragePopup());
-});

@@ -46,7 +46,14 @@ function normalizeIgnorePattern(pattern) {
   if (typeof pattern !== 'string') return '';
   let out = pattern.trim();
   if (!out) return '';
+  // Already normalized keyword — return as-is
+  if (out.startsWith('kw:')) return out;
   out = out.replace(/^['"`]+|['"`]+$/g, ''); // allow users to paste quoted values
+  // If no dot (and no slash after stripping protocol), treat as keyword
+  const stripped = out.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+  if (stripped.indexOf('.') === -1 && stripped.indexOf('/') === -1) {
+    return 'kw:' + stripped.toLowerCase().trim();
+  }
   out = out.replace(/^https?:\/\//i, '');
   out = out.replace(/\.+$/g, '');
   out = out.trim();
@@ -111,8 +118,16 @@ async function isIgnoreListEnabled() {
   return settings.ignoreListEnabled !== false; // Default to true if not set
 }
 // Check if URL matches any ignore pattern
-function matchesIgnorePattern(url, pattern) {
+function matchesIgnorePattern(url, pattern, title) {
   try {
+    // Keyword pattern: matches URL string or page title
+    if (pattern.startsWith('kw:')) {
+      const kw = pattern.slice(3).toLowerCase();
+      if (!kw) return false;
+      const urlLower = (url || '').toLowerCase();
+      const titleLower = (title || '').toLowerCase();
+      return urlLower.includes(kw) || titleLower.includes(kw);
+    }
     const parsed = parseIgnorePattern(pattern);
     if (!parsed) return false;
 
@@ -131,11 +146,11 @@ function matchesIgnorePattern(url, pattern) {
   }
 }
 
-async function shouldIgnoreUrl(url) {
+async function shouldIgnoreUrl(url, title) {
   const enabled = await isIgnoreListEnabled();
   if (!enabled) return false;
   const ignoreList = await getIgnoreList();
-  return ignoreList.some(pattern => matchesIgnorePattern(url, pattern));
+  return ignoreList.some(pattern => matchesIgnorePattern(url, pattern, title));
 }
 
 async function addIgnorePattern(pattern) {
@@ -197,7 +212,7 @@ async function cleanIgnoredFromHistory() {
   const toKeep = [];
   const toDelete = [];
   for (const e of entries) {
-    if (ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern))) {
+    if (ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern, e.title))) {
       toDelete.push(e);
     } else {
       toKeep.push(e);
@@ -314,7 +329,7 @@ async function getTodayFromChromeApi() {
     const entries = [];
     for (const item of items) {
       if (!item.url || !isTrackable(item.url)) continue;
-      if (ignoreList.some(p => matchesIgnorePattern(item.url, p))) continue;
+      if (ignoreList.some(p => matchesIgnorePattern(item.url, p, item.title))) continue;
       entries.push({
         id: `live_${item.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
         url: normalizeUrl(item.url),
@@ -430,7 +445,9 @@ async function doAutoSaveSession() {
   if (!openTabs.length) return;
 
   const label    = chrome.i18n.getMessage("current_session") + ' – ' + new Date().toLocaleString();
-  const htmlBody = buildSessionHtml(label, openTabs);
+  const tsData   = await chrome.storage.local.get('eh_tab_storage');
+  const tsEntries = tsData['eh_tab_storage'] || [];
+  const htmlBody = buildSessionHtml(label, openTabs, tsEntries);
   const extPageUrl = chrome.runtime.getURL('history.html');
 
   // Check if the history page is already open
@@ -505,22 +522,118 @@ async function saveCurrentSession() {
   });
 }
 
-function buildSessionHtml(label, tabs) {
+function buildSessionHtml(label, tabs, tsEntries) {
+  tsEntries = tsEntries || [];
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const domainOf2 = url => { try { return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; } };
-  const rows = tabs.map(t => {
+  const validTabs = tabs.filter(t => t.url);
+  const windowIds = [...new Set(validTabs.map(t => t.windowId).filter(Boolean))];
+  const hasMultiWindow = windowIds.length > 1;
+
+  function tabLink(t) {
     const dom = domainOf2(t.url);
-    //return ${chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent("https://" + dom)}&size=16`)}
-    return `<a href="${esc(t.url)}"><img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(dom)}" loading="lazy" onerror="this.style.display='none'"/><span class="title">${esc(t.title||t.url)}</span><span class="domain">${esc(dom)}</span></a>`;
-  }).join('');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>${esc(label)}</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:40px 32px}
-h1{font-size:1.3rem;font-weight:700;color:#3b9eff;margin-bottom:4px}.meta{font-size:.78rem;color:#a09eb0;margin-bottom:28px}
-.links{display:flex;flex-direction:column;gap:3px}a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}
-a:hover{background:#1f1f28}.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}footer{margin-top:36px;font-size:.7rem;color:#5a5870}</style></head>
-<body><h1>📋 ${esc(label)}</h1><div class="meta">${tabs.length} tabs · Saved ${new Date().toLocaleString()}</div>
-<div class="links">${rows}</div><footer>Auto-saved by Extended History</footer></body></html>`;
+    return '<a href="' + esc(t.url) + '">'
+      + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+      + '<span class="title">' + esc(t.title || t.url) + '</span>'
+      + '<span class="domain">' + esc(dom) + '</span></a>';
+  }
+
+  let sessHtml = '';
+  if (hasMultiWindow) {
+    const windowMap = new Map();
+    for (const t of validTabs) {
+      const wid = t.windowId || 'unknown';
+      if (!windowMap.has(wid)) windowMap.set(wid, []);
+      windowMap.get(wid).push(t);
+    }
+    let wi = 1;
+    for (const [, winTabs] of windowMap) {
+      const urlsJson = JSON.stringify(winTabs.map(t => t.url)).replace(/"/g, '&quot;');
+      sessHtml += '<div class="win-header">'
+        + '<span class="win-label">Window ' + wi + '</span>'
+        + '<span class="win-count">' + winTabs.length + ' tab' + (winTabs.length !== 1 ? 's' : '') + '</span>'
+        + '<button class="restore-btn" data-urls="' + urlsJson + '">\u21BA Restore Window</button>'
+        + '</div>';
+      sessHtml += winTabs.map(tabLink).join('');
+      wi++;
+    }
+  } else {
+    const allUrls = JSON.stringify(validTabs.map(t => t.url)).replace(/"/g, '&quot;');
+    sessHtml = '<div class="restore-bar">'
+      + '<button class="restore-btn" data-urls="' + allUrls + '">\u21BA Restore all ' + validTabs.length + ' tabs</button>'
+      + '</div>';
+    sessHtml += validTabs.map(tabLink).join('');
+  }
+
+  const tsHtml = tsEntries.length
+    ? '<div class="links">' + tsEntries.map(e => { try { return tabLink(e); } catch(x) { return ''; } }).join('') + '</div>'
+    : '<div class="ts-empty">No stored tabs.</div>';
+
+  const CSS = ':root{--accent:#3b9eff}'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:0}'
+    + '.page-header{padding:32px 32px 0}'
+    + 'h1{font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:4px}'
+    + '.meta{font-size:.78rem;color:#a09eb0;margin-bottom:20px}'
+    + '.tabs-nav{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.08);padding:0 32px}'
+    + '.tab-btn{padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:#a09eb0;font-size:.82rem;font-weight:600;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px}'
+    + '.tab-btn:hover{color:#f0eee8}'
+    + '.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}'
+    + '.tab-panel{display:none;padding:20px 32px 40px}'
+    + '.tab-panel.active{display:block}'
+    + '.links{display:flex;flex-direction:column;gap:3px}'
+    + 'a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}'
+    + 'a:hover{background:#1f1f28}'
+    + '.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}'
+    + '.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}'
+    + '.win-header{font-size:.75rem;font-weight:700;color:var(--accent);padding:20px 0 6px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(59,158,255,.2);margin-bottom:4px}'
+    + '.win-header:first-child{padding-top:4px}'
+    + '.win-label{font-weight:700}'
+    + '.win-count{font-weight:400;color:#a09eb0;flex:1}'
+    + '.restore-bar{padding:0 0 14px}'
+    + '.restore-btn{padding:6px 14px;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:6px;color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;transition:background .1s;flex-shrink:0}'
+    + '.restore-btn:hover{background:rgba(59,158,255,.22)}'
+    + '.ts-empty{color:#a09eb0;font-size:.85rem;padding:20px 0}'
+    + 'footer{padding:16px 32px 32px;font-size:.7rem;color:#5a5870}';
+
+  const SCRIPT = '(function(){'
+    + 'function st(n){'
+    +   '["sessions","tabstorage"].forEach(function(x){'
+    +     'document.getElementById("tab-"+x).classList.toggle("active",x===n);'
+    +     'document.getElementById("btn-"+x).classList.toggle("active",x===n);'
+    +   '});'
+    + '}'
+    + 'document.getElementById("btn-sessions").addEventListener("click",function(){st("sessions");});'
+    + 'document.getElementById("btn-tabstorage").addEventListener("click",function(){st("tabstorage");});'
+    + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
+    +   'btn.addEventListener("click",function(){'
+    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+    +     'if(!u.length)return;'
+    +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
+    +     'u.forEach(function(x){window.open(x,"_blank");});'
+    +   '});'
+    + '});'
+    + '})();';
+
+  return '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"/>'
+    + '<title>Session \u2013 ' + esc(label) + '</title>'
+    + '<style>' + CSS + '</style></head>\n<body>\n'
+    + '<div class="page-header">'
+    +   '<h1>\uD83D\uDCCB ' + esc(label) + '</h1>'
+    +   '<div class="meta">' + validTabs.length + ' tabs \u00B7 Auto-saved ' + new Date().toLocaleString() + '</div>'
+    + '</div>\n'
+    + '<div class="tabs-nav">'
+    +   '<button class="tab-btn active" id="btn-sessions">Sessions</button>'
+    +   '<button class="tab-btn" id="btn-tabstorage">Tab Storage</button>'
+    + '</div>\n'
+    + '<div class="tab-panel active" id="tab-sessions">'
+    +   '<div class="links">' + sessHtml + '</div>'
+    + '</div>\n'
+    + '<div class="tab-panel" id="tab-tabstorage">' + tsHtml + '</div>\n'
+    + '<footer>Auto-saved by Extended History</footer>\n'
+    + '<script>' + SCRIPT + '<\/script>\n'
+    + '</body></html>';
 }
 
 // ── Tab activated (user switches tabs) ───────────────────────────────────────
@@ -881,7 +994,7 @@ function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toS
 
 async function recordVisit(url, title, tabId) {
   if (!isTrackable(url)) return;
-  if (await shouldIgnoreUrl(url)) return;
+  if (await shouldIgnoreUrl(url, title)) return;
   const settings = await getSettings();
   const now      = Date.now();
   const syncInterval = typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
@@ -1120,6 +1233,13 @@ async function handle(msg) {
       const next = await removeTabStorageEntry(msg.id);
       return { success: true, entries: next };
     }
+    case 'REMOVE_TAB_STORAGE_ENTRIES': {
+      const { ids } = msg;
+      const r = await chrome.storage.local.get('eh_tab_storage');
+      const list = (r['eh_tab_storage'] || []).filter(e => !ids.includes(e.id));
+      await chrome.storage.local.set({ 'eh_tab_storage': list });
+      return { success: true, entries: list };
+    }
     case 'CLEAR_TAB_STORAGE': {
       await chrome.storage.local.set({ [TAB_STORAGE_KEY]: [] });
       return { success: true };
@@ -1275,6 +1395,11 @@ async function handle(msg) {
         });
       }
       return result;
+    }
+    case 'SET_IGNORE_LIST': {
+      const { list } = msg;
+      await setIgnoreList(list || []);
+      return { success: true };
     }
     case 'REMOVE_IGNORE_PATTERN': {
       const { pattern } = msg;

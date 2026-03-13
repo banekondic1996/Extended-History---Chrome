@@ -53,7 +53,13 @@ async function loadIgnoreList() {
       item.className = 'ignore-item';
       
       const code = document.createElement('code');
-      code.textContent = pattern;
+      // Display kw: patterns as readable keyword labels
+      if (pattern.startsWith('kw:')) {
+        code.textContent = 'keyword: ' + pattern.slice(3);
+        code.title = 'Keyword pattern — matches any URL or page title containing "' + pattern.slice(3) + '"';
+      } else {
+        code.textContent = pattern;
+      }
       
       const removeBtn = document.createElement('button');
       removeBtn.className = 'ignore-remove-btn';
@@ -193,7 +199,7 @@ function initIgnoreList() {
   if (addBtn) {
     addBtn.addEventListener('click', addIgnorePattern);
   } else {
-    console.warn('[IgnoreList] Add button #addIgnoreBtn not found');
+    // elements injected post-auth — not an error
   }
   
   // Toggle switch
@@ -202,7 +208,7 @@ function initIgnoreList() {
     toggle.addEventListener('change', toggleIgnoreList);
     //console.log('[IgnoreList] Toggle switch listener attached');
   } else {
-    console.warn('[IgnoreList] Toggle #ignoreListToggle not found');
+    // elements injected post-auth — not an error
   }
   
   // Pattern guide toggle
@@ -210,7 +216,7 @@ function initIgnoreList() {
   if (guideToggle) {
     guideToggle.addEventListener('click', togglePatternGuide);
   } else {
-    console.warn('[IgnoreList] Guide toggle #patternGuideToggle not found');
+    // elements injected post-auth — not an error
   }
   
   // Enter key to add pattern
@@ -223,7 +229,7 @@ function initIgnoreList() {
     });
     //console.log('[IgnoreList] Input Enter key listener attached');
   } else {
-    console.warn('[IgnoreList] Input #ignorePatternInput not found');
+    // elements injected post-auth — not an error
   }
   
   // Load patterns when the ignore list panel becomes visible
