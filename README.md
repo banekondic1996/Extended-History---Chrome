@@ -17,20 +17,10 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Encrypt history exports
 -Read exported history, without import, even encrypted ones
 </pre>
-**To do (ordered by importance):**
-<pre>
--Fix translations (i need help with this, i can't translate dynamic parts)
--Add multiple selection for bookmarks and multiple items moving into bookmarks folder, multi link copy also
--Add whole history encryption and UI locking
--Add better timestamp labels when browsing history
--Fix browser cache based favicon resolver
--Store page even if page didn't load completely
--Fix Tab Storage loading speed in popup
--Check does having date labels for bookmarks affect perfomance
--Lazy load bookmarks instead of canvas trick
--Put scroll to buttom button and little bigger scroll bars
-</pre>
-<br>
+**To do list in main branch**
+</br>
+
+**Screenshots:**
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
 
 
