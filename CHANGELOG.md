@@ -29,7 +29,7 @@ Fixed/changed in version 4.0.7:
 -Changed scrolling arrow positions and added option to hold buttons to scroll
 -"All" button is always at the begining now at dates bar
 
-Fixed/changed in version 4.0.8 (waiting for Chrome Store to review and approve update): 
+Fixed/changed in version 4.0.8: 
 -Architectural change for perfomance, 
   fast url chanigng doesn't trigger saving to local storage anymore, 
   instead todays history is shown via chrome api, 
@@ -47,7 +47,7 @@ Fixed/changed in version 4.0.8 (waiting for Chrome Store to review and approve u
 -Added option to turn of time tracking to reduce cpu usage (a little bit) if option not needed
 -Fixed deleting, it didn't work well
 
-Fixed/changed in version 4.0.9 (in testing branch):
+Fixed/changed in version 4.0.9:
 -Ignore lists now require password to be seen (easy password reset, just resets ignore list if you forgot password)
 -Searched results in popup can now be deleten
 -Stored tabs can be unstored now inside popup
@@ -57,7 +57,7 @@ Fixed/changed in version 4.0.9 (in testing branch):
 -Added keyword option in ignore lists, to ignore history storing based on keyword in title or url
 -Clicking items in Recent History inside popup now opens them in new tab, without focusing on that page
 
-Fixed/changed in version 4.1.0 (not released on Github or Store yet, until tested):
+Fixed/changed in version 4.1.0 (in Chrome Store):
 -Bookmarks loading speed fixed
 -Bookmarks search input clear button added
 -Bookmarks search loading speed increased
@@ -65,6 +65,13 @@ Fixed/changed in version 4.1.0 (not released on Github or Store yet, until teste
 -Added more translations
 -Bookmarks multiple selection mode added
 
+Fixed/changed in version 4.1.1 (in testing branch):
+-Added wallpaper mode with frosted UI look
+-Fixed reading mode calendar
+-Added reading mode filters
+-Fixed context menu for reading mode
+-Added option for wallpaper hue
+-CSS fixes
 </pre>
 
 
