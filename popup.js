@@ -24,8 +24,9 @@ function favUrl(domain) {
 }
 
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
-chrome.storage.local.get('eh_settings', r => {
-    const s = r.eh_settings || {};
+chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
+    const s  = r.eh_settings  || {};
+    const wp = r.eh_wallpaper || null;
     document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
@@ -37,7 +38,73 @@ chrome.storage.local.get('eh_settings', r => {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
+
+    // Wallpaper mode
+    if (wp && wp.enabled && wp.dataUrl) {
+        _applyPopupWallpaper(wp, s.theme || 'dark');
+    }
 });
+
+function _applyPopupWallpaper(wp, theme) {
+    const isDark = theme === 'dark';
+    const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
+    const blurAmount     = wp.blurAmount ?? 8;
+    const overlayColor   = isDark
+        ? `rgba(0,0,0,${overlayOpacity})`
+        : `rgba(255,255,255,${overlayOpacity})`;
+
+    document.getElementById('eh-popup-wp-layer')?.remove();
+    document.getElementById('eh-popup-wp-style')?.remove();
+
+    const layer = document.createElement('div');
+    layer.id = 'eh-popup-wp-layer';
+    layer.style.cssText = `
+        position:absolute;inset:0;z-index:-1;
+        background:url(${wp.dataUrl}) center/cover no-repeat;
+        filter:blur(${blurAmount}px);
+        transform:scale(0.98);
+        pointer-events:none;
+    `;
+    document.body.prepend(layer);
+
+    const style = document.createElement('style');
+    style.id = 'eh-popup-wp-style';
+    style.textContent = `
+        body { background: transparent !important; }
+        body::before {
+            content:''; position:absolute; inset:0; z-index:0;
+            background:${overlayColor}; pointer-events:none;
+        }
+        .header, .tabs, .sel-mode-row, .footer, .search-bar,
+        .tab-panel, .search-overlay {
+            background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
+            backdrop-filter: blur(14px) saturate(1.3) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
+            border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+        }
+        .ritem {
+            background: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} !important;
+        }
+        .ritem:hover {
+            background: ${isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)'} !important;
+        }
+        .search-input {
+            background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
+            backdrop-filter: blur(6px) !important;
+        }
+        .tab.active{
+            filter: brightness(1.2)!important;
+            background: transparent !important;
+            backdrop-filter: blur(2px) !important;
+        }
+        .tab:hover, .flink:hover{
+            filter: brightness(1.2)!important;
+            background: transparent !important;
+            backdrop-filter: blur(2px) !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // ── Header "Open" button ──────────────────────────────────────────────────────
 document.getElementById('openBtn').addEventListener('click', () => {

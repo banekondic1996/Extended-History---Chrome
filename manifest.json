@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Extended History  | 90+ days of history",
+  "name": "Extended History | 90+ days of history",
   "version": "4.1.0",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
@@ -18,6 +18,10 @@
     "webNavigation",
     "windows"
   ],
+  "externally_connectable": {
+    "ids": ["epcfihjolbggloifehmdebihghhmjleb"],
+    "matches": []
+  },
   "background": {
     "service_worker": "background.js"
   },

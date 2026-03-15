@@ -1510,3 +1510,23 @@ async function handle(msg) {
     default: return {error:`Unknown: ${msg.type}`};
   }
 }
+// ══ EXTERNAL MESSAGING ══════════════════════════════════════════════════════
+// Allows the "Extended Page" new-tab extension to query history data.
+// The sender's ID must be listed in manifest.json > externally_connectable > ids.
+const ALLOWED_EXTERNAL_TYPES = new Set([
+  'GET_MOST_VISITED',
+  'GET_TAB_STORAGE',
+  'GET_SETTINGS',
+  'REMOVE_TAB_STORAGE_ENTRY',
+]);
+
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (!ALLOWED_EXTERNAL_TYPES.has(message.type)) {
+    sendResponse({ error: 'Not allowed: ' + message.type });
+    return false;
+  }
+  handle(message)
+    .then(sendResponse)
+    .catch(err => sendResponse({ error: err.message }));
+  return true; // Keep channel open for async response
+});
