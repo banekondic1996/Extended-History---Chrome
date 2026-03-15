@@ -19,7 +19,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do (ordered by importance):**
 <pre>
--Reading mod doesn't have search filters based on url, title, domain also right click context menu
+-Reading mode doesn't have search filters based on url, title, domain also right click context menu
 -Fix browser cache based favicon resolver
 -Fix translations (i need help with this, i can't translate dynamic parts)
 -Add better timestamp labels when browsing history
