@@ -1,6 +1,147 @@
 {
   "ext_name": { "message": "Extended History" },
 
+
+  
+  "all": {
+    "message": "All"
+  },
+  "auto_focus_search": {
+    "message": "Auto-focus search on open"
+  },
+  "auto_focus_search_desc": {
+    "message": "Automatically focus the search input when the history page opens"
+  },
+  "back": {
+    "message": "← Back"
+  },
+  "background_tint": {
+    "message": "Background Tint"
+  },
+  "browser_cache": {
+    "message": "Browser cache"
+  },
+  "delete_history_reset_password": {
+    "message": "Delete history & reset password"
+  },
+  "enable_bg_tint": {
+    "message": "Enable background tint"
+  },
+  "enable_lock": {
+    "message": "Enable Lock"
+  },
+  "enter_password_to_continue": {
+    "message": "Enter your password to continue"
+  },
+  "ext_locked": {
+    "message": "Extended History — Locked"
+  },
+  "favicon_resolver": {
+    "message": "Favicon resolver"
+  },
+  "favicon_resolver_desc": {
+    "message": "How site icons are fetched. \"Browser cache\" uses Chrome's built-in cache (faster, private). \"Google\" fetches from Google's CDN (better coverage)."
+  },
+  "for_password_reset": {
+    "message": "(for password reset)"
+  },
+  "forgot_password_reset": {
+    "message": "Forgot password / Reset"
+  },
+  "google_resolver": {
+    "message": "Google resolver"
+  },
+  "history_merge_interval": {
+    "message": "History merge interval"
+  },
+  "history_merge_interval_desc": {
+    "message": "How often browser history is merged into local storage. 30min is optimal, but you can put more if using PC for longer hours"
+  },
+  "lock_extension_page": {
+    "message": "Lock extension page"
+  },
+  "lock_extension_page_desc": {
+    "message": "Require a password to view the history page and disable search/tab features in popup. History is NOT encrypted — only protected from non-technical users."
+  },
+  "password": {
+    "message": "Password"
+  },
+  "performance": {
+    "message": "Performance"
+  },
+  "popup": {
+    "message": "Popup"
+  },
+  "popup_height": {
+    "message": "Popup height"
+  },
+  "popup_height_desc": {
+    "message": "Maximum height of the popup list area (px)"
+  },
+  "refresh": {
+    "message": "↻ Refresh"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ Warning: Resetting your password will permanently delete ALL stored history. This cannot be undone."
+  },
+  "search_bar": {
+    "message": "Search bar"
+  },
+  "search_bar_desc": {
+    "message": "Show the search bar at the bottom of the popup"
+  },
+  "security_answer": {
+    "message": "Security answer"
+  },
+  "security_question": {
+    "message": "Security question"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Set Up Page Lock"
+  },
+  "tabs_bar": {
+    "message": "Tabs bar"
+  },
+  "tabs_bar_desc": {
+    "message": "Show the Recent History / Closed Tabs switcher"
+  },
+  "time_spent_tracking": {
+    "message": "Time Spent tracking"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Track time spent per domain. Disable to reduce CPU usage."
+  },
+  "ui": {
+    "message": "UI"
+  },
+  "unlock": {
+    "message": "Unlock"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com or keyword"
+  },
+  "opt_all_fields": {
+    "message": "All fields"
+  },
+  "opt_title": {
+    "message": "Title"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Domain"
+  },
+  "block_all_example_7": {
+    "message": "Only blocks that keyword"
+  },
+  "specific_word": {
+    "message": "Specific keyword"
+  },
+  "example_com_6": {
+    "message": "example"
+  },
+
   "current_session": { "message": "Current Session" },
   "active": { "message": "Active" },
   "all_fields": { "message": "All fields" },
