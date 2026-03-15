@@ -19,14 +19,14 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do (ordered by importance):**
 <pre>
+-Reading mod doesn't have search filters based on url, title, domain also right click context menu
+-Fix browser cache based favicon resolver
 -Fix translations (i need help with this, i can't translate dynamic parts)
+-Add better timestamp labels when browsing history
 -Add whole history encryption and UI locking
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
--Add better timestamp labels when browsing history
--Fix browser cache based favicon resolver
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
--Reading mod doesn't have search filters based on url, title, domain also right click context menu
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
