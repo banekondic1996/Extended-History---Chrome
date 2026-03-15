@@ -59,10 +59,10 @@ function _applyPopupWallpaper(wp, theme) {
     const layer = document.createElement('div');
     layer.id = 'eh-popup-wp-layer';
     layer.style.cssText = `
-        position:absolute;inset:0;z-index:-1;
+        position:fixed;inset:0;z-index:-1;
         background:url(${wp.dataUrl}) center/cover no-repeat;
         filter:blur(${blurAmount}px);
-        transform:scale(0.98);
+        transform:scale(1);
         pointer-events:none;
     `;
     document.body.prepend(layer);
@@ -70,9 +70,9 @@ function _applyPopupWallpaper(wp, theme) {
     const style = document.createElement('style');
     style.id = 'eh-popup-wp-style';
     style.textContent = `
-        body { background: transparent !important; }
+        body { background: transparent !important; overflow: hidden; }
         body::before {
-            content:''; position:absolute; inset:0; z-index:0;
+            content:''; position:fixed; inset:0; z-index:0;
             background:${overlayColor}; pointer-events:none;
         }
         .header, .tabs, .sel-mode-row, .footer, .search-bar,

@@ -2284,7 +2284,7 @@ function populateSettings(s) {
     bgTintOpacity.value = s.bgTintOpacity !== undefined ? s.bgTintOpacity : 8;
     if (bgTintOpacityVal) bgTintOpacityVal.textContent = bgTintOpacity.value + '%';
   }
-  updateBgTintPreview();
+
 
   // Populate popup settings
   const popupSearchToggle = document.getElementById('popupSearchToggle');
@@ -2324,12 +2324,21 @@ function applyVisuals(s) {
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
   
-  // Apply background tint
-  if (s.bgTintEnabled && s.bgTintHue !== undefined && s.bgTintOpacity !== undefined) {
-    const tintColor = `hsla(${s.bgTintHue}, 70%, 60%, ${s.bgTintOpacity / 100})`;
-    r.style.setProperty('--bg-tint', tintColor);
+  // Apply background tint: hue-rotate filter on the wallpaper layer
+  const wpLayer = document.getElementById('eh-wallpaper-layer');
+  if (s.bgTintEnabled && s.bgTintHue !== undefined) {
+    const blurAmt = s.blurAmount ?? s.bgTintBlur ?? 8;
+    const hueRot  = s.bgTintHue;
+    if (wpLayer) {
+      wpLayer.style.filter = `blur(${blurAmt}px) hue-rotate(${hueRot}deg)`;
+    }
+    r.style.setProperty('--bg-tint-hue', hueRot + 'deg');
   } else {
-    r.style.removeProperty('--bg-tint');
+    if (wpLayer) {
+      const blurAmt = s.blurAmount ?? 8;
+      wpLayer.style.filter = `blur(${blurAmt}px)`;
+    }
+    r.style.removeProperty('--bg-tint-hue');
   }
 }
 
@@ -2494,9 +2503,11 @@ document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
 
 // ── Context menu ──────────────────────────────────────────────────────────────
 let _ctxEntry = null;
+let _ctxSource = 'history'; // 'history' | 'readingmode'
 
-function showCtxMenu(x, y, entry) {
+function showCtxMenu(x, y, entry, source) {
   _ctxEntry = entry;
+  _ctxSource = source || 'history';
   const menu       = document.getElementById('ctxMenu');
   const delEl      = document.getElementById('ctx-delete');
   const delSep     = document.getElementById('ctx-del-sep');
@@ -2536,9 +2547,13 @@ document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
   if (!_ctxEntry?.visitTime) { hideCtxMenu(); return; }
   const dateKey = new Date(_ctxEntry.visitTime).toLocaleDateString('en-CA');
   hideCtxMenu();
-  const si = document.getElementById('searchInput');
-  if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
-  activateDatePill(dateKey);
+  if (_ctxSource === 'readingmode') {
+    rmActivateDatePill(dateKey);
+  } else {
+    const si = document.getElementById('searchInput');
+    if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
+    activateDatePill(dateKey);
+  }
 });
 document.getElementById('ctx-copy-url').addEventListener('click', () => {
   if (_ctxEntry?.url) navigator.clipboard.writeText(_ctxEntry.url).then(() => toast('URL copied', 'ok')); hideCtxMenu();
@@ -2799,6 +2814,10 @@ function rmBuildDateNav() {
 
 function rmActivateDatePill(key, silent) {
   _rmFilterDate = key === 'all' ? null : key;
+  const fromEl = document.getElementById('rmDateFrom');
+  const toEl   = document.getElementById('rmDateTo');
+  if (fromEl) fromEl.value = _rmFilterDate || '';
+  if (toEl)   toEl.value   = _rmFilterDate || '';
   // Clear scroll pills + external All pill
   document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
   const rmAllPill = document.getElementById('rmAllPill');
@@ -2832,10 +2851,19 @@ function rmDoFilter() {
   const words = q.split(/\s+/).filter(Boolean);
   const mode  = (document.getElementById('rmSearchMode')?.value) || 'all';
 
+  // Date range from picker inputs (only used when no pill date is active)
+  const fromVal = document.getElementById('rmDateFrom')?.value;
+  const toVal   = document.getElementById('rmDateTo')?.value;
+  const fromTs  = (!_rmFilterDate && fromVal) ? new Date(fromVal + 'T00:00:00').getTime() : null;
+  const toTs    = (!_rmFilterDate && toVal)   ? new Date(toVal + 'T23:59:59').getTime()   : null;
+
   _rmFiltered = _rmEntries.filter(e => {
     if (_rmFilterDate) {
       const eDate = new Date(e.visitTime).toLocaleDateString('en-CA');
       if (eDate !== _rmFilterDate) return false;
+    } else if (fromTs || toTs) {
+      if (fromTs && e.visitTime < fromTs) return false;
+      if (toTs   && e.visitTime > toTs)   return false;
     }
     if (words.length) {
       const dom = e.domain || tryDomain(e.url);
@@ -2893,6 +2921,10 @@ function rmAppendPage() {
       <div class="e-time">${fmtTime(e.visitTime)}</div>`;
     row.querySelector('.e-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('click', () => window.open(e.url, '_blank'));
+    row.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      showCtxMenu(ev.clientX, ev.clientY, { url: e.url, title: e.title, visitTime: e.visitTime }, 'readingmode');
+    });
     area.appendChild(row);
   }
 
@@ -3260,52 +3292,41 @@ function closeDeleteHistoryModal() {
   if (warn) warn.style.display = 'none';
 }
 
-
-
-// ══ BACKGROUND TINT ═════════════════════════════════════════════════════════
-function updateBgTintPreview() {
-  const toggle = document.getElementById('bgTintToggle');
-  const hue = document.getElementById('bgTintHue');
-  const opacity = document.getElementById('bgTintOpacity');
-  const preview = document.getElementById('bgTintPreview');
-  
-  if (!preview || !hue || !opacity || !toggle) return;
-  
-  const enabled = toggle.checked;
-  const hueVal = parseInt(hue.value);
-  const opacityVal = parseInt(opacity.value);
-  
-  if (enabled) {
-    const tintColor = `hsla(${hueVal}, 70%, 60%, ${opacityVal / 100})`;
-    preview.style.background = `linear-gradient(${tintColor}, ${tintColor}), var(--bg)`;
-  } else {
-    preview.style.background = 'var(--bg)';
-  }
-}
-
 // Setup background tint event listeners
 function setupBgTintListeners() {
-  const toggle = document.getElementById('bgTintToggle');
-  const hue = document.getElementById('bgTintHue');
-  const opacity = document.getElementById('bgTintOpacity');
-  const hueVal = document.getElementById('bgTintHueVal');
+  const toggle     = document.getElementById('bgTintToggle');
+  const hue        = document.getElementById('bgTintHue');
+  const opacity    = document.getElementById('bgTintOpacity');
+  const hueVal     = document.getElementById('bgTintHueVal');
   const opacityVal = document.getElementById('bgTintOpacityVal');
-  
+
+  function syncTintToSettings() {
+    _curSettings.bgTintEnabled = toggle ? toggle.checked : false;
+    _curSettings.bgTintHue     = hue    ? parseInt(hue.value) : 220;
+    _curSettings.bgTintOpacity = opacity ? parseInt(opacity.value) : 8;
+    applyVisuals(_curSettings);
+    send('SAVE_SETTINGS', { settings: {
+      bgTintEnabled: _curSettings.bgTintEnabled,
+      bgTintHue:     _curSettings.bgTintHue,
+      bgTintOpacity: _curSettings.bgTintOpacity
+    }}).catch(() => {});
+  }
+
   if (toggle) {
-    toggle.addEventListener('change', updateBgTintPreview);
+    toggle.addEventListener('change', syncTintToSettings);
   }
   
   if (hue && hueVal) {
     hue.addEventListener('input', () => {
       hueVal.textContent = hue.value + '°';
-      updateBgTintPreview();
+      syncTintToSettings();
     });
   }
   
   if (opacity && opacityVal) {
     opacity.addEventListener('input', () => {
       opacityVal.textContent = opacity.value + '%';
-      updateBgTintPreview();
+      syncTintToSettings();
     });
   }
 }
@@ -3338,10 +3359,12 @@ function applyWallpaper(wp) {
   // Background layer div (fixed, behind everything)
   const layer = document.createElement('div');
   layer.id = 'eh-wallpaper-layer';
+  const hueRot = (_curSettings.bgTintEnabled && _curSettings.bgTintHue !== undefined)
+    ? ` hue-rotate(${_curSettings.bgTintHue}deg)` : '';
   layer.style.cssText = `
     position:fixed;inset:0;z-index:-1;
     background:url(${wp.dataUrl}) center/cover no-repeat;
-    filter:blur(${blurAmount}px);
+    filter:blur(${blurAmount}px)${hueRot};
     transform:scale(1.05);
     pointer-events:none;
   `;
@@ -3365,7 +3388,6 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .ctxMenu,
     html.wallpaper-mode .kpi-card,
     html.wallpaper-mode .entry,
-    html.wallpaper-mode #ctxMenu,
     html.wallpaper-mode .modal-inner,
     html.wallpaper-mode .ignore-add,
     html.wallpaper-mode .panel-scroll,
@@ -3381,6 +3403,12 @@ function applyWallpaper(wp) {
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
       color:var(--text2);
+    }
+    html.wallpaper-mode #ctxMenu {
+      background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
+      backdrop-filter: blur(20px) saturate(1.6) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'} !important;
     }
     html.wallpaper-mode ::placeholder , .modal-sub, .e-time , .bm-folder-label, .logo-sub{
     color:var(--text2) !important;
@@ -3468,9 +3496,42 @@ async function loadAndApplyWallpaper() {
   try {
     const r = await chrome.storage.local.get(WP_STORAGE_KEY);
     const wp = r[WP_STORAGE_KEY];
-    if (wp) applyWallpaper(wp);
+    if (wp) {
+      // Auto-randomize if using Unsplash source and flag is set
+      if (wp.enabled && wp.source === 'splash' && wp.autoRandomize) {
+        applyWallpaper(wp); // apply existing image immediately, then fetch new one
+        _fetchAndApplySplash(wp);
+      } else if (wp.enabled && wp.source === 'splash' && !wp.dataUrl) {
+        // First open after install: no image yet, fetch one now
+        _fetchAndApplySplash(wp);
+      } else {
+        applyWallpaper(wp);
+      }
+    }
     return wp;
   } catch { return null; }
+}
+
+// Fetch a new random Unsplash image and apply+save it
+async function _fetchAndApplySplash(currentWp) {
+  try {
+    const seed = Math.floor(Math.random() * 100000);
+    const resp = await fetch(`https://picsum.photos/seed/${seed}/1920/1080`);
+    if (!resp.ok) return;
+    const blob = await resp.blob();
+    const dUrl = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+    const newWp = { ...currentWp, dataUrl: dUrl };
+    await chrome.storage.local.set({ [WP_STORAGE_KEY]: newWp });
+    applyWallpaper(newWp);
+    // Update preview thumbnail if settings panel is open
+    const preview = document.getElementById('wpCurrentPreview');
+    if (preview) preview.src = dUrl;
+  } catch { /* silently keep the existing wallpaper */ }
 }
 
 function setupWallpaperListeners() {
@@ -3510,6 +3571,9 @@ function setupWallpaperListeners() {
         previewWrap.style.display = 'block';
         currentPreview.src = wp.dataUrl;
       }
+      // Restore auto-randomize toggle
+      const autoRandToggle = document.getElementById('wpAutoRandomize');
+      if (autoRandToggle) autoRandToggle.checked = wp.autoRandomize || false;
       // Switch to correct source panel
       if (wp.source === 'splash') {
         srcBtns.forEach(b => b.classList.toggle('active', b.dataset.src === 'splash'));
@@ -3603,6 +3667,14 @@ function setupWallpaperListeners() {
     }
     splashLoadBtn.textContent = 'Randomize';
     splashLoadBtn.disabled    = false;
+  });
+
+  // Auto-randomize toggle
+  document.getElementById('wpAutoRandomize')?.addEventListener('change', async () => {
+    _wpState.autoRandomize = document.getElementById('wpAutoRandomize').checked;
+    _wpState.source = 'splash'; // ensure source is set so auto-randomize works on open
+    await saveWallpaper(_wpState);
+    toast(_wpState.autoRandomize ? 'Will randomize on every open' : 'Auto-randomize disabled', 'ok');
   });
 
   // Overlay slider

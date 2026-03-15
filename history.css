@@ -479,7 +479,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   padding: 80px 40px; gap: 12px; text-align: center;
   color: var(--text3); font-size: 0.9rem;
 }
-.state-msg-icon { font-size: 36px; opacity: 0.3; }
+.state-msg-icon { font-size: 36px; opacity: 0.8; }
 
 /* ═══ KPI CARDS ════════════════════════════════════════════════════════════ */
 .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }

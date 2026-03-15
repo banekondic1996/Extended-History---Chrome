@@ -175,9 +175,9 @@
             <option value="url" data-i18n-key="opt_url">URL</option>
             <option value="domain" data-i18n-key="opt_domain">Domain</option>
           </select>
-          <input type="date" id="rmDateFrom" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer"/>
+         <input type="date" id="rmDateFrom" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer"/>
           <span style="color:var(--text3);flex-shrink:0;font-size:0.8rem">→</span>
-          <input type="date" id="rmDateTo" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer"/>
+          <input type="date" id="rmDateTo" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer;margin-right: 100px;"/>
         </div>
       </div>
       <div class="list-area" id="rmListArea"></div>
@@ -434,26 +434,24 @@
               </div>
             </div>
           </div>
-          <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px;opacity: 0.2;">
-            <div class="s-row-lbl" data-i18n-key="background_tint">Background Tint</div>
+          <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px">
+            <div class="s-row-lbl" data-i18n-key="background_tint">Wallpaper Tint</div>
             <div style="width:100%;display:flex;gap:16px;align-items:center;margin-bottom:8px">
               <label class="toggle-switch" style="margin:0">
-                <input type="checkbox" id="bgTintToggle" disabled>
+                <input type="checkbox" id="bgTintToggle">
                 <span class="toggle-slider"></span>
               </label>
-              <span style="color:var(--text2);font-size:0.9rem" data-i18n-key="enable_bg_tint">Enable background tint</span>
+              <span style="color:var(--text2);font-size:0.9rem" data-i18n-key="enable_bg_tint">Enable wallpaper tint (works only if wallpaper mod is on)</span>
             </div>
             <div style="width:100%;display:flex;gap:16px;align-items:center">
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                   <span style="color:var(--text2);font-size:0.85rem;min-width:40px">Hue:</span>
                   <input type="range" id="bgTintHue" min="0" max="360" value="220" 
-                         style="flex:1;accent-color:var(--accent)" disabled/>
+                         style="flex:1;accent-color:var(--accent)"/>
                   <span id="bgTintHueVal" style="color:var(--text);font-size:0.85rem;min-width:35px;font-family:var(--font-mono)">220°</span>
                 </div>
-    
               </div>
-              <div id="bgTintPreview" style="width:60px;height:60px;border-radius:8px;border:2px solid var(--border);background:var(--bg)"></div>
             </div>
           </div>
 
@@ -487,6 +485,13 @@
                 <div style="display:flex;gap:8px;align-items:center">
                   <span style="font-size:0.82rem;color:var(--text2);flex:1">Fetches a random high-res photo (changes each time)</span>
                   <button class="action-btn" id="wpSplashLoadBtn">🎲 Randomize</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <label class="toggle-switch" style="margin:0">
+                    <input type="checkbox" id="wpAutoRandomize">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span style="color:var(--text2);font-size:0.82rem">Auto-randomize on every open</span>
                 </div>
               </div>
               <!-- Preview -->

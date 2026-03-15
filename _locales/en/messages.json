@@ -16,7 +16,7 @@
     "message": "← Back"
   },
   "background_tint": {
-    "message": "Background Tint"
+    "message": "Wallpaper Tint"
   },
   "browser_cache": {
     "message": "Browser cache"
@@ -25,7 +25,7 @@
     "message": "Delete history & reset password"
   },
   "enable_bg_tint": {
-    "message": "Enable background tint"
+    "message": "Enable wallpaper tint (works only if wallpaper mode is on)"
   },
   "enable_lock": {
     "message": "Enable Lock"
