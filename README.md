@@ -27,6 +27,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Import history within certain time range
+-Wallpaper switching at launch is slow, preload next wallpaper to be ready
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
