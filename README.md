@@ -9,7 +9,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Export and import history and bookmarks
 -Export session tabs and see previous sessions
 -Quick access to recent history by pressing extension button 
--Change accent colors if you are into that
+-Change accent colors and wallpapers with glass like UI if you are into that
 -Delete history per day, based on filter, or selection
 -Option to periodically save session as html file
 -Keep history more then 90 days
@@ -27,6 +27,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
+-Import history within certain time range
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
