@@ -15,7 +15,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.1.0</div>
+      <div class="logo-sub">v4.1.1</div>
     </div>
   </div>
 
@@ -163,12 +163,21 @@
           </div>
           <button class="nav-arrow" id="rmDnRight">›</button>
         </div>
-        <div class="search-row" style="margin-top:10px">
-          <div class="search-box">
+        <div class="search-row" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="search-box" style="flex:1;min-width:160px">
             <span class="search-box-icon">🔍</span>
-            <input type="text" id="rmSearchInput" placeholder="Search this file…"/>
+            <input type="text" id="rmSearchInput" placeholder="Search this file…" data-i18n-key="ph_search_history"/>
             <button class="search-clear-btn" id="rmSearchClearBtn" title="Clear">✕</button>
           </div>
+          <select id="rmSearchMode" title="Search field" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;cursor:pointer;outline:none;flex-shrink:0">
+            <option value="all" data-i18n-key="opt_all_fields">All fields</option>
+            <option value="title" data-i18n-key="opt_title">Title</option>
+            <option value="url" data-i18n-key="opt_url">URL</option>
+            <option value="domain" data-i18n-key="opt_domain">Domain</option>
+          </select>
+         <input type="date" id="rmDateFrom" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer"/>
+          <span style="color:var(--text3);flex-shrink:0;font-size:0.8rem">→</span>
+          <input type="date" id="rmDateTo" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer;margin-right: 100px;"/>
         </div>
       </div>
       <div class="list-area" id="rmListArea"></div>
@@ -425,33 +434,92 @@
               </div>
             </div>
           </div>
-          <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px;opacity: 0.2;">
-            <div class="s-row-lbl" data-i18n-key="background_tint">Background Tint</div>
+          <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px">
+            <div class="s-row-lbl" data-i18n-key="background_tint">Wallpaper Tint</div>
             <div style="width:100%;display:flex;gap:16px;align-items:center;margin-bottom:8px">
               <label class="toggle-switch" style="margin:0">
-                <input type="checkbox" id="bgTintToggle" disabled>
+                <input type="checkbox" id="bgTintToggle">
                 <span class="toggle-slider"></span>
               </label>
-              <span style="color:var(--text2);font-size:0.9rem" data-i18n-key="enable_bg_tint">Enable background tint</span>
+              <span style="color:var(--text2);font-size:0.9rem" data-i18n-key="enable_bg_tint">Enable wallpaper tint (works only if wallpaper mod is on)</span>
             </div>
             <div style="width:100%;display:flex;gap:16px;align-items:center">
               <div style="flex:1">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                   <span style="color:var(--text2);font-size:0.85rem;min-width:40px">Hue:</span>
                   <input type="range" id="bgTintHue" min="0" max="360" value="220" 
-                         style="flex:1;accent-color:var(--accent)" disabled/>
+                         style="flex:1;accent-color:var(--accent)"/>
                   <span id="bgTintHueVal" style="color:var(--text);font-size:0.85rem;min-width:35px;font-family:var(--font-mono)">220°</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span style="color:var(--text2);font-size:0.85rem;min-width:40px">Opacity:</span>
-                  <input type="range" id="bgTintOpacity" min="0" max="20" value="8" 
-                         style="flex:1;accent-color:var(--accent)" disabled/>
-                  <span id="bgTintOpacityVal" style="color:var(--text);font-size:0.85rem;min-width:35px;font-family:var(--font-mono)">8%</span>
-                </div>
               </div>
-              <div id="bgTintPreview" style="width:60px;height:60px;border-radius:8px;border:2px solid var(--border);background:var(--bg)"></div>
             </div>
           </div>
+
+          <!-- ── WALLPAPER MODE ───────────────────────────────────── -->
+          <div class="s-row" style="border-top:1px solid var(--border);flex-direction:column;align-items:flex-start;gap:14px">
+            <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div class="s-row-lbl">🖼 Wallpaper Mode</div>
+                <div class="s-row-desc">Set a custom background image. Enables a frosted-glass UI look.</div>
+              </div>
+              <label class="toggle-switch" style="margin:0;flex-shrink:0">
+                <input type="checkbox" id="wallpaperToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div id="wallpaperControls" style="width:100%;display:flex;flex-direction:column;gap:14px">
+              <!-- Source selector -->
+              <div style="display:flex;gap:8px">
+                <button class="wp-src-btn active" id="wpSrcCustom" data-src="custom">📁 Custom Image</button>
+                <button class="wp-src-btn" id="wpSrcSplash" data-src="splash">🎲 Random from Unsplash</button>
+              </div>
+              <!-- Custom image picker -->
+              <div id="wpCustomPanel">
+                <div id="wpDropZone" class="wp-dropzone">
+                  <span id="wpDropLabel">Drop image here or <strong>click to browse</strong></span>
+                  <input type="file" id="wpFileInput" accept="image/*" style="display:none"/>
+                </div>
+              </div>
+              <!-- Unsplash panel -->
+              <div id="wpSplashPanel" style="display:none">
+                <div style="display:flex;gap:8px;align-items:center">
+                  <span style="font-size:0.82rem;color:var(--text2);flex:1">Fetches a random high-res photo (changes each time)</span>
+                  <button class="action-btn" id="wpSplashLoadBtn">🎲 Randomize</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <label class="toggle-switch" style="margin:0">
+                    <input type="checkbox" id="wpAutoRandomize">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span style="color:var(--text2);font-size:0.82rem">Auto-randomize on every open</span>
+                </div>
+              </div>
+              <!-- Preview -->
+              <div id="wpPreviewWrap" style="display:none">
+                <div style="font-size:0.78rem;color:var(--text2);margin-bottom:6px">Current wallpaper:</div>
+                <img id="wpCurrentPreview" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
+              </div>
+              <!-- Overlay opacity -->
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="color:var(--text2);font-size:0.85rem">Overlay opacity</span>
+                  <span id="wpOverlayVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">60%</span>
+                </div>
+                <input type="range" id="wpOverlayOpacity" min="0" max="95" value="60" step="1" style="width:100%;accent-color:var(--accent)"/>
+                <div style="font-size:0.72rem;color:var(--text3)">Controls the dark (dark mode) or white (light mode) overlay on top of the wallpaper.</div>
+              </div>
+              <!-- Blur -->
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="color:var(--text2);font-size:0.85rem">Background blur</span>
+                  <span id="wpBlurVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">8px</span>
+                </div>
+                <input type="range" id="wpBlurAmount" min="0" max="40" value="8" step="1" style="width:100%;accent-color:var(--accent)"/>
+              </div>
+              <button class="action-btn danger" id="wpClearBtn" style="align-self:flex-start">✕ Remove wallpaper</button>
+            </div>
+          </div>
+          <!-- ── END WALLPAPER MODE ───────────────────────────────── -->
         </div>
 
         <div class="s-card">
@@ -547,7 +615,7 @@
           <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="favicon_resolver">Favicon resolver</div>
-              <div class="s-row-desc" data-i18n-key="favicon_resolver_desc">How site icons are fetched. "Browser cache" uses Chrome's built-in cache (faster, private). "Google" fetches from Google's CDN (better coverage).</div>
+              <div class="s-row-desc" data-i18n-key="favicon_resolver_desc">How site icons are fetched. "Browser cache" uses browser's built-in cache (faster, private). "Google" fetches from Google's CDN (better coverage).</div>
             </div>
             <div class="s-ctrl">
               <select id="faviconResolverSel">
@@ -602,8 +670,8 @@
           <div class="s-card-title" style="color:var(--danger)" data-i18n-key="danger_zone">Danger Zone</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Chrome history</div>
-              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Chrome native history again (merges, no duplicates)</div>
+              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import browser history</div>
+              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available browser native history again (merges, no duplicates)</div>
             </div>
             <div class="s-ctrl">
               <button class="action-btn" id="reBackfillBtn">↺ <span data-i18n-key="reimport">Re-import</span></button>
@@ -633,8 +701,8 @@
           Created by <strong style="color:var(--text)">Bane Kondić</strong>, cause he didn't like 90days history limit in Chromium.<br>
           This extension  <strong style="color:var(--text)">does not send data</strong> and is completely <strong style="color:var(--text)">open source</strong>,<br> code is available on creators Github profile
         </div>
-        <a href="https://github.com/banekondic1996/" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s" 
+        <a class="sa-btn" href="https://github.com/banekondic1996/" target="_blank" 
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s" 
            data-i18n-key="github_profile">
           Github Profile
         </a>
@@ -642,10 +710,10 @@
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="feedback">Feedback</div>
       <div style="max-width:560px;padding:8px 0 8px"> <br>
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_discord">
-          Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in chrome store)
+          Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in firefox store)
         </div>
-        <a href="https://discord.gg/xyzeh2WjmQ" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+        <a class="sa-btn" href="https://discord.gg/xyzeh2WjmQ" target="_blank"
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="discord_server">
           Discord server
         </a>
@@ -653,10 +721,10 @@
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;" data-i18n-key="rate_extension">Rate this extension </div>
       <div style="max-width:560px;padding:8px 0 8px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_chrome_webstore"> 
-          Link to <strong style="color:var(--text)">Chrome Web Store</strong> extensions page
+          Link to <strong style="color:var(--text)">Firefox Store</strong> extensions page
         </div>
-        <a href="https://chromewebstore.google.com/detail/extended-history/cdfgfljiefjinljmnedgkfhgcgldkhkk" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+        <a class="sa-btn" href="https://addons.mozilla.org/en-US/firefox/addon/extended-history/" target="_blank"
+           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="click_to_rate">
           Click to Rate 
         </a>
@@ -716,7 +784,7 @@
 <div class="modal-backdrop" id="deleteHistoryModal">
   <div class="modal-box">
     <div class="modal-title">🗑 <span data-i18n-key="delete_history">Delete History</span></div>
-    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Chrome's native history.</div>
+    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Firefox's native history.</div>
     <div class="dh-range-grid" id="dhRangeGrid">
       <button class="dh-range-btn" data-range="1h" data-i18n-key="last_1_hour">Last 1 hour</button>
       <button class="dh-range-btn" data-range="24h" data-i18n-key="last_24_hours">Last 24 hours</button>

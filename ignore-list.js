@@ -5,8 +5,8 @@
 // Helper function for sending messages to background
 function send(type, extra = {}) {
   return new Promise((res, rej) => {
-    chrome.runtime.sendMessage({ type, ...extra }, r => {
-      if (chrome.runtime.lastError) { rej(new Error(chrome.runtime.lastError.message)); return; }
+    browser.runtime.sendMessage({ type, ...extra }, r => {
+      if (browser.runtime.lastError) { rej(new Error(browser.runtime.lastError.message)); return; }
       if (r && r.error) { rej(new Error(r.error)); return; }
       res(r);
     });

@@ -1,17 +1,46 @@
 /**
- * Extended History — background.js v3.3
- * Time tracking: purely event-driven per-tab, domain-bucketed by day.
+ * Extended History — background.js v3.3 (Firefox port)
+ *
+ * Firefox-specific changes:
+ *  1. All browser.* APIs (Promise-based, no callbacks needed)
+ *  2. browser.tabs.query({url}) → manual filter (Firefox MV2 requires activeTab
+ *     permission for URL-based tab queries from background)
+ *  3. browser.i18n.getMessage → i18n() helper (graceful fallback)
+ *  4. browser.runtime.onMessageExternal → removed (not supported in Firefox MV2)
+ *  5. browser.storage.local.getBytesInUse → byte-size estimation fallback
+ *  6. Array.prototype.findLastIndex polyfill (Firefox < 104)
+ *  7. browser.browsingData.remove wrapped in try/catch (already was, kept)
+ *  8. Persistent background page (manifest: persistent:true), so SW lifecycle
+ *     patterns (alarms for self-heal) are kept but aren't strictly necessary.
  */
 
+// ── Array.findLastIndex polyfill (Firefox < 104) ──────────────────────────────
+if (!Array.prototype.findLastIndex) {
+  Array.prototype.findLastIndex = function(predicate) {
+    for (let i = this.length - 1; i >= 0; i--) {
+      if (predicate(this[i], i, this)) return i;
+    }
+    return -1;
+  };
+}
+
+// ── i18n helper ──────────────────────────────────────────────────────────────
+function i18n(key, sub) {
+  try {
+    const msg = browser.i18n.getMessage(key, sub);
+    return msg || key;
+  } catch { return key; }
+}
+
 const HISTORY_KEY  = 'eh_history';
-const TODAY_HISTORY_KEY = 'eh_today_history';  // Separate storage for today's history
+const TODAY_HISTORY_KEY = 'eh_today_history';
 const TIME_KEY     = 'eh_time';
 const SETTINGS_KEY = 'eh_settings';
 const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
-const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
-const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
-const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history flushes
+const CURRENT_SESSION_KEY = 'eh_current_session';
+const IGNORE_LIST_KEY = 'eh_ignore_list';
+const SYNC_INTERVAL_KEY = 'eh_sync_interval';
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
@@ -26,10 +55,10 @@ const DEFAULT_SETTINGS = {
   font:          'system-ui',
   fontSize:      15,
   theme:         'dark',
-  language:      'en', // Default language
-  ignoreListEnabled: true, // Toggle for ignore list
-  syncInterval: 30,        // Minutes between flushing today's Chrome history → local storage (0 = every visit)
-  timeTrackingEnabled: true, // Whether to track time spent per domain
+  language:      'en',
+  ignoreListEnabled: true,
+  syncInterval: 30,
+  timeTrackingEnabled: true,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,10 +75,8 @@ function normalizeIgnorePattern(pattern) {
   if (typeof pattern !== 'string') return '';
   let out = pattern.trim();
   if (!out) return '';
-  // Already normalized keyword — return as-is
   if (out.startsWith('kw:')) return out;
-  out = out.replace(/^['"`]+|['"`]+$/g, ''); // allow users to paste quoted values
-  // If no dot (and no slash after stripping protocol), treat as keyword
+  out = out.replace(/^['\"`]+|['\"`]+$/g, '');
   const stripped = out.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
   if (stripped.indexOf('.') === -1 && stripped.indexOf('/') === -1) {
     return 'kw:' + stripped.toLowerCase().trim();
@@ -93,11 +120,9 @@ function hostMatchesPattern(urlHost, patternHost, allowSubdomains = true) {
 }
 
 async function getIgnoreList() {
-  const r = await chrome.storage.local.get(IGNORE_LIST_KEY);
+  const r = await browser.storage.local.get(IGNORE_LIST_KEY);
   const list = r[IGNORE_LIST_KEY] || [];
-  return list
-    .map(normalizeIgnorePattern)
-    .filter(Boolean);
+  return list.map(normalizeIgnorePattern).filter(Boolean);
 }
 
 async function setIgnoreList(list) {
@@ -109,18 +134,17 @@ async function setIgnoreList(list) {
     seen.add(clean);
     normalized.push(clean);
   }
-  await chrome.storage.local.set({ [IGNORE_LIST_KEY]: normalized });
+  await browser.storage.local.set({ [IGNORE_LIST_KEY]: normalized });
 }
-// Check if ignore list is enabled
+
 async function isIgnoreListEnabled() {
-  const r = await chrome.storage.local.get(SETTINGS_KEY);
+  const r = await browser.storage.local.get(SETTINGS_KEY);
   const settings = r[SETTINGS_KEY] || DEFAULT_SETTINGS;
-  return settings.ignoreListEnabled !== false; // Default to true if not set
+  return settings.ignoreListEnabled !== false;
 }
-// Check if URL matches any ignore pattern
+
 function matchesIgnorePattern(url, pattern, title) {
   try {
-    // Keyword pattern: matches URL string or page title
     if (pattern.startsWith('kw:')) {
       const kw = pattern.slice(3).toLowerCase();
       if (!kw) return false;
@@ -168,12 +192,10 @@ async function addIgnorePattern(pattern) {
 async function deleteUrlFromNativeHistory(url) {
   const urls = [...new Set([url, normalizeUrl(url)])].filter(Boolean);
   for (const target of urls) {
-    try { await chrome.history.deleteUrl({ url: target }); } catch {}
+    try { await browser.history.deleteUrl({ url: target }); } catch {}
   }
 }
 
-// Ignore cleanup needs retries because some sites commit through redirect chains
-// and native history records may appear slightly after onCommitted.
 async function cleanupIgnoredUrlFromNativeHistory(url) {
   const host = domainOf(url);
   const passes = [0, 250, 1200];
@@ -185,7 +207,7 @@ async function cleanupIgnoredUrlFromNativeHistory(url) {
   if (!host) return;
   try {
     const ignoreList = await getIgnoreList();
-    const recent = await chrome.history.search({
+    const recent = await browser.history.search({
       text: host,
       startTime: Date.now() - 10 * 60 * 1000,
       maxResults: 250,
@@ -199,16 +221,14 @@ async function cleanupIgnoredUrlFromNativeHistory(url) {
   } catch {}
 }
 
-// Clean all ignored URLs from history
 async function cleanIgnoredFromHistory() {
   const enabled = await isIgnoreListEnabled();
   if (!enabled) return { removed: 0 };
   const ignoreList = await getIgnoreList();
   if (!ignoreList.length) return { removed: 0 };
-  
+
   let entries = await getAll();
-  
-  // Filter out ignored entries
+
   const toKeep = [];
   const toDelete = [];
   for (const e of entries) {
@@ -218,30 +238,25 @@ async function cleanIgnoredFromHistory() {
       toKeep.push(e);
     }
   }
-  
+
   if (toDelete.length) {
     await setAll(toKeep);
     await updateTodayHistory();
-    
-    // Also remove from Chrome native history
+
     for (const e of toDelete) {
-      try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+      try { await browser.history.deleteUrl({ url: e.url }); } catch {}
     }
   }
-  
+
   return { removed: toDelete.length };
 }
 
 // ── Time tracking ─────────────────────────────────────────────────────────────
-//
-// Tracks the currently active tab in the focused window.
-// SW restarts from scratch after idle — self-heals within 30s via alarm.
-
 let activeTabId    = null;
 let activeDomain   = null;
 let segmentStart   = null;
-let windowFocused  = true; // corrected by resumeActiveTab
-let _timeTrackingEnabled = true; // cached in-memory, updated on SAVE_SETTINGS
+let windowFocused  = true;
+let _timeTrackingEnabled = true;
 
 async function commitSegment() {
   if (!activeDomain || !segmentStart || !windowFocused) {
@@ -251,11 +266,10 @@ async function commitSegment() {
   if (!_timeTrackingEnabled) { segmentStart = null; return; }
   const now = Date.now();
   const ms  = now - segmentStart;
-  segmentStart = null; // clear immediately to prevent double-commit
+  segmentStart = null;
 
   if (ms < 1000 || ms > 7_200_000) return;
 
-  // Cap at today's elapsed time (don't bleed across midnight)
   const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
   const sinceDay = now - midnight.getTime();
   const capped   = Math.min(ms, sinceDay);
@@ -267,18 +281,17 @@ async function commitSegment() {
 function startSegment(tabId, domain) {
   activeTabId  = tabId;
   activeDomain = domain;
-  // segmentStart stays null if tracking is disabled; commitSegment checks too
   segmentStart = Date.now();
 }
 
-// Called on startup/install to pick up wherever we are
 async function resumeActiveTab() {
   try {
-    const wins = await chrome.windows.getAll({ populate: false });
+    const wins = await browser.windows.getAll({ populate: false });
     const focused = wins.find(w => w.focused);
     if (!focused) { windowFocused = false; return; }
     windowFocused = true;
-    const [tab] = await chrome.tabs.query({ active: true, windowId: focused.id });
+    const tabs = await browser.tabs.query({ active: true, windowId: focused.id });
+    const tab = tabs[0];
     if (tab && isTrackable(tab.url)) {
       if (_timeTrackingEnabled) startSegment(tab.id, domainOf(tab.url));
     }
@@ -287,37 +300,28 @@ async function resumeActiveTab() {
 
 async function addTime(domain, ms) {
   if (!domain) return;
-  const r   = await chrome.storage.local.get(TIME_KEY);
+  const r   = await browser.storage.local.get(TIME_KEY);
   const map = r[TIME_KEY] || {};
   const day = todayKey();
   if (!map[domain]) map[domain] = {};
   map[domain][day] = (map[domain][day] || 0) + ms;
-  await chrome.storage.local.set({ [TIME_KEY]: map });
+  await browser.storage.local.set({ [TIME_KEY]: map });
 }
 
-// Safety-net alarm every 30s:
-// - segment running → commit + restart
-// - no segment (e.g. after SW restart) → resumeActiveTab to self-heal
-// - save current session (overwrite, not append)
-chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
-// Flush alarm: fire every minute; actual flush only runs when syncInterval has elapsed
-chrome.alarms.create('eh_flush', { periodInMinutes: 1 });
+browser.alarms.create('eh_tick',  { periodInMinutes: 0.5 });
+browser.alarms.create('eh_flush', { periodInMinutes: 1 });
 
-const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
-let _lastAutoSave   = 0; // timestamp of last auto-save
-let _lastSessionSave = 0; // timestamp of last session save
+const AUTO_SAVE_KEY = 'eh_auto_save_interval';
+let _lastAutoSave   = 0;
+let _lastSessionSave = 0;
 
-// ── Today's history: read live from Chrome API (no per-visit storage writes) ──
-// Returns entries in the same shape as eh_history entries.
-// For the popup and history page we query Chrome's native history for today —
-// this is always up-to-date with zero extra storage writes while browsing.
-async function getTodayFromChromeApi() {
+async function getTodayFromNativeHistory() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const startTime = todayStart.getTime();
 
   try {
-    const items = await chrome.history.search({
+    const items = await browser.history.search({
       text: '',
       startTime,
       maxResults: 10000,
@@ -347,17 +351,13 @@ async function getTodayFromChromeApi() {
   }
 }
 
-// Legacy no-op shim — callers that still call updateTodayHistory() are safe.
-// Today's data is now served live from Chrome API; we don't need to cache it.
+// Alias for compatibility with callers that use the legacy-named function
+const getTodayFromBrowserApi = getTodayFromNativeHistory;
+
 async function updateTodayHistory() {
-  // No-op: today's history is read live via getTodayFromChromeApi().
-  // The periodic flush (flushTodayToHistory) handles persisting to eh_history.
+  // No-op: today's history is read live via getTodayFromNativeHistory().
 }
 
-// ── Periodic flush: merge today's Chrome history into eh_history ──────────────
-// Runs every `syncInterval` minutes (default 30). Pulls all of today's visits
-// from the Chrome history API and merges them into local storage, deduplicating
-// by (normalizedUrl, 5-second bucket). This replaces per-visit storage writes.
 let _lastFlush = 0;
 
 async function flushTodayToHistory() {
@@ -365,7 +365,7 @@ async function flushTodayToHistory() {
   const now = Date.now();
   const cutoff = now - settings.retentionDays * 86400000;
 
-  const todayEntries = await getTodayFromChromeApi();
+  const todayEntries = await getTodayFromNativeHistory();
   if (!todayEntries.length) return;
 
   let existing = await getAll();
@@ -382,13 +382,11 @@ async function flushTodayToHistory() {
 
   if (!added) return;
 
-  // Apply retention/max cap then save
   existing = existing.filter(e => e.visitTime >= cutoff);
   if (existing.length > settings.maxEntries) existing = existing.slice(existing.length - settings.maxEntries);
   existing.sort((a, b) => b.visitTime - a.visitTime);
   await setAll(existing);
   _lastFlush = now;
-  //console.log(`[EH] Flushed ${added} new entries from today into history`);
 }
 
 async function getSyncInterval() {
@@ -397,14 +395,13 @@ async function getSyncInterval() {
 }
 
 async function getAutoSaveInterval() {
-  const r = await chrome.storage.local.get(AUTO_SAVE_KEY);
+  const r = await browser.storage.local.get(AUTO_SAVE_KEY);
   return r[AUTO_SAVE_KEY] ?? 0;
 }
 
-chrome.alarms.onAlarm.addListener(async alarm => {
+browser.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name === 'eh_flush') {
     const intervalMins = await getSyncInterval();
-    // intervalMins === 0 means "flush on every visit" (legacy mode) — skip timer flush
     if (intervalMins > 0 && Date.now() - _lastFlush >= intervalMins * 60 * 1000) {
       await flushTodayToHistory().catch(() => {});
     }
@@ -419,21 +416,19 @@ chrome.alarms.onAlarm.addListener(async alarm => {
       await resumeActiveTab();
     }
   }
-  
-  // Save current session every 30s (overwrite same storage)
+
   const now = Date.now();
-  if (now - _lastSessionSave >= 30000) { // 30 seconds
+  if (now - _lastSessionSave >= 30000) {
     await saveCurrentSession();
     _lastSessionSave = now;
   }
-  
-  // Only auto-save when browser window is focused — don't interrupt games etc.
+
   const mins = await getAutoSaveInterval();
   if (mins >= 1 && Date.now() - _lastAutoSave >= mins * 60 * 1000) {
     try {
-      const win = await chrome.windows.getLastFocused({ populate: false });
+      const win = await browser.windows.getLastFocused({ populate: false });
       if (win && win.focused) await doAutoSaveSession();
-    } catch { /* no window */ }
+    } catch {}
   }
 });
 
@@ -444,22 +439,22 @@ async function doAutoSaveSession() {
     : [];
   if (!openTabs.length) return;
 
-  const label    = chrome.i18n.getMessage("current_session") + ' – ' + new Date().toLocaleString();
-  const tsData   = await chrome.storage.local.get('eh_tab_storage');
+  const label    = i18n('current_session') + ' – ' + new Date().toLocaleString();
+  const tsData   = await browser.storage.local.get('eh_tab_storage');
   const tsEntries = tsData['eh_tab_storage'] || [];
   const htmlBody = buildSessionHtml(label, openTabs, tsEntries);
-  const extPageUrl = chrome.runtime.getURL('history.html');
+  const extPageUrl = browser.runtime.getURL('history.html');
 
-  // Check if the history page is already open
   let tabId = null;
   let didOpen = false;
   try {
-    const existing = await chrome.tabs.query({ url: extPageUrl });
+    // Firefox: can't query by URL from background without <all_urls>; query all and filter
+    const allTabs = await browser.tabs.query({});
+    const existing = allTabs.filter(t => t.url && t.url.startsWith(extPageUrl));
     if (existing.length > 0) {
       tabId = existing[0].id;
     } else {
-      // Open it hidden in the background
-      const t = await chrome.tabs.create({ url: extPageUrl, active: false });
+      const t = await browser.tabs.create({ url: extPageUrl, active: false });
       tabId = t.id;
       didOpen = true;
     }
@@ -468,23 +463,22 @@ async function doAutoSaveSession() {
     return;
   }
 
-  // Wait for the page to signal it's ready (it sends READY ping on load),
-  // or fall back to a fixed delay if it was already open
   await new Promise(resolve => {
     if (!didOpen) { resolve(); return; }
     const timeout = setTimeout(resolve, 6000);
     const listener = (msg, sender) => {
-      if (msg.type === 'AUTO_SAVE_READY' && sender.tab?.id === tabId) {
+      if (msg.type === 'AUTO_SAVE_READY' && sender.tab && sender.tab.id === tabId) {
         clearTimeout(timeout);
-        chrome.runtime.onMessage.removeListener(listener);
+        browser.runtime.onMessage.removeListener(listener);
         resolve();
       }
+      return false;
     };
-    chrome.runtime.onMessage.addListener(listener);
+    browser.runtime.onMessage.addListener(listener);
   });
 
   try {
-    await chrome.tabs.sendMessage(tabId, {
+    await browser.tabs.sendMessage(tabId, {
       type: 'AUTO_SAVE_DOWNLOAD',
       html: htmlBody,
       filename: 'extended-history-session.html',
@@ -494,25 +488,22 @@ async function doAutoSaveSession() {
     console.warn('[EH] auto-save: send failed:', e.message);
   }
 
-  // Close the tab we opened (leave user's existing tab alone)
   if (didOpen) {
     setTimeout(async () => {
-      try { await chrome.tabs.remove(tabId); } catch {}
+      try { await browser.tabs.remove(tabId); } catch {}
     }, 3000);
   }
 }
 
-// Save current session to storage (overwrite same location, don't pile data)
 async function saveCurrentSession() {
   if (!sessionId) await loadSessionState();
   const openTabs = sessionId
     ? Object.values(sessionTabs).filter(t => t.url && t.closed === null)
     : [];
-  
+
   if (!openTabs.length) return;
-  
-  // Save to single storage location, overwriting previous
-  await chrome.storage.local.set({
+
+  await browser.storage.local.set({
     [CURRENT_SESSION_KEY]: {
       id: sessionId,
       start: sessionStart,
@@ -608,7 +599,7 @@ function buildSessionHtml(label, tabs, tsEntries) {
     + 'document.getElementById("btn-tabstorage").addEventListener("click",function(){st("tabstorage");});'
     + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
     +   'btn.addEventListener("click",function(){'
-    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\')); '
     +     'if(!u.length)return;'
     +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
     +     'u.forEach(function(x){window.open(x,"_blank");});'
@@ -636,21 +627,21 @@ function buildSessionHtml(label, tabs, tsEntries) {
     + '</body></html>';
 }
 
-// ── Tab activated (user switches tabs) ───────────────────────────────────────
-chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
+// ── Tab activated ─────────────────────────────────────────────────────────────
+browser.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
   if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
 
   if (!windowFocused || !_timeTrackingEnabled) return;
 
   try {
-    const tab = await chrome.tabs.get(tabId);
+    const tab = await browser.tabs.get(tabId);
     if (tab && isTrackable(tab.url)) startSegment(tabId, domainOf(tab.url));
   } catch {}
 });
 
-// ── Tab URL changed (navigation within same tab) ─────────────────────────────
-chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+// ── Tab URL changed ───────────────────────────────────────────────────────────
+browser.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (tabId !== activeTabId) return;
   if (!info.url) return;
   if (!isTrackable(info.url)) {
@@ -662,16 +653,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (_timeTrackingEnabled) startSegment(tabId, domainOf(info.url));
 });
 
-// ── Tab closed ───────────────────────────────────────────────────────────────
-chrome.tabs.onRemoved.addListener(async tabId => {
+// ── Tab closed ────────────────────────────────────────────────────────────────
+browser.tabs.onRemoved.addListener(async tabId => {
   if (tabId !== activeTabId) return;
   if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
 });
 
-// ── Window focus changes (alt-tab away / back) ────────────────────────────────
-chrome.windows.onFocusChanged.addListener(async wid => {
-  if (wid === chrome.windows.WINDOW_ID_NONE) {
+// ── Window focus changes ──────────────────────────────────────────────────────
+browser.windows.onFocusChanged.addListener(async wid => {
+  if (wid === browser.windows.WINDOW_ID_NONE) {
     windowFocused = false;
     if (_timeTrackingEnabled) await commitSegment();
     activeTabId = null; activeDomain = null;
@@ -679,48 +670,48 @@ chrome.windows.onFocusChanged.addListener(async wid => {
     windowFocused = true;
     if (!_timeTrackingEnabled) return;
     try {
-      const [tab] = await chrome.tabs.query({ active: true, windowId: wid });
+      const tabs = await browser.tabs.query({ active: true, windowId: wid });
+      const tab = tabs[0];
       if (tab && isTrackable(tab.url)) startSegment(tab.id, domainOf(tab.url));
     } catch {}
   }
 });
 
-// ── Storage migration ────────────────────────────────────────────────────────
+// ── Storage migration ─────────────────────────────────────────────────────────
 const LEGACY_KEYS = [
   ['recall_history',    HISTORY_KEY],
-['recall_time',       TIME_KEY],
-['recall_settings',   SETTINGS_KEY],
-['recall_sessions',   SESSIONS_KEY],
-['recall_backfilled', BACKFILL_KEY],
+  ['recall_time',       TIME_KEY],
+  ['recall_settings',   SETTINGS_KEY],
+  ['recall_sessions',   SESSIONS_KEY],
+  ['recall_backfilled', BACKFILL_KEY],
 ];
 async function migrateStorage() {
-  const m = await chrome.storage.local.get('eh_migration_done');
+  const m = await browser.storage.local.get('eh_migration_done');
   if (m.eh_migration_done) return;
-  const existing = await chrome.storage.local.get(LEGACY_KEYS.map(([k]) => k));
+  const existing = await browser.storage.local.get(LEGACY_KEYS.map(([k]) => k));
   const toSet = {};
   for (const [oldKey, newKey] of LEGACY_KEYS) {
     if (existing[oldKey] !== undefined) {
-      const cur = await chrome.storage.local.get(newKey);
+      const cur = await browser.storage.local.get(newKey);
       if (!cur[newKey] || (Array.isArray(cur[newKey]) && !cur[newKey].length))
         toSet[newKey] = existing[oldKey];
     }
   }
-  if (Object.keys(toSet).length) await chrome.storage.local.set(toSet);
-  await chrome.storage.local.set({ eh_migration_done: true });
+  if (Object.keys(toSet).length) await browser.storage.local.set(toSet);
+  await browser.storage.local.set({ eh_migration_done: true });
 }
 
-// ── Session tracking ─────────────────────────────────────────────────────────
+// ── Session tracking ──────────────────────────────────────────────────────────
 let sessionId    = null;
 let sessionTabs  = {};
 let sessionStart = null;
 
-// Persist current session state so SW restarts don't lose it
 async function saveSessionState() {
   if (!sessionId) return;
-  await chrome.storage.local.set({ eh_cur_session: { sessionId, sessionStart, sessionTabs } });
+  await browser.storage.local.set({ eh_cur_session: { sessionId, sessionStart, sessionTabs } });
 }
 async function loadSessionState() {
-  const r = await chrome.storage.local.get('eh_cur_session');
+  const r = await browser.storage.local.get('eh_cur_session');
   if (r.eh_cur_session) {
     sessionId    = r.eh_cur_session.sessionId;
     sessionStart = r.eh_cur_session.sessionStart;
@@ -728,10 +719,9 @@ async function loadSessionState() {
   }
 }
 async function clearSessionState() {
-  await chrome.storage.local.remove('eh_cur_session');
+  await browser.storage.local.remove('eh_cur_session');
 }
 
-// Debounced wrapper — coalesces rapid tab open/close events into one write
 let _saveSessionTimer = null;
 function debouncedSaveSession() {
   if (_saveSessionTimer) clearTimeout(_saveSessionTimer);
@@ -741,38 +731,38 @@ function debouncedSaveSession() {
   }, 1000);
 }
 
-// ── Tab Storage helpers ──────────────────────────────────────────────────────
+// ── Tab Storage helpers ───────────────────────────────────────────────────────
 async function getTabStorage() {
-  const r = await chrome.storage.local.get(TAB_STORAGE_KEY);
+  const r = await browser.storage.local.get(TAB_STORAGE_KEY);
   return r[TAB_STORAGE_KEY] || [];
 }
 async function removeTabStorageEntry(id) {
   const stored = await getTabStorage();
   const next = stored.filter(e => e.id !== id);
-  await chrome.storage.local.set({ [TAB_STORAGE_KEY]: next });
+  await browser.storage.local.set({ [TAB_STORAGE_KEY]: next });
   return next;
 }
 
 async function getSessions() {
-  const r = await chrome.storage.local.get(SESSIONS_KEY);
+  const r = await browser.storage.local.get(SESSIONS_KEY);
   return r[SESSIONS_KEY] || [];
 }
 async function getMaxSessions() {
-  const r = await chrome.storage.local.get('eh_max_sessions');
+  const r = await browser.storage.local.get('eh_max_sessions');
   return r.eh_max_sessions || MAX_SESSIONS_DEFAULT;
 }
 
 async function saveSessions(list) {
   const max = await getMaxSessions();
   if (list.length > max) list = list.slice(-max);
-  await chrome.storage.local.set({ [SESSIONS_KEY]: list });
+  await browser.storage.local.set({ [SESSIONS_KEY]: list });
 }
 async function beginSession() {
   sessionId    = `s_${Date.now()}`;
   sessionTabs  = {};
   sessionStart = Date.now();
   try {
-    const tabs = await chrome.tabs.query({});
+    const tabs = await browser.tabs.query({});
     for (const t of tabs) {
       if (isTrackable(t.url))
         sessionTabs[t.id] = { url: t.url, title: t.title||'', domain: domainOf(t.url), windowId: t.windowId||null, opened: Date.now(), closed: null };
@@ -781,11 +771,9 @@ async function beginSession() {
   await saveSessionState();
 }
 async function finishSession() {
-  // Restore persisted state in case SW restarted (sessionId would be null)
   if (!sessionId) await loadSessionState();
-  if (!sessionId) return; // truly no session
+  if (!sessionId) return;
   const list = await getSessions();
-  // Only include tabs still open when the session ended (closed === null)
   const tabs = Object.values(sessionTabs).filter(t => t.url && t.closed === null);
   const uniq = new Set(tabs.map(t => t.url));
   if (tabs.length) list.push({ id: sessionId, start: sessionStart, end: Date.now(), tabCount: uniq.size, tabs });
@@ -794,18 +782,19 @@ async function finishSession() {
   await clearSessionState();
 }
 
-chrome.tabs.onCreated.addListener(async tab => {
+browser.tabs.onCreated.addListener(async tab => {
   if (!sessionId || !isTrackable(tab.url)) return;
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
   debouncedSaveSession();
 });
-// ── Title backfill queue — serializes concurrent storage writes ───────────────
+
+// ── Title backfill queue ──────────────────────────────────────────────────────
 let _titleQueue = Promise.resolve();
 function queuedBackfillTitle(url, title) {
   _titleQueue = _titleQueue.then(() => backfillTitle(url, title)).catch(() => {});
 }
 
-chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+browser.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   // ── Sessions ──
   if (sessionId) {
     if (info.url && isTrackable(info.url)) {
@@ -818,15 +807,12 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
     }
   }
 
-  // ── History title back-fill ──
-  // info.title fires whenever Chrome updates the tab title — including SPA navigations.
-  // Skip transient/loading titles. Queue writes so opening many tabs simultaneously
-  // doesn't cause concurrent storage overwrites that lose each other's changes.
-  const _badTitles = ['New Tab', 'Loading…', 'Loading...', ''];
+  const _badTitles = ['New Tab', 'Loading\u2026', 'Loading...', ''];
   if (!info.title || _badTitles.includes(info.title) || !tab?.url || !isTrackable(tab.url)) return;
   queuedBackfillTitle(tab.url, info.title);
 });
-chrome.tabs.onRemoved.addListener(async tabId => {
+
+browser.tabs.onRemoved.addListener(async tabId => {
   if (sessionTabs[tabId]) {
     sessionTabs[tabId].closed = Date.now();
     debouncedSaveSession();
@@ -834,33 +820,33 @@ chrome.tabs.onRemoved.addListener(async tabId => {
 });
 
 function ensureContextMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
+  browser.contextMenus.removeAll().then(() => {
+    browser.contextMenus.create({
       id: CONTEXT_MENU_PARENT_ID,
       title: 'Extended History',
       contexts: ['page', 'frame'],
       documentUrlPatterns: ['http://*/*', 'https://*/*'],
-    }, () => { if (chrome.runtime.lastError) console.warn('[EH] context menu parent failed:', chrome.runtime.lastError.message); });
+    });
 
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: CONTEXT_MENU_IGNORE_DOMAIN_ID,
       parentId: CONTEXT_MENU_PARENT_ID,
       title: "Don't keep this domain in history",
       contexts: ['page', 'frame'],
       documentUrlPatterns: ['http://*/*', 'https://*/*'],
-    }, () => { if (chrome.runtime.lastError) console.warn('[EH] ignore menu failed:', chrome.runtime.lastError.message); });
+    });
 
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: CONTEXT_MENU_STORE_TAB_ID,
       parentId: CONTEXT_MENU_PARENT_ID,
       title: 'Store this tab',
       contexts: ['page', 'frame'],
       documentUrlPatterns: ['http://*/*', 'https://*/*'],
-    }, () => { if (chrome.runtime.lastError) console.warn('[EH] store tab menu failed:', chrome.runtime.lastError.message); });
+    });
   });
 }
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
   const pageUrl = info.pageUrl || info.frameUrl || tab?.url || '';
 
   if (info.menuItemId === CONTEXT_MENU_IGNORE_DOMAIN_ID) {
@@ -890,43 +876,39 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         domain: domainOf(pageUrl),
         savedAt: Date.now(),
       });
-      await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored });
+      await browser.storage.local.set({ [TAB_STORAGE_KEY]: stored });
     }
     if (tab?.id) {
-      try { await chrome.tabs.remove(tab.id); } catch {}
+      try { await browser.tabs.remove(tab.id); } catch {}
     }
   }
 });
 
-// ── Startup / Install ────────────────────────────────────────────────────────
-chrome.runtime.onStartup.addListener(async () => {
+// ── Startup / Install ─────────────────────────────────────────────────────────
+browser.runtime.onStartup.addListener(async () => {
   ensureContextMenus();
   await migrateStorage();
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
-  // Flush any history from the previous session that wasn't saved by the periodic timer
-  // (e.g. user browsed then shut down before the next flush interval ran)
   await flushTodayToHistory().catch(() => {});
   await finishSession();
   await beginSession();
   await resumeActiveTab();
 });
 
-chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+browser.runtime.onInstalled.addListener(async ({ reason }) => {
   ensureContextMenus();
   await migrateStorage();
   if (reason === 'install') {
-    chrome.tabs.create({ url: chrome.runtime.getURL('tutorial.html') });
+    browser.tabs.create({ url: browser.runtime.getURL('tutorial.html') });
   }
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   await beginSession();
   await resumeActiveTab();
-  
-  // Always backfill Chrome history on install/update to ensure we have all history
-  // This runs on first install, updates, and reinstalls
+
   try {
-    const items   = await chrome.history.search({ text:'', startTime:0, maxResults:100000 });
+    const items   = await browser.history.search({ text:'', startTime:0, maxResults:100000 });
     const entries = items.filter(i=>isTrackable(i.url)).map(i=>({
       id:`bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2,6)}`,
       url:normalizeUrl(i.url), rawUrl:i.url, title:i.title||'',
@@ -939,38 +921,30 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
       await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
       await updateTodayHistory();
     }
-    await chrome.storage.local.set({ [BACKFILL_KEY]:true });
-    //console.log(`[EH] Backfilled ${newOnes.length} entries`);
+    await browser.storage.local.set({ [BACKFILL_KEY]:true });
   } catch(e) { console.error('[EH] backfill',e); }
 });
 
-// ── History storage ──────────────────────────────────────────────────────────
-async function getAll() { const r=await chrome.storage.local.get(HISTORY_KEY); return r[HISTORY_KEY]||[]; }
-async function setAll(e) { await chrome.storage.local.set({ [HISTORY_KEY]:e }); }
-async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
+// ── History storage ───────────────────────────────────────────────────────────
+async function getAll() { const r=await browser.storage.local.get(HISTORY_KEY); return r[HISTORY_KEY]||[]; }
+async function setAll(e) { await browser.storage.local.set({ [HISTORY_KEY]:e }); }
+async function getSettings() { const r=await browser.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
 async function saveSettings(newSettings) {
   const current = await getSettings();
   const merged = { ...current, ...newSettings };
-  await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
-  
-  // NEW: If ignore list was just enabled/disabled, clean history immediately if enabled
+  await browser.storage.local.set({ [SETTINGS_KEY]: merged });
+
   if (newSettings.hasOwnProperty('ignoreListEnabled')) {
     if (newSettings.ignoreListEnabled) {
-      // Just enabled - clean ignored URLs from history
       await cleanIgnoredFromHistory();
     }
-    // If disabled, we don't need to do anything - URLs will just be allowed
   }
 }
-// ── Title back-fill from Chrome history ──────────────────────────────────────
-// Chrome's own history DB has the correct title for every URL it has seen.
-// We query it and write the result into any recent entry that still lacks a title.
-// Write title for the most recent entry matching this URL within the last 2 minutes.
-// Always overwrites — if tabs.onUpdated fires twice, the second (final) title wins.
-// If no entry exists yet (title fired before recordVisit), retry once after 1.5s.
+
+// ── Title back-fill ───────────────────────────────────────────────────────────
 async function backfillTitle(url, title, _isRetry = false) {
   if (!url || !title || !isTrackable(url)) return;
-  if (title === 'New Tab' || title === 'Loading…' || title === 'Loading...') return;
+  if (title === 'New Tab' || title === 'Loading\u2026' || title === 'Loading...') return;
   const norm = normalizeUrl(url);
   const entries = await getAll();
   const now = Date.now();
@@ -978,11 +952,10 @@ async function backfillTitle(url, title, _isRetry = false) {
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     if (e.url !== norm) continue;
-    if ((now - e.visitTime) > 300000) continue; // 5 min window (was 2 min)
+    if ((now - e.visitTime) > 300000) continue;
     if (e.visitTime > bestTime) { bestTime = e.visitTime; bestIdx = i; }
   }
   if (bestIdx === -1) {
-    // Entry not recorded yet — retry once after 1.5s (covers fast title updates like Google Search)
     if (!_isRetry) setTimeout(() => backfillTitle(url, title, true), 1500);
     return;
   }
@@ -990,7 +963,7 @@ async function backfillTitle(url, title, _isRetry = false) {
   await setAll(entries);
 }
 
-function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toString().replace(/\/$/,''); } catch { return url; } }
+function normalizeUrl(url) { try { const u=new URL(url); u.hash=''; return u.toString().replace(/\/$/, ''); } catch { return url; } }
 
 async function recordVisit(url, title, tabId) {
   if (!isTrackable(url)) return;
@@ -999,14 +972,12 @@ async function recordVisit(url, title, tabId) {
   const now      = Date.now();
   const syncInterval = typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
 
-  // ── Deferred mode (syncInterval > 0): today's visits are served live from
-  //    the Chrome history API and flushed in bulk on a timer. No per-visit write.
   if (syncInterval > 0) {
-    // Still backfill title into existing entries if we have one within 5 min
     if (title) {
       const cutoff5 = now - 5000;
       const norm = normalizeUrl(url);
       const entries = await getAll();
+      // findLastIndex polyfilled above
       const idx = entries.findLastIndex(e => e.url === norm && e.visitTime >= cutoff5);
       if (idx !== -1 && !entries[idx].title) {
         entries[idx].title = title;
@@ -1016,7 +987,6 @@ async function recordVisit(url, title, tabId) {
     return;
   }
 
-  // ── Legacy mode (syncInterval === 0): write every visit immediately ──────
   const cutoff   = now - settings.retentionDays * 86400000;
   let entries    = await getAll();
   const norm     = normalizeUrl(url);
@@ -1028,56 +998,50 @@ async function recordVisit(url, title, tabId) {
   await setAll(entries);
 }
 
-chrome.webNavigation.onCommitted.addListener(async details => {
+browser.webNavigation.onCommitted.addListener(async details => {
   if (details.frameId!==0||!isTrackable(details.url)) return;
   if (['auto_subframe','manual_subframe'].includes(details.transitionType)) return;
   let title='';
   const url = details.url;
-  // Check ignore list FIRST - before Chrome commits to history
   if (await shouldIgnoreUrl(url)) {
     await cleanupIgnoredUrlFromNativeHistory(url);
-    return; // Don't record in extension
+    return;
   }
-  try { const tab=await chrome.tabs.get(details.tabId); title=tab?.title||''; } catch {}
+  try { const tab=await browser.tabs.get(details.tabId); title=tab?.title||''; } catch {}
   await recordVisit(details.url, title, details.tabId);
 });
 
-chrome.webNavigation.onCompleted.addListener(async details => {
+browser.webNavigation.onCompleted.addListener(async details => {
   if (details.frameId!==0||!isTrackable(details.url)) return;
   if (await shouldIgnoreUrl(details.url)) {
     await cleanupIgnoredUrlFromNativeHistory(details.url);
   }
-  // Title back-fill is handled by tabs.onUpdated — no timer needed here.
 });
 
-// ── SPA / pushState navigation (YouTube, etc.) ──────────────────────────────
-// onCommitted doesn't fire for history.pushState — use onHistoryStateUpdated.
-chrome.webNavigation.onHistoryStateUpdated.addListener(async details => {
+browser.webNavigation.onHistoryStateUpdated.addListener(async details => {
   if (details.frameId !== 0 || !isTrackable(details.url)) return;
   if (await shouldIgnoreUrl(details.url)) return;
   await recordVisit(details.url, '', details.tabId);
-  // Title will arrive via tabs.onUpdated
 });
 
-// ── Message API ──────────────────────────────────────────────────────────────
-chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
+// ── Message API ───────────────────────────────────────────────────────────────
+browser.runtime.onMessage.addListener((msg, _s, respond) => {
+  handle(msg).then(respond).catch(err => respond({ error: err.message }));
+  return true; // keep channel open for async response
+});
 
 async function handle(msg) {
   switch(msg.type) {
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
 
-      // Split source: today live from Chrome API, past days from local storage.
-      // This ensures today's entries are always current (no per-visit storage writes)
-      // while older history is served from the fast local store.
       const todayStart = new Date(); todayStart.setHours(0,0,0,0);
       const todayMs = todayStart.getTime();
 
       const [todayEntries, allStored] = await Promise.all([
-        getTodayFromChromeApi(),
+        getTodayFromNativeHistory(),
         getAll(),
       ]);
-      // Only keep past days from local storage — today comes from Chrome API
       const pastEntries = allStored.filter(e => e.visitTime < todayMs);
       let entries = [...todayEntries, ...pastEntries];
 
@@ -1099,20 +1063,16 @@ async function handle(msg) {
     case 'DELETE_IDS': {
       const s = new Set(msg.ids);
 
-      // 1. Remove from local storage
       const all = await getAll();
       const removed = all.filter(e => s.has(e.id));
       await setAll(all.filter(e => !s.has(e.id)));
 
-      // 2. Delete from Chrome history — every URL variant we know about:
-      //    - urls passed directly from the UI (covers today's live entries)
-      //    - url + rawUrl from local storage entries
       const urlsToDelete = new Set([
         ...(msg.urls || []),
         ...removed.flatMap(e => [e.url, e.rawUrl]),
       ].filter(Boolean));
       for (const url of urlsToDelete) {
-        try { await chrome.history.deleteUrl({ url }); } catch {}
+        try { await browser.history.deleteUrl({ url }); } catch {}
       }
       return { success: true };
     }
@@ -1133,63 +1093,62 @@ async function handle(msg) {
         return ms&&me&&mq;
       }
 
-      // 1. Remove matching entries from local storage
       const allStored = await getAll();
       const toDelete = allStored.filter(matchesFilter);
       await setAll(allStored.filter(e => !toDelete.find(d => d.id === e.id)));
 
-      // 2. Also match today's live entries from Chrome API
-      const todayLive = await getTodayFromChromeApi();
+      const todayLive = await getTodayFromNativeHistory();
       const toDeleteToday = todayLive.filter(matchesFilter);
 
-      // 3. Delete every URL variant from Chrome history (covers both past + today)
       const urlsToDelete = new Set(
         [...toDelete, ...toDeleteToday].flatMap(e => [e.url, e.rawUrl]).filter(Boolean)
       );
       for (const url of urlsToDelete) {
-        try { await chrome.history.deleteUrl({ url }); } catch {}
+        try { await browser.history.deleteUrl({ url }); } catch {}
       }
       return { success: true, deleted: toDelete.length + toDeleteToday.length };
     }
     case 'DELETE_HISTORY_RANGE': {
       const { startTime, endTime, clearCookies, clearCache } = msg;
-      // Delete from extension storage
       let entries = await getAll();
       const before = entries.length;
       entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
       await setAll(entries);
       const deleted = before - entries.length;
-      // Delete from Chrome native history
-      try { await chrome.history.deleteRange({ startTime, endTime }); } catch {}
-      // Optionally clear cookies and cache
+      try { await browser.history.deleteRange({ startTime, endTime }); } catch {}
       if (clearCookies || clearCache) {
         const since = startTime;
         const dataTypes = {};
         if (clearCookies) { dataTypes.cookies = true; dataTypes.localStorage = true; dataTypes.indexedDB = true; }
         if (clearCache)   { dataTypes.cache = true; dataTypes.cacheStorage = true; }
-        try { await chrome.browsingData.remove({ since }, dataTypes); } catch {}
+        try { await browser.browsingData.remove({ since }, dataTypes); } catch {}
       }
-      // Update today's history
       await updateTodayHistory();
       return { success: true, deleted };
     }
     case 'CLEAR_ALL': {
       await setAll([]);
-      try { await chrome.history.deleteAll(); } catch {}
-      // Update today's history
+      try { await browser.history.deleteAll(); } catch {}
       await updateTodayHistory();
       return { success: true };
     }
     case 'GET_STATS': {
-      const entries=await getAll(); const used=await chrome.storage.local.getBytesInUse(HISTORY_KEY);
+      const entries=await getAll();
+      // Firefox: getBytesInUse is not supported on local storage; estimate from JSON size
+      let storageMB = '?';
+      try {
+        const raw = await browser.storage.local.get(HISTORY_KEY);
+        const bytes = new TextEncoder().encode(JSON.stringify(raw)).length;
+        storageMB = (bytes / 1048576).toFixed(1);
+      } catch {}
       const oldest=entries.length?Math.min(...entries.map(e=>e.visitTime)):null;
       const now=Date.now(); const daily={};
       for(let i=89;i>=0;i--) daily[new Date(now-i*86400000).toLocaleDateString('en-CA')]=0;
       for(const e of entries){const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++;}
-      return {totalEntries:entries.length,storageMB:(used/1048576).toFixed(1),oldestEntry:oldest,dailyActivity:daily};
+      return {totalEntries:entries.length,storageMB,oldestEntry:oldest,dailyActivity:daily};
     }
     case 'GET_TIME_DATA': {
-      const {days=30}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
+      const {days=30}=msg; const r=await browser.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
       const now=Date.now(); const dateSet=new Set();
       for(let i=0;i<days;i++) dateSet.add(new Date(now-i*86400000).toLocaleDateString('en-CA'));
       const totals={};
@@ -1208,17 +1167,18 @@ async function handle(msg) {
       }
       return {topSites:sorted,dailyMap};
     }
-    case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
+    case 'GET_DEVICES': {
+      // browser.sessions.getDevices() exists in Firefox
+      try { return {devices: await browser.sessions.getDevices()}; } catch { return {devices:[]}; }
+    }
     case 'GET_TODAY_HISTORY': {
-      // Serve today's history live from Chrome API — no storage read needed.
-      // Falls back to eh_today_history in storage if Chrome API fails.
-      const liveEntries = await getTodayFromChromeApi();
+      const liveEntries = await getTodayFromNativeHistory();
       if (liveEntries.length) return { entries: liveEntries };
-      const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
+      const r = await browser.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
     }
     case 'GET_CURRENT_SESSION': {
-      const r = await chrome.storage.local.get(CURRENT_SESSION_KEY);
+      const r = await browser.storage.local.get(CURRENT_SESSION_KEY);
       return { session: r[CURRENT_SESSION_KEY] || null };
     }
     case 'GET_SESSIONS': {
@@ -1235,28 +1195,27 @@ async function handle(msg) {
     }
     case 'REMOVE_TAB_STORAGE_ENTRIES': {
       const { ids } = msg;
-      const r = await chrome.storage.local.get('eh_tab_storage');
+      const r = await browser.storage.local.get('eh_tab_storage');
       const list = (r['eh_tab_storage'] || []).filter(e => !ids.includes(e.id));
-      await chrome.storage.local.set({ 'eh_tab_storage': list });
+      await browser.storage.local.set({ 'eh_tab_storage': list });
       return { success: true, entries: list };
     }
     case 'CLEAR_TAB_STORAGE': {
-      await chrome.storage.local.set({ [TAB_STORAGE_KEY]: [] });
+      await browser.storage.local.set({ [TAB_STORAGE_KEY]: [] });
       return { success: true };
     }
     case 'SET_MAX_SESSIONS': {
       const val = Math.max(1, Math.min(20, parseInt(msg.value) || MAX_SESSIONS_DEFAULT));
-      await chrome.storage.local.set({ eh_max_sessions: val });
-      // Trim existing sessions if new max is smaller
+      await browser.storage.local.set({ eh_max_sessions: val });
       const list = await getSessions();
-      if (list.length > val) await chrome.storage.local.set({ [SESSIONS_KEY]: list.slice(-val) });
+      if (list.length > val) await browser.storage.local.set({ [SESSIONS_KEY]: list.slice(-val) });
       return { success: true, value: val };
     }
     case 'SET_AUTO_SAVE_INTERVAL': {
       const mins = parseInt(msg.minutes) || 0;
       const safe = mins === 0 ? 0 : Math.max(1, Math.min(1440, mins));
-      await chrome.storage.local.set({ [AUTO_SAVE_KEY]: safe });
-      _lastAutoSave = 0; // reset so next tick recalculates
+      await browser.storage.local.set({ [AUTO_SAVE_KEY]: safe });
+      _lastAutoSave = 0;
       return { success: true, minutes: safe };
     }
     case 'GET_SYNC_INTERVAL': {
@@ -1266,7 +1225,7 @@ async function handle(msg) {
       const mins = parseInt(msg.minutes);
       const safe = isNaN(mins) ? 30 : Math.max(0, Math.min(1440, mins));
       await saveSettings({ syncInterval: safe });
-      _lastFlush = 0; // reset so next alarm tick re-evaluates
+      _lastFlush = 0;
       return { success: true, minutes: safe };
     }
     case 'FORCE_FLUSH': {
@@ -1285,23 +1244,21 @@ async function handle(msg) {
       if (!Array.isArray(tabs)) return { success: false };
       for (const t of tabs) {
         if (t.url && isTrackable(t.url)) {
-          try { await chrome.tabs.create({ url: t.url, active: false }); } catch {}
+          try { await browser.tabs.create({ url: t.url, active: false }); } catch {}
         }
       }
       return { success: true };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
     case 'SAVE_SETTINGS': {
-      const cur=await getSettings(); 
+      const cur=await getSettings();
       const next={...cur,...msg.settings};
-      //console.log('[EH] SAVE_SETTINGS:', { current: cur, incoming: msg.settings, merged: next });
-      await chrome.storage.local.set({[SETTINGS_KEY]:next});
-      // Update in-memory cache so event listeners pick it up immediately
+      await browser.storage.local.set({[SETTINGS_KEY]:next});
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
       return {success:true,settings:next};
     }
     case 'EXPORT': {
-      const entries=await getAll(); const tr=await chrome.storage.local.get(TIME_KEY); const sess=await getSessions();
+      const entries=await getAll(); const tr=await browser.storage.local.get(TIME_KEY); const sess=await getSessions();
       return {exportedAt:new Date().toISOString(),totalEntries:entries.length,entries,timeData:tr[TIME_KEY]||{},sessions:sess};
     }
     case 'IMPORT_HISTORY': {
@@ -1320,12 +1277,9 @@ async function handle(msg) {
         existingSet.add(key); count++;
       }
       existing.sort((a,b)=>b.visitTime-a.visitTime); await setAll(existing);
-      // Update today's history
       await updateTodayHistory();
 
-      // ── Bookmark top domains into "Extended History" folder ──────────────
       try {
-        // Count visits per domain across all history (imported + existing)
         const allEntries = await getAll();
         const domainCounts = {};
         for (const e of allEntries) {
@@ -1338,8 +1292,7 @@ async function handle(msg) {
           .map(([domain]) => domain);
 
         if (topDomains.length) {
-          // Find or create "Extended History" bookmark folder
-          const tree = await chrome.bookmarks.getTree();
+          const tree = await browser.bookmarks.getTree();
           function findFolder(nodes, title) {
             for (const n of nodes) {
               if (!n.url && n.title === title) return n;
@@ -1349,34 +1302,31 @@ async function handle(msg) {
           }
           let folder = findFolder(tree, 'Extended History');
           if (!folder) {
-            // Create at top-level bookmarks bar (id '1') or Other Bookmarks (id '2')
             const parentId = tree[0]?.children?.[0]?.id || '1';
-            folder = await chrome.bookmarks.create({ parentId, title: 'Extended History' });
+            folder = await browser.bookmarks.create({ parentId, title: 'Extended History' });
           }
 
-          // Collect URLs already in the folder to avoid duplicates
-          const folderChildren = await chrome.bookmarks.getChildren(folder.id);
+          const folderChildren = await browser.bookmarks.getChildren(folder.id);
           const existingUrls = new Set(folderChildren.map(c => c.url).filter(Boolean));
 
           for (const domain of topDomains) {
             const url = `https://${domain}`;
             if (!existingUrls.has(url)) {
               try {
-                await chrome.bookmarks.create({ parentId: folder.id, title: domain, url });
+                await browser.bookmarks.create({ parentId: folder.id, title: domain, url });
                 existingUrls.add(url);
               } catch {}
             }
           }
         }
       } catch {}
-      // ────────────────────────────────────────────────────────────────────
 
       return {success:true,imported:count};
     }
     case 'RE_BACKFILL': {
       try {
-        await chrome.storage.local.remove(BACKFILL_KEY);
-        const items = await chrome.history.search({ text: '', startTime: 0, maxResults: 100000 });
+        await browser.storage.local.remove(BACKFILL_KEY);
+        const items = await browser.history.search({ text: '', startTime: 0, maxResults: 100000 });
         const entries = items.filter(i => isTrackable(i.url)).map(i => ({
           id:        `bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
           url:       normalizeUrl(i.url),
@@ -1391,57 +1341,55 @@ async function handle(msg) {
         const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
         const newOnes     = entries.filter(e => !existingSet.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
         if (newOnes.length) await setAll([...existing, ...newOnes].sort((a, b) => b.visitTime - a.visitTime));
-        await chrome.storage.local.set({ [BACKFILL_KEY]: true });
+        await browser.storage.local.set({ [BACKFILL_KEY]: true });
         await updateTodayHistory();
         return { success: true, imported: newOnes.length };
       } catch (e) { return { error: e.message }; }
     }
-    case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
+    case 'GET_BOOKMARKS': { try{return {tree:await browser.bookmarks.getTree()};}catch{return {tree:[]};} }
     case 'MOVE_BOOKMARK': {
       try {
-        await chrome.bookmarks.move(msg.id, { parentId: msg.parentId });
+        await browser.bookmarks.move(msg.id, { parentId: msg.parentId });
         return { success: true };
       } catch(e) { return { error: e.message }; }
     }
     case 'DELETE_BOOKMARK': {
       try {
-        // removeTree handles both bookmarks and folders
-        await chrome.bookmarks.removeTree(msg.id);
+        await browser.bookmarks.removeTree(msg.id);
         return { success: true };
       } catch(e) { return { error: e.message }; }
     }
     case 'RENAME_BOOKMARK': {
       try {
-        await chrome.bookmarks.update(msg.id, { title: msg.title });
+        await browser.bookmarks.update(msg.id, { title: msg.title });
         return { success: true };
       } catch(e) { return { error: e.message }; }
     }
     case 'CREATE_BOOKMARK_FOLDER': {
       try {
-        const folder = await chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title });
+        const folder = await browser.bookmarks.create({ parentId: msg.parentId, title: msg.title });
         return { success: true, id: folder.id };
       } catch(e) { return { error: e.message }; }
     }
     case 'IMPORT_BOOKMARKS': {
       const {bookmarks}=msg; let imported=0;
-      for(const bm of (bookmarks||[])) if(bm.url){try{await chrome.bookmarks.create({title:bm.title||bm.url,url:bm.url});imported++;}catch{}}
+      for(const bm of (bookmarks||[])) if(bm.url){try{await browser.bookmarks.create({title:bm.title||bm.url,url:bm.url});imported++;}catch{}}
       return {success:true,imported};
     }
-    case 'OPEN_INCOGNITO': { try{await chrome.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
+    case 'OPEN_INCOGNITO': {
+      // Firefox uses "private" not "incognito" for window type
+      try { await browser.windows.create({ url: msg.url, incognito: true }); } catch {}
+      return { success: true };
+    }
     case 'GET_IGNORE_LIST': {
       return { list: await getIgnoreList(), enabled: await isIgnoreListEnabled() };
     }
     case 'ADD_IGNORE_PATTERN': {
       const result = await addIgnorePattern(msg.pattern);
       if (!result.success) return result;
-      // Clean history in background (don't wait for it)
       const enabled = await isIgnoreListEnabled();
       if (enabled) {
-        cleanIgnoredFromHistory().then(() => {
-          //console.log('[EH] Cleaned ignored URLs from history for pattern:', result.pattern);
-        }).catch(err => {
-          //console.error('[EH] Error cleaning ignored history:', err);
-        });
+        cleanIgnoredFromHistory().catch(() => {});
       }
       return result;
     }
@@ -1469,7 +1417,6 @@ async function handle(msg) {
       return { success: true, enabled: newEnabled };
     }
     case 'FLUSH_TIME': {
-      // Commit whatever is running (if anything), then restart
       if (activeDomain && segmentStart && windowFocused) {
         await commitSegment();
         segmentStart = Date.now();
@@ -1477,20 +1424,20 @@ async function handle(msg) {
       return {success:true};
     }
     case 'CLEAR_TIME_DATA': {
-      await chrome.storage.local.remove(TIME_KEY);
+      await browser.storage.local.remove(TIME_KEY);
       return {success:true};
     }
-        case 'GET_MOST_VISITED': {
+    case 'GET_MOST_VISITED': {
       const {viewType='url',period='all'}=msg;
       const entries=await getAll();
       const now=Date.now();
       let cutoffTime=0;
       if(period==='10') cutoffTime=now-10*86400000;
       else if(period==='30') cutoffTime=now-30*86400000;
-      
+
       const filtered=period==='all'?entries:entries.filter(e=>e.visitTime>=cutoffTime);
       const counts={};
-      
+
       for(const e of filtered){
         let key;
         if(viewType==='domain'){
@@ -1503,30 +1450,13 @@ async function handle(msg) {
         }
         counts[key].count++;
       }
-      
+
       const sorted=Object.values(counts).sort((a,b)=>b.count-a.count).slice(0,50);
       return {items:sorted};
     }
     default: return {error:`Unknown: ${msg.type}`};
   }
 }
-// ══ EXTERNAL MESSAGING ══════════════════════════════════════════════════════
-// Allows the "Extended Page" new-tab extension to query history data.
-// The sender's ID must be listed in manifest.json > externally_connectable > ids.
-const ALLOWED_EXTERNAL_TYPES = new Set([
-  'GET_MOST_VISITED',
-  'GET_TAB_STORAGE',
-  'GET_SETTINGS',
-  'REMOVE_TAB_STORAGE_ENTRY',
-]);
 
-chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-  if (!ALLOWED_EXTERNAL_TYPES.has(message.type)) {
-    sendResponse({ error: 'Not allowed: ' + message.type });
-    return false;
-  }
-  handle(message)
-    .then(sendResponse)
-    .catch(err => sendResponse({ error: err.message }));
-  return true; // Keep channel open for async response
-});
+// NOTE: browser.runtime.onMessageExternal is not supported in Firefox MV2.
+// Cross-extension messaging is intentionally omitted in this port.
