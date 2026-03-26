@@ -21,6 +21,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 <pre>
 -Fix browser cache based favicon resolver
 -Fix translations (i need help with this, i can't translate dynamic parts)
+-Maybe switch to using IndexDB?
 -Add better timestamp labels when browsing history
 -Add whole history encryption and UI locking
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
