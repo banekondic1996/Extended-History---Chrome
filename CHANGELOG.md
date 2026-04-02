@@ -57,7 +57,7 @@ Fixed/changed in version 4.0.9:
 -Added keyword option in ignore lists, to ignore history storing based on keyword in title or url
 -Clicking items in Recent History inside popup now opens them in new tab, without focusing on that page
 
-Fixed/changed in version 4.1.0 (in Chrome Store):
+Fixed/changed in version 4.1.0:
 -Bookmarks loading speed fixed
 -Bookmarks search input clear button added
 -Bookmarks search loading speed increased
@@ -65,13 +65,19 @@ Fixed/changed in version 4.1.0 (in Chrome Store):
 -Added more translations
 -Bookmarks multiple selection mode added
 
-Fixed/changed in version 4.1.1 (in testing branch):
+Fixed/changed in version 4.1.1 (in Chrome Store):
 -Added wallpaper mode with frosted UI look
 -Fixed reading mode calendar
 -Added reading mode filters
 -Fixed context menu for reading mode
 -Added option for wallpaper hue
 -CSS fixes
+  
+Fixed/changed in version 4.1.2:
+-Added option to auto store tabs that haven't been focused on for configured amount of time
+-Added option to migrate storage to use IndexedDB instead of localStorage (good for big history, but more vulnerable to malware and breaking, so not recommended)
+-Fixed random wallpaper switching speed
+-Added option to show URLs under site titles in popup
 </pre>
 
 
