@@ -1,8 +1,46 @@
 {
   "ext_name": { "message": "Extended History" },
 
-
-  
+  "popup_show_url": {
+    "message": "URLs"
+  },
+  "popup_show_url_desc": {
+    "message": "Display the page URL below the title in the popup list"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Auto-store idle tabs"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Automatically move tabs to Tab Storage when they haven't been focused for a set amount of time. The tab is closed and saved for later — nothing is lost."
+  },
+  "idle_threshold": {
+    "message": "Idle threshold"
+  },
+  "idle_threshold_desc": {
+    "message": "Store a tab after this many hours without it being focused. Default: 6."
+  },
+   "history_storage": {
+    "message": "History storage engine"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB is faster for large histories (100k+ entries) and uses less memory. Migration copies all data — you can switch back any time. Current: "
+  },
+  "apply_migrate": {
+    "message": "Apply & Migrate"
+  },
+  "wallpaper_mode": { "message": "🖼 Wallpaper Mode" },
+  "wallpaper_mode_desc": { "message": "Set a custom background image. Enables a frosted-glass UI look." },
+  "wallpaper_mode_custom_image": { "message": "📁 Custom Image" },
+  "wallpaper_random_unsplash": { "message": "🎲 Random from Unsplash" },
+  "wallpaper_drop_image": { "message": "Drop image here or <strong>click to browse</strong>" },
+  "wallpaper_fetch": { "message": "Fetches a random high-res photo (changes each time)" },
+  "wallpaper_randomize": { "message": "🎲 Randomize" },
+  "wallpaper_auto_randomize": { "message": "Auto-randomize on every open" },
+  "wallpaper_current": { "message": "Current wallpaper:" },
+  "overlay_opacity": { "message": "Overlay opacity" },
+  "overlay_control_desc": { "message": "Controls the dark (dark mode) or white (light mode) overlay on top of the wallpaper." },
+  "wallpaper_blur": { "message": "Background blur" },
+  "wallpaper_remove": { "message": "✕ Remove wallpaper" },
   "all": {
     "message": "All"
   },
@@ -16,7 +54,7 @@
     "message": "← Back"
   },
   "background_tint": {
-    "message": "Background Tint"
+    "message": "Wallpaper Tint"
   },
   "browser_cache": {
     "message": "Browser cache"
@@ -25,7 +63,7 @@
     "message": "Delete history & reset password"
   },
   "enable_bg_tint": {
-    "message": "Enable background tint"
+    "message": "Enable wallpaper tint (works only if wallpaper mode is on)"
   },
   "enable_lock": {
     "message": "Enable Lock"

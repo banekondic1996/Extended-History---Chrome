@@ -18,6 +18,46 @@
   "domains": {"message": "域名"},
   "enable_ignore": {"message": "启用忽略列表"},
   "filter_urls": {"message": "过滤匹配以下模式的 URL"},
+  "popup_show_url": {
+  "message": "URL"
+  },
+  "popup_show_url_desc": {
+    "message": "在弹出列表中标题下方显示页面URL"
+  },
+  "auto_store_idle_tabs": {
+    "message": "自动存储空闲标签页"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "当标签页在一段时间内未被激活时，自动将其移动到标签存储中。标签页会被关闭并保存——不会丢失任何内容。"
+  },
+  "idle_threshold": {
+    "message": "空闲阈值"
+  },
+  "idle_threshold_desc": {
+    "message": "在未激活达到此小时数后存储标签页。默认：6。"
+  },
+  "history_storage": {
+    "message": "历史记录存储引擎"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB 对于大型历史记录（100k+ 条目）更快且占用更少内存。迁移会复制所有数据——您可以随时切换回来。当前："
+  },
+  "apply_migrate": {
+    "message": "应用并迁移"
+  },
+  "wallpaper_mode": { "message": "🖼 壁纸模式" },
+  "wallpaper_mode_desc": { "message": "设置自定义背景图片，启用磨砂玻璃效果。" },
+  "wallpaper_mode_custom_image": { "message": "📁 自定义图片" },
+  "wallpaper_random_unsplash": { "message": "🎲 来自 Unsplash 的随机图片" },
+  "wallpaper_drop_image": { "message": "拖放图片或<strong>点击浏览</strong>" },
+  "wallpaper_fetch": { "message": "获取随机高清图片（每次都会变化）" },
+  "wallpaper_randomize": { "message": "🎲 随机" },
+  "wallpaper_auto_randomize": { "message": "每次打开自动随机" },
+  "wallpaper_current": { "message": "当前壁纸：" },
+  "overlay_opacity": { "message": "覆盖透明度" },
+  "overlay_control_desc": { "message": "控制深色或浅色覆盖层。" },
+  "wallpaper_blur": { "message": "背景模糊" },
+  "wallpaper_remove": { "message": "✕ 移除壁纸" },
 
   "reading_mode": {"message": "阅读模式"},
   "tab_storage": {"message": "标签存储"},

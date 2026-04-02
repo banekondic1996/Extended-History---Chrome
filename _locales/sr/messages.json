@@ -9,6 +9,46 @@
   "ph_search_history": { "message": "Претражи историју" },
   "ph_search_bookmarks": { "message": "Претражи обележено" },
   "yesterday": { "message": "Јуче" },
+  "popup_show_url": {
+    "message": "URL-ови"
+  },
+  "popup_show_url_desc": {
+    "message": "Прикажи URL странице испод наслова у искачућој листи"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Аутоматски сачувај неактивне табове"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Аутоматски премешта табове у складиште када нису били активни одређено време. Таб се затвара и чува — ништа се не губи."
+  },
+  "idle_threshold": {
+    "message": "Праг неактивности"
+  },
+  "idle_threshold_desc": {
+    "message": "Сачувај таб након овог броја сати без активности. Подразумевано: 6."
+  },
+  "history_storage": {
+    "message": "Механизам складиштења историје"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB је бржи за велике историје (100k+ уноса) и користи мање меморије. Миграција копира све податке — можете се вратити у било ком тренутку. Тренутно: "
+  },
+  "apply_migrate": {
+    "message": "Примени и мигрирај"
+  },
+  "wallpaper_mode": { "message": "🖼 Режим позадине" },
+  "wallpaper_mode_desc": { "message": "Постави прилагођену слику позадине. Омогућава ефекат замућеног стакла." },
+  "wallpaper_mode_custom_image": { "message": "📁 Прилагођена слика" },
+  "wallpaper_random_unsplash": { "message": "🎲 Насумично са Unsplash-а" },
+  "wallpaper_drop_image": { "message": "Превуци слику или <strong>кликни за избор</strong>" },
+  "wallpaper_fetch": { "message": "Преузима насумичну фотографију високе резолуције (мења се сваки пут)" },
+  "wallpaper_randomize": { "message": "🎲 Насумично" },
+  "wallpaper_auto_randomize": { "message": "Аутоматски при сваком отварању" },
+  "wallpaper_current": { "message": "Тренутна позадина:" },
+  "overlay_opacity": { "message": "Прозирност слоја" },
+  "overlay_control_desc": { "message": "Контролише тамни или светли слој преко позадине." },
+  "wallpaper_blur": { "message": "Замућење позадине" },
+  "wallpaper_remove": { "message": "✕ Уклони позадину" },
 
  "confirm_delete_all_time": {
     "message": "⚠️ Потврдите брисање резултата за цео период\n\nОво ће обрисати $COUNT$ одговарајућих резултата из целе ваше историје.\n\nДа ли сте сигурни?",

@@ -3,6 +3,8 @@
  * Virtual scroll, click-to-open / checkbox-to-select, sessions, bookmarks,
  * dark/light mode, local fonts only.
  */
+const WP_STORAGE_KEY = 'eh_wallpaper';
+const WP_NEXT_KEY    = 'eh_wallpaper_next';
 
 // ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
@@ -114,6 +116,8 @@ function setTheme(t) {
   document.getElementById('themeDark').classList.toggle('active', t === 'dark');
   _curSettings.theme = t;
   send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
+  // Re-apply wallpaper so overlay color adapts to new theme
+  chrome.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -908,7 +912,7 @@ async function loadSessions() {
       if (!badgeText) {
         const restoreBtn = document.createElement('button');
         restoreBtn.className   = 'tb-btn';
-        restoreBtn.textContent = '↺ Restore';
+        restoreBtn.textContent = '↺ ' + (chrome.i18n.getMessage('restore') || 'Restore');
         restoreBtn.setAttribute('data-i18n-key', 'restore');
         restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
         restoreBtn.addEventListener('click', async ev => {
@@ -2282,14 +2286,16 @@ function populateSettings(s) {
     bgTintOpacity.value = s.bgTintOpacity !== undefined ? s.bgTintOpacity : 8;
     if (bgTintOpacityVal) bgTintOpacityVal.textContent = bgTintOpacity.value + '%';
   }
-  updateBgTintPreview();
+
 
   // Populate popup settings
   const popupSearchToggle = document.getElementById('popupSearchToggle');
   const popupTabsToggle   = document.getElementById('popupTabsToggle');
+  const popupURLsToggle   = document.getElementById('popupURLsToggle');
   const popupHeightInput  = document.getElementById('popupHeightInput');
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
+  if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
   if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
 
   // Populate UI settings
@@ -2304,6 +2310,16 @@ function populateSettings(s) {
   applyTimeTrackingState(s.timeTrackingEnabled !== false);
   const syncIntervalInput = document.getElementById('syncIntervalInput');
   if (syncIntervalInput) syncIntervalInput.value = typeof s.syncInterval === 'number' ? s.syncInterval : 30;
+
+  // Auto-store idle tabs
+  const autoStoreTgl = document.getElementById('autoStoreToggle');
+  const autoStoreHrsInput = document.getElementById('autoStoreHoursInput');
+  const autoStoreHrsRow   = document.getElementById('autoStoreHoursRow');
+  if (autoStoreTgl) {
+    autoStoreTgl.checked = s.autoStoreEnabled === true;
+    if (autoStoreHrsRow) autoStoreHrsRow.style.display = s.autoStoreEnabled ? '' : 'none';
+  }
+  if (autoStoreHrsInput) autoStoreHrsInput.value = typeof s.autoStoreHours === 'number' ? s.autoStoreHours : 6;
 }
 
 function applyTimeTrackingState(enabled) {
@@ -2322,13 +2338,77 @@ function applyVisuals(s) {
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
   
-  // Apply background tint
-  if (s.bgTintEnabled && s.bgTintHue !== undefined && s.bgTintOpacity !== undefined) {
-    const tintColor = `hsla(${s.bgTintHue}, 70%, 60%, ${s.bgTintOpacity / 100})`;
-    r.style.setProperty('--bg-tint', tintColor);
+  // Apply background tint: hue-rotate filter on the wallpaper layer
+  const wpLayer = document.getElementById('eh-wallpaper-layer');
+  if (s.bgTintEnabled && s.bgTintHue !== undefined) {
+    const blurAmt = s.blurAmount ?? s.bgTintBlur ?? 8;
+    const hueRot  = s.bgTintHue;
+    if (wpLayer) {
+      wpLayer.style.filter = `blur(${blurAmt}px) hue-rotate(${hueRot}deg)`;
+    }
+    r.style.setProperty('--bg-tint-hue', hueRot + 'deg');
   } else {
-    r.style.removeProperty('--bg-tint');
+    if (wpLayer) {
+      const blurAmt = s.blurAmount ?? 8;
+      wpLayer.style.filter = `blur(${blurAmt}px)`;
+    }
+    r.style.removeProperty('--bg-tint-hue');
   }
+}
+// ── Storage backend migration ─────────────────────────────────────────────────
+async function loadStorageBackend() {
+  try {
+    const r = await send('GET_STORAGE_BACKEND');
+    const backend = r.backend || 'local';
+    const sel = document.getElementById('storageBackendSel');
+    const lbl = document.getElementById('storageBackendLabel');
+    if (sel) sel.value = backend;
+    if (lbl) lbl.textContent = backend === 'idb' ? 'IndexedDB' : 'Local Storage';
+  } catch {}
+}
+
+async function migrateStorage() {
+  const sel    = document.getElementById('storageBackendSel');
+  const status = document.getElementById('migrateStorageStatus');
+  const btn    = document.getElementById('migrateStorageBtn');
+  const lbl    = document.getElementById('storageBackendLabel');
+  if (!sel) return;
+
+  const target = sel.value;
+  const current = lbl?.textContent;
+  const currentBackend = current?.includes('IndexedDB') ? 'idb' : 'local';
+
+  if (target === currentBackend) {
+    toast('Already using ' + (target === 'idb' ? 'IndexedDB' : 'Local Storage'), 'ok');
+    return;
+  }
+
+  if (!confirm(
+    target === 'idb'
+      ? 'Migrate history to IndexedDB? This may take a moment for large histories.'
+      : 'Migrate history back to Local Storage? This may take a moment for large histories.'
+  )) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Migrating…';
+  if (status) status.textContent = 'Please wait…';
+
+  try {
+    const type = target === 'idb' ? 'MIGRATE_TO_IDB' : 'MIGRATE_TO_LOCAL';
+    const r = await send(type);
+    if (r.error) throw new Error(r.error);
+    if (lbl) lbl.textContent = target === 'idb' ? 'IndexedDB' : 'Local Storage';
+    if (status) status.textContent = `✓ Migrated ${fmtNum(r.migrated)} entries`;
+    toast(`Migrated to ${target === 'idb' ? 'IndexedDB' : 'Local Storage'}`, 'ok');
+  } catch(err) {
+    if (status) status.textContent = '✗ Migration failed: ' + err.message;
+    toast('Migration failed: ' + err.message, 'err');
+    // Revert select to current
+    if (sel) sel.value = currentBackend;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Apply & Migrate';
 }
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
@@ -2344,6 +2424,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
   const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
+  const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
@@ -2364,11 +2445,14 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         bgTintOpacity,
         popupShowSearch,
         popupShowTabs,
+        popupShowUrl,
         popupHeight,
         faviconResolver,
         searchAutoFocus,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
-        syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30))
+        syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30)),
+        autoStoreEnabled: document.getElementById('autoStoreToggle')?.checked === true,
+        autoStoreHours: Math.max(1, Math.min(168, parseInt(document.getElementById('autoStoreHoursInput')?.value || '6') || 6))
       } 
     });
     _curSettings = r.settings;
@@ -2383,6 +2467,11 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
 
 document.getElementById('timeTrackingToggle')?.addEventListener('change', (e) => {
   applyTimeTrackingState(e.target.checked);
+});
+
+document.getElementById('autoStoreToggle')?.addEventListener('change', (e) => {
+  const row = document.getElementById('autoStoreHoursRow');
+  if (row) row.style.display = e.target.checked ? '' : 'none';
 });
 
 document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () => {
@@ -2492,9 +2581,11 @@ document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
 
 // ── Context menu ──────────────────────────────────────────────────────────────
 let _ctxEntry = null;
+let _ctxSource = 'history'; // 'history' | 'readingmode'
 
-function showCtxMenu(x, y, entry) {
+function showCtxMenu(x, y, entry, source) {
   _ctxEntry = entry;
+  _ctxSource = source || 'history';
   const menu       = document.getElementById('ctxMenu');
   const delEl      = document.getElementById('ctx-delete');
   const delSep     = document.getElementById('ctx-del-sep');
@@ -2534,9 +2625,13 @@ document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
   if (!_ctxEntry?.visitTime) { hideCtxMenu(); return; }
   const dateKey = new Date(_ctxEntry.visitTime).toLocaleDateString('en-CA');
   hideCtxMenu();
-  const si = document.getElementById('searchInput');
-  if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
-  activateDatePill(dateKey);
+  if (_ctxSource === 'readingmode') {
+    rmActivateDatePill(dateKey);
+  } else {
+    const si = document.getElementById('searchInput');
+    if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
+    activateDatePill(dateKey);
+  }
 });
 document.getElementById('ctx-copy-url').addEventListener('click', () => {
   if (_ctxEntry?.url) navigator.clipboard.writeText(_ctxEntry.url).then(() => toast('URL copied', 'ok')); hideCtxMenu();
@@ -2797,6 +2892,10 @@ function rmBuildDateNav() {
 
 function rmActivateDatePill(key, silent) {
   _rmFilterDate = key === 'all' ? null : key;
+  const fromEl = document.getElementById('rmDateFrom');
+  const toEl   = document.getElementById('rmDateTo');
+  if (fromEl) fromEl.value = _rmFilterDate || '';
+  if (toEl)   toEl.value   = _rmFilterDate || '';
   // Clear scroll pills + external All pill
   document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
   const rmAllPill = document.getElementById('rmAllPill');
@@ -2828,14 +2927,29 @@ function rmActivateDatePill(key, silent) {
 function rmDoFilter() {
   const q     = _rmSearchVal.trim().toLowerCase();
   const words = q.split(/\s+/).filter(Boolean);
+  const mode  = (document.getElementById('rmSearchMode')?.value) || 'all';
+
+  // Date range from picker inputs (only used when no pill date is active)
+  const fromVal = document.getElementById('rmDateFrom')?.value;
+  const toVal   = document.getElementById('rmDateTo')?.value;
+  const fromTs  = (!_rmFilterDate && fromVal) ? new Date(fromVal + 'T00:00:00').getTime() : null;
+  const toTs    = (!_rmFilterDate && toVal)   ? new Date(toVal + 'T23:59:59').getTime()   : null;
 
   _rmFiltered = _rmEntries.filter(e => {
     if (_rmFilterDate) {
       const eDate = new Date(e.visitTime).toLocaleDateString('en-CA');
       if (eDate !== _rmFilterDate) return false;
+    } else if (fromTs || toTs) {
+      if (fromTs && e.visitTime < fromTs) return false;
+      if (toTs   && e.visitTime > toTs)   return false;
     }
     if (words.length) {
-      const hay = [e.url, e.title||'', e.domain||tryDomain(e.url)].join(' ').toLowerCase();
+      const dom = e.domain || tryDomain(e.url);
+      let hay;
+      if      (mode === 'title')  hay = (e.title || '').toLowerCase();
+      else if (mode === 'url')    hay = (e.url   || '').toLowerCase();
+      else if (mode === 'domain') hay = dom.toLowerCase();
+      else                        hay = [e.url, e.title||'', dom].join(' ').toLowerCase();
       if (!words.every(w => hay.includes(w))) return false;
     }
     return true;
@@ -2885,6 +2999,10 @@ function rmAppendPage() {
       <div class="e-time">${fmtTime(e.visitTime)}</div>`;
     row.querySelector('.e-fav').addEventListener('error', function(){ this.style.opacity='0'; });
     row.addEventListener('click', () => window.open(e.url, '_blank'));
+    row.addEventListener('contextmenu', ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      showCtxMenu(ev.clientX, ev.clientY, { url: e.url, title: e.title, visitTime: e.visitTime }, 'readingmode');
+    });
     area.appendChild(row);
   }
 
@@ -2928,6 +3046,34 @@ document.addEventListener('DOMContentLoaded', () => {
     _rmSearchVal = '';
     document.getElementById('rmSearchInput').value = '';
     document.getElementById('rmSearchClearBtn')?.classList.remove('visible');
+    rmDoFilter();
+  });
+  // Search mode filter
+  document.getElementById('rmSearchMode')?.addEventListener('change', rmDoFilter);
+  // Date range inputs
+  document.getElementById('rmDateFrom')?.addEventListener('change', () => {
+    _rmFilterDate = null; // clear pill selection when using range
+    document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('rmAllPill')?.classList.remove('active');
+    rmDoFilter();
+  });
+  document.getElementById('rmDateTo')?.addEventListener('change', () => {
+    _rmFilterDate = null;
+    document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('rmAllPill')?.classList.remove('active');
+    rmDoFilter();
+  });
+  // All time / clear filters
+  document.getElementById('rmClearFiltersBtn')?.addEventListener('click', () => {
+    _rmFilterDate = null;
+    _rmSearchVal  = '';
+    const si = document.getElementById('rmSearchInput');
+    if (si) { si.value = ''; }
+    document.getElementById('rmSearchClearBtn')?.classList.remove('visible');
+    document.getElementById('rmDateFrom').value = '';
+    document.getElementById('rmDateTo').value   = '';
+    document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('rmAllPill')?.classList.add('active');
     rmDoFilter();
   });
 });
@@ -3145,6 +3291,11 @@ function _showIgnorePanel() {
 
   // Load patterns
   if (window.IgnoreList) window.IgnoreList.load();
+
+  // Re-apply translations to newly injected content
+  if (typeof window.applyTranslations === 'function' && window._currentLang) {
+    window.applyTranslations(window._currentLang);
+  }
 }
 
 function switchPanel(name) {
@@ -3219,57 +3370,462 @@ function closeDeleteHistoryModal() {
   if (warn) warn.style.display = 'none';
 }
 
-
-
-// ══ BACKGROUND TINT ═════════════════════════════════════════════════════════
-function updateBgTintPreview() {
-  const toggle = document.getElementById('bgTintToggle');
-  const hue = document.getElementById('bgTintHue');
-  const opacity = document.getElementById('bgTintOpacity');
-  const preview = document.getElementById('bgTintPreview');
-  
-  if (!preview || !hue || !opacity || !toggle) return;
-  
-  const enabled = toggle.checked;
-  const hueVal = parseInt(hue.value);
-  const opacityVal = parseInt(opacity.value);
-  
-  if (enabled) {
-    const tintColor = `hsla(${hueVal}, 70%, 60%, ${opacityVal / 100})`;
-    preview.style.background = `linear-gradient(${tintColor}, ${tintColor}), var(--bg)`;
-  } else {
-    preview.style.background = 'var(--bg)';
-  }
-}
-
 // Setup background tint event listeners
 function setupBgTintListeners() {
-  const toggle = document.getElementById('bgTintToggle');
-  const hue = document.getElementById('bgTintHue');
-  const opacity = document.getElementById('bgTintOpacity');
-  const hueVal = document.getElementById('bgTintHueVal');
+  const toggle     = document.getElementById('bgTintToggle');
+  const hue        = document.getElementById('bgTintHue');
+  const opacity    = document.getElementById('bgTintOpacity');
+  const hueVal     = document.getElementById('bgTintHueVal');
   const opacityVal = document.getElementById('bgTintOpacityVal');
-  
+
+  function syncTintToSettings() {
+    _curSettings.bgTintEnabled = toggle ? toggle.checked : false;
+    _curSettings.bgTintHue     = hue    ? parseInt(hue.value) : 220;
+    _curSettings.bgTintOpacity = opacity ? parseInt(opacity.value) : 8;
+    applyVisuals(_curSettings);
+    send('SAVE_SETTINGS', { settings: {
+      bgTintEnabled: _curSettings.bgTintEnabled,
+      bgTintHue:     _curSettings.bgTintHue,
+      bgTintOpacity: _curSettings.bgTintOpacity
+    }}).catch(() => {});
+  }
+
   if (toggle) {
-    toggle.addEventListener('change', updateBgTintPreview);
+    toggle.addEventListener('change', syncTintToSettings);
   }
   
   if (hue && hueVal) {
     hue.addEventListener('input', () => {
       hueVal.textContent = hue.value + '°';
-      updateBgTintPreview();
+      syncTintToSettings();
     });
   }
   
   if (opacity && opacityVal) {
     opacity.addEventListener('input', () => {
       opacityVal.textContent = opacity.value + '%';
-      updateBgTintPreview();
+      syncTintToSettings();
     });
   }
 }
 
-// ══ INIT ════════════════════════════════════════════════════════════════════
+// ══ WALLPAPER MODE ══════════════════════════════════════════════════════════
+
+// Apply wallpaper to the page (called on load and on change)
+function applyWallpaper(wp) {
+  const root = document.documentElement;
+  const body = document.body;
+
+  // Remove any previous wallpaper layer
+  document.getElementById('eh-wallpaper-layer')?.remove();
+  document.getElementById('eh-wallpaper-style')?.remove();
+  root.classList.remove('wallpaper-mode');
+
+  if (!wp || !wp.enabled || !wp.dataUrl) return;
+
+  root.classList.add('wallpaper-mode');
+
+  const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
+  const blurAmount     = wp.blurAmount ?? 8;
+  const isDark         = (root.getAttribute('data-theme') || 'dark') === 'dark';
+  const overlayColor   = isDark
+    ? `rgba(0,0,0,${overlayOpacity})`
+    : `rgba(255,255,255,${overlayOpacity})`;
+
+  // Background layer div (fixed, behind everything)
+  const layer = document.createElement('div');
+  layer.id = 'eh-wallpaper-layer';
+  const hueRot = (_curSettings.bgTintEnabled && _curSettings.bgTintHue !== undefined)
+    ? ` hue-rotate(${_curSettings.bgTintHue}deg)` : '';
+  layer.style.cssText = `
+    position:fixed;inset:0;z-index:-1;
+    background:url(${wp.dataUrl}) center/cover no-repeat;
+    filter:blur(${blurAmount}px)${hueRot};
+    transform:scale(1.05);
+    pointer-events:none;
+  `;
+  body.prepend(layer);
+
+  // Overlay + glass CSS injection
+  const style = document.createElement('style');
+  style.id = 'eh-wallpaper-style';
+  style.textContent = `
+    html.wallpaper-mode body { background: transparent !important; }
+    html.wallpaper-mode body::before {
+      content:''; position:fixed; inset:0; z-index:0;
+      background:${overlayColor};
+      pointer-events:none;
+    }
+    html.wallpaper-mode .sidebar,
+    html.wallpaper-mode .modal-box,
+    html.wallpaper-mode .topbar,
+    html.wallpaper-mode .s-card,
+    html.wallpaper-mode .chart-card,
+    html.wallpaper-mode .ctxMenu,
+    html.wallpaper-mode .kpi-card,
+    html.wallpaper-mode .entry,
+    html.wallpaper-mode .modal-inner,
+    html.wallpaper-mode .ignore-add,
+    html.wallpaper-mode .panel-scroll,
+    html.wallpaper-mode .ignore-item,
+    html.wallpaper-mode .session-card,
+    html.wallpaper-mode .device-card,
+    html.wallpaper-mode .ts-card,
+    html.wallpaper-mode .bm-item,
+    html.wallpaper-mode .mv-item,
+    html.wallpaper-mode .day-label, .bm-tree-pane, .bm-toolbar, .sel-bar.on{
+      background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
+      backdrop-filter: saturate(1.4) !important;
+      -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+      color:var(--text2);
+    }
+    html.wallpaper-mode #ctxMenu {
+      background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
+      backdrop-filter: blur(20px) saturate(1.6) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'} !important;
+    }
+    html.wallpaper-mode ::placeholder , .modal-sub, .e-time , .bm-folder-label, .logo-sub{
+    color:var(--text2) !important;
+    }
+    html.wallpaper-mode .rm-drop-desc, .rm-drop-hint, .bm-title{
+    color:var(--text) !important;
+    }
+    html.wallpaper-mode .modal-backdrop{
+    background: transparent !important;
+    backdrop-filter: blur(50px);
+    }
+    html.wallpaper-mode  .state-msg{
+    background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
+    height:100%
+    }
+    html.wallpaper-mode .sidebar {
+      background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
+    }
+    html.wallpaper-mode .topbar {
+      background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
+    }
+    html.wallpaper-mode .action-btn,
+    html.wallpaper-mode .dn-pill,
+    html.wallpaper-mode .chip,
+    html.wallpaper-mode .nav-item,
+    html.wallpaper-mode .tf-btn {
+      border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
+  
+    }
+    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
+      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
+      color:var(--text2) !important;
+    }
+    html.wallpaper-mode .dn-pill-day, input[type='date']{
+    color:var(--text2) ;
+    }
+    html.wallpaper-mode input[type="text"],  input[type="password"], .sess-head, .dc-head{
+    background:transparent !important;
+    }
+     html.wallpaper-mode .nav-item:hover , .bm-tree-row:hover, .ctx-item:hover{
+    opacity:0.7 !important;
+    }
+    html.wallpaper-mode .ts-row:hover{
+    background:transparent;
+    backdrop-filter:opacity(0.4);
+    }
+    html.wallpaper-mode .hn-pill.active {
+    background: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important;
+    }
+
+    html.wallpaper-mode .action-btn.primary,
+    html.wallpaper-mode .dn-pill.active,
+    html.wallpaper-mode .chip.on,
+    html.wallpaper-mode .nav-item.active,
+    html.wallpaper-mode .tf-btn.active {
+      background: var(--accent) !important;
+      backdrop-filter: none !important;
+      border-color: transparent !important;
+      color:white !important;
+      opacity: 0.9 !important;
+    }
+    html.wallpaper-mode input,
+    html.wallpaper-mode select,
+    html.wallpaper-mode textarea,
+    html.wallpaper-mode .search-box {
+      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
+      border-color: ${isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)'} !important;
+    }
+    html.wallpaper-mode .panel { background: transparent !important; }
+    html.wallpaper-mode .panel, html.wallpaper-mode #main { position: relative; z-index: 1; }
+  `;
+  document.head.appendChild(style);
+}
+
+// Save wallpaper settings
+async function saveWallpaper(wp) {
+  try {
+    await chrome.storage.local.set({ [WP_STORAGE_KEY]: wp });
+  } catch(e) { toast('Failed to save wallpaper: ' + e.message, 'err'); }
+}
+
+// Load wallpaper on startup
+async function loadAndApplyWallpaper() {
+  try {
+    const r = await chrome.storage.local.get(WP_STORAGE_KEY);
+    const wp = r[WP_STORAGE_KEY];
+    if (wp) {
+      // Auto-randomize if using Unsplash source and flag is set
+      if (wp.enabled && wp.source === 'splash' && wp.autoRandomize) {
+        applyWallpaper(wp); // apply existing image immediately, then fetch new one
+        _fetchAndApplySplash(wp);
+        _ensureNextPrefetched();
+      } else if (wp.enabled && wp.source === 'splash' && !wp.dataUrl) {
+        // First open after install: no image yet, fetch one now
+        _fetchAndApplySplash(wp);
+      } else {
+        applyWallpaper(wp);
+      }
+    }
+    return wp;
+  } catch { return null; }
+}
+
+// Fetch a new random Unsplash image and apply+save it
+async function _fetchAndApplySplash(currentWp) {
+  try {
+    let dUrl = null;
+    const r    = await chrome.storage.local.get(WP_NEXT_KEY);
+    const next = r[WP_NEXT_KEY];
+    if (next && next.dataUrl) {
+      dUrl = next.dataUrl;
+      await chrome.storage.local.remove(WP_NEXT_KEY);
+    } else {
+      dUrl = await _fetchRandomWallpaperDataUrl();
+      if (!dUrl) return;
+    }
+    const newWp = { ...currentWp, dataUrl: dUrl };
+    await chrome.storage.local.set({ [WP_STORAGE_KEY]: newWp });
+    applyWallpaper(newWp);
+    const preview = document.getElementById('wpCurrentPreview');
+    if (preview) preview.src = dUrl;
+    _prefetchNextWallpaper(); // queue next one silently
+  } catch {}
+}
+// Fetch one random picsum image and return it as a dataUrl (or null on failure).
+async function _fetchRandomWallpaperDataUrl() {
+  try {
+    const seed = Math.floor(Math.random() * 100000);
+    const resp = await fetch(`https://picsum.photos/seed/${seed}/1920/1080`);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return new Promise((res) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result);
+      reader.onerror = () => res(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Silently fetch a new random wallpaper and store it as the pre-fetched "next".
+// Called in the background after applying a wallpaper so the following open is instant.
+async function _prefetchNextWallpaper() {
+  try {
+    const dUrl = await _fetchRandomWallpaperDataUrl();
+    if (dUrl) {
+      await chrome.storage.local.set({ [WP_NEXT_KEY]: { dataUrl: dUrl, fetchedAt: Date.now() } });
+    }
+  } catch {}
+}
+async function _ensureNextPrefetched() {
+  try {
+    const r    = await chrome.storage.local.get(WP_NEXT_KEY);
+    const next = r[WP_NEXT_KEY];
+    const STALE = 7 * 24 * 60 * 60 * 1000;
+    if (!next || !next.dataUrl || (Date.now() - (next.fetchedAt || 0)) > STALE) {
+      _prefetchNextWallpaper();
+    }
+  } catch {}
+}
+
+function setupWallpaperListeners() {
+  const toggle         = document.getElementById('wallpaperToggle');
+  const controls       = document.getElementById('wallpaperControls');
+  const srcBtns        = document.querySelectorAll('.wp-src-btn');
+  const customPanel    = document.getElementById('wpCustomPanel');
+  const splashPanel    = document.getElementById('wpSplashPanel');
+  const dropZone       = document.getElementById('wpDropZone');
+  const fileInput      = document.getElementById('wpFileInput');
+
+  const splashLoadBtn  = document.getElementById('wpSplashLoadBtn');
+  const splashCredit   = document.getElementById('wpSplashCredit');
+  const previewWrap    = document.getElementById('wpPreviewWrap');
+  const currentPreview = document.getElementById('wpCurrentPreview');
+  const overlaySlider  = document.getElementById('wpOverlayOpacity');
+  const overlayVal     = document.getElementById('wpOverlayVal');
+  const blurSlider     = document.getElementById('wpBlurAmount');
+  const blurVal        = document.getElementById('wpBlurVal');
+  const clearBtn       = document.getElementById('wpClearBtn');
+
+  if (!toggle) return;
+
+  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+
+  // Load existing wallpaper state into UI
+  chrome.storage.local.get(WP_STORAGE_KEY, r => {
+    const wp = r[WP_STORAGE_KEY];
+    if (wp) {
+      _wpState = { ..._wpState, ...wp };
+      toggle.checked = wp.enabled || false;
+      overlaySlider.value = wp.overlayOpacity ?? 60;
+      overlayVal.textContent = (wp.overlayOpacity ?? 60) + '%';
+      blurSlider.value = wp.blurAmount ?? 8;
+      blurVal.textContent = (wp.blurAmount ?? 8) + 'px';
+      if (wp.dataUrl) {
+        previewWrap.style.display = 'block';
+        currentPreview.src = wp.dataUrl;
+      }
+      // Restore auto-randomize toggle
+      const autoRandToggle = document.getElementById('wpAutoRandomize');
+      if (autoRandToggle) autoRandToggle.checked = wp.autoRandomize || false;
+      // Switch to correct source panel
+      if (wp.source === 'splash') {
+        srcBtns.forEach(b => b.classList.toggle('active', b.dataset.src === 'splash'));
+        customPanel.style.display = 'none';
+        splashPanel.style.display = 'block';
+      }
+    }
+  });
+
+  // Toggle enable/disable
+  toggle.addEventListener('change', async () => {
+    _wpState.enabled = toggle.checked;
+    applyWallpaper(_wpState);
+    await saveWallpaper(_wpState);
+  });
+
+  // Source buttons
+  srcBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      srcBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const src = btn.dataset.src;
+      _wpState.source = src;
+      customPanel.style.display = src === 'custom' ? 'block' : 'none';
+      splashPanel.style.display = src === 'splash' ? 'block' : 'none';
+    });
+  });
+
+  // Custom image: click drop zone
+  dropZone?.addEventListener('click', () => fileInput?.click());
+  dropZone?.addEventListener('dragover', ev => { ev.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; });
+  dropZone?.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+  dropZone?.addEventListener('drop', ev => {
+    ev.preventDefault(); dropZone.style.borderColor = '';
+    const f = ev.dataTransfer.files[0];
+    if (f) _loadImageFile(f);
+  });
+  fileInput?.addEventListener('change', ev => {
+    const f = ev.target.files[0];
+    if (f) _loadImageFile(f);
+    ev.target.value = '';
+  });
+
+  function _loadImageFile(file) {
+    if (!file.type.startsWith('image/')) { toast('Please select an image file', 'err'); return; }
+    const reader = new FileReader();
+    reader.onload = async e => {
+      _wpState.dataUrl  = e.target.result;
+      _wpState.source   = 'custom';
+      _wpState.enabled  = true;
+      toggle.checked    = true;
+      previewWrap.style.display   = 'block';
+      currentPreview.src          = _wpState.dataUrl;
+      document.getElementById('wpDropLabel').innerHTML = '✓ Image loaded. Drop another to replace.';
+      applyWallpaper(_wpState);
+      await saveWallpaper(_wpState);
+      toast('Wallpaper applied', 'ok');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Unsplash random
+    splashLoadBtn?.addEventListener('click', async () => {
+    splashLoadBtn.textContent = '⏳ Loading…';
+    splashLoadBtn.disabled    = true;
+    try {
+      // Use pre-fetched next if available, otherwise fetch live
+      const r    = await chrome.storage.local.get(WP_NEXT_KEY);
+      const next = r[WP_NEXT_KEY];
+      let dUrl   = null;
+
+      if (next && next.dataUrl) {
+        dUrl = next.dataUrl;
+        await chrome.storage.local.remove(WP_NEXT_KEY);
+      } else {
+        dUrl = await _fetchRandomWallpaperDataUrl();
+        if (!dUrl) throw new Error('Failed to fetch image');
+      }
+
+      _wpState.dataUrl  = dUrl;
+      _wpState.source   = 'splash';
+      _wpState.enabled  = true;
+      toggle.checked    = true;
+      previewWrap.style.display = 'block';
+      currentPreview.src        = dUrl;
+      applyWallpaper(_wpState);
+      await saveWallpaper(_wpState);
+      toast('Wallpaper applied', 'ok');
+
+      _prefetchNextWallpaper(); // queue the next one silently
+
+    } catch(err) {
+      toast('Could not load image: ' + err.message, 'err');
+    }
+    splashLoadBtn.textContent = 'Randomize';
+    splashLoadBtn.disabled    = false;
+  });
+ // Auto-randomize toggle
+  document.getElementById('wpAutoRandomize')?.addEventListener('change', async () => {
+    _wpState.autoRandomize = document.getElementById('wpAutoRandomize').checked;
+    _wpState.source = 'splash';
+    await saveWallpaper(_wpState);
+    if (_wpState.autoRandomize) _prefetchNextWallpaper(); // ← add this line
+    toast(_wpState.autoRandomize ? 'Will randomize on every open' : 'Auto-randomize disabled', 'ok');
+  });
+
+  // Overlay slider
+  overlaySlider?.addEventListener('input', async () => {
+    _wpState.overlayOpacity = parseInt(overlaySlider.value);
+    overlayVal.textContent  = _wpState.overlayOpacity + '%';
+    applyWallpaper(_wpState);
+    await saveWallpaper(_wpState);
+  });
+
+  // Blur slider
+  blurSlider?.addEventListener('input', async () => {
+    _wpState.blurAmount = parseInt(blurSlider.value);
+    blurVal.textContent = _wpState.blurAmount + 'px';
+    applyWallpaper(_wpState);
+    await saveWallpaper(_wpState);
+  });
+
+  // Clear
+  clearBtn?.addEventListener('click', async () => {
+    if (!confirm('Remove the current wallpaper?')) return;
+    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+    toggle.checked = false;
+    previewWrap.style.display    = 'none';
+    document.getElementById('wpDropLabel').innerHTML = 'Drop image here or <strong>click to browse</strong>';
+    applyWallpaper(_wpState);
+    await saveWallpaper(_wpState);
+    toast('Wallpaper removed', 'ok');
+  });
+}
+
+// ══ END WALLPAPER MODE ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
   // Apply settings from chrome.storage.local directly — zero IPC latency for first paint
   const SETTINGS_KEY_LOCAL = 'eh_settings';
@@ -3287,6 +3843,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     _curSettings = s;
     applyVisuals(s);
     populateSettings(s);
+    loadStorageBackend();
+    document.getElementById('migrateStorageBtn')?.addEventListener('click', migrateStorage);
   } catch {}
 
   // Theme buttons
@@ -3313,6 +3871,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupToolbar();
   setupSelActions();
   setupBgTintListeners();
+  setupWallpaperListeners();
+  loadAndApplyWallpaper();
    // ── Scroll-to-bottom buttons ──────────────────────────────────────────────
   (function() {
     function setupScrollBtn(scrollEl, btnId) {

@@ -18,6 +18,46 @@
   "domains": {"message": "Domener"},
   "enable_ignore": {"message": "Aktiver ignoreringsliste"},
   "filter_urls": {"message": "Filtrer URL-er som matcher mønstrene nedenfor"},
+  "popup_show_url": {
+  "message": "URL-er"
+  },
+  "wallpaper_mode": { "message": "🖼 Bakgrunnsmodus" },
+  "wallpaper_mode_desc": { "message": "Sett et tilpasset bakgrunnsbilde. Aktiverer frostet glass-effekt." },
+  "wallpaper_mode_custom_image": { "message": "📁 Egendefinert bilde" },
+  "wallpaper_random_unsplash": { "message": "🎲 Tilfeldig fra Unsplash" },
+  "wallpaper_drop_image": { "message": "Slipp bilde eller <strong>klikk for å bla</strong>" },
+  "wallpaper_fetch": { "message": "Henter tilfeldig høyoppløselig bilde" },
+  "wallpaper_randomize": { "message": "🎲 Tilfeldig" },
+  "wallpaper_auto_randomize": { "message": "Automatisk hver åpning" },
+  "wallpaper_current": { "message": "Nåværende bakgrunn:" },
+  "overlay_opacity": { "message": "Overleggsopasitet" },
+  "overlay_control_desc": { "message": "Kontrollerer mørkt eller lyst lag over bakgrunn." },
+  "wallpaper_blur": { "message": "Bakgrunnsuskarphet" },
+  "wallpaper_remove": { "message": "✕ Fjern bakgrunn" },
+  "popup_show_url_desc": {
+    "message": "Vis sidens URL under tittelen i popup-listen"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Lagre inaktive faner automatisk"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Flytter automatisk faner til lagring når de ikke har vært aktive på en stund. Fanen lukkes og lagres — ingenting går tapt."
+  },
+  "idle_threshold": {
+    "message": "Inaktivitetsgrense"
+  },
+  "idle_threshold_desc": {
+    "message": "Lagre en fane etter dette antallet timer uten aktivitet. Standard: 6."
+  },
+  "history_storage": {
+    "message": "Lagringsmotor for historikk"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB er raskere for store historikker (100k+ oppføringer) og bruker mindre minne. Migrering kopierer alle data — du kan når som helst bytte tilbake. Nåværende: "
+  },
+  "apply_migrate": {
+    "message": "Bruk og migrer"
+  },
 
   "reading_mode": {"message": "Lesemodus"},
   "tab_storage": {"message": "Fanearkiv"},

@@ -9,7 +9,19 @@
   "domain": { "message": "Domein" },
   "ph_search_history": { "message": "Geschiedenis zoeken…" },
   "ph_search_bookmarks": { "message": "Bladwijzers zoeken…" },
-
+  "wallpaper_mode": { "message": "🖼 Achtergrondmodus" },
+  "wallpaper_mode_desc": { "message": "Stel een aangepaste achtergrondafbeelding in. Schakelt een frosted-glass UI-look in." },
+  "wallpaper_mode_custom_image": { "message": "📁 Aangepaste afbeelding" },
+  "wallpaper_random_unsplash": { "message": "🎲 Willekeurig van Unsplash" },
+  "wallpaper_drop_image": { "message": "Sleep hier een afbeelding of <strong>klik om te bladeren</strong>" },
+  "wallpaper_fetch": { "message": "Haalt een willekeurige foto in hoge resolutie op (verandert elke keer)" },
+  "wallpaper_randomize": { "message": "🎲 Willekeurig maken" },
+  "wallpaper_auto_randomize": { "message": "Automatisch willekeurig bij elke opening" },
+  "wallpaper_current": { "message": "Huidige achtergrond:" },
+  "overlay_opacity": { "message": "Overlay transparantie" },
+  "overlay_control_desc": { "message": "Bepaalt de donkere (donkere modus) of witte (lichte modus) overlay bovenop de achtergrond." },
+  "wallpaper_blur": { "message": "Achtergrondvervaging" },
+  "wallpaper_remove": { "message": "✕ Achtergrond verwijderen" },
   "reading_mode": {"message": "Leesmodus"},
   "tab_storage": {"message": "Tabopslag"},
   "load_exported_history_read": {"message": "Laad een geëxporteerd geschiedenisbestand (.json) om het te bekijken zonder het te importeren. De interface werkt precies zoals het Geschiedenis-tabblad — datumfilters, zoeken, alles."},
@@ -17,6 +29,33 @@
   "choose_file_hint": {"message": "of sleep een .json-bestand hierheen"},
   "leave_reading_mode": {"message": "✕ Leesmodus verlaten"},
   "reading": {"message": "Lezen:"},
+  "popup_show_url": {
+  "message": "URL's"
+  },
+  "popup_show_url_desc": {
+    "message": "Toon de pagina-URL onder de titel in de pop-uplijst"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Inactieve tabbladen automatisch opslaan"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Verplaatst tabbladen automatisch naar de opslag wanneer ze gedurende een bepaalde tijd niet actief zijn geweest. Het tabblad wordt gesloten en opgeslagen — er gaat niets verloren."
+  },
+  "idle_threshold": {
+    "message": "Inactiviteitsdrempel"
+  },
+  "idle_threshold_desc": {
+    "message": "Sla een tabblad op na dit aantal uren zonder activiteit. Standaard: 6."
+  },
+  "history_storage": {
+    "message": "Opslagengine voor geschiedenis"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB is sneller voor grote geschiedenissen (100k+ items) en gebruikt minder geheugen. Migratie kopieert alle gegevens — je kunt altijd terugschakelen. Huidig: "
+  },
+  "apply_migrate": {
+    "message": "Toepassen en migreren"
+  },
 
   "most_visited": {"message": "Meest bezocht"},
   "tabs": {"message": "tabbladen"},

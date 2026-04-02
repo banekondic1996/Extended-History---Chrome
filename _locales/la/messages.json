@@ -18,6 +18,46 @@
   "domains": {"message": "Dominii"},
   "enable_ignore": {"message": "Indicem Ignorandum Activa"},
   "filter_urls": {"message": "Filtra URL quae formis infra congruunt"},
+  "popup_show_url": {
+  "message": "URL"
+  },
+  "popup_show_url_desc": {
+    "message": "Ostendere URL paginae sub titulo in indice popup"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Tabs otiosos automatice servare"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Tabs automatice moventur ad repositum cum per tempus definitum non sunt activi. Tab clauditur et servatur — nihil amittitur."
+  },
+  "idle_threshold": {
+    "message": "Limen otiositatis"
+  },
+  "idle_threshold_desc": {
+    "message": "Serva tab post tot horas sine usu. Praedefinitum: 6."
+  },
+  "history_storage": {
+    "message": "Machina historiae reponendae"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB celerior est pro magnis historiis (100k+ entries) et minus memoriae utitur. Migratio omnia data transfert — redire potes quovis tempore. Praesens: "
+  },
+  "apply_migrate": {
+    "message": "Adhibe et migra"
+  },
+  "wallpaper_mode": "🖼 Modus imaginis fundi",
+  "wallpaper_mode_desc": "Imaginem fundi propriam constitue. Effectum vitri opaci in interfacie permittit.",
+  "wallpaper_mode_custom_image": "📁 Imago propria",
+  "wallpaper_random_unsplash": "🎲 Fortuito ex Unsplash",
+  "wallpaper_drop_image": "Trahe imaginem hic aut <strong>clicca ad eligendum</strong>",
+  "wallpaper_fetch": "Imaginem fortuitam altae resolutionis accipit (quoties mutatur)",
+  "wallpaper_randomize": "🎲 Fortuitum",
+  "wallpaper_auto_randomize": "Automatice fortuitum omni apertione",
+  "wallpaper_current": "Imago fundi currentis:",
+  "overlay_opacity": "Opacitas superpositionis",
+  "overlay_control_desc": "Regit superpositionem obscuram (modus obscurus) vel albam (modus clarus) supra imaginem.",
+  "wallpaper_blur": "Obscuratio fundi",
+  "wallpaper_remove": "✕ Remove imaginem",
 
   "reading_mode": {"message": "Modus Lectionis"},
   "tab_storage": {"message": "Repositio Schedae"},

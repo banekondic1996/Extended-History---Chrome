@@ -18,7 +18,46 @@
   "domains": {"message": "डोमेन"},
   "enable_ignore": {"message": "इग्नोर सूची सक्षम करें"},
   "filter_urls": {"message": "नीचे दिए गए पैटर्न से मेल खाने वाले URL फ़िल्टर करें"},
-
+  "popup_show_url": {
+  "message": "URL"
+  },
+  "popup_show_url_desc": {
+    "message": "पॉपअप सूची में शीर्षक के नीचे पेज URL दिखाएं"
+  },
+  "auto_store_idle_tabs": {
+    "message": "निष्क्रिय टैब स्वतः सहेजें"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "जब टैब एक निर्धारित समय तक सक्रिय नहीं रहते, तो उन्हें स्वतः स्टोरेज में स्थानांतरित कर दिया जाता है। टैब बंद होकर सुरक्षित हो जाता है — कुछ भी खोता नहीं है।"
+  },
+  "idle_threshold": {
+    "message": "निष्क्रियता सीमा"
+  },
+  "idle_threshold_desc": {
+    "message": "इस संख्या के घंटों तक सक्रिय न रहने पर टैब सहेजें। डिफ़ॉल्ट: 6।"
+  },
+  "history_storage": {
+    "message": "इतिहास संग्रह इंजन"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB बड़े इतिहास (100k+ प्रविष्टियाँ) के लिए तेज़ है और कम मेमोरी का उपयोग करता है। माइग्रेशन सभी डेटा कॉपी करता है — आप कभी भी वापस स्विच कर सकते हैं। वर्तमान: "
+  },
+  "apply_migrate": {
+    "message": "लागू करें और माइग्रेट करें"
+  },
+  "wallpaper_mode": { "message": "🖼 वॉलपेपर मोड" },
+  "wallpaper_mode_desc": { "message": "कस्टम बैकग्राउंड इमेज सेट करें। फ्रॉस्टेड-ग्लास UI सक्षम करता है।" },
+  "wallpaper_mode_custom_image": { "message": "📁 कस्टम इमेज" },
+  "wallpaper_random_unsplash": { "message": "🎲 Unsplash से रैंडम" },
+  "wallpaper_drop_image": { "message": "इमेज ड्रॉप करें या <strong>ब्राउज़ करें</strong>" },
+  "wallpaper_fetch": { "message": "रैंडम हाई-रेज़ फोटो लाता है" },
+  "wallpaper_randomize": { "message": "🎲 रैंडम" },
+  "wallpaper_auto_randomize": { "message": "हर बार ऑटो-रैंडम" },
+  "wallpaper_current": { "message": "वर्तमान वॉलपेपर:" },
+  "overlay_opacity": { "message": "ओवरले अपारदर्शिता" },
+  "overlay_control_desc": { "message": "डार्क या लाइट ओवरले को नियंत्रित करता है।" },
+  "wallpaper_blur": { "message": "बैकग्राउंड ब्लर" },
+  "wallpaper_remove": { "message": "✕ वॉलपेपर हटाएं" },
   "reading_mode": {"message": "रीडिंग मोड"},
   "tab_storage": {"message": "टैब स्टोरेज"},
   "load_exported_history_read": {"message": "एक एक्सपोर्ट की गई हिस्ट्री फ़ाइल (.json) लोड करें ताकि बिना इम्पोर्ट किए उसे ब्राउज़ किया जा सके। इंटरफ़ेस बिल्कुल हिस्ट्री टैब जैसा काम करता है — तारीख फ़िल्टर, खोज आदि।"},
