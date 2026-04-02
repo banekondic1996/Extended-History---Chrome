@@ -21,16 +21,13 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 <pre>
 -Fix browser cache based favicon resolver
 -Fix translations (i need help with this, i can't translate dynamic parts)
--Maybe switch to using IndexedDB?
 -Add better timestamp labels when browsing history
 -Add whole history encryption and UI locking
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Store page even if page didn't load completely
 -Fix Tab Storage loading speed in popup
 -Import history within certain time range
--Wallpaper switching at launch is slow, preload next wallpaper to be ready
 -Reduce RAM usage when in bookmarks and overall
--Return option to show urls under link titles in popup
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
