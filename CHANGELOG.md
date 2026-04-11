@@ -78,6 +78,7 @@ Fixed/changed in version 4.1.2:
 -Added option to migrate storage to use IndexedDB instead of localStorage (good for big history, but more vulnerable to malware and breaking, so not recommended)
 -Fixed random wallpaper switching speed
 -Added option to show URLs under site titles in popup
+-Fixed website title changing consuming CPU (example title change on message recieved)  
 </pre>
 
 
