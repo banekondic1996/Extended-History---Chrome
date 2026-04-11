@@ -432,7 +432,8 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     await saveCurrentSession();
     _lastSessionSave = now;
   }
-
+ 
+  
   // Auto-store idle tabs check (runs every tick ~30s, cheap because most tabs won't qualify)
   await runAutoStore().catch(() => {});
   
@@ -649,14 +650,13 @@ function buildSessionHtml(label, tabs, tsEntries) {
 chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
   if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
+  if (!windowFocused || !_timeTrackingEnabled && !_autoStoreEnabled) return;
 
   try {
     const tab = await chrome.tabs.get(tabId);
     // Record this tab's URL as "just focused" for auto-store idle tracking
     if (tab && isTrackable(tab.url)) {
       await updateTabLastFocused(tab.url);
-    }
-    if (windowFocused && _timeTrackingEnabled && tab && isTrackable(tab.url)) {
       startSegment(tabId, domainOf(tab.url));
     }
   } catch {}
@@ -664,10 +664,12 @@ chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
 
 // ── Tab URL changed (navigation within same tab) ─────────────────────────────
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+  // Reset the idle timer whenever any tab navigates to a new URL — this covers
+  // background tabs (e.g. link opened in new tab) that are never the activeTabId.
+  if (info.url && isTrackable(info.url)) await resetTabLastFocused(info.url);
+
   if (tabId !== activeTabId) return;
   if (!info.url) return;
-  // Update last-focused timestamp for the new URL (tab is active, user navigated)
-  if (isTrackable(info.url)) await updateTabLastFocused(info.url);
   if (!isTrackable(info.url)) {
     if (_timeTrackingEnabled) await commitSegment();
     activeDomain = null;
@@ -789,6 +791,14 @@ async function updateTabLastFocused(url) {
   await chrome.storage.local.set({ [TAB_LAST_FOCUSED_KEY]: map });
 }
 
+// Reset the last-focused timestamp for a URL to now.
+// Called whenever a URL is freshly loaded into any tab — ensures a newly opened
+// background tab is never auto-stored just because that URL was visited long ago.
+async function resetTabLastFocused(url) {
+  if (!_autoStoreEnabled || !url || !isTrackable(url)) return;
+  await updateTabLastFocused(url);
+}
+
 async function runAutoStore() {
   if (!_autoStoreEnabled) return;
   const thresholdMs = _autoStoreHours * 3600000;
@@ -812,8 +822,9 @@ async function runAutoStore() {
 
     const lastFocused = map[norm];
     if (!lastFocused) {
-      // No record — treat tab open time as last focus; record it now and skip
-      await updateTabLastFocused(norm);
+      // No record — this tab was just opened or never focused.
+      // Stamp it as "fresh now" so the idle clock starts from this moment.
+      await resetTabLastFocused(norm);
       continue;
     }
     if (now - lastFocused >= thresholdMs) {
@@ -886,6 +897,10 @@ async function finishSession() {
 }
 
 chrome.tabs.onCreated.addListener(async tab => {
+  // Reset the idle timer for this URL — a freshly opened tab should never be
+  // immediately auto-stored just because the same URL was visited long ago.
+  if (tab.url && isTrackable(tab.url)) await resetTabLastFocused(tab.url);
+
   if (!sessionId || !isTrackable(tab.url)) return;
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
   debouncedSaveSession();
@@ -896,6 +911,17 @@ function queuedBackfillTitle(url, title) {
   _titleQueue = _titleQueue.then(() => backfillTitle(url, title)).catch(() => {});
 }
 
+// Per-tab debounce timers for title-only updates.
+// Notification badges change the title many times per minute (e.g. "(3) Gmail",
+// "(4) Gmail" …). We debounce title-only updates so we only write to storage
+// once the title has been stable for 5 seconds, keeping CPU near zero.
+const _titleDebounceTimers = new Map(); // tabId → timeoutId
+const TITLE_DEBOUNCE_MS = 5000;
+
+// Track the last URL we recorded for each tab so we can detect real navigations
+// vs pure title changes on the same URL.
+const _tabLastUrl = new Map(); // tabId → url
+
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   // ── Sessions ──
   if (sessionId) {
@@ -904,20 +930,55 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
       sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
       debouncedSaveSession();
     } else if (info.title && sessionTabs[tabId]) {
-      sessionTabs[tabId].title = info.title;
-      debouncedSaveSession();
+      // Don't write to session storage on every title flash — debounce it
+      const existing = sessionTabs[tabId];
+      if (existing.title !== info.title) {
+        existing.title = info.title;
+        debouncedSaveSession(); // already debounced at 1 s, so this is fine
+      }
     }
   }
 
   // ── History title back-fill ──
-  // info.title fires whenever Chrome updates the tab title — including SPA navigations.
-  // Skip transient/loading titles. Queue writes so opening many tabs simultaneously
-  // doesn't cause concurrent storage overwrites that lose each other's changes.
-  const _badTitles = ['New Tab', 'Loading…', 'Loading...', ''];
-  if (!info.title || _badTitles.includes(info.title) || !tab?.url || !isTrackable(tab.url)) return;
-  queuedBackfillTitle(tab.url, info.title);
+  // Only backfill when info.url is present (real navigation) OR when the title
+  // has settled after a debounce delay (avoids hammering storage on notification
+  // badge sites that flip the title dozens of times per minute).
+  const _badTitles = new Set(['New Tab', 'Loading…', 'Loading...', '']);
+
+  if (!info.title || _badTitles.has(info.title) || !tab?.url || !isTrackable(tab.url)) {
+    // Track URL changes even when there's no title update
+    if (info.url && isTrackable(info.url)) _tabLastUrl.set(tabId, info.url);
+    return;
+  }
+
+  const isUrlChange = !!info.url; // Chrome sets info.url only on real navigations
+  if (isUrlChange) {
+    // Real navigation: cancel any pending title debounce for this tab and
+    // write immediately — the URL changed so the title is definitely fresh.
+    const pending = _titleDebounceTimers.get(tabId);
+    if (pending) { clearTimeout(pending); _titleDebounceTimers.delete(tabId); }
+    _tabLastUrl.set(tabId, info.url);
+    queuedBackfillTitle(tab.url, info.title);
+  } else {
+    // Title-only update on the same URL (notification badge, SPA state, etc.).
+    // Debounce: cancel the previous timer and restart. Only write after the
+    // title has been stable for TITLE_DEBOUNCE_MS milliseconds.
+    const pending = _titleDebounceTimers.get(tabId);
+    if (pending) clearTimeout(pending);
+    const timer = setTimeout(() => {
+      _titleDebounceTimers.delete(tabId);
+      if (!tab?.url || !isTrackable(tab.url)) return;
+      queuedBackfillTitle(tab.url, info.title);
+    }, TITLE_DEBOUNCE_MS);
+    _titleDebounceTimers.set(tabId, timer);
+  }
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
+  // Clean up per-tab title debounce state
+  const pending = _titleDebounceTimers.get(tabId);
+  if (pending) { clearTimeout(pending); _titleDebounceTimers.delete(tabId); }
+  _tabLastUrl.delete(tabId);
+
   if (sessionTabs[tabId]) {
     sessionTabs[tabId].closed = Date.now();
     debouncedSaveSession();
@@ -995,7 +1056,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await migrateStorage();
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
-  _autoStoreEnabled    = _s0.autoStoreEnabled === true;
+  _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   // Flush any history from the previous session that wasn't saved by the periodic timer
   // (e.g. user browsed then shut down before the next flush interval ran)
@@ -1013,7 +1074,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   }
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
-  _autoStoreEnabled    = _s0.autoStoreEnabled === true;
+  _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   await beginSession();
   await resumeActiveTab();
@@ -1404,7 +1465,7 @@ async function handle(msg) {
       await chrome.storage.local.set({[SETTINGS_KEY]:next});
       // Update in-memory cache so event listeners pick it up immediately
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
-      if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled === true;
+      if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
       if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
       return {success:true,settings:next};
     }
