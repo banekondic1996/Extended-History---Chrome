@@ -1349,7 +1349,7 @@ async function handle(msg) {
     }
     case 'GET_STATS': {
       const entries=await getAll(); const used=await chrome.storage.local.getBytesInUse(HISTORY_KEY);
-      const oldest=entries.length?Math.min(...entries.map(e=>e.visitTime)):null;
+      const oldest = entries.length ? entries.reduce((min, e) => e.visitTime < min ? e.visitTime : min, entries[0].visitTime) : null;
       const now=Date.now(); const daily={};
       for(let i=89;i>=0;i--) daily[new Date(now-i*86400000).toLocaleDateString('en-CA')]=0;
       for(const e of entries){const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++;}

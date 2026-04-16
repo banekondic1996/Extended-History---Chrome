@@ -600,7 +600,7 @@ function drawLineChart(daily) {
 
   const entries = Object.entries(daily);
   const vals    = entries.map(e => e[1]);
-  const maxV    = Math.max(...vals, 1);
+  const maxV = vals.reduce((a, b) => b > a ? b : a, 1);
 
   const xOf = i => p.l + (i / (entries.length - 1)) * iW;
   const yOf = v => p.t + (1 - v / maxV) * iH;
@@ -662,7 +662,7 @@ function drawLineChart(daily) {
 function drawBarChart(daily) {
   const entries = Object.entries(daily).slice(-30);
   const vals    = entries.map(e => e[1]);
-  const maxV    = Math.max(...vals, 1);
+  const maxV = vals.reduce((a, b) => b > a ? b : a, 1);
 
   document.getElementById('bar30Wrap').innerHTML = entries.map(([date, v]) => {
     const h   = Math.max((v / maxV) * 100, v > 0 ? 3 : 0);
