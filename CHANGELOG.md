@@ -79,6 +79,11 @@ Fixed/changed in version 4.1.2:
 -Fixed random wallpaper switching speed
 -Added option to show URLs under site titles in popup
 -Fixed website title changing consuming CPU (example title change on message recieved)  
+
+Fixed/changed in version 4.1.3:
+-Added option to export tabs for devices
+-Changes in favicon functions
+-Fixed speed of tab unstoring
 </pre>
 
 
