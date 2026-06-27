@@ -3,33 +3,15 @@
  * Virtual scroll, click-to-open / checkbox-to-select, sessions, bookmarks,
  * dark/light mode, local fonts only.
  */
-
-// Firefox i18n helper — wraps browser.i18n.getMessage with a safe fallback
-function i18n(key, sub) {
-  try {
-    const msg = browser.i18n.getMessage(key, sub);
-    return msg || key;
-  } catch { return key; }
-}
-
-// Array.findLastIndex polyfill (Firefox < 104)
-if (!Array.prototype.findLastIndex) {
-  Array.prototype.findLastIndex = function(predicate) {
-    for (let i = this.length - 1; i >= 0; i--) {
-      if (predicate(this[i], i, this)) return i;
-    }
-    return -1;
-  };
-}
+const WP_STORAGE_KEY = 'eh_wallpaper';
+const WP_NEXT_KEY    = 'eh_wallpaper_next';
 
 // ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
-  return new Promise((res, rej) => {
-    browser.runtime.sendMessage({ type, ...extra }, r => {
-      if (browser.runtime.lastError) { rej(new Error(browser.runtime.lastError.message)); return; }
-      if (r && r.error) { rej(new Error(r.error)); return; }
-      res(r);
-    });
+  // Firefox: browser.runtime.sendMessage is natively Promise-based
+  return browser.runtime.sendMessage({ type, ...extra }).then(r => {
+    if (r && r.error) throw new Error(r.error);
+    return r;
   });
 }
 
@@ -92,8 +74,8 @@ function dayLabel(ts) {
   
   const diff = Math.round((nDate - dDate) / 86400000);
   
-  if (diff === 0) return i18n("today") || 'Today';
-  if (diff === 1) return i18n("yesterday") || 'Yesterday';
+  if (diff === 0) return browser.i18n.getMessage("today") || 'Today';
+  if (diff === 1) return browser.i18n.getMessage("yesterday") || 'Yesterday';
   if (diff < 7)   return d.toLocaleDateString(undefined, { weekday: 'long' });
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -109,10 +91,19 @@ function fmtDuration(ms) {
   return `${Math.floor(m/60)}h ${m%60}m`;
 }
 function favUrl(domain) {
-  if (_curSettings && _curSettings.faviconResolver === 'browser') {
-    return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
-  }
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
+}
+// setFavicon: sets img.src, routing through background for cached mode
+function setFavicon(img, domain) {
+  if (!domain) return;
+  if (_curSettings && _curSettings.faviconResolver === 'cached') {
+    browser.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
+      if (resp && resp.dataUrl) img.src = resp.dataUrl;
+      else img.src = favUrl(domain);
+    });
+  } else {
+    img.src = favUrl(domain);
+  }
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -133,7 +124,7 @@ function setTheme(t) {
   _curSettings.theme = t;
   send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
   // Re-apply wallpaper so overlay color adapts to new theme
-  browser.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
+  browser.storage.local.get(WP_STORAGE_KEY).then(r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -345,8 +336,8 @@ function buildDateNav() {
   for (let i = 0; i < 1000; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
-    if (i === 0) { addBtn(i18n('today')     || 'Today',     key, ''); continue; }
-    if (i === 1) { addBtn(i18n('yesterday') || 'Yesterday', key, ''); continue; }
+    if (i === 0) { addBtn(browser.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
+    if (i === 1) { addBtn(browser.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
 
@@ -572,8 +563,8 @@ async function deleteMatching() {
   // Check if "all time" is selected (no date filters)
   const isAllTime = !startDate && !endDate;
   const confirmMsg = isAllTime 
-   ? i18n("confirm_delete_all_time", fmtNum(allResults.length))
-  : i18n("confirm_delete_filtered", fmtNum(allResults.length));
+   ? browser.i18n.getMessage("confirm_delete_all_time", fmtNum(allResults.length))
+  : browser.i18n.getMessage("confirm_delete_filtered", fmtNum(allResults.length));
   
   if (!confirm(confirmMsg)) return;
   
@@ -616,7 +607,7 @@ function drawLineChart(daily) {
 
   const entries = Object.entries(daily);
   const vals    = entries.map(e => e[1]);
-  const maxV    = Math.max(...vals, 1);
+  const maxV = vals.reduce((a, b) => b > a ? b : a, 1);
 
   const xOf = i => p.l + (i / (entries.length - 1)) * iW;
   const yOf = v => p.t + (1 - v / maxV) * iH;
@@ -678,7 +669,7 @@ function drawLineChart(daily) {
 function drawBarChart(daily) {
   const entries = Object.entries(daily).slice(-30);
   const vals    = entries.map(e => e[1]);
-  const maxV    = Math.max(...vals, 1);
+  const maxV = vals.reduce((a, b) => b > a ? b : a, 1);
 
   document.getElementById('bar30Wrap').innerHTML = entries.map(([date, v]) => {
     const h   = Math.max((v / maxV) * 100, v > 0 ? 3 : 0);
@@ -928,7 +919,7 @@ async function loadSessions() {
       if (!badgeText) {
         const restoreBtn = document.createElement('button');
         restoreBtn.className   = 'tb-btn';
-        restoreBtn.textContent = '↺ ' + (i18n('restore') || 'Restore');
+        restoreBtn.textContent = '↺ ' + (browser.i18n.getMessage('restore') || 'Restore');
         restoreBtn.setAttribute('data-i18n-key', 'restore');
         restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
         restoreBtn.addEventListener('click', async ev => {
@@ -995,8 +986,8 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: i18n("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
-                                      i18n("active"), current.tabs
+        { main: browser.i18n.getMessage("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+                                      browser.i18n.getMessage("active"), current.tabs
       ));
     }
     
@@ -1023,7 +1014,7 @@ function buildSessTabEl(t) {
 
   const img = document.createElement('img');
   img.className = 'sess-fav';
-  img.src       = favUrl(dom);
+  setFavicon(img, dom);
   img.loading   = 'lazy';
   img.addEventListener('error', () => { img.style.opacity = '0'; });
 
@@ -1077,8 +1068,21 @@ async function loadTabStorage() {
       toast('Tab storage cleared', 'ok');
       loadTabStorage();
     });
+    const restoreAllBtn = document.createElement('button');
+    restoreAllBtn.className = 'tb-btn';
+    restoreAllBtn.textContent = '↺ Restore all';
+    restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
+    restoreAllBtn.addEventListener('click', async () => {
+      if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
+      // Hand off to background: clears storage + opens tabs with stagger
+      const urls = entries.map(e => e.url).filter(Boolean);
+      await send('RESTORE_TAB_STORAGE_ENTRIES', { ids: entries.map(e => e.id), urls });
+      toast(`Restoring ${entries.length} tab${entries.length !== 1 ? 's' : ''}…`, 'ok');
+      loadTabStorage();
+    });
     header.appendChild(countEl);
     header.appendChild(clearBtn);
+    header.appendChild(restoreAllBtn);
     el.appendChild(header);
     const list = document.createElement('div');
     list.className = 'ts-list';
@@ -1089,7 +1093,7 @@ async function loadTabStorage() {
       row.title = entry.url;
       const fav = document.createElement('img');
       fav.className = 'ts-fav';
-      fav.src = favUrl(dom);
+      setFavicon(fav, dom);
       fav.loading = 'lazy';
       fav.addEventListener('error', () => { fav.style.opacity = '0'; });
       const body = document.createElement('div');
@@ -1109,13 +1113,31 @@ async function loadTabStorage() {
       removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 8px;flex-shrink:0;color:var(--text3)';
       removeBtn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
-        loadTabStorage();
+        row.remove();
+        if (!list.querySelector('.ts-row')) {
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+        } else {
+          const countEl2 = el.querySelector('.ts-count');
+          if (countEl2) {
+            const n = list.querySelectorAll('.ts-row').length;
+            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+          }
+        }
+        send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
       });
-      row.addEventListener('click', async () => {
+      row.addEventListener('click', () => {
         browser.tabs.create({ url: entry.url, active: false });
-        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
-        loadTabStorage();
+        row.remove();
+        if (!list.querySelector('.ts-row')) {
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+        } else {
+          const countEl2 = el.querySelector('.ts-count');
+          if (countEl2) {
+            const n = list.querySelectorAll('.ts-row').length;
+            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+          }
+        }
+        send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
       });
       row.appendChild(fav);
       row.appendChild(body);
@@ -1137,14 +1159,48 @@ async function loadDevices() {
   try {
     const { devices } = await send('GET_DEVICES');
     if (!devices?.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>No synced devices found.<br><small style="color:var(--text3)">Sign in to your browser and enable Sync.</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>No synced devices found.<br><small style="color:var(--text3)">Sign in to browser and enable Sync.</small></div>';
       return;
     }
 
     el.innerHTML = '';
-    devices.forEach(dev => {
+
+    // ── Refresh button at top ──
+    const topBar = document.createElement('div');
+    topBar.style.cssText = 'display:flex;justify-content:flex-end;padding:8px 16px 4px';
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'tb-btn';
+    refreshBtn.textContent = '↻ Refresh';
+    refreshBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;';
+    refreshBtn.addEventListener('click', () => loadDevices());
+    topBar.appendChild(refreshBtn);
+    el.appendChild(topBar);
+
+    // ── Deduplicate: for same device name keep only the freshest session set ──
+    const deviceMap = new Map();
+    for (const dev of devices) {
+      const key = (dev.deviceName || 'Unknown').toLowerCase().trim();
+      // Pick the entry whose most-recent session is newer
+      if (!deviceMap.has(key)) {
+        deviceMap.set(key, dev);
+      } else {
+        const existing = deviceMap.get(key);
+        const latestTs = d => (d.sessions || []).reduce((m, s) => Math.max(m, s.lastModified || 0), 0);
+        if (latestTs(dev) > latestTs(existing)) deviceMap.set(key, dev);
+      }
+    }
+
+    deviceMap.forEach(dev => {
       const icon = /phone|mobile|android|ios/i.test(dev.deviceName || '') ? '📱' : '💻';
-      const tabs = dev.sessions?.flatMap(s => s.window?.tabs || []) || [];
+      // Flatten tabs across all sessions, deduplicate by URL
+      const seenUrls = new Set();
+      const tabs = (dev.sessions || [])
+        .flatMap(s => s.window?.tabs || [])
+        .filter(t => {
+          if (!t.url || seenUrls.has(t.url)) return false;
+          seenUrls.add(t.url);
+          return true;
+        });
 
       const card = document.createElement('div');
       card.className = 'device-card';
@@ -1169,11 +1225,22 @@ async function loadDevices() {
       nameWrap.appendChild(subEl);
       headLeft.appendChild(nameWrap);
 
+      // ── Export button ──
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'tb-btn';
+      exportBtn.textContent = '⬇ Export';
+      exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:6px';
+      exportBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        exportDeviceAsHtml(dev.deviceName || 'Device', tabs);
+      });
+
       const toggle = document.createElement('span');
       toggle.className = 'dc-toggle';
       toggle.textContent = '▶';
 
       head.appendChild(headLeft);
+      head.appendChild(exportBtn);
       head.appendChild(toggle);
       card.appendChild(head);
 
@@ -1189,7 +1256,7 @@ async function loadDevices() {
 
         const img = document.createElement('img');
         img.className = 'dc-rfav';
-        img.src       = favUrl(dom);
+        setFavicon(img, dom);
         img.loading   = 'lazy';
         img.addEventListener('error', () => { img.style.opacity = '0'; });
 
@@ -1235,6 +1302,74 @@ async function loadDevices() {
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
+}
+
+// ── Export device tabs as .html ──────────────────────────────────────────────
+function exportDeviceAsHtml(deviceName, tabs) {
+  const validTabs = tabs.filter(t => t.url);
+  if (!validTabs.length) { toast('No tabs to export', 'err'); return; }
+
+  function tabLink(t) {
+    const dom = tryDomain(t.url);
+    return '<a href="' + esc(t.url) + '">'
+      + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+      + '<span class="title">' + esc(t.title || t.url) + '</span>'
+      + '<span class="domain">' + esc(dom) + '</span></a>';
+  }
+
+  const allUrls = JSON.stringify(validTabs.map(t => t.url)).replace(/"/g, '&quot;');
+  const linksHtml = '<div class="restore-bar">'
+    + '<button class="restore-btn" data-urls="' + allUrls + '">\u21BA Open all ' + validTabs.length + ' tabs</button>'
+    + '</div>'
+    + '<div class="links">' + validTabs.map(tabLink).join('') + '</div>';
+
+  const CSS = ':root{--accent:#3b9eff}'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:0}'
+    + '.page-header{padding:32px 32px 20px}'
+    + 'h1{font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:4px}'
+    + '.meta{font-size:.78rem;color:#a09eb0}'
+    + '.content{padding:0 32px 40px}'
+    + '.links{display:flex;flex-direction:column;gap:3px}'
+    + 'a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}'
+    + 'a:hover{background:#1f1f28}'
+    + '.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}'
+    + '.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}'
+    + '.restore-bar{padding:0 0 14px}'
+    + '.restore-btn{padding:6px 14px;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:6px;color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;transition:background .1s}'
+    + '.restore-btn:hover{background:rgba(59,158,255,.22)}'
+    + 'footer{padding:16px 32px 32px;font-size:.7rem;color:#5a5870}';
+
+  const SCRIPT = '(function(){'
+    + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
+    +   'btn.addEventListener("click",function(){'
+    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+    +     'if(!u.length)return;'
+    +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
+    +     'u.forEach(function(x){window.open(x,"_blank");});'
+    +   '});'
+    + '});'
+    + '})();';
+
+  const html = '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"/>'
+    + '<title>' + esc(deviceName) + ' \u2013 Device Tabs</title>'
+    + '<style>' + CSS + '</style></head>\n<body>\n'
+    + '<div class="page-header">'
+    +   '<h1>' + ((/phone|mobile|android|ios/i.test(deviceName)) ? '📱' : '💻') + ' ' + esc(deviceName) + '</h1>'
+    +   '<div class="meta">' + validTabs.length + ' tabs \u00B7 Exported ' + new Date().toLocaleString() + '</div>'
+    + '</div>\n'
+    + '<div class="content">' + linksHtml + '</div>\n'
+    + '<footer>Exported by Extended History</footer>\n'
+    + '<script>' + SCRIPT + '<\/script>\n'
+    + '</body></html>';
+
+  const safeName = deviceName.replace(/[^a-z0-9_\-]/gi, '_').toLowerCase();
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([html], { type: 'text/html' })),
+    download: 'device_' + safeName + '_' + new Date().toISOString().slice(0, 10) + '.html'
+  }).click();
+  toast('Device tabs exported', 'ok');
 }
 
 // ══ BOOKMARKS — split-pane tree + list ══════════════════════════════════════
@@ -1815,7 +1950,7 @@ function _buildBmRow(n) {
 
   const fav = document.createElement('img');
   fav.className = 'bm-fav';
-  fav.src = favUrl(dom);
+  setFavicon(fav, dom);
   fav.loading = 'lazy';
   fav.addEventListener('error', function(){ this.style.opacity='0'; });
 
@@ -2307,9 +2442,11 @@ function populateSettings(s) {
   // Populate popup settings
   const popupSearchToggle = document.getElementById('popupSearchToggle');
   const popupTabsToggle   = document.getElementById('popupTabsToggle');
+  const popupURLsToggle   = document.getElementById('popupURLsToggle');
   const popupHeightInput  = document.getElementById('popupHeightInput');
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
+  if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
   if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
 
   // Populate UI settings
@@ -2324,6 +2461,16 @@ function populateSettings(s) {
   applyTimeTrackingState(s.timeTrackingEnabled !== false);
   const syncIntervalInput = document.getElementById('syncIntervalInput');
   if (syncIntervalInput) syncIntervalInput.value = typeof s.syncInterval === 'number' ? s.syncInterval : 30;
+
+  // Auto-store idle tabs
+  const autoStoreTgl = document.getElementById('autoStoreToggle');
+  const autoStoreHrsInput = document.getElementById('autoStoreHoursInput');
+  const autoStoreHrsRow   = document.getElementById('autoStoreHoursRow');
+  if (autoStoreTgl) {
+    autoStoreTgl.checked = s.autoStoreEnabled === true;
+    if (autoStoreHrsRow) autoStoreHrsRow.style.display = s.autoStoreEnabled ? '' : 'none';
+  }
+  if (autoStoreHrsInput) autoStoreHrsInput.value = typeof s.autoStoreHours === 'number' ? s.autoStoreHours : 6;
 }
 
 function applyTimeTrackingState(enabled) {
@@ -2359,6 +2506,61 @@ function applyVisuals(s) {
     r.style.removeProperty('--bg-tint-hue');
   }
 }
+// ── Storage backend migration ─────────────────────────────────────────────────
+async function loadStorageBackend() {
+  try {
+    const r = await send('GET_STORAGE_BACKEND');
+    const backend = r.backend || 'local';
+    const sel = document.getElementById('storageBackendSel');
+    const lbl = document.getElementById('storageBackendLabel');
+    if (sel) sel.value = backend;
+    if (lbl) lbl.textContent = backend === 'idb' ? 'IndexedDB' : 'Local Storage';
+  } catch {}
+}
+
+async function migrateStorage() {
+  const sel    = document.getElementById('storageBackendSel');
+  const status = document.getElementById('migrateStorageStatus');
+  const btn    = document.getElementById('migrateStorageBtn');
+  const lbl    = document.getElementById('storageBackendLabel');
+  if (!sel) return;
+
+  const target = sel.value;
+  const current = lbl?.textContent;
+  const currentBackend = current?.includes('IndexedDB') ? 'idb' : 'local';
+
+  if (target === currentBackend) {
+    toast('Already using ' + (target === 'idb' ? 'IndexedDB' : 'Local Storage'), 'ok');
+    return;
+  }
+
+  if (!confirm(
+    target === 'idb'
+      ? 'Migrate history to IndexedDB? This may take a moment for large histories.'
+      : 'Migrate history back to Local Storage? This may take a moment for large histories.'
+  )) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Migrating…';
+  if (status) status.textContent = 'Please wait…';
+
+  try {
+    const type = target === 'idb' ? 'MIGRATE_TO_IDB' : 'MIGRATE_TO_LOCAL';
+    const r = await send(type);
+    if (r.error) throw new Error(r.error);
+    if (lbl) lbl.textContent = target === 'idb' ? 'IndexedDB' : 'Local Storage';
+    if (status) status.textContent = `✓ Migrated ${fmtNum(r.migrated)} entries`;
+    toast(`Migrated to ${target === 'idb' ? 'IndexedDB' : 'Local Storage'}`, 'ok');
+  } catch(err) {
+    if (status) status.textContent = '✗ Migration failed: ' + err.message;
+    toast('Migration failed: ' + err.message, 'err');
+    // Revert select to current
+    if (sel) sel.value = currentBackend;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Apply & Migrate';
+}
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
   const days    = parseInt(document.getElementById('retDays').value);
@@ -2373,6 +2575,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
   const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
+  const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
@@ -2393,11 +2596,14 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         bgTintOpacity,
         popupShowSearch,
         popupShowTabs,
+        popupShowUrl,
         popupHeight,
         faviconResolver,
         searchAutoFocus,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
-        syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30))
+        syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30)),
+        autoStoreEnabled: document.getElementById('autoStoreToggle')?.checked === true,
+        autoStoreHours: Math.max(1, Math.min(168, parseInt(document.getElementById('autoStoreHoursInput')?.value || '6') || 6))
       } 
     });
     _curSettings = r.settings;
@@ -2412,6 +2618,11 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
 
 document.getElementById('timeTrackingToggle')?.addEventListener('change', (e) => {
   applyTimeTrackingState(e.target.checked);
+});
+
+document.getElementById('autoStoreToggle')?.addEventListener('change', (e) => {
+  const row = document.getElementById('autoStoreHoursRow');
+  if (row) row.style.display = e.target.checked ? '' : 'none';
 });
 
 document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () => {
@@ -3351,8 +3562,6 @@ function setupBgTintListeners() {
 
 // ══ WALLPAPER MODE ══════════════════════════════════════════════════════════
 
-const WP_STORAGE_KEY = 'eh_wallpaper';
-
 // Apply wallpaper to the page (called on load and on change)
 function applyWallpaper(wp) {
   const root = document.documentElement;
@@ -3488,6 +3697,7 @@ function applyWallpaper(wp) {
       backdrop-filter: none !important;
       border-color: transparent !important;
       color:white !important;
+      opacity: 0.9 !important;
     }
     html.wallpaper-mode input,
     html.wallpaper-mode select,
@@ -3519,6 +3729,7 @@ async function loadAndApplyWallpaper() {
       if (wp.enabled && wp.source === 'splash' && wp.autoRandomize) {
         applyWallpaper(wp); // apply existing image immediately, then fetch new one
         _fetchAndApplySplash(wp);
+        _ensureNextPrefetched();
       } else if (wp.enabled && wp.source === 'splash' && !wp.dataUrl) {
         // First open after install: no image yet, fetch one now
         _fetchAndApplySplash(wp);
@@ -3533,23 +3744,61 @@ async function loadAndApplyWallpaper() {
 // Fetch a new random Unsplash image and apply+save it
 async function _fetchAndApplySplash(currentWp) {
   try {
-    const seed = Math.floor(Math.random() * 100000);
-    const resp = await fetch(`https://picsum.photos/seed/${seed}/1920/1080`);
-    if (!resp.ok) return;
-    const blob = await resp.blob();
-    const dUrl = await new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload  = () => res(reader.result);
-      reader.onerror = rej;
-      reader.readAsDataURL(blob);
-    });
+    let dUrl = null;
+    const r    = await browser.storage.local.get(WP_NEXT_KEY);
+    const next = r[WP_NEXT_KEY];
+    if (next && next.dataUrl) {
+      dUrl = next.dataUrl;
+      await browser.storage.local.remove(WP_NEXT_KEY);
+    } else {
+      dUrl = await _fetchRandomWallpaperDataUrl();
+      if (!dUrl) return;
+    }
     const newWp = { ...currentWp, dataUrl: dUrl };
     await browser.storage.local.set({ [WP_STORAGE_KEY]: newWp });
     applyWallpaper(newWp);
-    // Update preview thumbnail if settings panel is open
     const preview = document.getElementById('wpCurrentPreview');
     if (preview) preview.src = dUrl;
-  } catch { /* silently keep the existing wallpaper */ }
+    _prefetchNextWallpaper(); // queue next one silently
+  } catch {}
+}
+// Fetch one random picsum image and return it as a dataUrl (or null on failure).
+async function _fetchRandomWallpaperDataUrl() {
+  try {
+    const seed = Math.floor(Math.random() * 100000);
+    const resp = await fetch(`https://picsum.photos/seed/${seed}/1920/1080`);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return new Promise((res) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result);
+      reader.onerror = () => res(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Silently fetch a new random wallpaper and store it as the pre-fetched "next".
+// Called in the background after applying a wallpaper so the following open is instant.
+async function _prefetchNextWallpaper() {
+  try {
+    const dUrl = await _fetchRandomWallpaperDataUrl();
+    if (dUrl) {
+      await browser.storage.local.set({ [WP_NEXT_KEY]: { dataUrl: dUrl, fetchedAt: Date.now() } });
+    }
+  } catch {}
+}
+async function _ensureNextPrefetched() {
+  try {
+    const r    = await browser.storage.local.get(WP_NEXT_KEY);
+    const next = r[WP_NEXT_KEY];
+    const STALE = 7 * 24 * 60 * 60 * 1000;
+    if (!next || !next.dataUrl || (Date.now() - (next.fetchedAt || 0)) > STALE) {
+      _prefetchNextWallpaper();
+    }
+  } catch {}
 }
 
 function setupWallpaperListeners() {
@@ -3655,43 +3904,46 @@ function setupWallpaperListeners() {
 
   // Unsplash random
     splashLoadBtn?.addEventListener('click', async () => {
-    splashLoadBtn.textContent  = '⏳ Loading…';
-    splashLoadBtn.disabled     = true;
+    splashLoadBtn.textContent = '⏳ Loading…';
+    splashLoadBtn.disabled    = true;
     try {
-      // Fetch the image as a blob and convert to data URL (required for storage) const seed = Math.floor(Math.random() * 100000);
-      
-      const seed = Math.floor(Math.random() * 100000);
-      const url  = `https://picsum.photos/seed/${seed}/1920/1080`;
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error('Failed to fetch image');
-      const blob  = await resp.blob();
-      const dUrl  = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload  = () => res(r.result);
-        r.onerror = rej;
-        r.readAsDataURL(blob);
-      });
-      _wpState.dataUrl     = dUrl;
-      _wpState.source      = 'splash';
-      _wpState.enabled     = true;
-      toggle.checked       = true;
-      previewWrap.style.display    = 'block';
-      currentPreview.src           = dUrl;
+      // Use pre-fetched next if available, otherwise fetch live
+      const r    = await browser.storage.local.get(WP_NEXT_KEY);
+      const next = r[WP_NEXT_KEY];
+      let dUrl   = null;
+
+      if (next && next.dataUrl) {
+        dUrl = next.dataUrl;
+        await browser.storage.local.remove(WP_NEXT_KEY);
+      } else {
+        dUrl = await _fetchRandomWallpaperDataUrl();
+        if (!dUrl) throw new Error('Failed to fetch image');
+      }
+
+      _wpState.dataUrl  = dUrl;
+      _wpState.source   = 'splash';
+      _wpState.enabled  = true;
+      toggle.checked    = true;
+      previewWrap.style.display = 'block';
+      currentPreview.src        = dUrl;
       applyWallpaper(_wpState);
       await saveWallpaper(_wpState);
       toast('Wallpaper applied', 'ok');
+
+      _prefetchNextWallpaper(); // queue the next one silently
+
     } catch(err) {
       toast('Could not load image: ' + err.message, 'err');
     }
     splashLoadBtn.textContent = 'Randomize';
     splashLoadBtn.disabled    = false;
   });
-
-  // Auto-randomize toggle
+ // Auto-randomize toggle
   document.getElementById('wpAutoRandomize')?.addEventListener('change', async () => {
     _wpState.autoRandomize = document.getElementById('wpAutoRandomize').checked;
-    _wpState.source = 'splash'; // ensure source is set so auto-randomize works on open
+    _wpState.source = 'splash';
     await saveWallpaper(_wpState);
+    if (_wpState.autoRandomize) _prefetchNextWallpaper(); // ← add this line
     toast(_wpState.autoRandomize ? 'Will randomize on every open' : 'Auto-randomize disabled', 'ok');
   });
 
@@ -3742,6 +3994,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     _curSettings = s;
     applyVisuals(s);
     populateSettings(s);
+    loadStorageBackend();
   } catch {}
 
   // Theme buttons
@@ -3754,6 +4007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Delete history nav button
   document.getElementById('deleteHistoryNavBtn')?.addEventListener('click', openDeleteHistoryModal);
+  document.getElementById('migrateStorageBtn')?.addEventListener('click', migrateStorage);
 
   // Bookmark search
   let _bmSearchTimer = null;
@@ -3947,9 +4201,9 @@ async function loadMostVisited() {
     b.classList.toggle('active', b.dataset.period === curMvPeriod));
   
   // Update chart title
-  const typeLabel = curMvType === 'url' ? i18n("urls")  : i18n("domains") ;
-  const periodLabel = curMvPeriod === 'all' ? i18n("all_time") : `${curMvPeriod} `+ i18n("days");
-  document.getElementById('mvChartTitle').textContent = i18n("most_visited") +` ${typeLabel} — ${periodLabel}`;
+  const typeLabel = curMvType === 'url' ? browser.i18n.getMessage("urls")  : browser.i18n.getMessage("domains") ;
+  const periodLabel = curMvPeriod === 'all' ? browser.i18n.getMessage("all_time") : `${curMvPeriod} `+ browser.i18n.getMessage("days");
+  document.getElementById('mvChartTitle').textContent = browser.i18n.getMessage("most_visited") +` ${typeLabel} — ${periodLabel}`;
 
   const el = document.getElementById('mvContent');
   el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div>';

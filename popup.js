@@ -24,6 +24,7 @@ function favUrl(domain) {
 }
 
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
+let _popupShowUrl = false; // cached from settings
 browser.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     const s  = r.eh_settings  || {};
     const wp = r.eh_wallpaper || null;
@@ -37,6 +38,9 @@ browser.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     if (s.popupHeight) {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
+    }
+     if(s.popupShowUrl){
+        _popupShowUrl=true;
     }
 
     // Wallpaper mode
@@ -203,6 +207,12 @@ function makeRow(url, title, timeText, onLeftClick) {
     titleEl.textContent = title || url;
 
     body.appendChild(titleEl);
+        if (_popupShowUrl) {
+        const urlEl = document.createElement('div');
+        urlEl.className   = 'rurl';
+        urlEl.textContent = url;
+        body.appendChild(urlEl);
+    }
 
     const time = document.createElement('div');
     time.className   = 'rtime';
@@ -310,6 +320,12 @@ function performSearch(query) {
             titleEl.className = 'rtitle';
             titleEl.textContent = e.title || e.url;
             body.appendChild(titleEl);
+               if (_popupShowUrl) {
+                const urlEl = document.createElement('div');
+                urlEl.className   = 'rurl';
+                urlEl.textContent = e.url;
+                body.appendChild(urlEl);
+            }
 
             const time = document.createElement('div');
             time.className = 'rtime';
@@ -364,11 +380,11 @@ function loadTodayHistory() {
         if (browser.runtime.lastError || !r) {
             // Fallback: read directly from storage (handles SW not running yet)
             browser.storage.local.get('eh_today_history', s => {
-                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 15));
+                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30));
             });
             return;
         }
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 15);
+        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
         renderTodayHistory(entries);
     });
 }
@@ -432,6 +448,12 @@ function renderTodayHistory(entries) {
         titleEl.className = 'rtitle';
         titleEl.textContent = e.title || e.url;
         body.appendChild(titleEl);
+          if (_popupShowUrl) {
+            const urlEl = document.createElement('div');
+            urlEl.className   = 'rurl';
+            urlEl.textContent = e.url;
+            body.appendChild(urlEl);
+        }
 
         const time = document.createElement('div');
         time.className = 'rtime';
@@ -504,38 +526,78 @@ function matchesIgnorePatternPopup(url, pattern, title) {
     } catch { return false; }
 }
 
-// ── Recent closed tabs — read directly from eh_history (all sessions) ──────────
+// ── Recent closed tabs ────────────────────────────────────────────────────────
 function loadRecentTabs() {
     const el = document.getElementById('recentTabs');
-    el.innerHTML = '<div class="loading">Loading…</div>';
+    browser.sessions.getRecentlyClosed({ maxResults: 25 }).then(sessions => {
 
-    browser.runtime.sendMessage({ type: 'GET_IGNORE_LIST' }, (ignoreResp) => {
-        const ignoreList    = (ignoreResp && ignoreResp.list)       || [];
-        const ignoreEnabled = ignoreResp && ignoreResp.enabled !== false;
+        if (!sessions || !sessions.length) {
+            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            return;
+        }
 
-        browser.storage.local.get('eh_history', r => {
-            const entries = (r.eh_history || [])
-                .filter(e => {
-                    if (!e.url) return false;
-                    if (ignoreEnabled && ignoreList.length &&
-                        ignoreList.some(p => matchesIgnorePatternPopup(e.url, p, e.title))) return false;
-                    return true;
-                })
-                .sort((a, b) => (b.visitTime || 0) - (a.visitTime || 0))
-                .slice(0, 30);
+        const tabs = [];
+        for (const session of sessions) {
+            if (session.tab) {
+                tabs.push({
+                    url: session.tab.url,
+                    title: session.tab.title,
+                    // Firefox: sessionId lives on the session object, not session.tab
+                    sessionId: session.sessionId || null,
+                    lastModified: session.lastModified
+                });
+            } else if (session.window) {
+                for (const tab of (session.window.tabs || [])) {
+                    tabs.push({
+                        url: tab.url,
+                        title: tab.title,
+                        // For window sessions Firefox doesn't expose per-tab sessionId
+                        sessionId: session.sessionId || null,
+                        lastModified: session.lastModified
+                    });
+                }
+            }
+        }
 
-            if (!entries.length) {
+        if (!tabs.length) {
+            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            return;
+        }
+
+       // Fetch ignore list and filter before rendering
+        browser.runtime.sendMessage({ type: 'GET_IGNORE_LIST' }, (ignoreResp) => {
+            const ignoreList = (ignoreResp && ignoreResp.list) || [];
+            const ignoreEnabled = ignoreResp && ignoreResp.enabled !== false;
+
+            const validTabs = tabs.filter(tab => {
+                if (!tab.url || tab.lastModified == null) return false;
+                // Firefox lastModified is already in milliseconds (not seconds like Chrome)
+                const ageInDays = (Date.now() - tab.lastModified) / (1000 * 60 * 60 * 24);
+                if (ageInDays < 0 || ageInDays > 30) return false;
+                // Filter out ignored URLs
+                if (ignoreEnabled && ignoreList.length) {
+                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title))) return false;
+                }
+                return true;
+            }).sort((a, b) => b.lastModified - a.lastModified);
+
+            if (!validTabs.length) {
                 el.innerHTML = '<div class="empty">No recently closed tabs</div>';
                 return;
             }
 
             el.innerHTML = '';
-            for (const e of entries) {
-                const timeAgo = getTimeAgo(Math.floor((e.visitTime || 0) / 1000));
-                const row = makeRow(e.url, e.title, timeAgo, () => browser.tabs.create({ url: e.url }));
+            for (const tab of validTabs.slice(0, 20)) {
+                const timeAgo = getTimeAgo(Math.floor(tab.lastModified / 1000));
+                const onLeftClick = tab.sessionId
+                    ? () => browser.sessions.restore(tab.sessionId).catch(() => browser.tabs.create({ url: tab.url }))
+                    : () => browser.tabs.create({ url: tab.url });
+                const row = makeRow(tab.url, tab.title, timeAgo, onLeftClick);
                 el.appendChild(row);
             }
         });
+    }).catch(() => {
+        el.innerHTML = '<div class="empty">Could not load recently closed tabs</div>';
     });
 }
 
@@ -704,6 +766,13 @@ function loadTabStoragePopup() {
       titleEl.className = 'rtitle';
       titleEl.textContent = entry.title || entry.url;
       body.appendChild(titleEl);
+
+      if (_popupShowUrl) {
+          const urlEl = document.createElement('div');
+          urlEl.className   = 'rurl';
+          urlEl.textContent = entry.url;
+          body.appendChild(urlEl);
+      }
 
       const time = document.createElement('div');
       time.className = 'rtime';
