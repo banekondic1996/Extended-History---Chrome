@@ -93,10 +93,19 @@ function fmtDuration(ms) {
   return `${Math.floor(m/60)}h ${m%60}m`;
 }
 function favUrl(domain) {
-  if (_curSettings && _curSettings.faviconResolver === 'browser') {
-    return chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent('https://' + domain)}`);
-  }
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
+}
+// setFavicon: sets img.src, routing through background for cached mode
+function setFavicon(img, domain) {
+  if (!domain) return;
+  if (_curSettings && _curSettings.faviconResolver === 'cached') {
+    chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
+      if (resp && resp.dataUrl) img.src = resp.dataUrl;
+      else img.src = favUrl(domain);
+    });
+  } else {
+    img.src = favUrl(domain);
+  }
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -1007,7 +1016,7 @@ function buildSessTabEl(t) {
 
   const img = document.createElement('img');
   img.className = 'sess-fav';
-  img.src       = favUrl(dom);
+  setFavicon(img, dom);
   img.loading   = 'lazy';
   img.addEventListener('error', () => { img.style.opacity = '0'; });
 
@@ -1061,8 +1070,21 @@ async function loadTabStorage() {
       toast('Tab storage cleared', 'ok');
       loadTabStorage();
     });
+    const restoreAllBtn = document.createElement('button');
+    restoreAllBtn.className = 'tb-btn';
+    restoreAllBtn.textContent = '↺ Restore all';
+    restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
+    restoreAllBtn.addEventListener('click', async () => {
+      if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
+      // Hand off to background: clears storage + opens tabs with stagger
+      const urls = entries.map(e => e.url).filter(Boolean);
+      await send('RESTORE_TAB_STORAGE_ENTRIES', { ids: entries.map(e => e.id), urls });
+      toast(`Restoring ${entries.length} tab${entries.length !== 1 ? 's' : ''}…`, 'ok');
+      loadTabStorage();
+    });
     header.appendChild(countEl);
     header.appendChild(clearBtn);
+    header.appendChild(restoreAllBtn);
     el.appendChild(header);
     const list = document.createElement('div');
     list.className = 'ts-list';
@@ -1073,7 +1095,7 @@ async function loadTabStorage() {
       row.title = entry.url;
       const fav = document.createElement('img');
       fav.className = 'ts-fav';
-      fav.src = favUrl(dom);
+      setFavicon(fav, dom);
       fav.loading = 'lazy';
       fav.addEventListener('error', () => { fav.style.opacity = '0'; });
       const body = document.createElement('div');
@@ -1093,13 +1115,31 @@ async function loadTabStorage() {
       removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 8px;flex-shrink:0;color:var(--text3)';
       removeBtn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
-        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
-        loadTabStorage();
+        row.remove();
+        if (!list.querySelector('.ts-row')) {
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+        } else {
+          const countEl2 = el.querySelector('.ts-count');
+          if (countEl2) {
+            const n = list.querySelectorAll('.ts-row').length;
+            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+          }
+        }
+        send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
       });
-      row.addEventListener('click', async () => {
+      row.addEventListener('click', () => {
         chrome.tabs.create({ url: entry.url, active: false });
-        await send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
-        loadTabStorage();
+        row.remove();
+        if (!list.querySelector('.ts-row')) {
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+        } else {
+          const countEl2 = el.querySelector('.ts-count');
+          if (countEl2) {
+            const n = list.querySelectorAll('.ts-row').length;
+            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+          }
+        }
+        send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
       });
       row.appendChild(fav);
       row.appendChild(body);
@@ -1126,9 +1166,43 @@ async function loadDevices() {
     }
 
     el.innerHTML = '';
-    devices.forEach(dev => {
+
+    // ── Refresh button at top ──
+    const topBar = document.createElement('div');
+    topBar.style.cssText = 'display:flex;justify-content:flex-end;padding:8px 16px 4px';
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'tb-btn';
+    refreshBtn.textContent = '↻ Refresh';
+    refreshBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;';
+    refreshBtn.addEventListener('click', () => loadDevices());
+    topBar.appendChild(refreshBtn);
+    el.appendChild(topBar);
+
+    // ── Deduplicate: for same device name keep only the freshest session set ──
+    const deviceMap = new Map();
+    for (const dev of devices) {
+      const key = (dev.deviceName || 'Unknown').toLowerCase().trim();
+      // Pick the entry whose most-recent session is newer
+      if (!deviceMap.has(key)) {
+        deviceMap.set(key, dev);
+      } else {
+        const existing = deviceMap.get(key);
+        const latestTs = d => (d.sessions || []).reduce((m, s) => Math.max(m, s.lastModified || 0), 0);
+        if (latestTs(dev) > latestTs(existing)) deviceMap.set(key, dev);
+      }
+    }
+
+    deviceMap.forEach(dev => {
       const icon = /phone|mobile|android|ios/i.test(dev.deviceName || '') ? '📱' : '💻';
-      const tabs = dev.sessions?.flatMap(s => s.window?.tabs || []) || [];
+      // Flatten tabs across all sessions, deduplicate by URL
+      const seenUrls = new Set();
+      const tabs = (dev.sessions || [])
+        .flatMap(s => s.window?.tabs || [])
+        .filter(t => {
+          if (!t.url || seenUrls.has(t.url)) return false;
+          seenUrls.add(t.url);
+          return true;
+        });
 
       const card = document.createElement('div');
       card.className = 'device-card';
@@ -1153,11 +1227,22 @@ async function loadDevices() {
       nameWrap.appendChild(subEl);
       headLeft.appendChild(nameWrap);
 
+      // ── Export button ──
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'tb-btn';
+      exportBtn.textContent = '⬇ Export';
+      exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:6px';
+      exportBtn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        exportDeviceAsHtml(dev.deviceName || 'Device', tabs);
+      });
+
       const toggle = document.createElement('span');
       toggle.className = 'dc-toggle';
       toggle.textContent = '▶';
 
       head.appendChild(headLeft);
+      head.appendChild(exportBtn);
       head.appendChild(toggle);
       card.appendChild(head);
 
@@ -1173,7 +1258,7 @@ async function loadDevices() {
 
         const img = document.createElement('img');
         img.className = 'dc-rfav';
-        img.src       = favUrl(dom);
+        setFavicon(img, dom);
         img.loading   = 'lazy';
         img.addEventListener('error', () => { img.style.opacity = '0'; });
 
@@ -1219,6 +1304,74 @@ async function loadDevices() {
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
+}
+
+// ── Export device tabs as .html ──────────────────────────────────────────────
+function exportDeviceAsHtml(deviceName, tabs) {
+  const validTabs = tabs.filter(t => t.url);
+  if (!validTabs.length) { toast('No tabs to export', 'err'); return; }
+
+  function tabLink(t) {
+    const dom = tryDomain(t.url);
+    return '<a href="' + esc(t.url) + '">'
+      + '<img class="fav" src="https://www.google.com/s2/favicons?sz=16&domain=' + encodeURIComponent(dom) + '" loading="lazy" onerror="this.style.display=\'none\'"/>'
+      + '<span class="title">' + esc(t.title || t.url) + '</span>'
+      + '<span class="domain">' + esc(dom) + '</span></a>';
+  }
+
+  const allUrls = JSON.stringify(validTabs.map(t => t.url)).replace(/"/g, '&quot;');
+  const linksHtml = '<div class="restore-bar">'
+    + '<button class="restore-btn" data-urls="' + allUrls + '">\u21BA Open all ' + validTabs.length + ' tabs</button>'
+    + '</div>'
+    + '<div class="links">' + validTabs.map(tabLink).join('') + '</div>';
+
+  const CSS = ':root{--accent:#3b9eff}'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:system-ui,sans-serif;background:#0d0d10;color:#f0eee8;padding:0}'
+    + '.page-header{padding:32px 32px 20px}'
+    + 'h1{font-size:1.3rem;font-weight:700;color:var(--accent);margin-bottom:4px}'
+    + '.meta{font-size:.78rem;color:#a09eb0}'
+    + '.content{padding:0 32px 40px}'
+    + '.links{display:flex;flex-direction:column;gap:3px}'
+    + 'a{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;text-decoration:none;color:#f0eee8;background:#18181f;border:1px solid rgba(255,255,255,.06);transition:background .1s}'
+    + 'a:hover{background:#1f1f28}'
+    + '.fav{width:16px;height:16px;border-radius:3px;flex-shrink:0}'
+    + '.title{flex:1;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.domain{font-size:.7rem;color:#a09eb0;flex-shrink:0;font-family:monospace}'
+    + '.restore-bar{padding:0 0 14px}'
+    + '.restore-btn{padding:6px 14px;background:rgba(59,158,255,.12);border:1px solid rgba(59,158,255,.35);border-radius:6px;color:var(--accent);font-size:.75rem;font-weight:600;cursor:pointer;transition:background .1s}'
+    + '.restore-btn:hover{background:rgba(59,158,255,.22)}'
+    + 'footer{padding:16px 32px 32px;font-size:.7rem;color:#5a5870}';
+
+  const SCRIPT = '(function(){'
+    + 'document.querySelectorAll(".restore-btn").forEach(function(btn){'
+    +   'btn.addEventListener("click",function(){'
+    +     'var u=JSON.parse(btn.getAttribute("data-urls").replace(/&quot;/g,\'"\'));'
+    +     'if(!u.length)return;'
+    +     'if(u.length>15&&!confirm("Open "+u.length+" tabs?"))return;'
+    +     'u.forEach(function(x){window.open(x,"_blank");});'
+    +   '});'
+    + '});'
+    + '})();';
+
+  const html = '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"/>'
+    + '<title>' + esc(deviceName) + ' \u2013 Device Tabs</title>'
+    + '<style>' + CSS + '</style></head>\n<body>\n'
+    + '<div class="page-header">'
+    +   '<h1>' + ((/phone|mobile|android|ios/i.test(deviceName)) ? '📱' : '💻') + ' ' + esc(deviceName) + '</h1>'
+    +   '<div class="meta">' + validTabs.length + ' tabs \u00B7 Exported ' + new Date().toLocaleString() + '</div>'
+    + '</div>\n'
+    + '<div class="content">' + linksHtml + '</div>\n'
+    + '<footer>Exported by Extended History</footer>\n'
+    + '<script>' + SCRIPT + '<\/script>\n'
+    + '</body></html>';
+
+  const safeName = deviceName.replace(/[^a-z0-9_\-]/gi, '_').toLowerCase();
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([html], { type: 'text/html' })),
+    download: 'device_' + safeName + '_' + new Date().toISOString().slice(0, 10) + '.html'
+  }).click();
+  toast('Device tabs exported', 'ok');
 }
 
 // ══ BOOKMARKS — split-pane tree + list ══════════════════════════════════════
@@ -1799,7 +1952,7 @@ function _buildBmRow(n) {
 
   const fav = document.createElement('img');
   fav.className = 'bm-fav';
-  fav.src = favUrl(dom);
+  setFavicon(fav, dom);
   fav.loading = 'lazy';
   fav.addEventListener('error', function(){ this.style.opacity='0'; });
 

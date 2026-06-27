@@ -19,15 +19,41 @@ function tryDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
+let _popupFavMode = 'google'; // updated when settings load
+let _popupSettingsReady = false;
+let _popupSettingsCallbacks = [];
+function onSettingsReady(fn) {
+    if (_popupSettingsReady) { fn(); } else { _popupSettingsCallbacks.push(fn); }
+}
+function _resolveSettingsReady() {
+    _popupSettingsReady = true;
+    _popupSettingsCallbacks.forEach(fn => fn());
+    _popupSettingsCallbacks = [];
+}
+
 function favUrl(domain) {
     return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
+}
+function setFavicon(img, domain) {
+    if (!domain) return;
+    if (_popupFavMode === 'cached') {
+        // Always go via background — it fetches through the service worker
+        // (no CORS restriction there) and returns a data URL we can use safely
+        chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
+            if (resp && resp.dataUrl) img.src = resp.dataUrl;
+            else img.src = favUrl(domain); // fallback to direct if fetch failed
+        });
+    } else {
+        img.src = favUrl(domain);
+    }
 }
 
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
 let _popupShowUrl = false; // cached from settings
 
-chrome.storage.local.get('eh_settings', r => {
-    const s = r.eh_settings || {};
+chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
+    const s  = r.eh_settings  || {};
+    const wp = r.eh_wallpaper || null;
     document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
@@ -39,10 +65,77 @@ chrome.storage.local.get('eh_settings', r => {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
-    if(s.popupShowUrl){
+     if(s.popupShowUrl){
         _popupShowUrl=true;
     }
+    if (s.faviconResolver) _popupFavMode = s.faviconResolver;
+
+    // Wallpaper mode
+    if (wp && wp.enabled && wp.dataUrl) {
+        _applyPopupWallpaper(wp, s.theme || 'dark');
+    }
+    _resolveSettingsReady();
 });
+function _applyPopupWallpaper(wp, theme) {
+    const isDark = theme === 'dark';
+    const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
+    const blurAmount     = wp.blurAmount ?? 8;
+    const overlayColor   = isDark
+        ? `rgba(0,0,0,${overlayOpacity})`
+        : `rgba(255,255,255,${overlayOpacity})`;
+
+    document.getElementById('eh-popup-wp-layer')?.remove();
+    document.getElementById('eh-popup-wp-style')?.remove();
+
+    const layer = document.createElement('div');
+    layer.id = 'eh-popup-wp-layer';
+    layer.style.cssText = `
+        position:fixed;inset:0;z-index:-1;
+        background:url(${wp.dataUrl}) center/cover no-repeat;
+        filter:blur(${blurAmount}px);
+        transform:scale(1.1);
+        pointer-events:none;
+    `;
+    document.body.prepend(layer);
+
+    const style = document.createElement('style');
+    style.id = 'eh-popup-wp-style';
+    style.textContent = `
+        body { background: transparent !important; overflow: hidden; }
+        body::before {
+            content:''; position:fixed; inset:0; z-index:0;
+            background:${overlayColor}; pointer-events:none;
+        }
+        .header, .tabs, .sel-mode-row, .footer, .search-bar,
+        .tab-panel, .search-overlay {
+            background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
+            backdrop-filter: blur(14px) saturate(1.3) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
+            border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+        }
+        .ritem {
+            background: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} !important;
+        }
+        .ritem:hover {
+            background: ${isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)'} !important;
+        }
+        .search-input {
+            background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
+            backdrop-filter: blur(6px) !important;
+        }
+        .tab.active{
+            filter: brightness(1.2)!important;
+            background: transparent !important;
+            backdrop-filter: blur(2px) !important;
+        }
+        .tab:hover, .flink:hover{
+            filter: brightness(1.2)!important;
+            background: transparent !important;
+            backdrop-filter: blur(2px) !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // ── Header "Open" button ──────────────────────────────────────────────────────
 document.getElementById('openBtn').addEventListener('click', () => {
@@ -130,7 +223,7 @@ function makeRow(url, title, timeText, onLeftClick) {
     const img = document.createElement('img');
     img.className = 'rfav';
     img.loading   = 'lazy';
-    img.src       = favUrl(dom);
+    setFavicon(img, dom);
     img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
     const body  = document.createElement('div');
@@ -245,7 +338,7 @@ function performSearch(query) {
             const img = document.createElement('img');
             img.className = 'rfav';
             img.loading = 'lazy';
-            img.src = favUrl(tryDomain(e.url));
+            setFavicon(img, tryDomain(e.url));
             img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
             const body = document.createElement('div');
@@ -374,7 +467,7 @@ function renderTodayHistory(entries) {
         const img = document.createElement('img');
         img.className = 'rfav';
         img.loading = 'lazy';
-        img.src = favUrl(tryDomain(e.url));
+        setFavicon(img, tryDomain(e.url));
         img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
         const body = document.createElement('div');
@@ -610,7 +703,7 @@ function renderQuickStoreList() {
 
         const fav = document.createElement('img');
         fav.className = 'ts-quick-fav';
-        try { fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${new URL(tab.url).hostname}`; } catch {}
+        try { setFavicon(fav, new URL(tab.url).hostname); } catch {}
         fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
 
         const title = document.createElement('span');
@@ -666,7 +759,7 @@ function exitTsSelMode() {
 }
 function updateTsModeBar() {
     const btn = document.getElementById('tsUnstoreBtn');
-    if (btn) btn.textContent = _tsSelItems.size > 0 ? `Unstore (${_tsSelItems.size})` : 'Unstore';
+    if (btn) btn.textContent = _tsSelItems.size > 0 ? `Restore (${_tsSelItems.size})` : 'Restore';
 }
 function toggleTsSelItem(id, row) {
     if (_tsSelItems.has(id)) { _tsSelItems.delete(id); row.classList.remove('sel-checked'); }
@@ -708,7 +801,7 @@ function loadTabStoragePopup() {
       const img = document.createElement('img');
       img.className = 'rfav';
       img.loading = 'lazy';
-      img.src = favUrl(tryDomain(entry.url));
+      setFavicon(img, tryDomain(entry.url));
       img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
       const body = document.createElement('div');
@@ -734,20 +827,32 @@ function loadTabStoragePopup() {
       row.appendChild(body);
       row.appendChild(time);
 
-      // Long-press to enter TS selection mode
+      // Long-press (800ms) to enter TS selection mode — longer threshold avoids
+      // accidental triggering during fast clicks
       let _tsHoldT = null;
       let _tsHoldFired = false;
+      let _tsMoved = false;
 
       row.addEventListener('pointerdown', (ev) => {
         if (ev.button !== 0 && ev.pointerType === 'mouse') return;
         _tsHoldFired = false;
+        _tsMoved = false;
         row.setPointerCapture(ev.pointerId);
         _tsHoldT = setTimeout(() => {
+          if (_tsMoved) return; // finger drifted — not a hold
           _tsHoldFired = true;
           _tsHoldT = null;
           if (!_tsSelMode) enterTsSelMode();
           toggleTsSelItem(entry.id, row);
-        }, 600);
+        }, 800);
+      });
+
+      row.addEventListener('pointermove', (ev) => {
+        // Cancel hold if pointer moves more than a few pixels (scroll intent)
+        if (Math.abs(ev.movementX) > 4 || Math.abs(ev.movementY) > 4) {
+          _tsMoved = true;
+          if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+        }
       });
 
       row.addEventListener('pointerup', () => {
@@ -755,6 +860,7 @@ function loadTabStoragePopup() {
       });
       row.addEventListener('pointercancel', () => {
         if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+        _tsMoved = false;
       });
 
       row.addEventListener('click', (ev) => {
@@ -762,10 +868,15 @@ function loadTabStoragePopup() {
         if (_tsHoldFired) { _tsHoldFired = false; return; }
         if (_tsSelMode) { toggleTsSelItem(entry.id, row); }
         else {
+          // Remove from DOM immediately so rapid clicks feel instant
+          row.remove();
+          const remaining = el.querySelectorAll('.ritem');
+          if (!remaining.length) {
+            el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
+          }
+          // Fire open + storage removal async — no need to wait
           chrome.tabs.create({ url: entry.url, active: false });
-          chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
-            loadTabStoragePopup();
-          });
+          chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id });
         }
       });
 
@@ -811,7 +922,7 @@ function loadMostVisitedPopup() {
 
             const fav = document.createElement('img');
             fav.className = 'mv-fav';
-            fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(item.identifier)}`;
+            setFavicon(fav, item.identifier);
             fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
 
             const domain = document.createElement('span');
@@ -913,7 +1024,13 @@ document.getElementById('tsUnselectBtn').addEventListener('click', () => {
 document.getElementById('tsUnstoreBtn').addEventListener('click', () => {
     if (!_tsSelItems.size) { exitTsSelMode(); return; }
     const ids = [..._tsSelItems];
-    chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRIES', ids }, () => {
+    const urlsToOpen = ids.map(id => {
+        const entry = _tsEntries.find(e => e.id === id);
+        return entry ? entry.url : null;
+    }).filter(Boolean);
+    // Hand off to background: removes from storage + opens tabs with staggered delay
+    // so the popup thread is never blocked by tab creation
+    chrome.runtime.sendMessage({ type: 'RESTORE_TAB_STORAGE_ENTRIES', ids, urls: urlsToOpen }, () => {
         exitTsSelMode();
         loadTabStoragePopup();
     });
@@ -986,9 +1103,11 @@ document.getElementById('srchDelBtn').addEventListener('click', () => {
 });
 
 
-// Initial load for all panels
-loadRecentTabs();
-loadTodayHistory();
+// Initial load for all panels — wait for settings so favicon mode is known
+onSettingsReady(() => {
+    loadRecentTabs();
+    loadTodayHistory();
+});
 
 // Auto-refresh on storage change
 chrome.storage.onChanged.addListener((changes, namespace) => {

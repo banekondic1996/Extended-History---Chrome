@@ -17,7 +17,8 @@ const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
 const TAB_STORAGE_KEY               = 'eh_tab_storage';
-const TAB_LAST_FOCUSED_KEY          = 'eh_tab_last_focused'; // url → lastFocusedAt timestamp
+const FAV_CACHE_KEY                 = 'eh_fav_cache'; // domain → dataURL
+
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -654,9 +655,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
 
   try {
     const tab = await chrome.tabs.get(tabId);
-    // Record this tab's URL as "just focused" for auto-store idle tracking
     if (tab && isTrackable(tab.url)) {
-      await updateTabLastFocused(tab.url);
       startSegment(tabId, domainOf(tab.url));
     }
   } catch {}
@@ -664,10 +663,6 @@ chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
 
 // ── Tab URL changed (navigation within same tab) ─────────────────────────────
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
-  // Reset the idle timer whenever any tab navigates to a new URL — this covers
-  // background tabs (e.g. link opened in new tab) that are never the activeTabId.
-  if (info.url && isTrackable(info.url)) await resetTabLastFocused(info.url);
-
   if (tabId !== activeTabId) return;
   if (!info.url) return;
   if (!isTrackable(info.url)) {
@@ -769,35 +764,10 @@ async function removeTabStorageEntry(id) {
   await chrome.storage.local.set({ [TAB_STORAGE_KEY]: next });
   return next;
 }
-// ── Auto-store: track last focused time per URL ──────────────────────────────
-// We key by URL (not tabId) so identity survives across browser restarts.
-// The map is kept in chrome.storage.local to survive service worker restarts.
-
-async function getTabLastFocused() {
-  const r = await chrome.storage.local.get(TAB_LAST_FOCUSED_KEY);
-  return r[TAB_LAST_FOCUSED_KEY] || {};
-}
-
-async function updateTabLastFocused(url) {
-  if (!url || !isTrackable(url)) return;
-  const norm = normalizeUrl(url);
-  const map = await getTabLastFocused();
-  map[norm] = Date.now();
-  // Prune entries older than 7 days to keep storage tidy
-  const cutoff = Date.now() - 7 * 86400000;
-  for (const [k, v] of Object.entries(map)) {
-    if (v < cutoff) delete map[k];
-  }
-  await chrome.storage.local.set({ [TAB_LAST_FOCUSED_KEY]: map });
-}
-
-// Reset the last-focused timestamp for a URL to now.
-// Called whenever a URL is freshly loaded into any tab — ensures a newly opened
-// background tab is never auto-stored just because that URL was visited long ago.
-async function resetTabLastFocused(url) {
-  if (!_autoStoreEnabled || !url || !isTrackable(url)) return;
-  await updateTabLastFocused(url);
-}
+// ── Auto-store: idle detection via tabs.Tab.lastAccessed ─────────────────────
+// The browser maintains tab.lastAccessed (ms epoch) natively — updated whenever
+// a tab is activated or navigated. No manual tracking map is needed, and the
+// value survives service-worker restarts automatically.
 
 async function runAutoStore() {
   if (!_autoStoreEnabled) return;
@@ -809,7 +779,6 @@ async function runAutoStore() {
     tabs = await chrome.tabs.query({});
   } catch { return; }
 
-  const map = await getTabLastFocused();
   const stored = await getTabStorage();
   const storedUrls = new Set(stored.map(e => e.url));
 
@@ -820,21 +789,17 @@ async function runAutoStore() {
     const norm = normalizeUrl(tab.url);
     if (storedUrls.has(norm)) continue; // already in tab storage
 
-    const lastFocused = map[norm];
-    if (!lastFocused) {
-      // No record — this tab was just opened or never focused.
-      // Stamp it as "fresh now" so the idle clock starts from this moment.
-      await resetTabLastFocused(norm);
-      continue;
-    }
-    if (now - lastFocused >= thresholdMs) {
+    // tab.lastAccessed is maintained natively by the browser (ms epoch).
+    // Fall back to now so a tab with no recorded access time is never stored
+    // immediately — treat it as freshly opened instead.
+    const lastAccessed = tab.lastAccessed ?? now;
+    if (now - lastAccessed >= thresholdMs) {
       toStore.push({ tab, norm });
     }
   }
 
   if (!toStore.length) return;
 
-  // Add each qualifying tab to tab storage and close the browser tab
   for (const { tab, norm } of toStore) {
     if (!stored.find(e => e.url === norm)) {
       stored.push({
@@ -847,10 +812,6 @@ async function runAutoStore() {
       });
     }
     try { await chrome.tabs.remove(tab.id); } catch {}
-    // Remove from last-focused map
-    const m = await getTabLastFocused();
-    delete m[norm];
-    await chrome.storage.local.set({ [TAB_LAST_FOCUSED_KEY]: m });
   }
   await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored });
 }
@@ -897,10 +858,6 @@ async function finishSession() {
 }
 
 chrome.tabs.onCreated.addListener(async tab => {
-  // Reset the idle timer for this URL — a freshly opened tab should never be
-  // immediately auto-stored just because the same URL was visited long ago.
-  if (tab.url && isTrackable(tab.url)) await resetTabLastFocused(tab.url);
-
   if (!sessionId || !isTrackable(tab.url)) return;
   sessionTabs[tab.id] = { url: tab.url||'', title: tab.title||'', domain: domainOf(tab.url||''), windowId: tab.windowId||null, opened: Date.now(), closed: null };
   debouncedSaveSession();
@@ -1409,6 +1366,55 @@ async function handle(msg) {
     }
     case 'CLEAR_TAB_STORAGE': {
       await chrome.storage.local.set({ [TAB_STORAGE_KEY]: [] });
+      return { success: true };
+    }
+    case 'GET_FAVICON_CACHED': {
+      // Returns a cached dataURL for the domain, or fetches+caches it from Google
+      const { domain } = msg;
+      if (!domain) return { dataUrl: null };
+      const store = (await chrome.storage.local.get(FAV_CACHE_KEY))[FAV_CACHE_KEY] || {};
+      if (store[domain]) return { dataUrl: store[domain], cached: true };
+      // Fetch from Google favicon service and convert to base64 data URL
+      try {
+        const googleUrl = `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}`;
+        const resp = await fetch(googleUrl);
+        if (!resp.ok) return { dataUrl: null };
+        const buf = await resp.arrayBuffer();
+        const mime = resp.headers.get('content-type') || 'image/png';
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const dataUrl = `data:${mime};base64,${b64}`;
+        // Persist — cap store at 2000 domains to avoid storage bloat
+        const keys = Object.keys(store);
+        if (keys.length >= 2000) {
+          // Evict oldest 200 entries (first inserted)
+          keys.slice(0, 200).forEach(k => delete store[k]);
+        }
+        store[domain] = dataUrl;
+        await chrome.storage.local.set({ [FAV_CACHE_KEY]: store });
+        return { dataUrl, cached: false };
+      } catch { return { dataUrl: null }; }
+    }
+    case 'CLEAR_FAV_CACHE': {
+      await chrome.storage.local.remove(FAV_CACHE_KEY);
+      return { success: true };
+    }
+    case 'RESTORE_TAB_STORAGE_ENTRIES': {
+      // Remove entries from storage immediately, then open tabs in background
+      // with a delay so the popup isn't stalled by tab creation
+      const { ids, urls } = msg;
+      if (ids && ids.length) {
+        const r2 = await chrome.storage.local.get(TAB_STORAGE_KEY);
+        const remaining = (r2[TAB_STORAGE_KEY] || []).filter(e => !ids.includes(e.id));
+        await chrome.storage.local.set({ [TAB_STORAGE_KEY]: remaining });
+      }
+      // Open tabs in background one by one with 800ms gap — popup is not involved
+      const urlList = urls || [];
+      (async () => {
+        for (let i = 0; i < urlList.length; i++) {
+          if (i > 0) await new Promise(r => setTimeout(r, 800));
+          try { await chrome.tabs.create({ url: urlList[i], active: false }); } catch {}
+        }
+      })();
       return { success: true };
     }
     case 'SET_MAX_SESSIONS': {
