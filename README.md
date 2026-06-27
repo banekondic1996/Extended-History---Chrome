@@ -21,11 +21,9 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 <pre>
 -Fix browser cache based favicon resolver
 -Fix translations (i need help with this, i can't translate dynamic parts)
--Add better timestamp labels when browsing history
 -Add whole history encryption and UI locking
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Store page even if page didn't load completely
--Fix Tab Storage loading speed in popup
 -Import history within certain time range
 -Reduce RAM usage when in bookmarks and overall
 </pre>
