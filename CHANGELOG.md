@@ -84,6 +84,7 @@ Fixed/changed in version 4.1.3:
 -Added option to export tabs for devices
 -Changes in favicon functions
 -Fixed speed of tab unstoring
+-Added preview for current year when scrolling date pills
 </pre>
 
 
