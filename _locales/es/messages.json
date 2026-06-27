@@ -9,7 +9,46 @@
   "domain": { "message": "Dominio" },
   "ph_search_history": { "message": "Buscar en el historial…" },
   "ph_search_bookmarks": { "message": "Buscar en marcadores…" },
-
+  "auto_store_idle_tabs": {
+  "message": "Guardar pestañas inactivas automáticamente"
+  },
+  "popup_show_url": {
+    "message": "URLs"
+  },
+  "popup_show_url_desc": {
+    "message": "Mostrar la URL de la página debajo del título en la lista emergente"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Mueve automáticamente las pestañas al almacenamiento cuando no han sido enfocadas durante un tiempo determinado. La pestaña se cierra y se guarda: no se pierde nada."
+  },
+  "idle_threshold": {
+    "message": "Umbral de inactividad"
+  },
+  "idle_threshold_desc": {
+    "message": "Guardar una pestaña después de esta cantidad de horas sin estar activa. Predeterminado: 6."
+  },
+  "history_storage": {
+    "message": "Motor de almacenamiento de historial"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB es más rápido para historiales grandes (100k+ entradas) y usa menos memoria. La migración copia todos los datos: puedes volver en cualquier momento. Actual: "
+  },
+  "apply_migrate": {
+    "message": "Aplicar y migrar"
+  },
+  "wallpaper_mode": { "message": "🖼 Modo de fondo" },
+  "wallpaper_mode_desc": { "message": "Establece una imagen de fondo personalizada. Activa un efecto de vidrio esmerilado en la interfaz." },
+  "wallpaper_mode_custom_image": { "message": "📁 Imagen personalizada" },
+  "wallpaper_random_unsplash": { "message": "🎲 Aleatorio de Unsplash" },
+  "wallpaper_drop_image": { "message": "Suelta una imagen aquí o <strong>haz clic para buscar</strong>" },
+  "wallpaper_fetch": { "message": "Obtiene una foto aleatoria en alta resolución (cambia cada vez)" },
+  "wallpaper_randomize": { "message": "🎲 Aleatorizar" },
+  "wallpaper_auto_randomize": { "message": "Aleatorizar automáticamente al abrir" },
+  "wallpaper_current": { "message": "Fondo actual:" },
+  "overlay_opacity": { "message": "Opacidad de superposición" },
+  "overlay_control_desc": { "message": "Controla la superposición oscura (modo oscuro) o blanca (modo claro) sobre el fondo." },
+  "wallpaper_blur": { "message": "Desenfoque de fondo" },
+  "wallpaper_remove": { "message": "✕ Eliminar fondo" },
   "reading_mode": {"message": "Modo de lectura"},
   "tab_storage": {"message": "Almacenamiento de pestañas"},
   "load_exported_history_read": {"message": "Carga un archivo de historial exportado (.json) para explorarlo sin importarlo. La interfaz funciona exactamente como la pestaña Historial — filtros de fecha, búsqueda, todo."},

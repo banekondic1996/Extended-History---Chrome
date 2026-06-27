@@ -9,6 +9,33 @@
   "domain": { "message": "Домен" },
   "ph_search_history": { "message": "Поиск в истории…" },
   "ph_search_bookmarks": { "message": "Поиск в закладках…" },
+  "popup_show_url_desc": {
+  "message": "Показывать URL страницы под заголовком во всплывающем списке"
+  },
+  "popup_show_url": {
+  "message": "URL-адреса"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Автоматически сохранять неактивные вкладки"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Автоматически перемещает вкладки в хранилище, если они не были активны в течение заданного времени. Вкладка закрывается и сохраняется — ничего не теряется."
+  },
+  "idle_threshold": {
+    "message": "Порог неактивности"
+  },
+  "idle_threshold_desc": {
+    "message": "Сохранять вкладку после указанного количества часов без активности. По умолчанию: 6."
+  },
+  "history_storage": {
+    "message": "Движок хранения истории"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB быстрее для больших историй (100k+ записей) и использует меньше памяти. Миграция копирует все данные — вы можете вернуться в любое время. Текущий: "
+  },
+  "apply_migrate": {
+    "message": "Применить и мигрировать"
+  },
 
   "most_visited": {"message": "Самые посещаемые"},
   "tabs": {"message": "вкладки"},
@@ -30,6 +57,19 @@
     "message": "Удалено $COUNT$ элементов",
     "placeholders": { "count": { "content": "$1" } }
   },
+  "wallpaper_mode": { "message": "🖼 Режим обоев" },
+  "wallpaper_mode_desc": { "message": "Установить пользовательское фоновое изображение. Включает эффект матового стекла." },
+  "wallpaper_mode_custom_image": { "message": "📁 Пользовательское изображение" },
+  "wallpaper_random_unsplash": { "message": "🎲 Случайно из Unsplash" },
+  "wallpaper_drop_image": { "message": "Перетащите изображение или <strong>нажмите для выбора</strong>" },
+  "wallpaper_fetch": { "message": "Загружает случайное фото высокого разрешения (меняется каждый раз)" },
+  "wallpaper_randomize": { "message": "🎲 Случайно" },
+  "wallpaper_auto_randomize": { "message": "Автоматически при каждом открытии" },
+  "wallpaper_current": { "message": "Текущие обои:" },
+  "overlay_opacity": { "message": "Прозрачность слоя" },
+  "overlay_control_desc": { "message": "Управляет тёмным или светлым слоем поверх фона." },
+  "wallpaper_blur": { "message": "Размытие фона" },
+  "wallpaper_remove": { "message": "✕ Удалить обои" },
   "all":{"message":"Все"},
   "auto_focus_search":{"message":"Автофокус поиска при открытии"},
   "auto_focus_search_desc":{"message":"Автоматически фокусировать поле поиска при открытии страницы истории"},

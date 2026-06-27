@@ -2,7 +2,8 @@
  * Extended History — background.js v3.3
  * Time tracking: purely event-driven per-tab, domain-bucketed by day.
  */
-
+importScripts('eh-idb.js');
+const IDB_STORAGE_KEY = 'eh_use_idb';
 const HISTORY_KEY  = 'eh_history';
 const TODAY_HISTORY_KEY = 'eh_today_history';  // Separate storage for today's history
 const TIME_KEY     = 'eh_time';
@@ -16,6 +17,8 @@ const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
 const TAB_STORAGE_KEY               = 'eh_tab_storage';
+const FAV_CACHE_KEY                 = 'eh_fav_cache'; // domain → dataURL
+
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
@@ -30,6 +33,8 @@ const DEFAULT_SETTINGS = {
   ignoreListEnabled: true, // Toggle for ignore list
   syncInterval: 30,        // Minutes between flushing today's Chrome history → local storage (0 = every visit)
   timeTrackingEnabled: true, // Whether to track time spent per domain
+  autoStoreEnabled: false,   // Auto-store tabs idle for too long
+  autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -242,6 +247,8 @@ let activeDomain   = null;
 let segmentStart   = null;
 let windowFocused  = true; // corrected by resumeActiveTab
 let _timeTrackingEnabled = true; // cached in-memory, updated on SAVE_SETTINGS
+let _autoStoreEnabled = false;   // cached in-memory, updated on SAVE_SETTINGS
+let _autoStoreHours   = 6;       // cached in-memory, updated on SAVE_SETTINGS
 
 async function commitSegment() {
   if (!activeDomain || !segmentStart || !windowFocused) {
@@ -426,6 +433,10 @@ chrome.alarms.onAlarm.addListener(async alarm => {
     await saveCurrentSession();
     _lastSessionSave = now;
   }
+ 
+  
+  // Auto-store idle tabs check (runs every tick ~30s, cheap because most tabs won't qualify)
+  await runAutoStore().catch(() => {});
   
   // Only auto-save when browser window is focused — don't interrupt games etc.
   const mins = await getAutoSaveInterval();
@@ -640,12 +651,13 @@ function buildSessionHtml(label, tabs, tsEntries) {
 chrome.tabs.onActivated.addListener(async ({ tabId, windowId }) => {
   if (_timeTrackingEnabled) await commitSegment();
   activeTabId = null; activeDomain = null;
-
-  if (!windowFocused || !_timeTrackingEnabled) return;
+  if (!windowFocused || !_timeTrackingEnabled && !_autoStoreEnabled) return;
 
   try {
     const tab = await chrome.tabs.get(tabId);
-    if (tab && isTrackable(tab.url)) startSegment(tabId, domainOf(tab.url));
+    if (tab && isTrackable(tab.url)) {
+      startSegment(tabId, domainOf(tab.url));
+    }
   } catch {}
 });
 
@@ -752,6 +764,57 @@ async function removeTabStorageEntry(id) {
   await chrome.storage.local.set({ [TAB_STORAGE_KEY]: next });
   return next;
 }
+// ── Auto-store: idle detection via tabs.Tab.lastAccessed ─────────────────────
+// The browser maintains tab.lastAccessed (ms epoch) natively — updated whenever
+// a tab is activated or navigated. No manual tracking map is needed, and the
+// value survives service-worker restarts automatically.
+
+async function runAutoStore() {
+  if (!_autoStoreEnabled) return;
+  const thresholdMs = _autoStoreHours * 3600000;
+  const now = Date.now();
+
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({});
+  } catch { return; }
+
+  const stored = await getTabStorage();
+  const storedUrls = new Set(stored.map(e => e.url));
+
+  const toStore = [];
+  for (const tab of tabs) {
+    if (!tab.url || !isTrackable(tab.url)) continue;
+    if (tab.active) continue; // never auto-store the currently active tab
+    const norm = normalizeUrl(tab.url);
+    if (storedUrls.has(norm)) continue; // already in tab storage
+
+    // tab.lastAccessed is maintained natively by the browser (ms epoch).
+    // Fall back to now so a tab with no recorded access time is never stored
+    // immediately — treat it as freshly opened instead.
+    const lastAccessed = tab.lastAccessed ?? now;
+    if (now - lastAccessed >= thresholdMs) {
+      toStore.push({ tab, norm });
+    }
+  }
+
+  if (!toStore.length) return;
+
+  for (const { tab, norm } of toStore) {
+    if (!stored.find(e => e.url === norm)) {
+      stored.push({
+        id: `ts_auto_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        url: norm,
+        title: tab.title || norm,
+        domain: domainOf(norm),
+        savedAt: Date.now(),
+        autoStored: true,
+      });
+    }
+    try { await chrome.tabs.remove(tab.id); } catch {}
+  }
+  await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored });
+}
 
 async function getSessions() {
   const r = await chrome.storage.local.get(SESSIONS_KEY);
@@ -805,6 +868,17 @@ function queuedBackfillTitle(url, title) {
   _titleQueue = _titleQueue.then(() => backfillTitle(url, title)).catch(() => {});
 }
 
+// Per-tab debounce timers for title-only updates.
+// Notification badges change the title many times per minute (e.g. "(3) Gmail",
+// "(4) Gmail" …). We debounce title-only updates so we only write to storage
+// once the title has been stable for 5 seconds, keeping CPU near zero.
+const _titleDebounceTimers = new Map(); // tabId → timeoutId
+const TITLE_DEBOUNCE_MS = 5000;
+
+// Track the last URL we recorded for each tab so we can detect real navigations
+// vs pure title changes on the same URL.
+const _tabLastUrl = new Map(); // tabId → url
+
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   // ── Sessions ──
   if (sessionId) {
@@ -813,20 +887,55 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
       sessionTabs[tabId] = { url: info.url, title: tab.title||'', domain: domainOf(info.url), windowId: tab.windowId||null, opened: prev?.opened||Date.now(), closed: null };
       debouncedSaveSession();
     } else if (info.title && sessionTabs[tabId]) {
-      sessionTabs[tabId].title = info.title;
-      debouncedSaveSession();
+      // Don't write to session storage on every title flash — debounce it
+      const existing = sessionTabs[tabId];
+      if (existing.title !== info.title) {
+        existing.title = info.title;
+        debouncedSaveSession(); // already debounced at 1 s, so this is fine
+      }
     }
   }
 
   // ── History title back-fill ──
-  // info.title fires whenever Chrome updates the tab title — including SPA navigations.
-  // Skip transient/loading titles. Queue writes so opening many tabs simultaneously
-  // doesn't cause concurrent storage overwrites that lose each other's changes.
-  const _badTitles = ['New Tab', 'Loading…', 'Loading...', ''];
-  if (!info.title || _badTitles.includes(info.title) || !tab?.url || !isTrackable(tab.url)) return;
-  queuedBackfillTitle(tab.url, info.title);
+  // Only backfill when info.url is present (real navigation) OR when the title
+  // has settled after a debounce delay (avoids hammering storage on notification
+  // badge sites that flip the title dozens of times per minute).
+  const _badTitles = new Set(['New Tab', 'Loading…', 'Loading...', '']);
+
+  if (!info.title || _badTitles.has(info.title) || !tab?.url || !isTrackable(tab.url)) {
+    // Track URL changes even when there's no title update
+    if (info.url && isTrackable(info.url)) _tabLastUrl.set(tabId, info.url);
+    return;
+  }
+
+  const isUrlChange = !!info.url; // Chrome sets info.url only on real navigations
+  if (isUrlChange) {
+    // Real navigation: cancel any pending title debounce for this tab and
+    // write immediately — the URL changed so the title is definitely fresh.
+    const pending = _titleDebounceTimers.get(tabId);
+    if (pending) { clearTimeout(pending); _titleDebounceTimers.delete(tabId); }
+    _tabLastUrl.set(tabId, info.url);
+    queuedBackfillTitle(tab.url, info.title);
+  } else {
+    // Title-only update on the same URL (notification badge, SPA state, etc.).
+    // Debounce: cancel the previous timer and restart. Only write after the
+    // title has been stable for TITLE_DEBOUNCE_MS milliseconds.
+    const pending = _titleDebounceTimers.get(tabId);
+    if (pending) clearTimeout(pending);
+    const timer = setTimeout(() => {
+      _titleDebounceTimers.delete(tabId);
+      if (!tab?.url || !isTrackable(tab.url)) return;
+      queuedBackfillTitle(tab.url, info.title);
+    }, TITLE_DEBOUNCE_MS);
+    _titleDebounceTimers.set(tabId, timer);
+  }
 });
 chrome.tabs.onRemoved.addListener(async tabId => {
+  // Clean up per-tab title debounce state
+  const pending = _titleDebounceTimers.get(tabId);
+  if (pending) { clearTimeout(pending); _titleDebounceTimers.delete(tabId); }
+  _tabLastUrl.delete(tabId);
+
   if (sessionTabs[tabId]) {
     sessionTabs[tabId].closed = Date.now();
     debouncedSaveSession();
@@ -904,6 +1013,8 @@ chrome.runtime.onStartup.addListener(async () => {
   await migrateStorage();
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
+  _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
+  _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   // Flush any history from the previous session that wasn't saved by the periodic timer
   // (e.g. user browsed then shut down before the next flush interval ran)
   await flushTodayToHistory().catch(() => {});
@@ -920,6 +1031,8 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   }
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
+  _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
+  _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   await beginSession();
   await resumeActiveTab();
   
@@ -944,9 +1057,20 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   } catch(e) { console.error('[EH] backfill',e); }
 });
 
-// ── History storage ──────────────────────────────────────────────────────────
-async function getAll() { const r=await chrome.storage.local.get(HISTORY_KEY); return r[HISTORY_KEY]||[]; }
-async function setAll(e) { await chrome.storage.local.set({ [HISTORY_KEY]:e }); }
+// ── History storage — switches between localStorage and IndexedDB ─────────────
+async function _useIdb() {
+  const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
+  return r[IDB_STORAGE_KEY] === true;
+}
+async function getAll() {
+  if (await _useIdb()) return EhIdb.getAll();
+  const r = await chrome.storage.local.get(HISTORY_KEY);
+  return r[HISTORY_KEY] || [];
+}
+async function setAll(entries) {
+  if (await _useIdb()) return EhIdb.setAll(entries);
+  await chrome.storage.local.set({ [HISTORY_KEY]: entries });
+}
 async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
 async function saveSettings(newSettings) {
   const current = await getSettings();
@@ -1182,7 +1306,7 @@ async function handle(msg) {
     }
     case 'GET_STATS': {
       const entries=await getAll(); const used=await chrome.storage.local.getBytesInUse(HISTORY_KEY);
-      const oldest=entries.length?Math.min(...entries.map(e=>e.visitTime)):null;
+      const oldest = entries.length ? entries.reduce((min, e) => e.visitTime < min ? e.visitTime : min, entries[0].visitTime) : null;
       const now=Date.now(); const daily={};
       for(let i=89;i>=0;i--) daily[new Date(now-i*86400000).toLocaleDateString('en-CA')]=0;
       for(const e of entries){const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++;}
@@ -1244,6 +1368,55 @@ async function handle(msg) {
       await chrome.storage.local.set({ [TAB_STORAGE_KEY]: [] });
       return { success: true };
     }
+    case 'GET_FAVICON_CACHED': {
+      // Returns a cached dataURL for the domain, or fetches+caches it from Google
+      const { domain } = msg;
+      if (!domain) return { dataUrl: null };
+      const store = (await chrome.storage.local.get(FAV_CACHE_KEY))[FAV_CACHE_KEY] || {};
+      if (store[domain]) return { dataUrl: store[domain], cached: true };
+      // Fetch from Google favicon service and convert to base64 data URL
+      try {
+        const googleUrl = `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}`;
+        const resp = await fetch(googleUrl);
+        if (!resp.ok) return { dataUrl: null };
+        const buf = await resp.arrayBuffer();
+        const mime = resp.headers.get('content-type') || 'image/png';
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        const dataUrl = `data:${mime};base64,${b64}`;
+        // Persist — cap store at 2000 domains to avoid storage bloat
+        const keys = Object.keys(store);
+        if (keys.length >= 2000) {
+          // Evict oldest 200 entries (first inserted)
+          keys.slice(0, 200).forEach(k => delete store[k]);
+        }
+        store[domain] = dataUrl;
+        await chrome.storage.local.set({ [FAV_CACHE_KEY]: store });
+        return { dataUrl, cached: false };
+      } catch { return { dataUrl: null }; }
+    }
+    case 'CLEAR_FAV_CACHE': {
+      await chrome.storage.local.remove(FAV_CACHE_KEY);
+      return { success: true };
+    }
+    case 'RESTORE_TAB_STORAGE_ENTRIES': {
+      // Remove entries from storage immediately, then open tabs in background
+      // with a delay so the popup isn't stalled by tab creation
+      const { ids, urls } = msg;
+      if (ids && ids.length) {
+        const r2 = await chrome.storage.local.get(TAB_STORAGE_KEY);
+        const remaining = (r2[TAB_STORAGE_KEY] || []).filter(e => !ids.includes(e.id));
+        await chrome.storage.local.set({ [TAB_STORAGE_KEY]: remaining });
+      }
+      // Open tabs in background one by one with 800ms gap — popup is not involved
+      const urlList = urls || [];
+      (async () => {
+        for (let i = 0; i < urlList.length; i++) {
+          if (i > 0) await new Promise(r => setTimeout(r, 800));
+          try { await chrome.tabs.create({ url: urlList[i], active: false }); } catch {}
+        }
+      })();
+      return { success: true };
+    }
     case 'SET_MAX_SESSIONS': {
       const val = Math.max(1, Math.min(20, parseInt(msg.value) || MAX_SESSIONS_DEFAULT));
       await chrome.storage.local.set({ eh_max_sessions: val });
@@ -1298,6 +1471,8 @@ async function handle(msg) {
       await chrome.storage.local.set({[SETTINGS_KEY]:next});
       // Update in-memory cache so event listeners pick it up immediately
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
+      if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
+      if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
       return {success:true,settings:next};
     }
     case 'EXPORT': {
@@ -1479,6 +1654,29 @@ async function handle(msg) {
     case 'CLEAR_TIME_DATA': {
       await chrome.storage.local.remove(TIME_KEY);
       return {success:true};
+    }
+    case 'MIGRATE_TO_IDB': {
+      try {
+        // Read from localStorage, write to IDB, then switch flag
+        const r = await chrome.storage.local.get(HISTORY_KEY);
+        const entries = r[HISTORY_KEY] || [];
+        await EhIdb.setAll(entries);
+        await chrome.storage.local.set({ [IDB_STORAGE_KEY]: true });
+        return { success: true, migrated: entries.length };
+      } catch(e) { return { error: e.message }; }
+    }
+    case 'MIGRATE_TO_LOCAL': {
+      try {
+        // Read from IDB, write to localStorage, then switch flag
+        const entries = await EhIdb.getAll();
+        await chrome.storage.local.set({ [HISTORY_KEY]: entries, [IDB_STORAGE_KEY]: false });
+        await EhIdb.clear();
+        return { success: true, migrated: entries.length };
+      } catch(e) { return { error: e.message }; }
+    }
+    case 'GET_STORAGE_BACKEND': {
+      const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
+      return { backend: r[IDB_STORAGE_KEY] === true ? 'idb' : 'local' };
     }
         case 'GET_MOST_VISITED': {
       const {viewType='url',period='all'}=msg;

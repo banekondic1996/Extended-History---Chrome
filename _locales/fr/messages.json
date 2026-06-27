@@ -10,6 +10,46 @@
   "ph_search_history": { "message": "Rechercher dans l’historique…" },
   "ph_search_bookmarks": { "message": "Rechercher dans les favoris…" },
 
+  "popup_show_url": {
+    "message": "URLs"
+  },
+  "popup_show_url_desc": {
+    "message": "Afficher l'URL de la page sous le titre dans la liste popup"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Stockage automatique des onglets inactifs"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Déplace automatiquement les onglets vers le stockage lorsqu'ils ne sont pas actifs pendant un certain temps. L'onglet est fermé et enregistré — rien n'est perdu."
+  },
+  "idle_threshold": {
+    "message": "Seuil d'inactivité"
+  },
+  "idle_threshold_desc": {
+    "message": "Stocker un onglet après ce nombre d'heures sans activité. Par défaut : 6."
+  },
+  "history_storage": {
+    "message": "Moteur de stockage de l'historique"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB est plus rapide pour les grands historiques (100k+ entrées) et utilise moins de mémoire. La migration copie toutes les données — vous pouvez revenir à tout moment. Actuel : "
+  },
+  "apply_migrate": {
+    "message": "Appliquer et migrer"
+  },
+  "wallpaper_mode": { "message": "🖼 Mode fond d’écran" },
+  "wallpaper_mode_desc": { "message": "Définir une image de fond personnalisée. Active un effet de verre dépoli." },
+  "wallpaper_mode_custom_image": { "message": "📁 Image personnalisée" },
+  "wallpaper_random_unsplash": { "message": "🎲 Aléatoire depuis Unsplash" },
+  "wallpaper_drop_image": { "message": "Déposez une image ici ou <strong>cliquez pour parcourir</strong>" },
+  "wallpaper_fetch": { "message": "Récupère une photo aléatoire haute résolution (change à chaque fois)" },
+  "wallpaper_randomize": { "message": "🎲 Aléatoire" },
+  "wallpaper_auto_randomize": { "message": "Aléatoire automatique à chaque ouverture" },
+  "wallpaper_current": { "message": "Fond actuel :" },
+  "overlay_opacity": { "message": "Opacité de superposition" },
+  "overlay_control_desc": { "message": "Contrôle la superposition sombre (mode sombre) ou blanche (mode clair)." },
+  "wallpaper_blur": { "message": "Flou d’arrière-plan" },
+  "wallpaper_remove": { "message": "✕ Supprimer le fond" },
   "most_visited": {"message": "Les plus visités"},
   "tabs": {"message": "onglets"},
   "since": {"message": "depuis"},

@@ -18,6 +18,47 @@
   "domains": {"message": "דומיינים"},
   "enable_ignore": {"message": "הפעל רשימת התעלמות"},
   "filter_urls": {"message": "סנן כתובות URL לפי התבניות למטה"},
+  "popup_show_url": {
+  "message": "כתובות URL"
+  },
+  "wallpaper_mode": { "message": "🖼 מצב רקע" },
+  "wallpaper_mode_desc": { "message": "הגדר תמונת רקע מותאמת. מאפשר אפקט זכוכית חלבית." },
+  "wallpaper_mode_custom_image": { "message": "📁 תמונה מותאמת" },
+  "wallpaper_random_unsplash": { "message": "🎲 אקראי מ-Unsplash" },
+  "wallpaper_drop_image": { "message": "גרור תמונה או <strong>לחץ לבחירה</strong>" },
+  "wallpaper_fetch": { "message": "מביא תמונה אקראית באיכות גבוהה" },
+  "wallpaper_randomize": { "message": "🎲 אקראי" },
+  "wallpaper_auto_randomize": { "message": "אקראי בכל פתיחה" },
+  "wallpaper_current": { "message": "רקע נוכחי:" },
+  "overlay_opacity": { "message": "שקיפות שכבה" },
+  "overlay_control_desc": { "message": "שולט בשכבה כהה או בהירה." },
+  "wallpaper_blur": { "message": "טשטוש רקע" },
+  "wallpaper_remove": { "message": "✕ הסר רקע" },
+  
+  "popup_show_url_desc": {
+    "message": "הצג את כתובת ה-URL של הדף מתחת לכותרת ברשימת הפופאפ"
+  },
+  "auto_store_idle_tabs": {
+    "message": "שמירה אוטומטית של כרטיסיות לא פעילות"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "מעביר כרטיסיות לאחסון באופן אוטומטי כאשר הן לא היו פעילות למשך זמן מוגדר. הכרטיסייה נסגרת ונשמרת — שום דבר לא הולך לאיבוד."
+  },
+  "idle_threshold": {
+    "message": "סף חוסר פעילות"
+  },
+  "idle_threshold_desc": {
+    "message": "שמור כרטיסייה לאחר מספר שעות זה ללא פעילות. ברירת מחדל: 6."
+  },
+  "history_storage": {
+    "message": "מנוע אחסון היסטוריה"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB מהיר יותר להיסטוריות גדולות (100k+ רשומות) ומשתמש בפחות זיכרון. ההעברה מעתיקה את כל הנתונים — ניתן לחזור בכל עת. נוכחי: "
+  },
+  "apply_migrate": {
+    "message": "החל והעבר"
+  },
 
   "reading_mode": {"message": "מצב קריאה"},
   "tab_storage": {"message": "אחסון כרטיסיות"},
