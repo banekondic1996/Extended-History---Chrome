@@ -26,6 +26,9 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Store page even if page didn't load completely
 -Import history within certain time range
 -Reduce RAM usage when in bookmarks and overall
+-Improve speed when switching between dates, it should be as fast as it is in reading mode when loading .json file
+-Add auto history export (example every 3 months) and history clean up after export
+-Add quick history filters option
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
