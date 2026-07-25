@@ -2,16 +2,12 @@
  * ignore-list.js - Ignore List UI functionality with enable/disable toggle
  */
 
-// Helper function for sending messages to background
-function send(type, extra = {}) {
-  return new Promise((res, rej) => {
-    chrome.runtime.sendMessage({ type, ...extra }, r => {
-      if (chrome.runtime.lastError) { rej(new Error(chrome.runtime.lastError.message)); return; }
-      if (r && r.error) { rej(new Error(r.error)); return; }
-      res(r);
-    });
-  });
-}
+// NOTE: uses the global send() already defined by history.js (loaded first on
+// this page). A local redeclaration here used to silently shadow it — classic
+// <script> tags all share one global scope, so the last-loaded function with
+// the same name wins for every caller on the page, including history.js's own
+// code. That meant history.js's timeout safeguard on send() was never actually
+// active. Don't redefine send() here.
 
 // Toast helper (assumes toast function exists in main file)
 function showToast(msg, type = 'ok') {

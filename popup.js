@@ -48,6 +48,22 @@ function setFavicon(img, domain) {
     }
 }
 
+// ── Toolbar icon variants (kept in sync with background.js TOOLBAR_ICON_FILES) ─
+const ICON_VARIANT_FILES = {
+    default: '/icons/icon128.png',
+    bw:      '/icons/icon_bw.png',
+    emerald: '/icons/icon_emerlad.png',
+    green:   '/icons/icon_green.png',
+    gold:    '/icons/icon_gold.png',
+    pink:    '/icons/icon_pink.png',
+    red:     '/icons/icon_red.png',
+};
+function applyIconVariant(variant) {
+    const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
+    const img = document.querySelector('.hico');
+    if (img) img.src = file;
+}
+
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
 let _popupShowUrl = false; // cached from settings
 
@@ -57,6 +73,7 @@ chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
+    applyIconVariant(s.toolbarIcon || 'default');
 
     // Popup-specific settings
     if (s.popupShowSearch === false) document.querySelector('.search-bar').style.display = 'none';

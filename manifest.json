@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Extended History | 90+ days of history",
+  "name": "Extended History",
   "version": "4.1.3",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
@@ -12,6 +12,7 @@
     "contextMenus",
     "history",
     "sessions",
+    "downloads",
     "storage",
     "tabs",
     "unlimitedStorage",
