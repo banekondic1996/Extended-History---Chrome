@@ -85,6 +85,14 @@ Fixed/changed in version 4.1.3:
 -Changes in favicon functions
 -Fixed speed of tab unstoring
 -Added preview for current year when scrolling date pills
+
+Fixed/changed in version 4.1.4 (testing and not released):
+-Fixed loading speed when switching between dates, now it's instant with caching
+-Added quick filters button
+-Added option to change extension icon
+-Added option to disable extension showing in context menu
+-Added auto export history interval option
+-Fixed option of not all tabs showing under devices
 </pre>
 
 
