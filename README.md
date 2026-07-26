@@ -16,6 +16,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Store tabs
 -Encrypt history exports
 -Read exported history, without import, even encrypted ones
+-Find history using quick filters
 </pre>
 **To do (ordered by importance):**
 <pre>
