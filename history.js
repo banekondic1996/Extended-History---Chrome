@@ -9,7 +9,16 @@ const WP_NEXT_KEY    = 'eh_wallpaper_next';
 // ── Messaging ──────────────────────────────────────────────────────────────
 function send(type, extra = {}) {
   return new Promise((res, rej) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      rej(new Error(`Timed out waiting for a response to "${type}" — the extension's background page may need to be reloaded.`));
+    }, 15000);
     chrome.runtime.sendMessage({ type, ...extra }, r => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
       if (chrome.runtime.lastError) { rej(new Error(chrome.runtime.lastError.message)); return; }
       if (r && r.error) { rej(new Error(r.error)); return; }
       res(r);
@@ -93,15 +102,20 @@ function fmtDuration(ms) {
   return `${Math.floor(m/60)}h ${m%60}m`;
 }
 function favUrl(domain) {
+  if (_curSettings && _curSettings.faviconResolver === 'browser') {
+    return chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent('https://' + domain)}`);
+  }
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
 }
-// setFavicon: sets img.src, routing through background for cached mode
+// setFavicon: sets img.src, using local cache when faviconResolver === 'cached'
 function setFavicon(img, domain) {
   if (!domain) return;
   if (_curSettings && _curSettings.faviconResolver === 'cached') {
     chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
-      if (resp && resp.dataUrl) img.src = resp.dataUrl;
-      else img.src = favUrl(domain);
+      if (resp && resp.dataUrl && !img.dataset.favLoaded) {
+        img.dataset.favLoaded = '1';
+        img.src = resp.dataUrl;
+      }
     });
   } else {
     img.src = favUrl(domain);
@@ -287,6 +301,12 @@ function getFilters() {
   return { query: q, mode, startDate: fromTs, endDate: toTs };
 }
 
+// NOTE: date/search switching is fast because background.js now keeps history
+// in memory between calls (see getAll()/setAll() there) instead of re-reading
+// and re-parsing the whole storage blob on every SEARCH message. We deliberately
+// do NOT duplicate the entire history into this page's memory (that was tried
+// and caused growing RAM usage across reloads) — only the current filtered
+// result set is held here, same as before.
 async function doSearch() {
   const { query, mode, startDate, endDate } = getFilters();
   selected.clear(); selMode = false; updateSelBar();
@@ -294,26 +314,32 @@ async function doSearch() {
   listArea().innerHTML = `<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>`;
 
   try {
-    // Fast path: If no filters and no query, show today's history immediately
-    const isInitialLoad = !query && !startDate && !endDate;
-    
-    // (no special fast-path needed: SEARCH now merges live today + past storage in one call)
-    
-    // Normal path: query with filters or no today's data
-    const r   = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
-    allResults = r.entries;
+    const r = await send('SEARCH', { query, mode, startDate, endDate, limit: 20000 });
+    allResults = applyQuickFilterEntries(r.entries);
     buildVirtualList();
   } catch (err) {
     listArea().innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
 }
 
+// Back-compat no-ops — earlier revision kept a full-history page-side cache that
+// needed patching after deletes. Kept as harmless stubs in case anything still
+// calls them; SEARCH always reflects live storage now, so there's nothing to patch.
+function invalidateHistCache() {}
+function patchHistCacheRemoveIds() {}
+
 // ── Date nav ────────────────────────────────────────────────────────────────
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function buildDateNav() {
+function buildDateNav(retentionDays) {
   const scroll = document.getElementById('dateScroll');
   const now    = Date.now();
+
+  // Use the setting value; fall back to 365 if not provided or not a valid number.
+  // Add 1 so "today" (i=0) is always included even when retentionDays is exactly 1.
+  const pillCount = (Number.isFinite(retentionDays) && retentionDays > 0)
+    ? retentionDays + 1
+    : 366;
 
   function addBtn(label, key, weekday) {
     const b = document.createElement('button');
@@ -335,13 +361,53 @@ function buildDateNav() {
   if (allPill) allPill.addEventListener('click', () => activateDatePill('all'));
 
   // Date pills: today, yesterday, then remaining days — "All" is NOT in the scroll
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < pillCount; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
     if (i === 0) { addBtn(chrome.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
     if (i === 1) { addBtn(chrome.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
+
+  // ── Scroll year indicator on dnAllPill ──────────────────────────────────────
+  (function setupScrollYearIndicator() {
+    const wrap    = document.getElementById('dateScrollWrap');
+    const allPill = document.getElementById('dnAllPill');
+    if (!wrap || !allPill) return;
+
+    let _scrollStopTimer = null;
+    let _isScrolling = false;
+
+    wrap.addEventListener('scroll', () => {
+      // Find the first dn-pill whose left edge is at or past the scroll container's left
+      const wrapLeft = wrap.getBoundingClientRect().left;
+      const pills    = document.querySelectorAll('#dateScroll .dn-pill');
+      let firstVisible = null;
+      for (const pill of pills) {
+        if (pill.getBoundingClientRect().left >= wrapLeft - 2) {
+          firstVisible = pill;
+          break;
+        }
+      }
+
+      if (firstVisible) {
+        const date = firstVisible.dataset.date; // 'YYYY-MM-DD'
+        const year = date ? date.slice(0, 4) : null;
+        if (year) {
+          allPill.textContent = year;
+          _isScrolling = true;
+        }
+      }
+
+      // Reset back to "All" shortly after scrolling stops
+      clearTimeout(_scrollStopTimer);
+      _scrollStopTimer = setTimeout(() => {
+        _isScrolling = false;
+        // Restore the original label — "All" (use i18n if available)
+        allPill.textContent = chrome.i18n.getMessage('all') || 'All';
+      }, 600);
+    }, { passive: true });
+  })();
 
   // Arrow buttons: click scrolls; hold scrolls continuously
   (function setupArrows() {
@@ -531,31 +597,44 @@ async function deleteSingle(id) {
   try {
     const entry = allResults.find(e => e.id === id);
     const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
-    await send('DELETE_IDS', { ids: [id], urls });
-    allResults = allResults.filter(e => e.id !== id);
+    console.log('[EH] deleteSingle:', id, urls);
+    const result = await send('DELETE_IDS', { ids: [id], urls });
+    console.log('[EH] deleteSingle response:', result);
     selected.delete(id);
-    if (selected.size === 0) exitSelMode();
-    else updateSelBar();
-    buildVirtualList();
+    // Re-fetch from the backend instead of trusting a local patch — this is the
+    // only way to be sure the list reflects what's actually in storage/Chrome
+    // history after the delete, whatever happened on the backend.
+    await doSearch();
     toast('Deleted', 'ok');
-  } catch (err) { toast(err.message, 'err'); }
+  } catch (err) {
+    console.error('[EH] deleteSingle failed:', err);
+    toast(err.message || 'Delete failed — see console for details', 'err');
+  }
 }
 
 async function deleteIds(ids) {
-  if (!ids.length) return;
-  if (!confirm(`Delete ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}?`)) return;
+  console.log('[EH] deleteIds called with', ids.length, 'ids:', ids);
+  if (!ids.length) { toast('Nothing selected', 'err'); return; }
+  const ok = confirm(`Delete ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}?`);
+  console.log('[EH] confirm() returned:', ok);
+  if (!ok) return;
   try {
     const idSet = new Set(ids);
     const urls = allResults
       .filter(e => idSet.has(e.id))
       .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
-    await send('DELETE_IDS', { ids, urls });
-    const s = new Set(ids);
-    allResults = allResults.filter(e => !s.has(e.id));
+    console.log('[EH] sending DELETE_IDS, urls:', urls);
+    const result = await send('DELETE_IDS', { ids, urls });
+    console.log('[EH] DELETE_IDS response:', result);
     exitSelMode();
-    buildVirtualList();
+    // Re-fetch from the backend — see note in deleteSingle above.
+    await doSearch();
     toast(`Deleted ${fmtNum(ids.length)} items`, 'ok');
-  } catch (err) { toast(err.message, 'err'); }
+    console.log('[EH] deleteIds finished, UI refreshed from backend');
+  } catch (err) {
+    console.error('[EH] deleteIds failed:', err);
+    toast(err.message || 'Delete failed — see console for details', 'err');
+  }
 }
 
 async function deleteMatching() {
@@ -572,8 +651,9 @@ async function deleteMatching() {
   
   try {
     const r = await send('DELETE_MATCHING', { query, mode, startDate, endDate });
+    exitSelMode();
+    await doSearch();
     toast(`Deleted ${fmtNum(r.deleted)} items`, 'ok');
-    allResults = []; exitSelMode(); buildVirtualList();
   } catch (err) { toast(err.message, 'err'); }
 }
 
@@ -1250,39 +1330,51 @@ async function loadDevices() {
       const tabsEl = document.createElement('div');
       tabsEl.className = 'dc-tabs-list';
 
-      tabs.slice(0, 50).forEach(t => {
-        const dom = tryDomain(t.url || '');
-        const row = document.createElement('div');
-        row.className = 'dc-row';
-        row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
+      let renderedCount = 0;
+      tabs.forEach((t, i) => {
+        try {
+          const dom = tryDomain(t.url || '');
+          const row = document.createElement('div');
+          row.className = 'dc-row';
+          row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
-        const img = document.createElement('img');
-        img.className = 'dc-rfav';
-        setFavicon(img, dom);
-        img.loading   = 'lazy';
-        img.addEventListener('error', () => { img.style.opacity = '0'; });
+          const img = document.createElement('img');
+          img.className = 'dc-rfav';
+          setFavicon(img, dom);
+          img.loading   = 'lazy';
+          img.addEventListener('error', () => { img.style.opacity = '0'; });
 
-        const body = document.createElement('div');
-        body.className = 'dc-rbody';
-        const titleEl = document.createElement('div');
-        titleEl.className   = 'dc-rtitle';
-        titleEl.textContent = t.title || t.url;
-        const urlEl = document.createElement('div');
-        urlEl.className   = 'dc-rurl';
-        urlEl.textContent = t.url;
-        body.appendChild(titleEl);
-        body.appendChild(urlEl);
-        row.appendChild(img);
-        row.appendChild(body);
+          const body = document.createElement('div');
+          body.className = 'dc-rbody';
+          const titleEl = document.createElement('div');
+          titleEl.className   = 'dc-rtitle';
+          titleEl.textContent = t.title || t.url;
+          const urlEl = document.createElement('div');
+          urlEl.className   = 'dc-rurl';
+          urlEl.textContent = t.url;
+          body.appendChild(titleEl);
+          body.appendChild(urlEl);
+          row.appendChild(img);
+          row.appendChild(body);
 
-        if (t.lastModified) {
-          const time = document.createElement('div');
-          time.className   = 'dc-rtime';
-          time.textContent = timeAgo(t.lastModified * 1000);
-          row.appendChild(time);
+          if (t.lastModified) {
+            const time = document.createElement('div');
+            time.className   = 'dc-rtime';
+            time.textContent = timeAgo(t.lastModified * 1000);
+            row.appendChild(time);
+          }
+          tabsEl.appendChild(row);
+          renderedCount++;
+        } catch (err) {
+          // A single malformed tab entry used to be able to throw here and silently
+          // abort the rest of forEach, leaving the list truncated with no visible
+          // error — that's the leading theory for tab lists appearing cut short.
+          console.error('[EH] Devices: failed to render tab row', i, t, err);
         }
-        tabsEl.appendChild(row);
       });
+      if (renderedCount !== tabs.length) {
+        console.warn(`[EH] Devices: only rendered ${renderedCount} of ${tabs.length} tabs for "${dev.deviceName}" — see errors above`);
+      }
 
       if (!tabs.length) {
         const empty = document.createElement('div');
@@ -2370,6 +2462,16 @@ document.getElementById('fontSzInput').addEventListener('input', () => {
   if (sz >= 11 && sz <= 22) document.documentElement.style.setProperty('--fsize', sz + 'px');
 });
 
+document.getElementById('toolbarIconGrid')?.addEventListener('click', ev => {
+  const btn = ev.target.closest('.icon-opt');
+  if (!btn) return;
+  document.querySelectorAll('#toolbarIconGrid .icon-opt').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('on', on);
+    b.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  });
+});
+
 function setupColorPicker(swId, picId, hexId, presetsId, cssVar) {
   const sw  = document.getElementById(swId);
   const pic = document.getElementById(picId);
@@ -2456,6 +2558,21 @@ function populateSettings(s) {
   if (faviconSel) faviconSel.value = s.faviconResolver || 'google';
   const autoFocusTgl = document.getElementById('searchAutoFocusToggle');
   if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
+  const contextMenuTgl = document.getElementById('contextMenuToggle');
+  if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
+
+  // Auto export interval
+  const autoExportInput = document.getElementById('autoExportInput');
+  if (autoExportInput) autoExportInput.value = s.autoExportIntervalMonths || 0;
+  refreshAutoExportStatus();
+
+  // Populate toolbar icon picker
+  const selectedIcon = s.toolbarIcon || 'default';
+  document.querySelectorAll('#toolbarIconGrid .icon-opt').forEach(btn => {
+    const on = btn.dataset.icon === selectedIcon;
+    btn.classList.toggle('on', on);
+    btn.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  });
 
   // Performance
   const timeTrackTgl = document.getElementById('timeTrackingToggle');
@@ -2483,6 +2600,22 @@ function applyTimeTrackingState(enabled) {
   navItem.title = enabled ? '' : 'Time Spent tracking is disabled in Settings';
 }
 
+// ── Toolbar icon variants (kept in sync with background.js TOOLBAR_ICON_FILES) ─
+const ICON_VARIANT_FILES = {
+  default: '/icons/icon128.png',
+  bw:      '/icons/icon_bw.png',
+  emerald: '/icons/icon_emerlad.png',
+  green:   '/icons/icon_green.png',
+  gold:    '/icons/icon_gold.png',
+  pink:    '/icons/icon_pink.png',
+  red:     '/icons/icon_red.png',
+};
+function applyIconVariant(variant) {
+  const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
+  const img = document.querySelector('.logo-icon');
+  if (img) img.src = file;
+}
+
 function applyVisuals(s) {
   const r = document.documentElement;
   if (s.accentColor)  r.style.setProperty('--accent',  s.accentColor);
@@ -2490,6 +2623,7 @@ function applyVisuals(s) {
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
+  applyIconVariant(s.toolbarIcon || 'default');
   
   // Apply background tint: hue-rotate filter on the wallpaper layer
   const wpLayer = document.getElementById('eh-wallpaper-layer');
@@ -2581,6 +2715,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
+  const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
+  const toolbarIcon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || 'default';
+  const autoExportIntervalMonths = Math.max(0, Math.min(60, parseInt(document.getElementById('autoExportInput')?.value || '0') || 0));
   
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
@@ -2602,6 +2739,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         popupHeight,
         faviconResolver,
         searchAutoFocus,
+        contextMenuEnabled,
+        toolbarIcon,
+        autoExportIntervalMonths,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
         syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30)),
         autoStoreEnabled: document.getElementById('autoStoreToggle')?.checked === true,
@@ -2609,13 +2749,70 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
       } 
     });
     _curSettings = r.settings;
+    applyIconVariant(_curSettings.toolbarIcon || 'default');
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
     // Save auto-save interval
     const autoSaveMins = parseInt(document.getElementById('autoSaveInput')?.value || '0');
     await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
+    refreshAutoExportStatus();
   } catch (err) { toast(err.message, 'err'); }
+});
+
+// ── Auto export interval ──────────────────────────────────────────────────────
+async function refreshAutoExportStatus() {
+  const el = document.getElementById('autoExportStatus');
+  if (!el) return;
+  try {
+    const r = await send('GET_AUTO_EXPORT_STATUS');
+    if (!r.enabled) { el.textContent = 'Disabled'; return; }
+    const acc = r.monthsAccumulated || 0;
+    if (acc < r.retainMonths + r.intervalMonths) {
+      el.textContent = `${acc.toFixed(1)} / ${r.retainMonths + r.intervalMonths} months accumulated`;
+    } else {
+      el.textContent = 'Due — will run on next check';
+    }
+  } catch {
+    el.textContent = '';
+  }
+}
+
+document.getElementById('testAutoExportBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('testAutoExportBtn');
+  const inputEl = document.getElementById('autoExportInput');
+  const interval = Math.max(0, Math.min(60, parseInt(inputEl?.value || '0') || 0));
+  if (interval <= 0) { toast('Enter a number of months above 0 first', 'err'); return; }
+
+  const ok = confirm(
+    `This will export everything in your extended history older than 3 months to a .json file, ` +
+    `then remove it from this extension's storage (your last 3 months always stay). ` +
+    `This never touches Chrome's native history. Continue?`
+  );
+  if (!ok) return;
+
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Running…';
+  try {
+    // Persist the interval so "Run now" always reflects what's currently typed in,
+    // even if "Save Settings" was never clicked.
+    await send('SAVE_SETTINGS', { settings: { autoExportIntervalMonths: interval } });
+    _curSettings.autoExportIntervalMonths = interval;
+
+    const r = await send('TRIGGER_AUTO_EXPORT');
+    if (r.success) {
+      toast(`Exported & removed ${fmtNum(r.exported)} entries older than 3 months from extended storage`, 'ok');
+      invalidateHistCache();
+      doSearch();
+    } else if (r.reason === 'empty' || r.reason === 'nothing_past_cutoff') {
+      toast('Nothing older than 3 months to export yet', 'ok');
+    } else if (r.reason === 'download_failed') {
+      toast('Could not save the export file — nothing was deleted. Try again.', 'err');
+    } else {
+      toast('Nothing to export yet', 'err');
+    }
+    refreshAutoExportStatus();
+  } catch (err) { toast(err.message, 'err'); }
+  btn.disabled = false; btn.textContent = orig;
 });
 
 document.getElementById('timeTrackingToggle')?.addEventListener('change', (e) => {
@@ -2637,10 +2834,12 @@ document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () =
 // Signal SW that this page is loaded and ready to handle downloads
 chrome.runtime.sendMessage({ type: 'AUTO_SAVE_READY' }).catch(() => {});
 
-// SW sends the session HTML — use anchor click (bypasses browser "ask where to save")
+// SW sends the content to download — use anchor click (bypasses browser "ask where to save").
+// Used for both session auto-save (HTML) and history auto-export (JSON).
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'AUTO_SAVE_DOWNLOAD') return;
-  const blob = new Blob([msg.html], { type: 'text/html' });
+  const content = msg.content ?? msg.html; // msg.html kept for back-compat
+  const blob = new Blob([content], { type: msg.mime || 'text/html' });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), {
     href: url, download: msg.filename || 'extended-history-session.html', target:"_blank",
@@ -2698,6 +2897,7 @@ document.getElementById('importDataFile')?.addEventListener('change', async ev =
     if (!entries) { toast('Invalid file format', 'err'); return; }
     const r = await send('IMPORT_HISTORY', { entries });
     toast(`Imported ${fmtNum(r.imported)} new entries`, 'ok');
+    invalidateHistCache();
     doSearch();
     ev.target.value = '';
   } catch (err) { toast(err.message || 'Import failed', 'err'); }
@@ -2710,6 +2910,7 @@ document.getElementById('reBackfillBtn')?.addEventListener('click', async () => 
     const r = await send('RE_BACKFILL');
     if (r?.error) { toast(r.error, 'err'); return; }
     toast(`Imported ${fmtNum(r.imported)} new entries from Chrome history`, 'ok');
+    invalidateHistCache();
     doSearch();
   } catch (err) { toast(err.message, 'err'); }
 });
@@ -2718,7 +2919,7 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   if (!confirm('Delete ALL history permanently? Cannot be undone.')) return;
   try {
     await send('CLEAR_ALL');
-    allResults = []; exitSelMode(); buildVirtualList();
+    allResults = []; invalidateHistCache(); exitSelMode(); buildVirtualList();
     toast('All history cleared', 'ok');
   } catch (err) { toast(err.message, 'err'); }
 });
@@ -3477,6 +3678,7 @@ function switchPanel(name) {
   if (name === 'tabstorage') loadTabStorage();
   if (name === 'bookmarks') loadBookmarks();
    if (name === 'mostvisited') loadMostVisited();
+  if (name === 'quickfilters') { if (window.QuickFilters) window.QuickFilters.loadPanel(); }
   if (name === 'settings') {
     send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
     send('GET_SESSIONS').then(r => {
@@ -4019,7 +4221,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     _bmSearchTimer = setTimeout(() => renderBookmarksWithFilter(ev.target.value), 150);
   });
 
-  buildDateNav();
+  // Build date nav with the correct number of pills based on the user's retention setting.
+  // _curSettings is now fully resolved (both local cache + background merge above),
+  // so retentionDays reflects the actual saved value (e.g. 5 years = 1825 days).
+  buildDateNav(_curSettings.retentionDays);
   buildHourNav();
   setupToolbar();
   setupSelActions();

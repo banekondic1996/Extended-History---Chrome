@@ -12,6 +12,7 @@ const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
+const QUICK_FILTERS_KEY = 'eh_quick_filters'; // Named saved filters: [{id,name,patterns:[]}]
 const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history flushes
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
@@ -35,7 +36,34 @@ const DEFAULT_SETTINGS = {
   timeTrackingEnabled: true, // Whether to track time spent per domain
   autoStoreEnabled: false,   // Auto-store tabs idle for too long
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
+  toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red
+  contextMenuEnabled: true,  // Whether right-click context menu shows on web pages
+  autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
+                                // block of history once it's built up beyond the retained window.
+  autoExportLastRunAt: 0,      // timestamp of the last successful auto-export (informational)
 };
+
+// Auto-export always keeps this many months of the most recent history untouched,
+// no matter what interval the user picks.
+const AUTO_EXPORT_RETAIN_MONTHS = 3;
+const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
+
+// ── Toolbar icon variants ────────────────────────────────────────────────────
+const TOOLBAR_ICON_FILES = {
+  default: '/icons/icon16.png',
+  bw:      '/icons/icon_bw.png',
+  emerald: '/icons/icon_emerlad.png',
+  green:   '/icons/icon_green.png',
+  gold:    '/icons/icon_gold.png',
+  pink:    '/icons/icon_pink.png',
+  red:     '/icons/icon_red.png',
+};
+function applyToolbarIcon(variant) {
+  const file = TOOLBAR_ICON_FILES[variant] || TOOLBAR_ICON_FILES.default;
+  try {
+    chrome.action.setIcon({ path: file });
+  } catch (e) { console.warn('[EH] setIcon failed:', e); }
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function todayKey() { return new Date().toLocaleDateString('en-CA'); }
@@ -173,7 +201,7 @@ async function addIgnorePattern(pattern) {
 async function deleteUrlFromNativeHistory(url) {
   const urls = [...new Set([url, normalizeUrl(url)])].filter(Boolean);
   for (const target of urls) {
-    try { await chrome.history.deleteUrl({ url: target }); } catch {}
+    await deleteUrlSafe(target);
   }
 }
 
@@ -230,7 +258,7 @@ async function cleanIgnoredFromHistory() {
     
     // Also remove from Chrome native history
     for (const e of toDelete) {
-      try { await chrome.history.deleteUrl({ url: e.url }); } catch {}
+      await deleteUrlSafe(e.url);
     }
   }
   
@@ -309,6 +337,8 @@ async function addTime(domain, ms) {
 chrome.alarms.create('eh_tick', { periodInMinutes: 0.5 });
 // Flush alarm: fire every minute; actual flush only runs when syncInterval has elapsed
 chrome.alarms.create('eh_flush', { periodInMinutes: 1 });
+// Auto-export check: cheap to run, only does real work once enough backlog has built up
+chrome.alarms.create('eh_auto_export_check', { periodInMinutes: 60 });
 
 const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
@@ -398,6 +428,84 @@ async function flushTodayToHistory() {
   //console.log(`[EH] Flushed ${added} new entries from today into history`);
 }
 
+// ── Auto history export ──────────────────────────────────────────────────────
+// If the user sets an interval (months), once history has accumulated beyond
+// (AUTO_EXPORT_RETAIN_MONTHS + interval) months old, the oldest block — every
+// entry older than AUTO_EXPORT_RETAIN_MONTHS — is exported as a .json download
+// and then removed from storage (extension storage + native Chrome history).
+// The most recent AUTO_EXPORT_RETAIN_MONTHS of history is never touched.
+let _autoExportRunning = false;
+
+// Stack-safe replacement for Math.min(...arr) — spreading a huge history array
+// as call arguments overflows the call stack once it gets into the hundreds of
+// thousands of entries (which unlimitedStorage happily allows).
+function oldestVisitTime(entries) {
+  let oldest = Infinity;
+  for (let i = 0; i < entries.length; i++) {
+    const t = entries[i].visitTime;
+    if (t < oldest) oldest = t;
+  }
+  return oldest;
+}
+
+async function checkAutoExport(force) {
+  if (_autoExportRunning) return { skipped: true };
+  const settings = await getSettings();
+  const interval = Number(settings.autoExportIntervalMonths) || 0;
+  if (interval <= 0) return { skipped: true, reason: 'disabled' };
+
+  _autoExportRunning = true;
+  try {
+    const entries = await getAll();
+    if (!entries.length) return { skipped: true, reason: 'empty' };
+
+    const now = Date.now();
+    const oldest = oldestVisitTime(entries);
+    const retainMs  = AUTO_EXPORT_RETAIN_MONTHS * MS_PER_MONTH;
+    const triggerMs = retainMs + interval * MS_PER_MONTH;
+
+    if (!force && (now - oldest) < triggerMs) {
+      return { skipped: true, reason: 'not_due', ageMonths: (now - oldest) / MS_PER_MONTH };
+    }
+
+    const cutoff = now - retainMs;
+    const toExport = entries.filter(e => e.visitTime < cutoff);
+    if (!toExport.length) return { skipped: true, reason: 'nothing_past_cutoff' };
+
+    const exportData = {
+      exportedAt: new Date(now).toISOString(),
+      totalEntries: toExport.length,
+      entries: toExport,
+      auto: true,
+      autoExportIntervalMonths: interval,
+    };
+
+    // Download via the same mechanism session auto-save uses — hands the JSON
+    // to an open (or briefly-opened) history.html tab, which saves it via a
+    // Blob + <a download> click. Avoids needing the "downloads" permission.
+    const json = JSON.stringify(exportData, null, 2);
+    const filename = `extended-history-auto_${new Date(now).toISOString().slice(0, 10)}.json`;
+    const downloaded = await downloadViaPage(json, filename, 'application/json');
+    if (!downloaded) return { skipped: true, reason: 'download_failed' };
+
+    // Remove exported entries from the EXTENSION'S OWN storage only — keep
+    // only the retained window there. This must NEVER touch native Chrome
+    // history: (1) that's not what auto-export is for — native history is
+    // Chrome's own ~3-month rolling window and is left alone entirely; and
+    // (2) chrome.history.deleteUrl() removes ALL visits to a URL, not just
+    // the specific old one being archived, so calling it here would also
+    // wipe out any more recent (within-retention) visits to the same URL —
+    // exactly what was happening before this fix.
+    const idsToRemove = new Set(toExport.map(e => e.id));
+    await removeEntries(idsToRemove, new Set());
+
+    await saveSettings({ autoExportLastRunAt: now });
+    return { success: true, exported: toExport.length, filename };
+  } finally {
+    _autoExportRunning = false;
+  }
+}
+
 async function getSyncInterval() {
   const settings = await getSettings();
   return typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
@@ -409,6 +517,10 @@ async function getAutoSaveInterval() {
 }
 
 chrome.alarms.onAlarm.addListener(async alarm => {
+  if (alarm.name === 'eh_auto_export_check') {
+    await checkAutoExport().catch(() => {});
+    return;
+  }
   if (alarm.name === 'eh_flush') {
     const intervalMins = await getSyncInterval();
     // intervalMins === 0 means "flush on every visit" (legacy mode) — skip timer flush
@@ -448,17 +560,12 @@ chrome.alarms.onAlarm.addListener(async alarm => {
   }
 });
 
-async function doAutoSaveSession() {
-  if (!sessionId) await loadSessionState();
-  const openTabs = sessionId
-    ? Object.values(sessionTabs).filter(t => t.url && t.closed === null)
-    : [];
-  if (!openTabs.length) return;
-
-  const label    = chrome.i18n.getMessage("current_session") + ' – ' + new Date().toLocaleString();
-  const tsData   = await chrome.storage.local.get('eh_tab_storage');
-  const tsEntries = tsData['eh_tab_storage'] || [];
-  const htmlBody = buildSessionHtml(label, openTabs, tsEntries);
+// Downloads content by handing it to an open (or briefly-opened) history.html
+// tab, which does the actual save via a Blob + <a download> click. This is how
+// session auto-save has always worked, and it means the extension never needs
+// the "downloads" permission at all. Used for both session auto-save and
+// history auto-export.
+async function downloadViaPage(content, filename, mime) {
   const extPageUrl = chrome.runtime.getURL('history.html');
 
   // Check if the history page is already open
@@ -475,8 +582,8 @@ async function doAutoSaveSession() {
       didOpen = true;
     }
   } catch (e) {
-    console.warn('[EH] auto-save: could not get tab:', e.message);
-    return;
+    console.warn('[EH] downloadViaPage: could not get tab:', e.message);
+    return false;
   }
 
   // Wait for the page to signal it's ready (it sends READY ping on load),
@@ -494,15 +601,17 @@ async function doAutoSaveSession() {
     chrome.runtime.onMessage.addListener(listener);
   });
 
+  let ok = true;
   try {
     await chrome.tabs.sendMessage(tabId, {
       type: 'AUTO_SAVE_DOWNLOAD',
-      html: htmlBody,
-      filename: 'extended-history-session.html',
+      content,
+      mime: mime || 'text/html',
+      filename,
     });
-    _lastAutoSave = Date.now();
   } catch (e) {
-    console.warn('[EH] auto-save: send failed:', e.message);
+    console.warn('[EH] downloadViaPage: send failed:', e.message);
+    ok = false;
   }
 
   // Close the tab we opened (leave user's existing tab alone)
@@ -511,6 +620,23 @@ async function doAutoSaveSession() {
       try { await chrome.tabs.remove(tabId); } catch {}
     }, 3000);
   }
+  return ok;
+}
+
+async function doAutoSaveSession() {
+  if (!sessionId) await loadSessionState();
+  const openTabs = sessionId
+    ? Object.values(sessionTabs).filter(t => t.url && t.closed === null)
+    : [];
+  if (!openTabs.length) return;
+
+  const label    = chrome.i18n.getMessage("current_session") + ' – ' + new Date().toLocaleString();
+  const tsData   = await chrome.storage.local.get('eh_tab_storage');
+  const tsEntries = tsData['eh_tab_storage'] || [];
+  const htmlBody = buildSessionHtml(label, openTabs, tsEntries);
+
+  const ok = await downloadViaPage(htmlBody, 'extended-history-session.html', 'text/html');
+  if (ok) _lastAutoSave = Date.now();
 }
 
 // Save current session to storage (overwrite same location, don't pile data)
@@ -942,7 +1068,13 @@ chrome.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
-function ensureContextMenus() {
+async function ensureContextMenus() {
+  const settings = await getSettings();
+  if (settings.contextMenuEnabled === false) {
+    // User disabled the right-click menu on web pages — just clear it out.
+    chrome.contextMenus.removeAll();
+    return;
+  }
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: CONTEXT_MENU_PARENT_ID,
@@ -1009,12 +1141,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // ── Startup / Install ────────────────────────────────────────────────────────
 chrome.runtime.onStartup.addListener(async () => {
-  ensureContextMenus();
+  await ensureContextMenus();
   await migrateStorage();
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
+  applyToolbarIcon(_s0.toolbarIcon);
   // Flush any history from the previous session that wasn't saved by the periodic timer
   // (e.g. user browsed then shut down before the next flush interval ran)
   await flushTodayToHistory().catch(() => {});
@@ -1024,7 +1157,7 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
-  ensureContextMenus();
+  await ensureContextMenus();
   await migrateStorage();
   if (reason === 'install') {
     chrome.tabs.create({ url: chrome.runtime.getURL('tutorial.html') });
@@ -1033,6 +1166,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
+  applyToolbarIcon(_s0.toolbarIcon);
   await beginSession();
   await resumeActiveTab();
   
@@ -1062,14 +1196,92 @@ async function _useIdb() {
   const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
   return r[IDB_STORAGE_KEY] === true;
 }
+// In-memory mirror of full history, kept warm for the life of the service worker.
+// This is the actual reason date-switching was slow: every SEARCH call used to
+// re-read + re-parse the entire history blob from chrome.storage/IndexedDB from
+// scratch. Reading Mode felt fast because it never touches storage at all after
+// the initial file load — this cache gives normal History that same behavior
+// without duplicating the whole dataset into the page's memory.
+// Races a promise against a timeout so a stuck chrome.* call (storage write,
+// history.deleteUrl, IDB transaction, etc.) can't hang a message handler
+// forever — the caller gets a rejected promise instead of silence.
+// chrome.history.deleteUrl() *should* return a Promise when called without a
+// callback, but empirically that form was hanging indefinitely here — never
+// resolving, never rejecting, silently stalling whatever awaited it. Using the
+// traditional explicit callback form is the one calling convention every
+// Chrome version has always supported correctly for this API, so use that
+// instead everywhere we delete a URL from native history.
+function deleteUrlSafe(url) {
+  return new Promise(resolve => {
+    try {
+      chrome.history.deleteUrl({ url }, () => {
+        if (chrome.runtime.lastError) {
+          console.log('[EH][bg] deleteUrl lastError for', url, ':', chrome.runtime.lastError.message);
+        }
+        resolve();
+      });
+    } catch (e) {
+      console.log('[EH][bg] deleteUrl threw for', url, ':', e.message);
+      resolve();
+    }
+  });
+}
+
+// Deletes a batch of URLs from native Chrome history with limited concurrency.
+// Firing hundreds/thousands of chrome.history.deleteUrl() calls all at once via
+// a single unbounded Promise.all() can overwhelm Chrome's history backend —
+// this processes them in small chunks instead.
+async function deleteUrlsBatched(urls, concurrency = 8) {
+  const arr = Array.isArray(urls) ? urls : [...urls];
+  for (let i = 0; i < arr.length; i += concurrency) {
+    const chunk = arr.slice(i, i + concurrency);
+    await Promise.all(chunk.map(url => deleteUrlSafe(url)));
+  }
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
+let _entriesCache = null;
+
 async function getAll() {
-  if (await _useIdb()) return EhIdb.getAll();
+  if (_entriesCache) return _entriesCache;
+  if (await _useIdb()) { _entriesCache = await EhIdb.getAll(); return _entriesCache; }
   const r = await chrome.storage.local.get(HISTORY_KEY);
-  return r[HISTORY_KEY] || [];
+  _entriesCache = r[HISTORY_KEY] || [];
+  return _entriesCache;
 }
 async function setAll(entries) {
+  _entriesCache = entries; // update the in-memory copy immediately, before the (slower) persisted write
   if (await _useIdb()) return EhIdb.setAll(entries);
   await chrome.storage.local.set({ [HISTORY_KEY]: entries });
+}
+
+// Removes entries matching any id in idSet or any url in urlSet.
+// On the IndexedDB backend this deletes only the affected rows (fast,
+// regardless of total history size). On the chrome.storage.local backend
+// there's no way around rewriting the whole blob — that storage model only
+// exposes a single key for the whole array — so this is the one place that
+// can still be slow for very large histories on that backend; migrating to
+// IndexedDB in Settings avoids it entirely.
+async function removeEntries(idSet, urlSet) {
+  const all = await getAll();
+  const toRemove = all.filter(e => idSet.has(e.id) || urlSet.has(e.url));
+  if (!toRemove.length) return { removed: [] };
+
+  if (await _useIdb()) {
+    const removeIdSet = new Set(toRemove.map(e => e.id));
+    await withTimeout(EhIdb.removeIds([...removeIdSet]), 10000, 'EhIdb.removeIds()');
+    _entriesCache = all.filter(e => !removeIdSet.has(e.id));
+  } else {
+    const removeIdSet = new Set(toRemove.map(e => e.id));
+    await withTimeout(setAll(all.filter(e => !removeIdSet.has(e.id))), 10000, 'setAll()');
+  }
+  return { removed: toRemove };
 }
 async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
 async function saveSettings(newSettings) {
@@ -1084,6 +1296,12 @@ async function saveSettings(newSettings) {
       await cleanIgnoredFromHistory();
     }
     // If disabled, we don't need to do anything - URLs will just be allowed
+  }
+  if (newSettings.hasOwnProperty('toolbarIcon')) {
+    applyToolbarIcon(merged.toolbarIcon);
+  }
+  if (newSettings.hasOwnProperty('contextMenuEnabled')) {
+    await ensureContextMenus();
   }
 }
 // ── Title back-fill from Chrome history ──────────────────────────────────────
@@ -1221,24 +1439,34 @@ async function handle(msg) {
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
     }
     case 'DELETE_IDS': {
+      console.log('[EH][bg] DELETE_IDS received, ids:', msg.ids?.length, 'urls:', msg.urls);
       const s = new Set(msg.ids);
+      // Today's entries are served live from the Chrome History API with a fresh
+      // random id every SEARCH call (see getTodayFromChromeApi). If the periodic
+      // flush has already written that visit into local storage under a
+      // *different* stable id before the user deletes it, id-only matching misses
+      // it — the local copy survives and the item reappears next time. Matching
+      // by normalized URL as well closes that gap.
+      const urlSet = new Set((msg.urls || []).map(u => { try { return normalizeUrl(u); } catch { return u; } }).filter(Boolean));
 
-      // 1. Remove from local storage
-      const all = await getAll();
-      const removed = all.filter(e => s.has(e.id));
-      await setAll(all.filter(e => !s.has(e.id)));
+      const t0 = Date.now();
+      const { removed } = await removeEntries(s, urlSet);
+      console.log('[EH][bg] DELETE_IDS: removeEntries() done in', Date.now() - t0, 'ms, removed from storage:', removed.length);
 
-      // 2. Delete from Chrome history — every URL variant we know about:
-      //    - urls passed directly from the UI (covers today's live entries)
-      //    - url + rawUrl from local storage entries
+      // Delete from Chrome history — every URL variant we know about:
+      //  - urls passed directly from the UI (covers today's live entries)
+      //  - url + rawUrl from local storage entries
       const urlsToDelete = new Set([
         ...(msg.urls || []),
         ...removed.flatMap(e => [e.url, e.rawUrl]),
       ].filter(Boolean));
-      for (const url of urlsToDelete) {
-        try { await chrome.history.deleteUrl({ url }); } catch {}
-      }
-      return { success: true };
+      console.log('[EH][bg] DELETE_IDS: deleting', urlsToDelete.size, 'url(s) from Chrome history...');
+      await withTimeout(
+        deleteUrlsBatched(urlsToDelete),
+        20000, 'chrome.history.deleteUrl() batch'
+      );
+      console.log('[EH][bg] DELETE_IDS done. removedFromStorage:', removed.length, 'deletedUrls:', urlsToDelete.size);
+      return { success: true, removedFromStorage: removed.length, deletedUrls: urlsToDelete.size };
     }
     case 'DELETE_MATCHING': {
       const {query='',mode='all',startDate,endDate}=msg;
@@ -1260,7 +1488,8 @@ async function handle(msg) {
       // 1. Remove matching entries from local storage
       const allStored = await getAll();
       const toDelete = allStored.filter(matchesFilter);
-      await setAll(allStored.filter(e => !toDelete.find(d => d.id === e.id)));
+      const toDeleteIds = new Set(toDelete.map(e => e.id));
+      await removeEntries(toDeleteIds, new Set());
 
       // 2. Also match today's live entries from Chrome API
       const todayLive = await getTodayFromChromeApi();
@@ -1270,9 +1499,10 @@ async function handle(msg) {
       const urlsToDelete = new Set(
         [...toDelete, ...toDeleteToday].flatMap(e => [e.url, e.rawUrl]).filter(Boolean)
       );
-      for (const url of urlsToDelete) {
-        try { await chrome.history.deleteUrl({ url }); } catch {}
-      }
+      // Throttled batches instead of one giant Promise.all — firing hundreds/
+      // thousands of concurrent deleteUrl() calls at once can overwhelm Chrome's
+      // history backend.
+      await deleteUrlsBatched(urlsToDelete);
       return { success: true, deleted: toDelete.length + toDeleteToday.length };
     }
     case 'DELETE_HISTORY_RANGE': {
@@ -1464,6 +1694,28 @@ async function handle(msg) {
       return { success: true };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
+    case 'TRIGGER_AUTO_EXPORT': {
+      const r = await checkAutoExport(true);
+      return r;
+    }
+    case 'GET_AUTO_EXPORT_STATUS': {
+      const settings = await getSettings();
+      const interval = Number(settings.autoExportIntervalMonths) || 0;
+      const entries = await getAll();
+      if (!interval || !entries.length) {
+        return { enabled: !!interval, monthsAccumulated: 0, retainMonths: AUTO_EXPORT_RETAIN_MONTHS, lastRunAt: settings.autoExportLastRunAt || 0 };
+      }
+      const now = Date.now();
+      const oldest = oldestVisitTime(entries);
+      const monthsAccumulated = (now - oldest) / MS_PER_MONTH;
+      return {
+        enabled: true,
+        intervalMonths: interval,
+        retainMonths: AUTO_EXPORT_RETAIN_MONTHS,
+        monthsAccumulated,
+        lastRunAt: settings.autoExportLastRunAt || 0,
+      };
+    }
     case 'SAVE_SETTINGS': {
       const cur=await getSettings(); 
       const next={...cur,...msg.settings};
@@ -1473,6 +1725,8 @@ async function handle(msg) {
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
       if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
       if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
+      if (msg.settings.hasOwnProperty('toolbarIcon'))       applyToolbarIcon(next.toolbarIcon);
+      if (msg.settings.hasOwnProperty('contextMenuEnabled')) await ensureContextMenus();
       return {success:true,settings:next};
     }
     case 'EXPORT': {
@@ -1643,6 +1897,50 @@ async function handle(msg) {
       await saveSettings({ ignoreListEnabled: newEnabled });
       return { success: true, enabled: newEnabled };
     }
+    // ── Quick Filters ──────────────────────────────────────────────────────
+    case 'GET_QUICK_FILTERS': {
+      const r = await chrome.storage.local.get(QUICK_FILTERS_KEY);
+      return { filters: r[QUICK_FILTERS_KEY] || [] };
+    }
+    case 'ADD_QUICK_FILTER': {
+      const name = (msg.name || '').trim();
+      const patterns = (msg.patterns || []).map(p => p.trim()).filter(Boolean);
+      if (!name) return { success: false, error: 'Please enter a filter name' };
+      if (!patterns.length) return { success: false, error: 'Please add at least one domain, keyword, or URL' };
+      const r = await chrome.storage.local.get(QUICK_FILTERS_KEY);
+      const list = r[QUICK_FILTERS_KEY] || [];
+      if (list.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+        return { success: false, error: 'A filter with that name already exists' };
+      }
+      const filter = { id: `qf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name, patterns };
+      list.push(filter);
+      await chrome.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true, filter };
+    }
+    case 'UPDATE_QUICK_FILTER': {
+      const { id } = msg;
+      const name = (msg.name || '').trim();
+      const patterns = (msg.patterns || []).map(p => p.trim()).filter(Boolean);
+      if (!id) return { success: false, error: 'Missing filter id' };
+      if (!name) return { success: false, error: 'Please enter a filter name' };
+      if (!patterns.length) return { success: false, error: 'Please add at least one domain, keyword, or URL' };
+      const r = await chrome.storage.local.get(QUICK_FILTERS_KEY);
+      let list = r[QUICK_FILTERS_KEY] || [];
+      if (list.some(f => f.id !== id && f.name.toLowerCase() === name.toLowerCase())) {
+        return { success: false, error: 'A filter with that name already exists' };
+      }
+      list = list.map(f => f.id === id ? { ...f, name, patterns } : f);
+      await chrome.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true };
+    }
+    case 'REMOVE_QUICK_FILTER': {
+      const { id } = msg;
+      const r = await chrome.storage.local.get(QUICK_FILTERS_KEY);
+      let list = r[QUICK_FILTERS_KEY] || [];
+      list = list.filter(f => f.id !== id);
+      await chrome.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true };
+    }
     case 'FLUSH_TIME': {
       // Commit whatever is running (if anything), then restart
       if (activeDomain && segmentStart && windowFocused) {
@@ -1662,6 +1960,7 @@ async function handle(msg) {
         const entries = r[HISTORY_KEY] || [];
         await EhIdb.setAll(entries);
         await chrome.storage.local.set({ [IDB_STORAGE_KEY]: true });
+        _entriesCache = entries; // keep the in-memory cache in sync with the new backend
         return { success: true, migrated: entries.length };
       } catch(e) { return { error: e.message }; }
     }
@@ -1671,6 +1970,7 @@ async function handle(msg) {
         const entries = await EhIdb.getAll();
         await chrome.storage.local.set({ [HISTORY_KEY]: entries, [IDB_STORAGE_KEY]: false });
         await EhIdb.clear();
+        _entriesCache = entries; // keep the in-memory cache in sync with the new backend
         return { success: true, migrated: entries.length };
       } catch(e) { return { error: e.message }; }
     }
