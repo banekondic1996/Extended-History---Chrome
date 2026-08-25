@@ -14,6 +14,7 @@ const SESSIONS_KEY = 'eh_sessions';
 const BACKFILL_KEY = 'eh_backfilled';
 const CURRENT_SESSION_KEY = 'eh_current_session'; // Single current session (overwritten)
 const IGNORE_LIST_KEY = 'eh_ignore_list'; // List of URL patterns to ignore
+const QUICK_FILTERS_KEY = 'eh_quick_filters'; // Named saved filters: [{id,name,patterns:[]}]
 const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history flushes
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
@@ -37,7 +38,61 @@ const DEFAULT_SETTINGS = {
   timeTrackingEnabled: true, // Whether to track time spent per domain
   autoStoreEnabled: false,   // Auto-store tabs idle for too long
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
+  toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red
+  contextMenuEnabled: true,  // Whether right-click context menu shows on web pages
+  datePillsWheelScroll: false, // Let a vertical mouse wheel scroll the horizontal date-pill bar
+  datePillsWheelSensitivity: 1, // Days moved per wheel "click" (1-6) when the above is enabled
+  popupAsSidebar: false,     // Open Extended History in Firefox's sidebar instead of the popup
+  autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
+                                // block of history once it's built up beyond the retained window.
+  autoExportLastRunAt: 0,      // timestamp of the last successful auto-export (informational)
 };
+
+// Auto-export always keeps this many months of the most recent history untouched,
+// no matter what interval the user picks.
+const AUTO_EXPORT_RETAIN_MONTHS = 3;
+const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
+
+// ── Toolbar icon variants ────────────────────────────────────────────────────
+const TOOLBAR_ICON_FILES = {
+  default: 'icons/icon16.png',
+  bw:      'icons/icon_bw.png',
+  emerald: 'icons/icon_emerlad.png',
+  green:   'icons/icon_green.png',
+  gold:    'icons/icon_gold.png',
+  pink:    'icons/icon_pink.png',
+  red:     'icons/icon_red.png',
+};
+function applyToolbarIcon(variant) {
+  const file = TOOLBAR_ICON_FILES[variant] || TOOLBAR_ICON_FILES.default;
+  try {
+    browser.browserAction.setIcon({ path: file });
+  } catch (e) { console.warn('[EH] setIcon failed:', e); }
+}
+
+// ── Popup / Sidebar mode ─────────────────────────────────────────────────────
+// When "Use as sidebar" is enabled, clear the browserAction's default popup so
+// clicking the toolbar icon fires onClicked instead — which we use to open the
+// Firefox sidebar (a full-height panel) rather than the small dropdown popup.
+function applyPopupMode(sidebarMode) {
+  try {
+    browser.browserAction.setPopup({ popup: sidebarMode ? '' : 'popup.html' });
+  } catch (e) { console.warn('[EH] setPopup failed:', e); }
+}
+
+browser.browserAction.onClicked.addListener(async () => {
+  // Only fires when default_popup has been cleared (sidebar mode is on).
+  // sidebarAction.toggle() opens it if closed, closes it if already open —
+  // so clicking the icon again closes the sidebar.
+  try {
+    if (browser.sidebarAction && browser.sidebarAction.toggle) {
+      await browser.sidebarAction.toggle();
+    } else if (browser.sidebarAction && browser.sidebarAction.open) {
+      // Fallback for older Firefox versions without toggle()
+      await browser.sidebarAction.open();
+    }
+  } catch (e) { console.warn('[EH] sidebarAction.toggle failed:', e); }
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function todayKey() { return new Date().toLocaleDateString('en-CA'); }
@@ -311,25 +366,22 @@ async function addTime(domain, ms) {
 browser.alarms.create('eh_tick', { periodInMinutes: 0.5 });
 // Flush alarm: fire every minute; actual flush only runs when syncInterval has elapsed
 browser.alarms.create('eh_flush', { periodInMinutes: 1 });
+// Auto-export check: cheap to run, only does real work once enough backlog has built up
+browser.alarms.create('eh_auto_export_check', { periodInMinutes: 60 });
 
 const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
 let _lastSessionSave = 0; // timestamp of last session save
 
-// ── Today's history: read live from browser API (no per-visit storage writes) ──
-// Returns entries in the same shape as eh_history entries.
-// For the popup and history page we query browser's native history for today —
-// this is always up-to-date with zero extra storage writes while browsing.
-async function getTodayFrombrowserApi() {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const startTime = todayStart.getTime();
-
+// ── Live history fetch: read straight from browser API (no per-visit storage writes) ──
+// Returns entries in the same shape as eh_history entries. Shared by the
+// calendar-day "today" fetch and the rolling-24h popup fetch below.
+async function _liveHistoryEntries(searchParams) {
   try {
     const items = await browser.history.search({
       text: '',
-      startTime,
       maxResults: 10000,
+      ...searchParams,
     });
 
     const ignoreEnabled = await isIgnoreListEnabled();
@@ -354,6 +406,21 @@ async function getTodayFrombrowserApi() {
   } catch {
     return [];
   }
+}
+
+// Calendar-day "today" (midnight → now). Used by the sidebar's Recent History
+// day-nav "Today" view, and by flushTodayToHistory() for merging into eh_history.
+async function getTodayFrombrowserApi() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  return _liveHistoryEntries({ startTime: todayStart.getTime() });
+}
+
+// Rolling last-24h window. Used by the (non-sidebar) popup's Recent History —
+// omitting startTime lets browser.history.search() apply its own default
+// window (last 24 hours) instead of a calendar-day cutoff.
+async function getRecentFromBrowserApi() {
+  return _liveHistoryEntries({});
 }
 
 // Legacy no-op shim — callers that still call updateTodayHistory() are safe.
@@ -405,12 +472,158 @@ async function getSyncInterval() {
   return typeof settings.syncInterval === 'number' ? settings.syncInterval : 30;
 }
 
+// Removes entries matching any id in idSet. Used by auto-export to drop the
+// exported block from the extension's own storage (native browser history is
+// never touched here — see checkAutoExport() below for why).
+async function removeEntries(idSet) {
+  const all = await getAll();
+  const toRemove = all.filter(e => idSet.has(e.id));
+  if (!toRemove.length) return { removed: [] };
+  await setAll(all.filter(e => !idSet.has(e.id)));
+  return { removed: toRemove };
+}
+
+// Stack-safe replacement for Math.min(...arr) — spreading a huge history array
+// as call arguments overflows the call stack once it gets into the hundreds of
+// thousands of entries.
+function oldestVisitTime(entries) {
+  let oldest = Infinity;
+  for (let i = 0; i < entries.length; i++) {
+    const t = entries[i].visitTime;
+    if (t < oldest) oldest = t;
+  }
+  return oldest;
+}
+
+// Downloads content by handing it to an open (or briefly-opened) history.html
+// tab, which does the actual save via a Blob + <a download> click — same
+// mechanism session auto-save uses, so the extension never needs the
+// "downloads" permission at all.
+async function downloadViaPage(content, filename, mime) {
+  const extPageUrl = browser.runtime.getURL('history.html');
+
+  let tabId = null;
+  let didOpen = false;
+  try {
+    const existing = await browser.tabs.query({ url: extPageUrl });
+    if (existing.length > 0) {
+      tabId = existing[0].id;
+    } else {
+      const t = await browser.tabs.create({ url: extPageUrl, active: false });
+      tabId = t.id;
+      didOpen = true;
+    }
+  } catch (e) {
+    console.warn('[EH] downloadViaPage: could not get tab:', e.message);
+    return false;
+  }
+
+  await new Promise(resolve => {
+    if (!didOpen) { resolve(); return; }
+    const timeout = setTimeout(resolve, 6000);
+    const listener = (msg, sender) => {
+      if (msg.type === 'AUTO_SAVE_READY' && sender.tab?.id === tabId) {
+        clearTimeout(timeout);
+        browser.runtime.onMessage.removeListener(listener);
+        resolve();
+      }
+    };
+    browser.runtime.onMessage.addListener(listener);
+  });
+
+  let ok = true;
+  try {
+    await browser.tabs.sendMessage(tabId, {
+      type: 'AUTO_SAVE_DOWNLOAD',
+      content,
+      mime: mime || 'text/html',
+      filename,
+    });
+  } catch (e) {
+    console.warn('[EH] downloadViaPage: send failed:', e.message);
+    ok = false;
+  }
+
+  if (didOpen) {
+    setTimeout(async () => {
+      try { await browser.tabs.remove(tabId); } catch {}
+    }, 3000);
+  }
+  return ok;
+}
+
+// ── Auto history export ──────────────────────────────────────────────────────
+// If the user sets an interval (months), once history has accumulated beyond
+// (AUTO_EXPORT_RETAIN_MONTHS + interval) months old, the oldest block — every
+// entry older than AUTO_EXPORT_RETAIN_MONTHS — is exported as a .json download
+// and then removed from storage (extension storage only — native browser
+// history is left alone entirely).
+let _autoExportRunning = false;
+
+async function checkAutoExport(force) {
+  if (_autoExportRunning) return { skipped: true };
+  const settings = await getSettings();
+  const interval = Number(settings.autoExportIntervalMonths) || 0;
+  if (interval <= 0) return { skipped: true, reason: 'disabled' };
+
+  _autoExportRunning = true;
+  try {
+    const entries = await getAll();
+    if (!entries.length) return { skipped: true, reason: 'empty' };
+
+    const now = Date.now();
+    const oldest = oldestVisitTime(entries);
+    const retainMs  = AUTO_EXPORT_RETAIN_MONTHS * MS_PER_MONTH;
+    const triggerMs = retainMs + interval * MS_PER_MONTH;
+
+    if (!force && (now - oldest) < triggerMs) {
+      return { skipped: true, reason: 'not_due', ageMonths: (now - oldest) / MS_PER_MONTH };
+    }
+
+    const cutoff = now - retainMs;
+    const toExport = entries.filter(e => e.visitTime < cutoff);
+    if (!toExport.length) return { skipped: true, reason: 'nothing_past_cutoff' };
+
+    const exportData = {
+      exportedAt: new Date(now).toISOString(),
+      totalEntries: toExport.length,
+      entries: toExport,
+      auto: true,
+      autoExportIntervalMonths: interval,
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const filename = `extended-history-auto_${new Date(now).toISOString().slice(0, 10)}.json`;
+    const downloaded = await downloadViaPage(json, filename, 'application/json');
+    if (!downloaded) return { skipped: true, reason: 'download_failed' };
+
+    // Remove exported entries from the EXTENSION'S OWN storage only — keep
+    // only the retained window there. This must NEVER touch native browser
+    // history: (1) that's not what auto-export is for — native history is
+    // the browser's own rolling window and is left alone entirely; and
+    // (2) browser.history.deleteUrl() removes ALL visits to a URL, not just
+    // the specific old one being archived, which would also wipe out any
+    // more recent (within-retention) visits to the same URL.
+    const idsToRemove = new Set(toExport.map(e => e.id));
+    await removeEntries(idsToRemove);
+
+    await saveSettings({ autoExportLastRunAt: now });
+    return { success: true, exported: toExport.length, filename };
+  } finally {
+    _autoExportRunning = false;
+  }
+}
+
 async function getAutoSaveInterval() {
   const r = await browser.storage.local.get(AUTO_SAVE_KEY);
   return r[AUTO_SAVE_KEY] ?? 0;
 }
 
 browser.alarms.onAlarm.addListener(async alarm => {
+  if (alarm.name === 'eh_auto_export_check') {
+    await checkAutoExport().catch(() => {});
+    return;
+  }
   if (alarm.name === 'eh_flush') {
     const intervalMins = await getSyncInterval();
     // intervalMins === 0 means "flush on every visit" (legacy mode) — skip timer flush
@@ -944,7 +1157,13 @@ browser.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
-function ensureContextMenus() {
+async function ensureContextMenus() {
+  const settings = await getSettings();
+  if (settings.contextMenuEnabled === false) {
+    // User disabled the right-click menu on web pages — just clear it out.
+    browser.contextMenus.removeAll();
+    return;
+  }
   browser.contextMenus.removeAll(() => {
     browser.contextMenus.create({
       id: CONTEXT_MENU_PARENT_ID,
@@ -1011,12 +1230,14 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // ── Startup / Install ────────────────────────────────────────────────────────
 browser.runtime.onStartup.addListener(async () => {
-  ensureContextMenus();
+  await ensureContextMenus();
   await migrateStorage();
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
+  applyToolbarIcon(_s0.toolbarIcon);
+  applyPopupMode(_s0.popupAsSidebar === true);
   // Flush any history from the previous session that wasn't saved by the periodic timer
   // (e.g. user browsed then shut down before the next flush interval ran)
   await flushTodayToHistory().catch(() => {});
@@ -1026,7 +1247,7 @@ browser.runtime.onStartup.addListener(async () => {
 });
 
 browser.runtime.onInstalled.addListener(async ({ reason }) => {
-  ensureContextMenus();
+  await ensureContextMenus();
   await migrateStorage();
   if (reason === 'install') {
     browser.tabs.create({ url: browser.runtime.getURL('tutorial.html') });
@@ -1035,6 +1256,8 @@ browser.runtime.onInstalled.addListener(async ({ reason }) => {
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
+  applyToolbarIcon(_s0.toolbarIcon);
+  applyPopupMode(_s0.popupAsSidebar === true);
   await beginSession();
   await resumeActiveTab();
   
@@ -1086,6 +1309,16 @@ async function saveSettings(newSettings) {
       await cleanIgnoredFromHistory();
     }
     // If disabled, we don't need to do anything - URLs will just be allowed
+  }
+
+  if (newSettings.hasOwnProperty('toolbarIcon')) {
+    applyToolbarIcon(merged.toolbarIcon);
+  }
+  if (newSettings.hasOwnProperty('popupAsSidebar')) {
+    applyPopupMode(merged.popupAsSidebar === true);
+  }
+  if (newSettings.hasOwnProperty('contextMenuEnabled')) {
+    await ensureContextMenus();
   }
 }
 // ── Title back-fill from browser history ──────────────────────────────────────
@@ -1343,6 +1576,15 @@ async function handle(msg) {
       const r = await browser.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
     }
+    case 'GET_RECENT_HISTORY': {
+      // Popup's Recent History (non-sidebar): plain browser.history.search()
+      // with no startTime, i.e. the browser's own rolling ~24h window,
+      // rather than a calendar-day cutoff.
+      const liveEntries = await getRecentFromBrowserApi();
+      if (liveEntries.length) return { entries: liveEntries };
+      const r = await browser.storage.local.get(TODAY_HISTORY_KEY);
+      return { entries: r[TODAY_HISTORY_KEY] || [] };
+    }
     case 'GET_CURRENT_SESSION': {
       const r = await browser.storage.local.get(CURRENT_SESSION_KEY);
       return { session: r[CURRENT_SESSION_KEY] || null };
@@ -1466,6 +1708,72 @@ async function handle(msg) {
       return { success: true };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
+    case 'TRIGGER_AUTO_EXPORT': {
+      const r = await checkAutoExport(true);
+      return r;
+    }
+    case 'GET_AUTO_EXPORT_STATUS': {
+      const settings = await getSettings();
+      const interval = Number(settings.autoExportIntervalMonths) || 0;
+      const entries = await getAll();
+      if (!interval || !entries.length) {
+        return { enabled: !!interval, monthsAccumulated: 0, retainMonths: AUTO_EXPORT_RETAIN_MONTHS, lastRunAt: settings.autoExportLastRunAt || 0 };
+      }
+      const now = Date.now();
+      const oldest = oldestVisitTime(entries);
+      const monthsAccumulated = (now - oldest) / MS_PER_MONTH;
+      return {
+        enabled: true,
+        intervalMonths: interval,
+        retainMonths: AUTO_EXPORT_RETAIN_MONTHS,
+        monthsAccumulated,
+        lastRunAt: settings.autoExportLastRunAt || 0,
+      };
+    }
+    // ── Quick Filters ──────────────────────────────────────────────────────
+    case 'GET_QUICK_FILTERS': {
+      const r = await browser.storage.local.get(QUICK_FILTERS_KEY);
+      return { filters: r[QUICK_FILTERS_KEY] || [] };
+    }
+    case 'ADD_QUICK_FILTER': {
+      const name = (msg.name || '').trim();
+      const patterns = (msg.patterns || []).map(p => p.trim()).filter(Boolean);
+      if (!name) return { success: false, error: 'Please enter a filter name' };
+      if (!patterns.length) return { success: false, error: 'Please add at least one domain, keyword, or URL' };
+      const r = await browser.storage.local.get(QUICK_FILTERS_KEY);
+      const list = r[QUICK_FILTERS_KEY] || [];
+      if (list.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+        return { success: false, error: 'A filter with that name already exists' };
+      }
+      const filter = { id: `qf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name, patterns };
+      list.push(filter);
+      await browser.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true, filter };
+    }
+    case 'UPDATE_QUICK_FILTER': {
+      const { id } = msg;
+      const name = (msg.name || '').trim();
+      const patterns = (msg.patterns || []).map(p => p.trim()).filter(Boolean);
+      if (!id) return { success: false, error: 'Missing filter id' };
+      if (!name) return { success: false, error: 'Please enter a filter name' };
+      if (!patterns.length) return { success: false, error: 'Please add at least one domain, keyword, or URL' };
+      const r = await browser.storage.local.get(QUICK_FILTERS_KEY);
+      let list = r[QUICK_FILTERS_KEY] || [];
+      if (list.some(f => f.id !== id && f.name.toLowerCase() === name.toLowerCase())) {
+        return { success: false, error: 'A filter with that name already exists' };
+      }
+      list = list.map(f => f.id === id ? { ...f, name, patterns } : f);
+      await browser.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true };
+    }
+    case 'REMOVE_QUICK_FILTER': {
+      const { id } = msg;
+      const r = await browser.storage.local.get(QUICK_FILTERS_KEY);
+      let list = r[QUICK_FILTERS_KEY] || [];
+      list = list.filter(f => f.id !== id);
+      await browser.storage.local.set({ [QUICK_FILTERS_KEY]: list });
+      return { success: true };
+    }
     case 'SAVE_SETTINGS': {
       const cur=await getSettings(); 
       const next={...cur,...msg.settings};
@@ -1475,6 +1783,9 @@ async function handle(msg) {
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
       if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
       if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
+      if (msg.settings.hasOwnProperty('toolbarIcon'))       applyToolbarIcon(next.toolbarIcon);
+      if (msg.settings.hasOwnProperty('popupAsSidebar'))    applyPopupMode(next.popupAsSidebar === true);
+      if (msg.settings.hasOwnProperty('contextMenuEnabled')) await ensureContextMenus();
       return {success:true,settings:next};
     }
     case 'EXPORT': {

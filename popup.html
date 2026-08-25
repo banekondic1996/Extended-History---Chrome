@@ -4,11 +4,65 @@
 <meta charset="utf-8"/>
 <title>Extended History</title>
 <style>
-:root { --accent:#3b9eff; }
+:root { --accent:#3b9eff; --fsize:13px; --font:system-ui,-apple-system,'Segoe UI',sans-serif; }
 [data-theme="dark"]  { --bg:#131318; --s1:#18181f; --s2:#1f1f28; --border:rgba(255,255,255,0.08); --text:#f0eee8; --text2:#a09eb0; --text3:#5a5870; }
 [data-theme="light"] { --bg:#ffffff; --s1:#f5f5f7; --s2:#eeeef2; --border:rgba(0,0,0,0.08); --text:#111118; --text2:#555568; --text3:#aaaabc; }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',sans-serif; width:340px; max-width:340px; font-size:13px; position:relative; overflow-x:hidden; }
+html { font-size:var(--fsize); }
+body { background:var(--bg); color:var(--text); font-family:var(--font); width:340px; max-width:340px; font-size:1rem; position:relative; overflow-x:hidden; }
+/* Sidebar mode: loaded via sidebar_action (popup.html?sidebar=1) — fill the
+   full-height panel instead of the small fixed-size popup dropdown. */
+body.sidebar-mode { width:100%; max-width:none; height:100vh; display:flex; flex-direction:column; }
+body.sidebar-mode .content-wrapper { flex:1; display:flex; flex-direction:column; min-height:0; }
+body.sidebar-mode .content { flex:1; max-height:none !important; }
+body.sidebar-mode .search-list { flex:1; max-height:none !important; }
+/* Keep the title bar pinned at the top and never let it get squeezed by the
+   flex column — same for the other fixed-height chrome (tabs, footer, search). */
+body.sidebar-mode .header { display:none; }
+body.sidebar-mode .hico, body.sidebar-mode .htitle { display:none; }
+.sidebar-daynav { align-items:center; justify-content:flex-end; padding:10px 14px; border-bottom:1px solid var(--border); flex-shrink:0;}
+.sdn-left { display:flex; align-items:center; gap:4px;flex-grow: 1; }
+.sdn-arrow { width:26px; height:26px; background:transparent; border:1.5px solid var(--accent); border-radius:6px; color:var(--accent); font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.sdn-arrow:hover { background:var(--accent); color:#fff; transform:translateY(-1px); }
+.sdn-arrow:active { transform:translateY(0); }
+.sdn-arrow:disabled { opacity:0.35; cursor:default; border-color:var(--border); color:var(--text2); }
+.sdn-arrow:disabled:hover { background:transparent; color:var(--text2); transform:none; }
+.sdn-datelabel { padding:5px 10px; margin-left:4px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.1s; }
+.sdn-datelabel:hover { border-color:var(--accent); color:var(--accent); }
+.sdn-clear { width:24px; height:24px; margin-left:4px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+.sdn-clear:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
+.sdn-clear:active:not(:disabled) { transform:translateY(0); }
+.sdn-clear:disabled { opacity:0.3; cursor:default; }
+.sdn-right { display:flex; align-items:center; gap:6px; align-self: flex-end; }
+
+/* ── Custom calendar (sidebar day picker) ─────────────────────────────────── */
+.sdn-cal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:500; align-items:flex-start; justify-content:center; padding-top:52px; }
+.sdn-cal-overlay.active { display:flex; }
+.sdn-cal { background:var(--bg); border:1px solid var(--border); border-radius:12px; width:260px; padding:12px; box-shadow:0 16px 48px rgba(0,0,0,0.4); user-select:none; }
+.sdn-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.sdn-cal-nav { width:26px; height:26px; background:transparent; border:1.5px solid var(--accent); border-radius:6px; color:var(--accent); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem; transition:all 0.15s; }
+.sdn-cal-nav:hover { background:var(--accent); color:#fff; }
+.sdn-cal-title { background:transparent; border:none; color:var(--text); font-size:0.85rem; font-weight:700; cursor:pointer; padding:4px 10px; border-radius:6px; transition:all 0.15s; }
+.sdn-cal-title:hover { background:var(--s1); color:var(--accent); }
+.sdn-cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:4px; }
+.sdn-cal-weekdays span { text-align:center; font-size:0.65rem; color:var(--text3); font-weight:600; padding:4px 0; }
+.sdn-cal-days { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.sdn-cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:0.78rem; color:var(--text); background:transparent; border:none; border-radius:8px; cursor:pointer; transition:all 0.15s; }
+.sdn-cal-day:hover:not(:disabled) { background:var(--s1); color:var(--accent); transform:scale(1.08); }
+.sdn-cal-day.today { color:var(--accent); font-weight:700; box-shadow:inset 0 0 0 1.5px var(--accent); }
+.sdn-cal-day.selected { background:var(--accent); color:#fff; font-weight:700; }
+.sdn-cal-day.selected:hover { background:var(--accent); color:#fff; transform:scale(1.08); }
+.sdn-cal-day.other-month { color:var(--text3); opacity:0.4; }
+.sdn-cal-day:disabled { color:var(--text3); opacity:0.25; cursor:default; }
+.sdn-cal-months { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.sdn-cal-month { padding:14px 4px; font-size:0.8rem; color:var(--text); background:transparent; border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:all 0.15s; text-align:center; }
+.sdn-cal-month:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:var(--s1); transform:scale(1.03); }
+.sdn-cal-month.cur { border-color:var(--accent); color:var(--accent); font-weight:700; }
+.sdn-cal-month:disabled { color:var(--text3); opacity:0.3; cursor:default; }
+body.sidebar-mode .tabs,
+body.sidebar-mode .sel-mode-row,
+body.sidebar-mode .footer,
+body.sidebar-mode .search-bar { flex-shrink:0; }
 .header { display:flex; align-items:center; gap:8px; padding:12px 14px 10px; border-bottom:1px solid var(--border); }
 .hico { width:26px;height:26px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:6px; display:flex;align-items:center;justify-content:center; font-size:13px; }
 .htitle { font-weight:600; font-size:0.9rem; flex:1; }
@@ -92,6 +146,32 @@ body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-sys
   <div class="htitle">Extended History</div>
   <button class="store-btn" id="storeBtn">Store</button>
   <button class="open-btn" id="openBtn">Open</button>
+</div>
+<!-- Sidebar-mode only: prev/next day nav + date label on the left, Store/Open
+     (relocated from the header, which is hidden in sidebar mode) on the right.
+     Only ever shown while on the Recent History sub-view — see popup.js. -->
+<div class="sidebar-daynav" id="sidebarDayNav" style="display:none">
+  <div class="sdn-left">
+    <button class="sdn-arrow" id="sdnPrev" title="Previous day">‹</button>
+    <button class="sdn-arrow" id="sdnNext" title="Next day">›</button>
+    <button class="sdn-datelabel" id="sdnDateLabel">Today</button>
+    <button class="sdn-clear" id="sdnClear" title="Clear search &amp; reset to today">✕</button>
+  </div>
+  <div class="sdn-right" id="sdnRight"></div>
+</div>
+<div class="sdn-cal-overlay" id="sdnCalOverlay">
+  <div class="sdn-cal" id="sdnCal">
+    <div class="sdn-cal-header">
+      <button class="sdn-cal-nav" id="sdnCalPrev">‹</button>
+      <button class="sdn-cal-title" id="sdnCalTitle">August 2026</button>
+      <button class="sdn-cal-nav" id="sdnCalNext">›</button>
+    </div>
+    <div class="sdn-cal-weekdays" id="sdnCalWeekdays">
+      <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+    </div>
+    <div class="sdn-cal-days" id="sdnCalDays"></div>
+    <div class="sdn-cal-months" id="sdnCalMonths" style="display:none"></div>
+  </div>
 </div>
 <div class="tabs" id="tabsRow">
   <button class="tab active" data-tab="history" id="historyTab">Recent History</button>

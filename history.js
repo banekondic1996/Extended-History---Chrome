@@ -91,15 +91,20 @@ function fmtDuration(ms) {
   return `${Math.floor(m/60)}h ${m%60}m`;
 }
 function favUrl(domain) {
+  if (_curSettings && _curSettings.faviconResolver === 'browser') {
+    return browser.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent('https://' + domain)}`);
+  }
   return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
 }
-// setFavicon: sets img.src, routing through background for cached mode
+// setFavicon: sets img.src, using local cache when faviconResolver === 'cached'
 function setFavicon(img, domain) {
   if (!domain) return;
   if (_curSettings && _curSettings.faviconResolver === 'cached') {
     browser.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
-      if (resp && resp.dataUrl) img.src = resp.dataUrl;
-      else img.src = favUrl(domain);
+      if (resp && resp.dataUrl && !img.dataset.favLoaded) {
+        img.dataset.favLoaded = '1';
+        img.src = resp.dataUrl;
+      }
     });
   } else {
     img.src = favUrl(domain);
@@ -299,7 +304,7 @@ async function doSearch() {
     
     // Normal path: query with filters or no today's data
     const r   = await send('SEARCH', { query, mode, startDate, endDate, limit: 10000 });
-    allResults = r.entries;
+    allResults = typeof applyQuickFilterEntries === 'function' ? applyQuickFilterEntries(r.entries) : r.entries;
     buildVirtualList();
   } catch (err) {
     listArea().innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
@@ -309,9 +314,49 @@ async function doSearch() {
 // ── Date nav ────────────────────────────────────────────────────────────────
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function buildDateNav() {
+// Lets a normal mouse wheel (vertical-only deltaY) scroll the horizontally
+// scrolling date-pill bar — off by default since trackpads already scroll it
+// horizontally on their own; useful for desktop/laptop mouse users. Moves by
+// whole pill-widths per wheel "click" rather than raw pixel deltas, with a
+// sensitivity setting (1–6) controlling how many days that jumps per click.
+let _datePillsWheelEnabled = false;
+let _datePillsWheelSensitivity = 1;
+function applyDatePillsWheelScroll(enabled, sensitivity) {
+  _datePillsWheelEnabled = enabled;
+  if (sensitivity != null) _datePillsWheelSensitivity = Math.max(1, Math.min(6, sensitivity));
+  const wrap = document.getElementById('dateScrollWrap');
+  if (!wrap || wrap._ehWheelBound) return; // bind the listener once; toggle via the flags above
+  wrap._ehWheelBound = true;
+  let _wheelCooldown = false;
+  wrap.addEventListener('wheel', (e) => {
+    if (!_datePillsWheelEnabled) return;
+    // Only hijack predominantly-vertical wheel input — let native horizontal
+    // trackpad/shift-wheel gestures (deltaX) pass through untouched.
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    // Debounce so one physical wheel "click" reliably reads as exactly one
+    // step, regardless of how many wheel events the OS/browser fires for it.
+    if (_wheelCooldown) return;
+    _wheelCooldown = true;
+    setTimeout(() => { _wheelCooldown = false; }, 110);
+
+    const pill = document.querySelector('#dateScroll .dn-pill');
+    const gap  = parseFloat(getComputedStyle(document.getElementById('dateScroll')).gap) || 6;
+    const pillWidth = pill ? pill.getBoundingClientRect().width + gap : 60;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    wrap.scrollBy({ left: dir * pillWidth * _datePillsWheelSensitivity, behavior: 'smooth' });
+  }, { passive: false });
+}
+
+function buildDateNav(retentionDays) {
   const scroll = document.getElementById('dateScroll');
   const now    = Date.now();
+
+  // Use the setting value; fall back to 365 if not provided or not a valid number.
+  // Add 1 so "today" (i=0) is always included even when retentionDays is exactly 1.
+  const pillCount = (Number.isFinite(retentionDays) && retentionDays > 0)
+    ? retentionDays + 1
+    : 366;
 
   function addBtn(label, key, weekday) {
     const b = document.createElement('button');
@@ -333,13 +378,53 @@ function buildDateNav() {
   if (allPill) allPill.addEventListener('click', () => activateDatePill('all'));
 
   // Date pills: today, yesterday, then remaining days — "All" is NOT in the scroll
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < pillCount; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
     if (i === 0) { addBtn(browser.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
     if (i === 1) { addBtn(browser.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
+
+  // ── Scroll year indicator on dnAllPill ──────────────────────────────────────
+  (function setupScrollYearIndicator() {
+    const wrap    = document.getElementById('dateScrollWrap');
+    const allPill = document.getElementById('dnAllPill');
+    if (!wrap || !allPill) return;
+
+    let _scrollStopTimer = null;
+    let _isScrolling = false;
+
+    wrap.addEventListener('scroll', () => {
+      // Find the first dn-pill whose left edge is at or past the scroll container's left
+      const wrapLeft = wrap.getBoundingClientRect().left;
+      const pills    = document.querySelectorAll('#dateScroll .dn-pill');
+      let firstVisible = null;
+      for (const pill of pills) {
+        if (pill.getBoundingClientRect().left >= wrapLeft - 2) {
+          firstVisible = pill;
+          break;
+        }
+      }
+
+      if (firstVisible) {
+        const date = firstVisible.dataset.date; // 'YYYY-MM-DD'
+        const year = date ? date.slice(0, 4) : null;
+        if (year) {
+          allPill.textContent = year;
+          _isScrolling = true;
+        }
+      }
+
+      // Reset back to "All" shortly after scrolling stops
+      clearTimeout(_scrollStopTimer);
+      _scrollStopTimer = setTimeout(() => {
+        _isScrolling = false;
+        // Restore the original label — "All" (use i18n if available)
+        allPill.textContent = browser.i18n.getMessage('all') || 'All';
+      }, 600);
+    }, { passive: true });
+  })();
 
   // Arrow buttons: click scrolls; hold scrolls continuously
   (function setupArrows() {
@@ -2368,6 +2453,16 @@ document.getElementById('fontSzInput').addEventListener('input', () => {
   if (sz >= 11 && sz <= 22) document.documentElement.style.setProperty('--fsize', sz + 'px');
 });
 
+document.getElementById('toolbarIconGrid')?.addEventListener('click', ev => {
+  const btn = ev.target.closest('.icon-opt');
+  if (!btn) return;
+  document.querySelectorAll('#toolbarIconGrid .icon-opt').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('on', on);
+    b.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  });
+});
+
 function setupColorPicker(swId, picId, hexId, presetsId, cssVar) {
   const sw  = document.getElementById(swId);
   const pic = document.getElementById(picId);
@@ -2444,16 +2539,52 @@ function populateSettings(s) {
   const popupTabsToggle   = document.getElementById('popupTabsToggle');
   const popupURLsToggle   = document.getElementById('popupURLsToggle');
   const popupHeightInput  = document.getElementById('popupHeightInput');
+  const popupHeightVal    = document.getElementById('popupHeightVal');
+  const popupSidebarToggle = document.getElementById('popupSidebarToggle');
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
   if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
-  if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
+  if (popupHeightInput)  {
+    popupHeightInput.value = s.popupHeight || 320;
+    if (popupHeightVal) popupHeightVal.textContent = popupHeightInput.value + 'px';
+  }
+  if (popupSidebarToggle) {
+    popupSidebarToggle.checked = s.popupAsSidebar === true;
+    const row = document.getElementById('popupHeightRow');
+    if (row) row.style.opacity = s.popupAsSidebar === true ? '0.4' : '';
+  }
 
   // Populate UI settings
   const faviconSel = document.getElementById('faviconResolverSel');
   if (faviconSel) faviconSel.value = s.faviconResolver || 'google';
   const autoFocusTgl = document.getElementById('searchAutoFocusToggle');
   if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
+  const contextMenuTgl = document.getElementById('contextMenuToggle');
+  if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
+
+  const datePillsWheelTgl = document.getElementById('datePillsWheelToggle');
+  if (datePillsWheelTgl) datePillsWheelTgl.checked = s.datePillsWheelScroll === true;
+  const datePillsWheelSensInput = document.getElementById('datePillsWheelSensInput');
+  const datePillsWheelSensVal   = document.getElementById('datePillsWheelSensVal');
+  const wheelSensitivity = Math.max(1, Math.min(6, parseInt(s.datePillsWheelSensitivity) || 1));
+  if (datePillsWheelSensInput) datePillsWheelSensInput.value = wheelSensitivity;
+  if (datePillsWheelSensVal)   datePillsWheelSensVal.textContent = `${wheelSensitivity} day${wheelSensitivity === 1 ? '' : 's'}/click`;
+  const wheelSensRow = document.getElementById('datePillsWheelSensRow');
+  if (wheelSensRow) wheelSensRow.style.opacity = s.datePillsWheelScroll === true ? '' : '0.4';
+  applyDatePillsWheelScroll(s.datePillsWheelScroll === true, wheelSensitivity);
+
+  // Auto export interval
+  const autoExportInput = document.getElementById('autoExportInput');
+  if (autoExportInput) autoExportInput.value = s.autoExportIntervalMonths || 0;
+  refreshAutoExportStatus();
+
+  // Populate toolbar icon picker
+  const selectedIcon = s.toolbarIcon || 'default';
+  document.querySelectorAll('#toolbarIconGrid .icon-opt').forEach(btn => {
+    const on = btn.dataset.icon === selectedIcon;
+    btn.classList.toggle('on', on);
+    btn.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  });
 
   // Performance
   const timeTrackTgl = document.getElementById('timeTrackingToggle');
@@ -2481,6 +2612,22 @@ function applyTimeTrackingState(enabled) {
   navItem.title = enabled ? '' : 'Time Spent tracking is disabled in Settings';
 }
 
+// ── Toolbar icon variants (kept in sync with background.js TOOLBAR_ICON_FILES) ─
+const ICON_VARIANT_FILES = {
+  default: '/icons/icon128.png',
+  bw:      '/icons/icon_bw.png',
+  emerald: '/icons/icon_emerlad.png',
+  green:   '/icons/icon_green.png',
+  gold:    '/icons/icon_gold.png',
+  pink:    '/icons/icon_pink.png',
+  red:     '/icons/icon_red.png',
+};
+function applyIconVariant(variant) {
+  const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
+  const img = document.querySelector('.logo-icon');
+  if (img) img.src = file;
+}
+
 function applyVisuals(s) {
   const r = document.documentElement;
   if (s.accentColor)  r.style.setProperty('--accent',  s.accentColor);
@@ -2488,6 +2635,7 @@ function applyVisuals(s) {
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
+  applyIconVariant(s.toolbarIcon || 'default');
   
   // Apply background tint: hue-rotate filter on the wallpaper layer
   const wpLayer = document.getElementById('eh-wallpaper-layer');
@@ -2577,9 +2725,15 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
   const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
+  const popupAsSidebar  = document.getElementById('popupSidebarToggle')?.checked === true;
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
-  
+  const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
+  const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
+  const datePillsWheelSensitivity = Math.max(1, Math.min(6, parseInt(document.getElementById('datePillsWheelSensInput')?.value || '1') || 1));
+  const toolbarIcon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || 'default';
+  const autoExportIntervalMonths = Math.max(0, Math.min(60, parseInt(document.getElementById('autoExportInput')?.value || '0') || 0));
+
   if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
     const r = await send('SAVE_SETTINGS', { 
@@ -2598,8 +2752,14 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         popupShowTabs,
         popupShowUrl,
         popupHeight,
+        popupAsSidebar,
         faviconResolver,
         searchAutoFocus,
+        contextMenuEnabled,
+        datePillsWheelScroll,
+        datePillsWheelSensitivity,
+        toolbarIcon,
+        autoExportIntervalMonths,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
         syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30)),
         autoStoreEnabled: document.getElementById('autoStoreToggle')?.checked === true,
@@ -2607,13 +2767,70 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
       } 
     });
     _curSettings = r.settings;
+    applyIconVariant(_curSettings.toolbarIcon || 'default');
+    applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
     // Save auto-save interval
     const autoSaveMins = parseInt(document.getElementById('autoSaveInput')?.value || '0');
     await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
+    refreshAutoExportStatus();
   } catch (err) { toast(err.message, 'err'); }
+});
+
+// ── Auto export interval ──────────────────────────────────────────────────────
+async function refreshAutoExportStatus() {
+  const el = document.getElementById('autoExportStatus');
+  if (!el) return;
+  try {
+    const r = await send('GET_AUTO_EXPORT_STATUS');
+    if (!r.enabled) { el.textContent = 'Disabled'; return; }
+    const acc = r.monthsAccumulated || 0;
+    if (acc < r.retainMonths + r.intervalMonths) {
+      el.textContent = `${acc.toFixed(1)} / ${r.retainMonths + r.intervalMonths} months accumulated`;
+    } else {
+      el.textContent = 'Due — will run on next check';
+    }
+  } catch {
+    el.textContent = '';
+  }
+}
+
+document.getElementById('testAutoExportBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('testAutoExportBtn');
+  const inputEl = document.getElementById('autoExportInput');
+  const interval = Math.max(0, Math.min(60, parseInt(inputEl?.value || '0') || 0));
+  if (interval <= 0) { toast('Enter a number of months above 0 first', 'err'); return; }
+
+  const ok = confirm(
+    `This will export everything in your extended history older than 3 months to a .json file, ` +
+    `then remove it from this extension's storage (your last 3 months always stay). ` +
+    `This never touches Firefox's native history. Continue?`
+  );
+  if (!ok) return;
+
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Running…';
+  try {
+    // Persist the interval so "Run now" always reflects what's currently typed in,
+    // even if "Save Settings" was never clicked.
+    await send('SAVE_SETTINGS', { settings: { autoExportIntervalMonths: interval } });
+    _curSettings.autoExportIntervalMonths = interval;
+
+    const r = await send('TRIGGER_AUTO_EXPORT');
+    if (r.success) {
+      toast(`Exported & removed ${fmtNum(r.exported)} entries older than 3 months from extended storage`, 'ok');
+      doSearch();
+    } else if (r.reason === 'empty' || r.reason === 'nothing_past_cutoff') {
+      toast('Nothing older than 3 months to export yet', 'ok');
+    } else if (r.reason === 'download_failed') {
+      toast('Could not save the export file — nothing was deleted. Try again.', 'err');
+    } else {
+      toast('Nothing to export yet', 'err');
+    }
+    refreshAutoExportStatus();
+  } catch (err) { toast(err.message, 'err'); }
+  btn.disabled = false; btn.textContent = orig;
 });
 
 document.getElementById('timeTrackingToggle')?.addEventListener('change', (e) => {
@@ -2635,10 +2852,13 @@ document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () =
 // Signal SW that this page is loaded and ready to handle downloads
 browser.runtime.sendMessage({ type: 'AUTO_SAVE_READY' }).catch(() => {});
 
-// SW sends the session HTML — use anchor click (bypasses browser "ask where to save")
+// SW sends the session HTML (or, for auto-export, JSON) — use anchor click
+// (bypasses browser "ask where to save")
 browser.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'AUTO_SAVE_DOWNLOAD') return;
-  const blob = new Blob([msg.html], { type: 'text/html' });
+  const content = msg.content !== undefined ? msg.content : msg.html;
+  const mime = msg.mime || 'text/html';
+  const blob = new Blob([content], { type: mime });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), {
     href: url, download: msg.filename || 'extended-history-session.html', target:"_blank",
@@ -3474,7 +3694,8 @@ function switchPanel(name) {
   if (name === 'sessions')   loadSessions();
   if (name === 'tabstorage') loadTabStorage();
   if (name === 'bookmarks') loadBookmarks();
-   if (name === 'mostvisited') loadMostVisited();
+  if (name === 'mostvisited') loadMostVisited();
+  if (name === 'quickfilters') { if (window.QuickFilters) window.QuickFilters.loadPanel(); }
   if (name === 'settings') {
     send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
     send('GET_SESSIONS').then(r => {
@@ -3556,6 +3777,42 @@ function setupBgTintListeners() {
     opacity.addEventListener('input', () => {
       opacityVal.textContent = opacity.value + '%';
       syncTintToSettings();
+    });
+  }
+}
+
+// Live-update the popup height slider label + grey out the height row when
+// "Use as sidebar" is enabled (height doesn't apply to the sidebar panel).
+function setupPopupSettingsListeners() {
+  const heightInput  = document.getElementById('popupHeightInput');
+  const heightVal    = document.getElementById('popupHeightVal');
+  const heightRow    = document.getElementById('popupHeightRow');
+  const sidebarToggle = document.getElementById('popupSidebarToggle');
+
+  if (heightInput && heightVal) {
+    heightInput.addEventListener('input', () => {
+      heightVal.textContent = heightInput.value + 'px';
+    });
+  }
+  if (sidebarToggle && heightRow) {
+    sidebarToggle.addEventListener('change', () => {
+      heightRow.style.opacity = sidebarToggle.checked ? '0.4' : '';
+    });
+  }
+
+  const wheelToggle  = document.getElementById('datePillsWheelToggle');
+  const wheelSensRow = document.getElementById('datePillsWheelSensRow');
+  const wheelSensInput = document.getElementById('datePillsWheelSensInput');
+  const wheelSensVal   = document.getElementById('datePillsWheelSensVal');
+  if (wheelToggle && wheelSensRow) {
+    wheelToggle.addEventListener('change', () => {
+      wheelSensRow.style.opacity = wheelToggle.checked ? '' : '0.4';
+    });
+  }
+  if (wheelSensInput && wheelSensVal) {
+    wheelSensInput.addEventListener('input', () => {
+      const n = wheelSensInput.value;
+      wheelSensVal.textContent = `${n} day${n === '1' ? '' : 's'}/click`;
     });
   }
 }
@@ -4017,11 +4274,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     _bmSearchTimer = setTimeout(() => renderBookmarksWithFilter(ev.target.value), 150);
   });
 
-  buildDateNav();
+  buildDateNav(_curSettings.retentionDays);
   buildHourNav();
+  applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
   setupToolbar();
   setupSelActions();
   setupBgTintListeners();
+  setupPopupSettingsListeners();
   setupWallpaperListeners();
   loadAndApplyWallpaper();
    // ── Scroll-to-bottom buttons ──────────────────────────────────────────────
