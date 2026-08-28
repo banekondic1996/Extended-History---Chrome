@@ -93,6 +93,7 @@ Fixed/changed in version 4.1.4:
 -Added option to disable extension showing in context menu
 -Added auto export history interval option
 -Fixed option of not all tabs showing under devices
+-Fixed bug for not showing all tabs for devices
 
 Fixed/changed in version 4.1.5 (testing and not released):
 -Added high contrast mode
