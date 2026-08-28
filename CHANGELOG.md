@@ -100,6 +100,7 @@ Fixed/changed in version 4.1.5 (testing and not released):
 -Fixed quick filter filtering bug
 -Added scroll date pills by scroll wheel without holding shift
 -Fixed 'URLs' toggle for popup being enabled falsely by default
+-Fixed right clicking triggering selection mode in popup
 </pre>
 
 
