@@ -86,13 +86,20 @@ Fixed/changed in version 4.1.3:
 -Fixed speed of tab unstoring
 -Added preview for current year when scrolling date pills
 
-Fixed/changed in version 4.1.4 (testing and not released):
+Fixed/changed in version 4.1.4:
 -Fixed loading speed when switching between dates, now it's instant with caching
 -Added quick filters button
 -Added option to change extension icon
 -Added option to disable extension showing in context menu
 -Added auto export history interval option
 -Fixed option of not all tabs showing under devices
+
+Fixed/changed in version 4.1.5 (testing and not released):
+-Added high contrast mode
+-Added sidebar mode
+-Fixed quick filter filtering bug
+-Added scroll date pills by scroll wheel without holding shift
+-Fixed 'URLs' toggle for popup being enabled falsely by default
 </pre>
 
 
