@@ -38,6 +38,10 @@ const DEFAULT_SETTINGS = {
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
   toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red
   contextMenuEnabled: true,  // Whether right-click context menu shows on web pages
+  datePillsWheelScroll: false, // Let a vertical mouse wheel scroll the horizontal date-pill bar
+  datePillsWheelSensitivity: 1, // Days moved per wheel "click" (1-6) when the above is enabled
+  popupAsSidebar: false,     // Open Extended History in Chrome's side panel instead of the popup
+  sidebarAutoHide: true,     // Close the sidebar automatically when the mouse leaves it
   autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
                                 // block of history once it's built up beyond the retained window.
   autoExportLastRunAt: 0,      // timestamp of the last successful auto-export (informational)
@@ -63,6 +67,45 @@ function applyToolbarIcon(variant) {
   try {
     chrome.action.setIcon({ path: file });
   } catch (e) { console.warn('[EH] setIcon failed:', e); }
+}
+
+// ── Popup / Side panel mode ──────────────────────────────────────────────────
+// Chrome equivalent of Firefox's browserAction+sidebarAction pairing. When
+// "Use as sidebar" is enabled we clear the action's default popup (same call
+// Firefox uses) so a click doesn't just open the small dropdown, and we tell
+// chrome.sidePanel to open on that same action click instead. When disabled,
+// we restore the normal popup and turn the click-to-open-panel behavior back
+// off so the toolbar icon behaves like a normal popup button again.
+function applyPopupMode(sidebarMode) {
+  try {
+    chrome.action.setPopup({ popup: sidebarMode ? '' : 'popup.html' });
+  } catch (e) { console.warn('[EH] setPopup failed:', e); }
+  try {
+    if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
+      chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: sidebarMode === true });
+    }
+  } catch (e) { console.warn('[EH] sidePanel.setPanelBehavior failed:', e); }
+}
+
+// Keyboard shortcut (default Ctrl+Shift+H, see manifest "commands") — opens
+// the side panel directly regardless of the "Use as sidebar" toggle above,
+// so it's available even when the toolbar icon is still set to open the
+// regular popup. chrome.sidePanel.open() must be called synchronously within
+// a user-gesture-triggered handler, which is exactly what onCommand gives us
+// (with `tab` supplying the current window without an extra async hop).
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener((command, tab) => {
+    if (command !== 'open_sidebar') return;
+    if (!chrome.sidePanel || !chrome.sidePanel.open) return;
+    const windowId = tab && tab.windowId;
+    if (windowId != null) {
+      chrome.sidePanel.open({ windowId }).catch(e => console.warn('[EH] sidePanel.open failed:', e));
+    } else {
+      chrome.windows.getCurrent(w => {
+        chrome.sidePanel.open({ windowId: w.id }).catch(e => console.warn('[EH] sidePanel.open failed:', e));
+      });
+    }
+  });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -344,20 +387,15 @@ const AUTO_SAVE_KEY = 'eh_auto_save_interval'; // minutes, 0 = disabled
 let _lastAutoSave   = 0; // timestamp of last auto-save
 let _lastSessionSave = 0; // timestamp of last session save
 
-// ── Today's history: read live from Chrome API (no per-visit storage writes) ──
-// Returns entries in the same shape as eh_history entries.
-// For the popup and history page we query Chrome's native history for today —
-// this is always up-to-date with zero extra storage writes while browsing.
-async function getTodayFromChromeApi() {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const startTime = todayStart.getTime();
-
+// ── Live history fetch: read straight from Chrome API (no per-visit storage writes) ──
+// Returns entries in the same shape as eh_history entries. Shared by the
+// calendar-day "today" fetch and the rolling-24h popup fetch below.
+async function _liveHistoryEntries(searchParams) {
   try {
     const items = await chrome.history.search({
       text: '',
-      startTime,
       maxResults: 10000,
+      ...searchParams,
     });
 
     const ignoreEnabled = await isIgnoreListEnabled();
@@ -382,6 +420,26 @@ async function getTodayFromChromeApi() {
   } catch {
     return [];
   }
+}
+
+// Calendar-day "today" (midnight → now). Used by flushTodayToHistory() for
+// merging into eh_history, and by the sidebar day-nav once you step to a
+// past date (via the SEARCH message, bounded to that day's midnight-midnight
+// range) — NOT by the "Today" view itself, which uses the rolling-24h
+// getRecentFromChromeApi() below instead, in both the popup and the sidebar.
+async function getTodayFromChromeApi() {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  return _liveHistoryEntries({ startTime: todayStart.getTime() });
+}
+
+// Rolling last-24h window. Used by "Today" in both the popup and the
+// sidebar's day-nav — the sidebar only switches to genuine calendar-day
+// scoping once you navigate to a past date.
+// omitting startTime lets chrome.history.search() apply its own default
+// window (last 24 hours) instead of a calendar-day cutoff.
+async function getRecentFromChromeApi() {
+  return _liveHistoryEntries({});
 }
 
 // Legacy no-op shim — callers that still call updateTodayHistory() are safe.
@@ -1148,6 +1206,7 @@ chrome.runtime.onStartup.addListener(async () => {
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   applyToolbarIcon(_s0.toolbarIcon);
+  applyPopupMode(_s0.popupAsSidebar === true);
   // Flush any history from the previous session that wasn't saved by the periodic timer
   // (e.g. user browsed then shut down before the next flush interval ran)
   await flushTodayToHistory().catch(() => {});
@@ -1167,6 +1226,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   _autoStoreEnabled    = _s0.autoStoreEnabled !== false;
   _autoStoreHours      = typeof _s0.autoStoreHours === 'number' ? _s0.autoStoreHours : 6;
   applyToolbarIcon(_s0.toolbarIcon);
+  applyPopupMode(_s0.popupAsSidebar === true);
   await beginSession();
   await resumeActiveTab();
   
@@ -1299,6 +1359,9 @@ async function saveSettings(newSettings) {
   }
   if (newSettings.hasOwnProperty('toolbarIcon')) {
     applyToolbarIcon(merged.toolbarIcon);
+  }
+  if (newSettings.hasOwnProperty('popupAsSidebar')) {
+    applyPopupMode(merged.popupAsSidebar === true);
   }
   if (newSettings.hasOwnProperty('contextMenuEnabled')) {
     await ensureContextMenus();
@@ -1564,9 +1627,19 @@ async function handle(msg) {
     }
     case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
     case 'GET_TODAY_HISTORY': {
-      // Serve today's history live from Chrome API — no storage read needed.
-      // Falls back to eh_today_history in storage if Chrome API fails.
+      // Calendar-day (midnight → now) live fetch. Not currently used for the
+      // "Today" view anywhere (see GET_RECENT_HISTORY below) — kept available
+      // for anything that specifically wants a calendar-day cutoff.
       const liveEntries = await getTodayFromChromeApi();
+      if (liveEntries.length) return { entries: liveEntries };
+      const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
+      return { entries: r[TODAY_HISTORY_KEY] || [] };
+    }
+    case 'GET_RECENT_HISTORY': {
+      // "Today" in both the popup and the sidebar: plain chrome.history.search()
+      // with no startTime, i.e. the browser's own rolling ~24h window,
+      // rather than a calendar-day cutoff.
+      const liveEntries = await getRecentFromChromeApi();
       if (liveEntries.length) return { entries: liveEntries };
       const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
@@ -1726,6 +1799,7 @@ async function handle(msg) {
       if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
       if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
       if (msg.settings.hasOwnProperty('toolbarIcon'))       applyToolbarIcon(next.toolbarIcon);
+      if (msg.settings.hasOwnProperty('popupAsSidebar'))    applyPopupMode(next.popupAsSidebar === true);
       if (msg.settings.hasOwnProperty('contextMenuEnabled')) await ensureContextMenus();
       return {success:true,settings:next};
     }

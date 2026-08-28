@@ -15,6 +15,11 @@ let _srchSelMode = false;
 let _srchSelItems = new Set(); // selected search result entry IDs
 let _srchEntries = []; // current search result entries
 
+// ── Sidebar day-nav state (must be declared before any code path that might
+//    call refreshRecentHistoryView()/isViewingToday() during initial script
+//    execution — e.g. the "Initial load" call further down runs immediately) ─
+let _sidebarViewDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+
 function tryDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
@@ -64,8 +69,33 @@ function applyIconVariant(variant) {
     if (img) img.src = file;
 }
 
+// ── Sidebar-mode detection (loaded via chrome.sidePanel as popup.html?sidebar=1) ─
+let _sidebarAutoHideEnabled = true; // default on; synced from settings below once loaded
+if (new URLSearchParams(location.search).get('sidebar') === '1') {
+    document.body.classList.add('sidebar-mode');
+
+    // Chrome's side panel stays open until the user explicitly closes it —
+    // unlike a normal popup, it doesn't auto-dismiss when you click
+    // elsewhere. Replicate that via mouse presence: close shortly after the
+    // cursor leaves the panel, and cancel that if it comes back within the
+    // delay (so briefly crossing the edge, e.g. to use a native dropdown or
+    // scrollbar, doesn't close it). Toggleable in Settings — "Auto-hide
+    // sidebar on mouse leave" — since not everyone wants this.
+    let _leaveTimer = null;
+    const CLOSE_DELAY_MS = 400;
+    document.addEventListener('mouseleave', () => {
+        if (!_sidebarAutoHideEnabled) return;
+        clearTimeout(_leaveTimer);
+        _leaveTimer = setTimeout(() => window.close(), CLOSE_DELAY_MS);
+    });
+    document.addEventListener('mouseenter', () => {
+        clearTimeout(_leaveTimer);
+        _leaveTimer = null;
+    });
+}
+
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
-let _popupShowUrl = false; // cached from settings
+let _popupShowUrl = true; // cached from settings — defaults on, matches "!== false" pattern below
 
 chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     const s  = r.eh_settings  || {};
@@ -74,18 +104,25 @@ chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
     applyIconVariant(s.toolbarIcon || 'default');
+    // High contrast mode — overriding these two custom properties makes every
+    // rule using var(--text2)/var(--text3) resolve to the primary text color
+    // instead, no need to touch individual selectors. Shared with history.js's
+    // Settings toggle via the same eh_settings.highContrastMode value.
+    if (s.highContrastMode === true) {
+        document.documentElement.style.setProperty('--text2', 'var(--text)');
+        document.documentElement.style.setProperty('--text3', 'var(--text)');
+    }
 
     // Popup-specific settings
     if (s.popupShowSearch === false) document.querySelector('.search-bar').style.display = 'none';
     if (s.popupShowTabs   === false) document.getElementById('tabsRow').style.display    = 'none';
-    if (s.popupHeight) {
+    if (s.popupHeight && !document.body.classList.contains('sidebar-mode')) {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
-     if(s.popupShowUrl){
-        _popupShowUrl=true;
-    }
+    _popupShowUrl = s.popupShowUrl !== false;
     if (s.faviconResolver) _popupFavMode = s.faviconResolver;
+    _sidebarAutoHideEnabled = s.sidebarAutoHide !== false;
 
     // Wallpaper mode
     if (wp && wp.enabled && wp.dataUrl) {
@@ -124,11 +161,12 @@ function _applyPopupWallpaper(wp, theme) {
             background:${overlayColor}; pointer-events:none;
         }
         .header, .tabs, .sel-mode-row, .footer, .search-bar,
-        .tab-panel, .search-overlay {
+        .tab-panel, .search-overlay, .sidebar-daynav {
             background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
             backdrop-filter: blur(14px) saturate(1.3) !important;
             -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
             border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+            position: relative; z-index: 1;
         }
         .ritem {
             background: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} !important;
@@ -157,6 +195,14 @@ function _applyPopupWallpaper(wp, theme) {
 // ── Header "Open" button ──────────────────────────────────────────────────────
 document.getElementById('openBtn').addEventListener('click', () => {
     chrome.tabs.create({ url: 'history.html' });
+    // In sidebar mode, opening the full history page makes the sidebar
+    // redundant — close it. window.close() is the documented way for a side
+    // panel to close itself from its own script (no chrome.sidePanel.close()
+    // equivalent callable from here). No-op for the regular popup, which
+    // Chrome already closes automatically once a new tab takes focus.
+    if (document.body.classList.contains('sidebar-mode')) {
+        window.close();
+    }
 });
 
 // ── Header "Store" button — save current tab to Tab Storage ──────────────────
@@ -211,6 +257,7 @@ document.querySelectorAll('.tab').forEach(tab => {
         // Reset sub-views when switching tabs
         if (tabName !== 'history') showHistoryRecent();
         if (tabName !== 'tabstorage') showTsStoredLabel();
+        updateSidebarDayNavVisibility();
     });
 });
 
@@ -275,6 +322,7 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 
     clearBtn.classList.toggle('visible', !!query);
     clearTimeout(_searchTimer);
+    sdnUpdateClearBtn();
 
     if (!query) {
         closeSearchOverlay();
@@ -294,6 +342,7 @@ document.getElementById('searchClear').addEventListener('click', () => {
     document.getElementById('searchClear').classList.remove('visible');
     closeSearchOverlay();
     document.getElementById('searchInput').focus();
+    sdnUpdateClearBtn();
 });
 
 function openSearchOverlay() {
@@ -393,8 +442,14 @@ function performSearch(query) {
                 }, 500);
             };
             const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
-            row.addEventListener('mousedown', startHold);
-            row.addEventListener('mouseup', cancelHold);
+            row.addEventListener('mousedown', (ev) => {
+                if (ev.button !== 0) return; // only left click
+                startHold();
+            });
+            row.addEventListener('mouseup', (ev) => {
+                if (ev.button !== 0) return; // only left click
+                cancelHold();
+            });
             row.addEventListener('mouseleave', cancelHold);
             row.addEventListener('touchstart', () => {
                 _holdT = setTimeout(() => {
@@ -420,17 +475,22 @@ function performSearch(query) {
 }
 
 // ── Recent history — read today's history live from Chrome API via background ──
-function loadTodayHistory() {
-    chrome.runtime.sendMessage({ type: 'GET_TODAY_HISTORY' }, r => {
+function loadTodayHistory(preserveScroll) {
+    // "Today" — in both the plain popup and the sidebar's day-nav — shows a
+    // rolling last-24h window (GET_RECENT_HISTORY), not a calendar-day
+    // cutoff from midnight. The sidebar's day-nav arrows switch to genuine
+    // calendar-day scoping only once you step to a past date — that's
+    // handled separately by loadHistoryForSidebarDate().
+    chrome.runtime.sendMessage({ type: 'GET_RECENT_HISTORY' }, r => {
         if (chrome.runtime.lastError || !r) {
             // Fallback: read directly from storage (handles SW not running yet)
             chrome.storage.local.get('eh_today_history', s => {
-                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30));
+                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000), preserveScroll);
             });
             return;
         }
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 30);
-        renderTodayHistory(entries);
+        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
+        renderTodayHistory(entries, preserveScroll);
     });
 }
 
@@ -461,109 +521,177 @@ function toggleSelItem(id, row) {
     updateSelModeBar();
 }
 
-function renderTodayHistory(entries) {
+// ── Shared row builder for Recent History (kept as its own function, same
+// shape as the search-result rows, so both can be styled/updated together) ──
+function createHistoryRow(e, timeText) {
+    const row = document.createElement('a');
+    row.className = 'ritem' + (_selMode ? ' sel-mode' : '') + (_selItems.has(e.id) ? ' sel-checked' : '');
+    row.href = e.url;
+    row.title = (e.title || e.url) + '\n' + e.url;
+
+    const chk = document.createElement('div');
+    chk.className = 'ritem-check';
+    chk.textContent = '\u2713';
+
+    const img = document.createElement('img');
+    img.className = 'rfav';
+    img.loading = 'lazy';
+    setFavicon(img, tryDomain(e.url));
+    img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+
+    const body = document.createElement('div');
+    body.className = 'rbody';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'rtitle';
+    titleEl.textContent = e.title || e.url;
+    body.appendChild(titleEl);
+
+    if (_popupShowUrl) {
+        const urlEl = document.createElement('div');
+        urlEl.className   = 'rurl';
+        urlEl.textContent = e.url;
+        body.appendChild(urlEl);
+    }
+
+    const time = document.createElement('div');
+    time.className = 'rtime';
+    time.textContent = timeText;
+
+    row.appendChild(chk);
+    row.appendChild(img);
+    row.appendChild(body);
+    row.appendChild(time);
+
+    // Long-press (500ms) to enter selection mode
+    let _holdT = null;
+    let _suppressNextClick = false;
+    const startHold = () => {
+        _holdT = setTimeout(() => {
+            _holdT = null;
+            _suppressNextClick = true; // prevent the upcoming click from toggling it back off
+            if (!_selMode) enterSelMode();
+            toggleSelItem(e.id, row);
+        }, 500);
+    };
+    const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
+    row.addEventListener('mousedown', (ev) => {
+        if (ev.button !== 0) return; // only left click
+        startHold(ev);
+    });
+
+    row.addEventListener('mouseup', (ev) => {
+        if (ev.button !== 0) return; // only left click
+        cancelHold(ev);
+    });
+
+    row.addEventListener('mouseleave', cancelHold);
+
+    row.addEventListener('touchstart', () => {
+        _holdT = setTimeout(() => {
+            _holdT = null;
+            _suppressNextClick = true;
+            if (!_selMode) enterSelMode();
+            toggleSelItem(e.id, row);
+        }, 500);
+    }, { passive: true });
+
+    row.addEventListener('touchend', cancelHold);
+    row.addEventListener('touchcancel', cancelHold);
+
+    row.addEventListener('click', (ev) => {
+        if (ev.button !== 0) return; // extra safety (click is usually left-only anyway)
+
+        ev.preventDefault();
+        if (_suppressNextClick) {
+            _suppressNextClick = false;
+            return;
+        }
+
+        if (_selMode) {
+            toggleSelItem(e.id, row);
+        } else {
+            chrome.tabs.create({ url: e.url, active: false });
+        }
+    });
+
+    return row;
+}
+
+// ── Recent history — lazy-loaded / paginated, like the extension's history page ─
+const RECENT_PAGE_SIZE = 20;
+let _recentAll = [];
+let _recentOffset = 0;
+let _recentScrollAttached = false;
+
+function renderTodayHistory(entries, preserveScroll) {
     const el = document.getElementById('recent');
+    const container = document.getElementById('mainContent');
+    // Only trust a captured scroll depth when we're actually on the Recent
+    // History sub-view already — otherwise container.scrollTop belongs to
+    // whatever panel/tab is currently showing and has nothing to do with
+    // this list.
+    const isRecentActive = document.getElementById('h-recent')?.classList.contains('active');
+    const prevScrollTop = (preserveScroll && container && isRecentActive) ? container.scrollTop : 0;
+
+    _recentAll = entries;
+    _recentOffset = 0;
+    el._entries = entries;
     if (!entries.length) {
-        el.innerHTML = '<div class="empty">No history yet today</div>';
+        const msg = typeof isViewingToday === 'function' && !isViewingToday()
+            ? 'No history for this day'
+            : 'No history yet today';
+        el.innerHTML = `<div class="empty">${msg}</div>`;
+        if (container) container.scrollTop = 0;
         return;
     }
     el.innerHTML = '';
-    el._entries = entries;
-    for (const e of entries) {
-        const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    appendRecentPage();
+    attachRecentScrollLazyLoad();
 
-        const row = document.createElement('a');
-        row.className = 'ritem' + (_selMode ? ' sel-mode' : '') + (_selItems.has(e.id) ? ' sel-checked' : '');
-        row.href = e.url;
-        row.title = (e.title || e.url) + '\n' + e.url;
-
-        const chk = document.createElement('div');
-        chk.className = 'ritem-check';
-        chk.textContent = '\u2713';
-
-        const img = document.createElement('img');
-        img.className = 'rfav';
-        img.loading = 'lazy';
-        setFavicon(img, tryDomain(e.url));
-        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
-
-        const body = document.createElement('div');
-        body.className = 'rbody';
-        const titleEl = document.createElement('div');
-        titleEl.className = 'rtitle';
-        titleEl.textContent = e.title || e.url;
-        body.appendChild(titleEl);
-
-        if (_popupShowUrl) {
-            const urlEl = document.createElement('div');
-            urlEl.className   = 'rurl';
-            urlEl.textContent = e.url;
-            body.appendChild(urlEl);
+    if (!container) return;
+    if (preserveScroll && isRecentActive) {
+        // A live refresh (new visit, storage change, polling) rebuilt the
+        // list from scratch, which only renders the first page — refill
+        // enough additional pages to cover however far the user had already
+        // scrolled, then restore that exact position, instead of letting the
+        // browser clamp scrollTop to whatever (much shorter) content exists
+        // right after the rebuild, which is what caused the "random" jump.
+        while (_recentOffset < _recentAll.length && container.scrollHeight < prevScrollTop + container.clientHeight) {
+            appendRecentPage();
         }
-
-        const time = document.createElement('div');
-        time.className = 'rtime';
-        time.textContent = t;
-
-        row.appendChild(chk);
-        row.appendChild(img);
-        row.appendChild(body);
-        row.appendChild(time);
-
-        // Long-press (500ms) to enter selection mode
-        let _holdT = null;
-        let _suppressNextClick = false;
-        const startHold = () => {
-            _holdT = setTimeout(() => {
-                _holdT = null;
-                _suppressNextClick = true; // prevent the upcoming click from toggling it back off
-                if (!_selMode) enterSelMode();
-                toggleSelItem(e.id, row);
-            }, 500);
-        };
-        const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
-        row.addEventListener('mousedown', (ev) => {
-            if (ev.button !== 0) return; // only left click
-            startHold(ev);
-        });
-
-        row.addEventListener('mouseup', (ev) => {
-            if (ev.button !== 0) return; // only left click
-            cancelHold(ev);
-        });
-
-        row.addEventListener('mouseleave', cancelHold);
-
-        row.addEventListener('touchstart', () => {
-            _holdT = setTimeout(() => {
-                _holdT = null;
-                _suppressNextClick = true;
-                if (!_selMode) enterSelMode();
-                toggleSelItem(e.id, row);
-            }, 500);
-        }, { passive: true });
-
-        row.addEventListener('touchend', cancelHold);
-        row.addEventListener('touchcancel', cancelHold);
-
-        row.addEventListener('click', (ev) => {
-            if (ev.button !== 0) return; // extra safety (click is usually left-only anyway)
-
-            ev.preventDefault();
-            if (_suppressNextClick) {
-                _suppressNextClick = false;
-                return;
-            }
-
-            if (_selMode) {
-                toggleSelItem(e.id, row);
-            } else {
-                chrome.tabs.create({ url: e.url, active: false });
-            }
-        });
-
-        el.appendChild(row);
+        container.scrollTop = prevScrollTop;
+    } else {
+        // Explicit navigation (date change, tab switch, initial load) — always
+        // start at the top of the newly-selected view.
+        container.scrollTop = 0;
     }
+}
+
+function appendRecentPage() {
+    const el = document.getElementById('recent');
+    if (!el) return;
+    const slice = _recentAll.slice(_recentOffset, _recentOffset + RECENT_PAGE_SIZE);
+    if (!slice.length) return;
+    for (const e of slice) {
+        const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        el.appendChild(createHistoryRow(e, t));
+    }
+    _recentOffset += slice.length;
+}
+
+function attachRecentScrollLazyLoad() {
+    if (_recentScrollAttached) return;
+    _recentScrollAttached = true;
+    const container = document.getElementById('mainContent');
+    if (!container) return;
+    container.addEventListener('scroll', () => {
+        const panel = document.getElementById('h-recent');
+        if (!panel || !panel.classList.contains('active')) return;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        if (scrollTop + clientHeight >= scrollHeight - 150) {
+            appendRecentPage();
+        }
+    });
 }
 
 // ── Ignore pattern matching (mirrors background.js logic) ────────────────────
@@ -909,6 +1037,7 @@ function showHistoryRecent() {
     document.getElementById('h-mostvisited').classList.remove('active');
     const tab = document.getElementById('historyTab');
     if (tab) tab.textContent = 'Recent History';
+    updateSidebarDayNavVisibility();
 }
 
 function showHistoryMostVisited() {
@@ -917,6 +1046,7 @@ function showHistoryMostVisited() {
     const tab = document.getElementById('historyTab');
     if (tab) tab.textContent = 'Most Visited';
     loadMostVisitedPopup();
+    updateSidebarDayNavVisibility();
 }
 
 function loadMostVisitedPopup() {
@@ -1123,15 +1253,34 @@ document.getElementById('srchDelBtn').addEventListener('click', () => {
 // Initial load for all panels — wait for settings so favicon mode is known
 onSettingsReady(() => {
     loadRecentTabs();
-    loadTodayHistory();
+    refreshRecentHistoryView();
 });
 
 // Auto-refresh on storage change
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.eh_today_history) {
-        if (!_selMode) loadTodayHistory(); // don't disrupt selection mode
+    if (namespace !== 'local') return;
+    if (changes.eh_today_history) {
+        if (!_selMode) refreshRecentHistoryView(true); // don't disrupt selection mode or scroll position
+    }
+    if (changes.eh_settings) {
+        const next = changes.eh_settings.newValue;
+        if (next) _sidebarAutoHideEnabled = next.sidebarAutoHide !== false;
     }
 });
+
+// Recent History — chrome.history.onVisited fires on every new page visit.
+// The popup normally just reopens fresh each time, but the sidebar stays
+// open across navigations, so we need to actively refresh it here rather
+// than relying on the (now-unused) eh_today_history storage key.
+// preserveScroll=true here specifically — without it, opening any link from
+// the sidebar fired this listener, which rebuilt the list from scratch and
+// let the browser snap your scroll position to fit the (now much shorter)
+// freshly-rendered content, which is what looked like a "random" jump.
+if (chrome.history && chrome.history.onVisited) {
+    chrome.history.onVisited.addListener(() => {
+        if (!_selMode) refreshRecentHistoryView(true);
+    });
+}
 
 // Refresh closed tabs list when a tab/window closes
 chrome.tabs.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
@@ -1145,10 +1294,246 @@ setInterval(() => {
         const entries = r.eh_today_history || [];
         if (entries.length !== lastCount) {
             lastCount = entries.length;
-            loadTodayHistory();
+            refreshRecentHistoryView(true);
         }
     });
 }, 2000);
+
+// ══ Sidebar day navigation (Recent History tab, sidebar mode only) ═══════════
+// Prev/next-day arrows + a clickable date label (opens a custom calendar),
+// mirroring the day-by-day browsing available on the main extension page.
+// Store/Open are physically relocated here from the (hidden-in-sidebar) header,
+// and always stay visible regardless of which tab is active — only the
+// arrows + date label hide/show based on the Recent History sub-view.
+
+function isViewingToday() {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return _sidebarViewDate.getTime() === today.getTime();
+}
+
+function sdnFormatLabel(date) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    if (date.getTime() === today.getTime()) return 'Today';
+    if (date.getTime() === yesterday.getTime()) return 'Yesterday';
+    const opts = { month: 'short', day: 'numeric' };
+    if (date.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
+    return date.toLocaleDateString(undefined, opts);
+}
+
+// Recent History refresh — routes to the live "today" fetch when viewing
+// today (freshest, includes not-yet-flushed visits), or a plain SEARCH
+// bounded to the selected day otherwise.
+function refreshRecentHistoryView(preserveScroll) {
+    if (isViewingToday()) {
+        loadTodayHistory(preserveScroll);
+    } else {
+        loadHistoryForSidebarDate(preserveScroll);
+    }
+}
+
+function loadHistoryForSidebarDate(preserveScroll) {
+    const start = new Date(_sidebarViewDate); start.setHours(0, 0, 0, 0);
+    const end   = new Date(_sidebarViewDate); end.setHours(23, 59, 59, 999);
+    chrome.runtime.sendMessage({
+        type: 'SEARCH', query: '', mode: 'all',
+        startDate: start.getTime(), endDate: end.getTime(), limit: 1000
+    }, r => {
+        if (chrome.runtime.lastError || !r) return;
+        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime);
+        renderTodayHistory(entries, preserveScroll);
+    });
+}
+
+function sdnGoToDate(date) {
+    _sidebarViewDate = date;
+    sdnUpdateUI();
+    refreshRecentHistoryView();
+    const container = document.getElementById('mainContent');
+    if (container) container.scrollTop = 0;
+}
+
+function sdnUpdateUI() {
+    const label = document.getElementById('sdnDateLabel');
+    if (label) label.textContent = sdnFormatLabel(_sidebarViewDate);
+    // Right arrow (›) goes back in time — always available.
+    // Left arrow (‹) goes forward toward today — disabled once we're there.
+    const prevBtn = document.getElementById('sdnPrev');
+    if (prevBtn) prevBtn.disabled = isViewingToday();
+    sdnUpdateClearBtn();
+}
+
+// Clear button lights up whenever there's something to reset: an active
+// search query, or a non-today date being viewed.
+function sdnUpdateClearBtn() {
+    const btn = document.getElementById('sdnClear');
+    if (!btn) return;
+    const hasSearch = !!document.getElementById('searchInput')?.value.trim();
+    btn.disabled = !hasSearch && isViewingToday();
+}
+
+// The day-nav row itself (and Store/Open inside it) stays visible any time
+// we're in sidebar mode, no matter which tab is active. Only the arrows +
+// date label (.sdn-left) hide when we're not looking at Recent History.
+function updateSidebarDayNavVisibility() {
+    const container = document.getElementById('sidebarDayNav');
+    if (!container) return;
+    const inSidebar = document.body.classList.contains('sidebar-mode');
+    container.style.display = inSidebar ? 'flex' : 'none';
+
+    const left = document.querySelector('#sidebarDayNav .sdn-left');
+    if (!left) return;
+    const historyActive = document.getElementById('panel-history')?.classList.contains('active');
+    const recentActive  = document.getElementById('h-recent')?.classList.contains('active');
+    left.style.display = (historyActive && recentActive) ? 'flex' : 'none';
+}
+
+// ── Custom calendar ───────────────────────────────────────────────────────────
+// Fully custom-built (not the native OS date picker) so it matches the
+// extension's own theme colors and stays consistent across platforms.
+let _calViewYear, _calViewMonth; // month currently shown in day-grid view
+let _calMode = 'days'; // 'days' | 'months'
+
+function sdnOpenCalendar() {
+    const overlay = document.getElementById('sdnCalOverlay');
+    if (!overlay) return;
+    _calViewYear  = _sidebarViewDate.getFullYear();
+    _calViewMonth = _sidebarViewDate.getMonth();
+    _calMode = 'days';
+    sdnRenderCalendar();
+    overlay.classList.add('active');
+}
+
+function sdnCloseCalendar() {
+    document.getElementById('sdnCalOverlay')?.classList.remove('active');
+}
+
+function sdnRenderCalendar() {
+    const title = document.getElementById('sdnCalTitle');
+    const daysWrap = document.getElementById('sdnCalDays');
+    const monthsWrap = document.getElementById('sdnCalMonths');
+    const weekdaysWrap = document.getElementById('sdnCalWeekdays');
+    if (!title || !daysWrap || !monthsWrap) return;
+
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    if (_calMode === 'months') {
+        title.textContent = String(_calViewYear);
+        weekdaysWrap.style.display = 'none';
+        daysWrap.style.display = 'none';
+        monthsWrap.style.display = 'grid';
+        monthsWrap.innerHTML = '';
+        for (let m = 0; m < 12; m++) {
+            const btn = document.createElement('button');
+            btn.className = 'sdn-cal-month';
+            btn.textContent = monthNames[m].slice(0, 3);
+            const isFuture = _calViewYear > today.getFullYear() || (_calViewYear === today.getFullYear() && m > today.getMonth());
+            if (isFuture) btn.disabled = true;
+            if (_calViewYear === _sidebarViewDate.getFullYear() && m === _sidebarViewDate.getMonth()) btn.classList.add('cur');
+            btn.addEventListener('click', () => {
+                _calViewMonth = m;
+                _calMode = 'days'; // jump straight into day-selection for the picked month
+                sdnRenderCalendar();
+            });
+            monthsWrap.appendChild(btn);
+        }
+        return;
+    }
+
+    // Day-grid view
+    weekdaysWrap.style.display = 'grid';
+    daysWrap.style.display = 'grid';
+    monthsWrap.style.display = 'none';
+    title.textContent = `${monthNames[_calViewMonth]} ${_calViewYear}`;
+
+    daysWrap.innerHTML = '';
+    const firstOfMonth = new Date(_calViewYear, _calViewMonth, 1);
+    const startWeekday = firstOfMonth.getDay(); // 0=Sun
+    const daysInMonth = new Date(_calViewYear, _calViewMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(_calViewYear, _calViewMonth, 0).getDate();
+
+    const cells = [];
+    for (let i = startWeekday - 1; i >= 0; i--) cells.push({ day: daysInPrevMonth - i, otherMonth: true, date: new Date(_calViewYear, _calViewMonth - 1, daysInPrevMonth - i) });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, otherMonth: false, date: new Date(_calViewYear, _calViewMonth, d) });
+    while (cells.length % 7 !== 0) {
+        const d = cells.length - (startWeekday + daysInMonth) + 1;
+        cells.push({ day: d, otherMonth: true, date: new Date(_calViewYear, _calViewMonth + 1, d) });
+    }
+
+    for (const cell of cells) {
+        const btn = document.createElement('button');
+        btn.className = 'sdn-cal-day' + (cell.otherMonth ? ' other-month' : '');
+        btn.textContent = cell.day;
+        cell.date.setHours(0, 0, 0, 0);
+        if (cell.date.getTime() === today.getTime()) btn.classList.add('today');
+        if (cell.date.getTime() === _sidebarViewDate.getTime()) btn.classList.add('selected');
+        if (cell.date.getTime() > today.getTime()) btn.disabled = true;
+        btn.addEventListener('click', () => {
+            sdnGoToDate(cell.date);
+            sdnCloseCalendar();
+        });
+        daysWrap.appendChild(btn);
+    }
+}
+
+if (document.body.classList.contains('sidebar-mode')) {
+    // Relocate Store/Open from the (now-hidden) header into the day-nav row
+    const sdnRight = document.getElementById('sdnRight');
+    const storeBtn = document.getElementById('storeBtn');
+    const openBtn  = document.getElementById('openBtn');
+    if (sdnRight && storeBtn) sdnRight.appendChild(storeBtn);
+    if (sdnRight && openBtn)  sdnRight.appendChild(openBtn);
+
+    // Left arrow (‹) — forward toward today
+    document.getElementById('sdnPrev')?.addEventListener('click', () => {
+        if (isViewingToday()) return; // can't go past today
+        const d = new Date(_sidebarViewDate);
+        d.setDate(d.getDate() + 1);
+        sdnGoToDate(d);
+    });
+    // Right arrow (›) — back in time
+    document.getElementById('sdnNext')?.addEventListener('click', () => {
+        const d = new Date(_sidebarViewDate);
+        d.setDate(d.getDate() - 1);
+        sdnGoToDate(d);
+    });
+    document.getElementById('sdnDateLabel')?.addEventListener('click', sdnOpenCalendar);
+    // Clear button — resets any active search filter and jumps back to today
+    document.getElementById('sdnClear')?.addEventListener('click', () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && searchInput.value) {
+            searchInput.value = '';
+            document.getElementById('searchClear')?.classList.remove('visible');
+            closeSearchOverlay();
+        }
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        sdnGoToDate(today);
+    });
+    document.getElementById('sdnCalPrev')?.addEventListener('click', () => {
+        if (_calMode === 'months') { _calViewYear--; } else {
+            _calViewMonth--; if (_calViewMonth < 0) { _calViewMonth = 11; _calViewYear--; }
+        }
+        sdnRenderCalendar();
+    });
+    document.getElementById('sdnCalNext')?.addEventListener('click', () => {
+        if (_calMode === 'months') { _calViewYear++; } else {
+            _calViewMonth++; if (_calViewMonth > 11) { _calViewMonth = 0; _calViewYear++; }
+        }
+        sdnRenderCalendar();
+    });
+    document.getElementById('sdnCalTitle')?.addEventListener('click', () => {
+        _calMode = _calMode === 'days' ? 'months' : 'days';
+        sdnRenderCalendar();
+    });
+    document.getElementById('sdnCalOverlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'sdnCalOverlay') sdnCloseCalendar();
+    });
+
+    sdnUpdateUI();
+    updateSidebarDayNavVisibility();
+}
+
 // ── Right-click Sessions button → export latest session as HTML ───────────────
 (function () {
   function tryDomainLocal(url) {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Extended History",
-  "version": "4.1.4",
+  "name": "Extended History | Unlimited days of history",
+  "version": "4.1.5",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "permissions": [
@@ -12,6 +12,7 @@
     "contextMenus",
     "history",
     "sessions",
+    "sidePanel",
     "storage",
     "tabs",
     "unlimitedStorage",
@@ -27,6 +28,17 @@
   },
   "chrome_url_overrides": {
     "history": "history.html"
+  },
+  "side_panel": {
+    "default_path": "popup.html?sidebar=1"
+  },
+  "commands": {
+    "open_sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+H"
+      },
+      "description": "Open Extended History in the sidebar"
+    }
   },
   "action": {
     "default_popup": "popup.html",
