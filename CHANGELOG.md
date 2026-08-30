@@ -94,7 +94,7 @@ Fixed/changed in version 4.1.4:
 -Added auto export history interval option
 -Fixed option of not all tabs showing under devices
 
-Fixed/changed in version 4.1.5 (testing and not released):
+Fixed/changed in version 4.1.5 (in Web Store):
 -Added high contrast mode
 -Added sidebar mode
 -Fixed quick filter filtering bug
