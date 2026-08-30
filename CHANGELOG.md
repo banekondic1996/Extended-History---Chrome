@@ -65,7 +65,7 @@ Fixed/changed in version 4.1.0:
 -Added more translations
 -Bookmarks multiple selection mode added
 
-Fixed/changed in version 4.1.1 (in Chrome Store):
+Fixed/changed in version 4.1.1:
 -Added wallpaper mode with frosted UI look
 -Fixed reading mode calendar
 -Added reading mode filters
