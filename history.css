@@ -80,7 +80,9 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
+  margin: var(--ui-margin, 8px);
+  border-radius: var(--ui-radius, 20px);
+} 
 
 .logo-row {
   padding: 20px 20px 16px;
@@ -159,7 +161,7 @@ a { color: inherit; text-decoration: none; }
 .sa-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Main + Panels ── */
-.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; margin: var(--ui-margin, 8px);border-radius: var(--ui-radius, 20px);}
 .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
 .panel.active { display: flex; }
 
@@ -172,6 +174,21 @@ a { color: inherit; text-decoration: none; }
 }
 .panel-scroll::-webkit-scrollbar { width: 6px; }
 .panel-scroll::-webkit-scrollbar-thumb { background: var(--surf3); border-radius: 4px; }
+
+/* Devices panel has its own search/refresh row right under the title, so it
+   doesn't need as much breathing room above the heading as other panels. */
+#devicesScroll { padding-top: 14px; }
+
+/* Fixed footer bar for Settings — always visible, no scrolling needed */
+.settings-save-bar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-start;
+  padding: 14px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--surf1);
+  box-shadow: 0 -6px 16px rgba(0,0,0,0.15);
+}
 
 .panel-heading {
   font-size: 1.6rem;
@@ -274,6 +291,7 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .search-box {
   flex: 1;
@@ -285,7 +303,7 @@ a { color: inherit; text-decoration: none; }
   padding: 0 12px;
   gap: 8px;
   transition: border-color 0.15s;
-  min-width: 0;
+  min-width: 150px;
 }
 .search-box:focus-within { border-color: var(--accent); }
 .search-box-icon { color: var(--text3); font-size: 15px; flex-shrink: 0; }
@@ -707,6 +725,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   height: 22px;
   flex-shrink: 0;
   cursor: pointer;
+  accent-color: var(--accent);
 }
 .toggle-switch input {
   /* appearance: none;
@@ -1026,6 +1045,156 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .modal-backdrop.open .modal-box { transform:translateY(0); }
 .modal-title { font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px; }
 .modal-sub   { font-size:0.8rem;color:var(--text3);margin-bottom: 5px;margin-top: 20px; }
+
+/* ── Dev Mode ── */
+.dev-stat { background:var(--surf2); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; }
+.dev-stat-label { font-size:0.68rem; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+.dev-stat-value { font-size:0.95rem; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
+.dev-stat-value.warn { color:var(--danger); }
+.dev-tab-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; border-bottom:1px solid var(--border2); font-size:0.78rem; }
+.dev-tab-row:last-child { border-bottom:none; }
+.dev-tab-row .dtr-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+.dev-tab-row .dtr-idle { flex-shrink:0; color:var(--text2); font-variant-numeric:tabular-nums; font-weight:600; }
+.dev-tab-row .dtr-idle.hot { color:var(--danger); }
+.dev-tab-row .dtr-tag { flex-shrink:0; font-size:0.68rem; color:var(--text3); background:var(--surf3); border-radius:5px; padding:1px 6px; }
+
+/* ══ UI CALENDAR MODE ══════════════════════════════════════════════════════
+   Right-side calendar sidebar that replaces the date/hour pill nav on the
+   History page. Hidden by default; shown when the setting is on AND the
+   History panel is active (both toggled via body classes from history.js). */
+:root { --cal-w: 300px; } /* sidebar content width — capped well under the 350px max */
+
+body.cal-mode .date-nav-row,
+body.cal-mode .hour-nav-row { display: none; }
+
+.cal-sidebar {
+  display: none;
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: var(--cal-w);
+  max-width: 350px;
+  margin: var(--ui-margin, 8px) var(--ui-margin, 8px) var(--ui-margin, 8px) 0;
+  background: var(--surf0);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius, 20px);
+  z-index: 50;
+  overflow: hidden;
+  transition: transform 0.25s ease;
+}
+body.cal-sidebar-active .cal-sidebar { display: flex; flex-direction: column; }
+
+/* Reserve room in .main for the sidebar — mirrors its full footprint
+   (own right-margin + width + the gap where .main's right margin sits). */
+body.cal-sidebar-active .main {
+  margin-right: calc(var(--ui-margin, 8px) + var(--cal-w) + var(--ui-margin, 8px));
+}
+
+.cal-sidebar-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.cal-alltime-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surf2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.cal-alltime-btn:hover { border-color: var(--accent); color: var(--accent); }
+.cal-alltime-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.cal-widget { position: relative; }
+
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 6px; }
+.cal-arrow-btn {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+  background: var(--surf2); border: 1px solid var(--border2); color: var(--text2);
+  font-size: 1rem; line-height: 1; cursor: pointer; transition: all 0.12s;
+}
+.cal-arrow-btn:hover { background: var(--surf3); color: var(--text); }
+.cal-head-labels { display: flex; gap: 6px; flex: 1; justify-content: center; }
+.cal-label-btn {
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  color: var(--text); font-size: 0.85rem; font-weight: 700; padding: 4px 9px; cursor: pointer;
+}
+.cal-label-btn:hover { background: var(--surf2); border-color: var(--border2); }
+
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.cal-weekdays span { text-align: center; font-size: 0.65rem; font-weight: 700; color: var(--text3); text-transform: uppercase; }
+
+.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-day-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 8px;
+  font-size: 0.78rem; color: var(--text); cursor: pointer; transition: all 0.1s;
+}
+.cal-day-cell:hover { background: var(--surf2); }
+.cal-day-cell.outside { color: var(--text3); opacity: 0.4; }
+.cal-day-cell.today { font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent); }
+.cal-day-cell.selected { background: var(--accent); color: #fff; font-weight: 700; }
+.cal-day-cell.scroll-highlight:not(.selected) { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.cal-day-cell.future { opacity: 0.3; cursor: default; }
+
+.cal-picker {
+  position: absolute; inset: 0; z-index: 5;
+  background: var(--surf0); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  align-content: start; overflow-y: auto;
+}
+.cal-picker-cell {
+  padding: 9px 4px; text-align: center; background: var(--surf2); border: 1px solid transparent;
+  border-radius: 7px; font-size: 0.78rem; color: var(--text); cursor: pointer;
+}
+.cal-picker-cell:hover { border-color: var(--accent); color: var(--accent); }
+.cal-picker-cell.active { background: var(--accent); color: #fff; }
+.cal-picker-nav { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-bottom: 2px; }
+.cal-picker-nav button {
+  background: var(--surf2); border: 1px solid var(--border2); border-radius: 6px;
+  color: var(--text2); font-size: 0.75rem; padding: 3px 9px; cursor: pointer;
+}
+
+.cal-daynav-row { display: flex; width: 100%; gap: 6px; }
+.cal-daynav-btn {
+  flex: 1; padding: 8px 6px; background: var(--surf2); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text2); font-size: 0.76rem; font-weight: 600; cursor: pointer;
+  transition: all 0.12s;
+}
+.cal-daynav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.cal-hours-label { font-size: 0.68rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+.cal-hours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cal-hour-cell {
+  padding: 7px 2px; text-align: center; background: var(--surf2); border: 1px solid transparent;
+  border-radius: 7px; font-size: 0.72rem; color: var(--text2); cursor: pointer; transition: all 0.1s;
+}
+.cal-hour-cell:hover { border-color: var(--accent); color: var(--accent); }
+.cal-hour-cell.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.cal-hour-cell:disabled { opacity: 0.35; cursor: default; }
+.cal-hour-cell.all-hours { grid-column: 1 / -1; }
+
+/* ── Responsive auto-hide (< 1000px viewport) ──────────────────────────────
+   The sidebar slides fully off-screen and .main reclaims its space; a thin
+   invisible strip at the right edge reveals it again on hover. */
+.cal-hover-zone { display: none; position: fixed; top: 0; right: 0; width: 18px; height: 100vh; z-index: 480; }
+body.cal-narrow.cal-sidebar-active .cal-hover-zone { display: block; }
+
+body.cal-sidebar-active.cal-narrow .main { margin-right: var(--ui-margin, 8px); }
+body.cal-narrow .cal-sidebar {
+  transform: translateX(calc(100% + 14px));
+  box-shadow: -10px 0 30px rgba(0,0,0,0.4);
+  z-index: 500;
+}
+body.cal-narrow .cal-sidebar.cal-revealed { transform: translateX(0); }
 .dh-range-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px; }
 .dh-range-btn {
   padding:11px 10px;border-radius:8px;
@@ -1205,8 +1374,8 @@ span {
 }
 .ignore-toggle-wrapper{
     display: flex;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 2px;
+    margin-bottom: 20px;
     place-items: center;
 }
 .ignore-toggle-label{

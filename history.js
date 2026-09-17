@@ -152,6 +152,13 @@ let filterHour   = null; // 0-23
 let searchTimer  = null;
 let _curSettings = {};
 
+// ── Calendar Mode state ───────────────────────────────────────────────────
+let calViewYear   = new Date().getFullYear();
+let calViewMonth  = new Date().getMonth(); // 0-indexed
+let calActiveDate = null; // date highlighted in the widget; tracks filterDate when set,
+                           // or the scroll position while browsing "All time"
+let _extSidebarOpen = false; // cached eh_sidebar_open flag (Chrome side panel state)
+
 const PIE_COLORS = ['#3b9eff','#2dd4a0','#f97316','#a855f7','#ec4899','#eab308','#ef4444','#60a5fa','#34d399','#f472b6'];
 
 // ── Infinite scroll (no spacers — append-only, reset on new search) ──────────
@@ -177,6 +184,7 @@ function buildVirtualList() {
   area.innerHTML = '';
   appendPage();          // render first page immediately
   setupScrollObserver(area);
+  calScrollSpyCheck(area);
 }
 
 function appendPage() {
@@ -207,8 +215,9 @@ function appendPage() {
     const sel = selected.has(e.id);
     const row = document.createElement('div');
     row.className = `entry${sel ? ' sel' : ''}${selMode ? ' sel-mode-entry' : ''}`;
-    row.dataset.id  = e.id;
-    row.dataset.url = e.url;
+    row.dataset.id   = e.id;
+    row.dataset.url  = e.url;
+    row.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
     row.innerHTML = `
     <div class="entry-check" data-id="${esc(e.id)}" title="Select">✓</div>
     <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
@@ -269,6 +278,7 @@ function setupScrollObserver(area) {
     if (scrollTop + clientHeight >= scrollHeight - 400) {
       appendPage();
     }
+    calScrollSpyCheck(area);
   };
 }
 
@@ -328,8 +338,72 @@ async function doSearch() {
 function invalidateHistCache() {}
 function patchHistCacheRemoveIds() {}
 
+// High contrast mode — rather than hunting down every rule that uses the
+// dimmer --text2/--text3 secondary/tertiary text colors, just override those
+// two CSS custom properties themselves at :root to resolve to --text instead.
+// Every existing rule using var(--text2)/var(--text3) picks this up
+// automatically, in both themes, with nothing else to touch.
+function applyHighContrastMode(enabled) {
+  const root = document.documentElement;
+  if (enabled) {
+    root.style.setProperty('--text2', 'var(--text)');
+    root.style.setProperty('--text3', 'var(--text)');
+  } else {
+    root.style.removeProperty('--text2');
+    root.style.removeProperty('--text3');
+  }
+}
+
+// UI rounded corners toggle — .sidebar/.main read both their margin and
+// border-radius from CSS variables (falling back to the original 8px/20px
+// when unset), so disabling zeroes both for a flush, edge-to-edge layout.
+function applyRoundedCorners(enabled) {
+  const root = document.documentElement;
+  if (enabled === false) {
+    root.style.setProperty('--ui-radius', '0px');
+    root.style.setProperty('--ui-margin', '0px');
+  } else {
+    root.style.removeProperty('--ui-radius');
+    root.style.removeProperty('--ui-margin');
+  }
+}
+
 // ── Date nav ────────────────────────────────────────────────────────────────
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// Lets a normal mouse wheel (vertical-only deltaY) scroll the horizontally
+// scrolling date-pill bar — off by default since trackpads already scroll it
+// horizontally on their own; useful for desktop/laptop mouse users. Moves by
+// whole pill-widths per wheel "click" rather than raw pixel deltas, with a
+// sensitivity setting (1–6) controlling how many days that jumps per click.
+let _datePillsWheelEnabled = false;
+let _datePillsWheelSensitivity = 1;
+function applyDatePillsWheelScroll(enabled, sensitivity) {
+  _datePillsWheelEnabled = enabled;
+  if (sensitivity != null) _datePillsWheelSensitivity = Math.max(1, Math.min(6, sensitivity));
+  const wrap = document.getElementById('dateScrollWrap');
+  if (!wrap || wrap._ehWheelBound) return; // bind the listener once; toggle via the flags above
+  wrap._ehWheelBound = true;
+  let _wheelCooldown = false;
+  wrap.addEventListener('wheel', (e) => {
+    if (!_datePillsWheelEnabled) return;
+    // Only hijack predominantly-vertical wheel input — let native horizontal
+    // trackpad/shift-wheel gestures (deltaX) pass through untouched.
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    // Debounce so one physical wheel "click" reliably reads as exactly one
+    // step, regardless of how many wheel events the OS/browser fires for it.
+    if (_wheelCooldown) return;
+    _wheelCooldown = true;
+    setTimeout(() => { _wheelCooldown = false; }, 110);
+
+    const pill = document.querySelector('#dateScroll .dn-pill');
+    const gap  = parseFloat(getComputedStyle(document.getElementById('dateScroll')).gap) || 6;
+    const pillWidth = pill ? pill.getBoundingClientRect().width + gap : 60;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    wrap.scrollBy({ left: dir * pillWidth * _datePillsWheelSensitivity, behavior: 'smooth' });
+  }, { passive: false });
+}
 
 function buildDateNav(retentionDays) {
   const scroll = document.getElementById('dateScroll');
@@ -472,6 +546,7 @@ function activateDatePill(key, silent) {
     }
   }
   updateHourPillsState();
+  syncCalActiveDate(key);
   if (!silent) doSearch();
 }
 
@@ -484,19 +559,7 @@ function buildHourNav() {
     b.className    = 'hn-pill';
     b.textContent  = label;
     b.dataset.h    = h === null ? 'all' : h;
-    b.addEventListener('click', () => {
-      if (h === null) {
-        filterHour = null;
-        document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-      } else {
-        filterHour = filterHour === h ? null : h;
-        document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
-        if (filterHour !== null) b.classList.add('active');
-        else document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
-      }
-      doSearch();
-    });
+    b.addEventListener('click', () => setFilterHour(h));
     row.appendChild(b);
     return b;
   }
@@ -509,6 +572,25 @@ function buildHourNav() {
   updateHourPillsState();
 }
 
+// Shared by the old hour-pill row and the calendar-mode hour grid — a single
+// source of truth for `filterHour` so both UIs (only one visible at a time)
+// stay in sync no matter which one triggered the change.
+function setFilterHour(h) {
+  if (h === null) {
+    filterHour = null;
+  } else {
+    filterHour = filterHour === h ? null : h;
+  }
+  document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
+  if (filterHour !== null) {
+    document.querySelector(`.hn-pill[data-h="${filterHour}"]`)?.classList.add('active');
+  } else {
+    document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
+  }
+  updateCalHourGridState();
+  doSearch();
+}
+
 // Enable/disable hour pills based on whether a date filter is active
 function updateHourPillsState() {
   const hasDate = !!filterDate;
@@ -518,6 +600,305 @@ function updateHourPillsState() {
     b.style.cursor  = hasDate ? '' : 'default';
     b.title = hasDate ? '' : 'Select a date first to filter by hour';
   });
+  updateCalHourGridState();
+}
+
+// ══ CALENDAR MODE ═══════════════════════════════════════════════════════════
+// Right-side calendar sidebar, shown instead of the date/hour pill nav when
+// the "UI calendar mode" setting is on and the History panel is active.
+const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const CAL_WEEKDAYS = ['S','M','T','W','T','F','S'];
+
+function calDateKey(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function calTodayKey() {
+  const t = new Date();
+  return calDateKey(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+// Calendar-mode hour grid — active/disabled state only (rebuilding the grid
+// itself happens once at init via buildCalHourGrid()).
+function updateCalHourGridState() {
+  const hasDate = !!filterDate;
+  document.querySelectorAll('.cal-hour-cell').forEach(b => {
+    const h = b.dataset.h;
+    const isAll = h === 'all';
+    b.disabled = !isAll && !hasDate;
+    b.classList.toggle('active', isAll ? filterHour === null : Number(h) === filterHour);
+    b.title = (!isAll && !hasDate) ? 'Select a date first to filter by hour' : '';
+  });
+}
+
+// Keeps the widget's notion of "active date" in sync with activateDatePill(),
+// regardless of whether the change came from the old pills, the calendar
+// itself, or programmatically. key === 'all' leaves calActiveDate as-is —
+// scroll-spy takes over from there once results render.
+function syncCalActiveDate(key) {
+  if (key && key !== 'all') {
+    calActiveDate = key;
+    const [y, m] = key.split('-').map(Number);
+    calViewYear = y; calViewMonth = m - 1;
+  }
+  document.getElementById('calAllTimeBtn')?.classList.toggle('active', key === 'all');
+  renderCalendarWidget();
+}
+
+function renderCalendarWidget() {
+  const monthLbl = document.getElementById('calMonthLabel');
+  const yearLbl  = document.getElementById('calYearLabel');
+  if (monthLbl) monthLbl.textContent = CAL_MONTHS[calViewMonth];
+  if (yearLbl)  yearLbl.textContent  = String(calViewYear);
+
+  const wdEl = document.getElementById('calWeekdays');
+  if (wdEl && !wdEl.dataset.built) {
+    wdEl.innerHTML = CAL_WEEKDAYS.map(w => `<span>${w}</span>`).join('');
+    wdEl.dataset.built = '1';
+  }
+
+  const daysEl = document.getElementById('calDays');
+  if (!daysEl) return;
+  daysEl.innerHTML = '';
+
+  const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
+  const startOffset  = firstOfMonth.getDay(); // 0=Sun
+  const daysInMonth   = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  const daysInPrev    = new Date(calViewYear, calViewMonth, 0).getDate();
+  const todayKey = calTodayKey();
+
+  const cells = [];
+  for (let i = startOffset - 1; i >= 0; i--) cells.push({ y: calViewMonth === 0 ? calViewYear - 1 : calViewYear, m: (calViewMonth + 11) % 12, d: daysInPrev - i, outside: true });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ y: calViewYear, m: calViewMonth, d, outside: false });
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1];
+    const nd = new Date(last.y, last.m, last.d + 1);
+    cells.push({ y: nd.getFullYear(), m: nd.getMonth(), d: nd.getDate(), outside: true });
+  }
+
+  for (const c of cells) {
+    const key = calDateKey(c.y, c.m, c.d);
+    const btn = document.createElement('button');
+    btn.className = 'cal-day-cell';
+    btn.textContent = c.d;
+    btn.dataset.date = key;
+    if (c.outside) btn.classList.add('outside');
+    if (key === todayKey) btn.classList.add('today');
+    if (key === filterDate) btn.classList.add('selected');
+    else if (!filterDate && key === calActiveDate) btn.classList.add('scroll-highlight');
+    if (key > todayKey) btn.classList.add('future');
+    btn.addEventListener('click', () => {
+      if (key > todayKey) return;
+      calSelectDate(key);
+    });
+    daysEl.appendChild(btn);
+  }
+}
+
+function calSelectDate(key) {
+  closeCalPickers();
+  activateDatePill(key); // handles filterDate, old pills, calendar sync, and doSearch
+}
+
+function calGoAllTime() {
+  closeCalPickers();
+  activateDatePill('all');
+}
+
+function calShiftMonth(delta) {
+  calViewMonth += delta;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderCalendarWidget();
+}
+
+function calShiftDay(delta) {
+  const anchor = filterDate || calActiveDate || calTodayKey();
+  const [y, m, d] = anchor.split('-').map(Number);
+  const nd = new Date(y, m - 1, d + delta);
+  const key = calDateKey(nd.getFullYear(), nd.getMonth(), nd.getDate());
+  if (key > calTodayKey()) return; // don't navigate into the future
+  calSelectDate(key);
+}
+
+function closeCalPickers() {
+  const mp = document.getElementById('calMonthPicker');
+  const yp = document.getElementById('calYearPicker');
+  if (mp) mp.style.display = 'none';
+  if (yp) yp.style.display = 'none';
+}
+
+function calOpenMonthPicker() {
+  const el = document.getElementById('calMonthPicker');
+  const yp = document.getElementById('calYearPicker');
+  if (!el) return;
+  if (yp) yp.style.display = 'none';
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; return; }
+  el.innerHTML = CAL_MONTHS.map((name, i) =>
+    `<div class="cal-picker-cell${i === calViewMonth ? ' active' : ''}" data-m="${i}">${name.slice(0,3)}</div>`
+  ).join('');
+  el.querySelectorAll('.cal-picker-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calViewMonth = Number(cell.dataset.m);
+      el.style.display = 'none';
+      renderCalendarWidget();
+    });
+  });
+  el.style.display = 'grid';
+}
+
+let _calYearPageStart = null; // top-left year of the currently shown year-picker page
+function calOpenYearPicker() {
+  const el = document.getElementById('calYearPicker');
+  const mp = document.getElementById('calMonthPicker');
+  if (!el) return;
+  if (mp) mp.style.display = 'none';
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; return; }
+  if (_calYearPageStart === null) _calYearPageStart = calViewYear - 4;
+  calRenderYearPicker();
+  el.style.display = 'grid';
+}
+function calRenderYearPicker() {
+  const el = document.getElementById('calYearPicker');
+  if (!el) return;
+  const years = [];
+  for (let i = 0; i < 9; i++) years.push(_calYearPageStart + i);
+  el.innerHTML = `
+    <div class="cal-picker-nav">
+      <button id="calYearPagePrev">‹ ${_calYearPageStart - 9}s</button>
+      <button id="calYearPageNext">${_calYearPageStart + 9}s ›</button>
+    </div>` +
+    years.map(y => `<div class="cal-picker-cell${y === calViewYear ? ' active' : ''}" data-y="${y}">${y}</div>`).join('');
+  el.querySelectorAll('.cal-picker-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calViewYear = Number(cell.dataset.y);
+      el.style.display = 'none';
+      renderCalendarWidget();
+    });
+  });
+  document.getElementById('calYearPagePrev')?.addEventListener('click', () => { _calYearPageStart -= 9; calRenderYearPicker(); });
+  document.getElementById('calYearPageNext')?.addEventListener('click', () => { _calYearPageStart += 9; calRenderYearPicker(); });
+}
+
+function buildCalHourGrid() {
+  const grid = document.getElementById('calHoursGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cal-hour-cell all-hours active';
+  allBtn.textContent = 'All hours';
+  allBtn.dataset.h = 'all';
+  allBtn.addEventListener('click', () => setFilterHour(null));
+  grid.appendChild(allBtn);
+  for (let h = 0; h < 24; h++) {
+    const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
+    const b = document.createElement('button');
+    b.className = 'cal-hour-cell';
+    b.textContent = lbl;
+    b.dataset.h = h;
+    b.addEventListener('click', () => setFilterHour(h));
+    grid.appendChild(b);
+  }
+  updateCalHourGridState();
+}
+
+// ── Scroll-spy: while browsing "All time", highlight the date of whatever's
+// currently at the top of the visible list, without touching filterDate. ──
+let _calScrollSpyPending = false;
+function calScrollSpyCheck(area) {
+  if (filterDate) return; // only meaningful in All-time mode
+  if (!document.body.classList.contains('cal-sidebar-active')) return;
+  if (_calScrollSpyPending) return;
+  _calScrollSpyPending = true;
+  requestAnimationFrame(() => {
+    _calScrollSpyPending = false;
+    const areaTop = area.getBoundingClientRect().top;
+    const rows = area.querySelectorAll('.entry[data-date]');
+    let topRow = null;
+    for (const row of rows) {
+      if (row.getBoundingClientRect().bottom >= areaTop) { topRow = row; break; }
+    }
+    const key = topRow?.dataset.date;
+    if (key && key !== calActiveDate) {
+      calActiveDate = key;
+      const [y, m] = key.split('-').map(Number);
+      calViewYear = y; calViewMonth = m - 1;
+      renderCalendarWidget();
+    }
+  });
+}
+
+// ── Settings integration ────────────────────────────────────────────────────
+function applyCalendarMode(enabled) {
+  document.body.classList.toggle('cal-mode', enabled === true);
+  updateCalSidebarVisibility();
+}
+
+function updateCalSidebarVisibility() {
+  const onHistoryPanel = document.getElementById('panel-history')?.classList.contains('active');
+  const active = document.body.classList.contains('cal-mode') && !!onHistoryPanel;
+  document.body.classList.toggle('cal-sidebar-active', active);
+  if (active) { renderCalendarWidget(); updateCalHourGridState(); }
+  checkCalNarrow();
+}
+
+// ── Narrow-viewport auto-hide (< 1000px) ────────────────────────────────────
+function checkCalNarrow() {
+  const narrow = document.body.classList.contains('cal-sidebar-active') && window.innerWidth < 1250;
+  document.body.classList.toggle('cal-narrow', narrow);
+  if (!narrow) document.getElementById('calSidebar')?.classList.remove('cal-revealed');
+}
+
+function wireCalendarSidebar() {
+  document.getElementById('calAllTimeBtn')?.addEventListener('click', calGoAllTime);
+  document.getElementById('calPrevMonthBtn')?.addEventListener('click', () => calShiftMonth(-1));
+  document.getElementById('calNextMonthBtn')?.addEventListener('click', () => calShiftMonth(1));
+  document.getElementById('calMonthLabel')?.addEventListener('click', calOpenMonthPicker);
+  document.getElementById('calYearLabel')?.addEventListener('click', calOpenYearPicker);
+  document.getElementById('calPrevDayBtn')?.addEventListener('click', () => calShiftDay(-1));
+  document.getElementById('calNextDayBtn')?.addEventListener('click', () => calShiftDay(1));
+
+  buildCalHourGrid();
+  renderCalendarWidget();
+
+  // ── Narrow-viewport hover-reveal, suppressed while the extension's own
+  // Chrome side panel (popup.html?sidebar=1) is open — see _extSidebarOpen. ──
+  const sidebar = document.getElementById('calSidebar');
+  const hoverZone = document.getElementById('calHoverZone');
+  let _hideTimer = null;
+  function reveal() {
+    if (_extSidebarOpen) return; // suppressed — don't fight the side panel
+    if (!document.body.classList.contains('cal-narrow')) return;
+    clearTimeout(_hideTimer);
+    sidebar?.classList.add('cal-revealed');
+  }
+  function scheduleHide() {
+    clearTimeout(_hideTimer);
+    _hideTimer = setTimeout(() => sidebar?.classList.remove('cal-revealed'), 350);
+  }
+  hoverZone?.addEventListener('mouseenter', reveal);
+  sidebar?.addEventListener('mouseenter', () => clearTimeout(_hideTimer));
+  sidebar?.addEventListener('mouseleave', scheduleHide);
+  hoverZone?.addEventListener('mouseleave', () => {
+    // Only schedule a hide if the cursor didn't just move onto the sidebar itself.
+    setTimeout(() => { if (!sidebar?.matches(':hover')) scheduleHide(); }, 30);
+  });
+
+  let _resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(checkCalNarrow, 150);
+  });
+
+  // Track the extension's Chrome side panel open/close state (set by popup.js)
+  // so the hover-reveal above never fights it for the same screen edge.
+  try {
+    chrome.storage.local.get('eh_sidebar_open', r => { _extSidebarOpen = r?.eh_sidebar_open === true; });
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.eh_sidebar_open) _extSidebarOpen = changes.eh_sidebar_open.newValue === true;
+    });
+  } catch {}
 }
 
 // ── Toolbar ─────────────────────────────────────────────────────────────────
@@ -1247,17 +1628,6 @@ async function loadDevices() {
 
     el.innerHTML = '';
 
-    // ── Refresh button at top ──
-    const topBar = document.createElement('div');
-    topBar.style.cssText = 'display:flex;justify-content:flex-end;padding:8px 16px 4px';
-    const refreshBtn = document.createElement('button');
-    refreshBtn.className = 'tb-btn';
-    refreshBtn.textContent = '↻ Refresh';
-    refreshBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;';
-    refreshBtn.addEventListener('click', () => loadDevices());
-    topBar.appendChild(refreshBtn);
-    el.appendChild(topBar);
-
     // ── Deduplicate: for same device name keep only the freshest session set ──
     const deviceMap = new Map();
     for (const dev of devices) {
@@ -1330,39 +1700,53 @@ async function loadDevices() {
       const tabsEl = document.createElement('div');
       tabsEl.className = 'dc-tabs-list';
 
-      tabs.slice(0, 50).forEach(t => {
-        const dom = tryDomain(t.url || '');
-        const row = document.createElement('div');
-        row.className = 'dc-row';
-        row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
+      let renderedCount = 0;
+      tabs.forEach((t, i) => {
+        try {
+          const dom = tryDomain(t.url || '');
+          const row = document.createElement('div');
+          row.className = 'dc-row';
+          row.dataset.title = (t.title || '').toLowerCase();
+          row.dataset.url   = (t.url || '').toLowerCase();
+          row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
-        const img = document.createElement('img');
-        img.className = 'dc-rfav';
-        setFavicon(img, dom);
-        img.loading   = 'lazy';
-        img.addEventListener('error', () => { img.style.opacity = '0'; });
+          const img = document.createElement('img');
+          img.className = 'dc-rfav';
+          setFavicon(img, dom);
+          img.loading   = 'lazy';
+          img.addEventListener('error', () => { img.style.opacity = '0'; });
 
-        const body = document.createElement('div');
-        body.className = 'dc-rbody';
-        const titleEl = document.createElement('div');
-        titleEl.className   = 'dc-rtitle';
-        titleEl.textContent = t.title || t.url;
-        const urlEl = document.createElement('div');
-        urlEl.className   = 'dc-rurl';
-        urlEl.textContent = t.url;
-        body.appendChild(titleEl);
-        body.appendChild(urlEl);
-        row.appendChild(img);
-        row.appendChild(body);
+          const body = document.createElement('div');
+          body.className = 'dc-rbody';
+          const titleEl = document.createElement('div');
+          titleEl.className   = 'dc-rtitle';
+          titleEl.textContent = t.title || t.url;
+          const urlEl = document.createElement('div');
+          urlEl.className   = 'dc-rurl';
+          urlEl.textContent = t.url;
+          body.appendChild(titleEl);
+          body.appendChild(urlEl);
+          row.appendChild(img);
+          row.appendChild(body);
 
-        if (t.lastModified) {
-          const time = document.createElement('div');
-          time.className   = 'dc-rtime';
-          time.textContent = timeAgo(t.lastModified * 1000);
-          row.appendChild(time);
+          if (t.lastModified) {
+            const time = document.createElement('div');
+            time.className   = 'dc-rtime';
+            time.textContent = timeAgo(t.lastModified * 1000);
+            row.appendChild(time);
+          }
+          tabsEl.appendChild(row);
+          renderedCount++;
+        } catch (err) {
+          // A single malformed tab entry used to be able to throw here and silently
+          // abort the rest of forEach, leaving the list truncated with no visible
+          // error — that's the leading theory for tab lists appearing cut short.
+          console.error('[EH] Devices: failed to render tab row', i, t, err);
         }
-        tabsEl.appendChild(row);
       });
+      if (renderedCount !== tabs.length) {
+        console.warn(`[EH] Devices: only rendered ${renderedCount} of ${tabs.length} tabs for "${dev.deviceName}" — see errors above`);
+      }
 
       if (!tabs.length) {
         const empty = document.createElement('div');
@@ -1381,9 +1765,52 @@ async function loadDevices() {
 
       el.appendChild(card);
     });
+
+    filterDeviceRows(document.getElementById('deviceSearchInput')?.value || '');
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
+}
+
+// ── Devices search: filter tabs across all device cards by title or URL ─────
+function filterDeviceRows(rawQuery) {
+  const query = (rawQuery || '').trim().toLowerCase();
+  const cards = document.querySelectorAll('#devicesContent .device-card');
+  cards.forEach(card => {
+    const tabsEl = card.querySelector('.dc-tabs-list');
+    const toggle = card.querySelector('.dc-toggle');
+    if (!tabsEl) return;
+    const rows = tabsEl.querySelectorAll('.dc-row');
+    let anyVisible = false;
+    rows.forEach(row => {
+      const matches = !query || row.dataset.title.includes(query) || row.dataset.url.includes(query);
+      row.style.display = matches ? '' : 'none';
+      if (matches) anyVisible = true;
+    });
+    if (query) {
+      // Auto-expand cards that have a match so results are visible without
+      // needing to click into each device manually; hide cards with none.
+      card.style.display = anyVisible ? '' : 'none';
+      if (anyVisible) {
+        tabsEl.classList.add('open');
+        toggle?.classList.add('open');
+      }
+    } else {
+      // Search cleared — restore normal collapsed browsing behavior.
+      card.style.display = '';
+    }
+  });
+}
+
+let _deviceSearchWired = false;
+function wireDeviceSearch() {
+  if (_deviceSearchWired) return;
+  const input = document.getElementById('deviceSearchInput');
+  const refreshBtn = document.getElementById('devicesRefreshBtn');
+  if (!input && !refreshBtn) return;
+  _deviceSearchWired = true;
+  if (input) input.addEventListener('input', () => filterDeviceRows(input.value));
+  if (refreshBtn) refreshBtn.addEventListener('click', () => loadDevices());
 }
 
 // ── Export device tabs as .html ──────────────────────────────────────────────
@@ -2536,18 +2963,47 @@ function populateSettings(s) {
   const popupTabsToggle   = document.getElementById('popupTabsToggle');
   const popupURLsToggle   = document.getElementById('popupURLsToggle');
   const popupHeightInput  = document.getElementById('popupHeightInput');
+  const popupHeightVal    = document.getElementById('popupHeightVal');
+  const popupSidebarToggle = document.getElementById('popupSidebarToggle');
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
   if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
-  if (popupHeightInput)  popupHeightInput.value     = s.popupHeight     || 320;
+  if (popupHeightInput)  {
+    popupHeightInput.value = s.popupHeight || 320;
+    if (popupHeightVal) popupHeightVal.textContent = popupHeightInput.value + 'px';
+  }
+  if (popupSidebarToggle) {
+    popupSidebarToggle.checked = s.popupAsSidebar === true;
+    const row = document.getElementById('popupHeightRow');
+    if (row) row.style.opacity = s.popupAsSidebar === true ? '0.4' : '';
+  }
+  const sidebarAutoHideToggle = document.getElementById('sidebarAutoHideToggle');
+  if (sidebarAutoHideToggle) sidebarAutoHideToggle.checked = s.sidebarAutoHide !== false;
 
   // Populate UI settings
   const faviconSel = document.getElementById('faviconResolverSel');
   if (faviconSel) faviconSel.value = s.faviconResolver || 'google';
   const autoFocusTgl = document.getElementById('searchAutoFocusToggle');
   if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
+  const highContrastTgl = document.getElementById('highContrastToggle');
+  if (highContrastTgl) highContrastTgl.checked = s.highContrastMode === true;
+  const roundedCornersTgl = document.getElementById('roundedCornersToggle');
+  if (roundedCornersTgl) roundedCornersTgl.checked = s.roundedCorners !== false;
+  const calendarModeTgl = document.getElementById('calendarModeToggle');
+  if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
   const contextMenuTgl = document.getElementById('contextMenuToggle');
   if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
+
+  const datePillsWheelTgl = document.getElementById('datePillsWheelToggle');
+  if (datePillsWheelTgl) datePillsWheelTgl.checked = s.datePillsWheelScroll === true;
+  const datePillsWheelSensInput = document.getElementById('datePillsWheelSensInput');
+  const datePillsWheelSensVal   = document.getElementById('datePillsWheelSensVal');
+  const wheelSensitivity = Math.max(1, Math.min(6, parseInt(s.datePillsWheelSensitivity) || 1));
+  if (datePillsWheelSensInput) datePillsWheelSensInput.value = wheelSensitivity;
+  if (datePillsWheelSensVal)   datePillsWheelSensVal.textContent = `${wheelSensitivity} day${wheelSensitivity === 1 ? '' : 's'}/click`;
+  const wheelSensRow = document.getElementById('datePillsWheelSensRow');
+  if (wheelSensRow) wheelSensRow.style.opacity = s.datePillsWheelScroll === true ? '' : '0.4';
+  applyDatePillsWheelScroll(s.datePillsWheelScroll === true, wheelSensitivity);
 
   // Auto export interval
   const autoExportInput = document.getElementById('autoExportInput');
@@ -2611,6 +3067,8 @@ function applyVisuals(s) {
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
+  applyRoundedCorners(s.roundedCorners !== false);
+  applyCalendarMode(s.calendarMode === true);
   applyIconVariant(s.toolbarIcon || 'default');
   
   // Apply background tint: hue-rotate filter on the wallpaper layer
@@ -2701,9 +3159,16 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
   const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
+  const popupAsSidebar  = document.getElementById('popupSidebarToggle')?.checked === true;
+  const sidebarAutoHide = document.getElementById('sidebarAutoHideToggle')?.checked !== false;
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
+  const highContrastMode = document.getElementById('highContrastToggle')?.checked === true;
+  const roundedCorners = document.getElementById('roundedCornersToggle')?.checked !== false;
+  const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
+  const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
+  const datePillsWheelSensitivity = Math.max(1, Math.min(6, parseInt(document.getElementById('datePillsWheelSensInput')?.value || '1') || 1));
   const toolbarIcon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || 'default';
   const autoExportIntervalMonths = Math.max(0, Math.min(60, parseInt(document.getElementById('autoExportInput')?.value || '0') || 0));
   
@@ -2725,9 +3190,16 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         popupShowTabs,
         popupShowUrl,
         popupHeight,
+        popupAsSidebar,
+        sidebarAutoHide,
         faviconResolver,
         searchAutoFocus,
         contextMenuEnabled,
+        datePillsWheelScroll,
+        highContrastMode,
+        roundedCorners,
+        calendarMode,
+        datePillsWheelSensitivity,
         toolbarIcon,
         autoExportIntervalMonths,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
@@ -2738,6 +3210,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     });
     _curSettings = r.settings;
     applyIconVariant(_curSettings.toolbarIcon || 'default');
+    applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
+    applyHighContrastMode(_curSettings.highContrastMode === true);
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
     // Save auto-save interval
@@ -2772,6 +3246,13 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
   const interval = Math.max(0, Math.min(60, parseInt(inputEl?.value || '0') || 0));
   if (interval <= 0) { toast('Enter a number of months above 0 first', 'err'); return; }
 
+  const ok = confirm(
+    `This will export everything in your extended history older than 3 months to a .json file, ` +
+    `then remove it from this extension's storage (your last 3 months always stay). ` +
+    `This never touches Chrome's native history. Continue?`
+  );
+  if (!ok) return;
+
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Running…';
   try {
     // Persist the interval so "Run now" always reflects what's currently typed in,
@@ -2781,11 +3262,13 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
 
     const r = await send('TRIGGER_AUTO_EXPORT');
     if (r.success) {
-      toast(`Exported & removed ${fmtNum(r.exported)} entries older than 3 months`, 'ok');
+      toast(`Exported & removed ${fmtNum(r.exported)} entries older than 3 months from extended storage`, 'ok');
       invalidateHistCache();
       doSearch();
     } else if (r.reason === 'empty' || r.reason === 'nothing_past_cutoff') {
       toast('Nothing older than 3 months to export yet', 'ok');
+    } else if (r.reason === 'download_failed') {
+      toast('Could not save the export file — nothing was deleted. Try again.', 'err');
     } else {
       toast('Nothing to export yet', 'err');
     }
@@ -2813,10 +3296,12 @@ document.getElementById('testAutoSaveBtn')?.addEventListener('click', async () =
 // Signal SW that this page is loaded and ready to handle downloads
 chrome.runtime.sendMessage({ type: 'AUTO_SAVE_READY' }).catch(() => {});
 
-// SW sends the session HTML — use anchor click (bypasses browser "ask where to save")
+// SW sends the content to download — use anchor click (bypasses browser "ask where to save").
+// Used for both session auto-save (HTML) and history auto-export (JSON).
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'AUTO_SAVE_DOWNLOAD') return;
-  const blob = new Blob([msg.html], { type: 'text/html' });
+  const content = msg.content ?? msg.html; // msg.html kept for back-compat
+  const blob = new Blob([content], { type: msg.mime || 'text/html' });
   const url  = URL.createObjectURL(blob);
   const a    = Object.assign(document.createElement('a'), {
     href: url, download: msg.filename || 'extended-history-session.html', target:"_blank",
@@ -3552,6 +4037,18 @@ function _showIgnorePanel() {
             </div>
           </label>
         </div>
+        <div class="ignore-toggle-wrapper">
+          <label class="toggle-switch">
+            <input type="checkbox" id="hideTimeSpentToggle">
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="ignore-toggle-label" for="hideTimeSpentToggle">
+            <div class="ignore-toggle-text">
+              <div class="ignore-toggle-title">Hide from Time Spent</div>
+              <div class="ignore-toggle-subtitle">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
+            </div>
+          </label>
+        </div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
           <button id="addIgnoreBtn">Add Pattern</button>
@@ -3607,6 +4104,8 @@ function _showIgnorePanel() {
       if (addBtn) addBtn.addEventListener('click', window.IgnoreList.add);
       const toggle = document.getElementById('ignoreListToggle');
       if (toggle) toggle.addEventListener('change', window.IgnoreList.toggle);
+      const tsToggle = document.getElementById('hideTimeSpentToggle');
+      if (tsToggle) tsToggle.addEventListener('change', window.IgnoreList.toggleTimeSpent);
       const guideToggle = document.getElementById('patternGuideToggle');
       if (guideToggle) guideToggle.addEventListener('click', window.IgnoreList.toggleGuide);
       const input = document.getElementById('ignorePatternInput');
@@ -3644,13 +4143,14 @@ function switchPanel(name) {
   b.classList.toggle('active', b.dataset.panel === name));
   document.querySelectorAll('.panel').forEach(p =>
   p.classList.toggle('active', p.id === `panel-${name}`));
+  updateCalSidebarVisibility();
 
   // Ignorelist: show panel then overlay modal on top (modal is position:fixed)
   if (name === 'ignorelist') { handleIgnoreListAccess(); return; }
 
   if (name === 'activity')  loadActivity();
   if (name === 'timespent') loadTimeSpent(curTimeDays || 15);
-  if (name === 'devices')    loadDevices();
+  if (name === 'devices')    { loadDevices(); wireDeviceSearch(); }
   if (name === 'sessions')   loadSessions();
   if (name === 'tabstorage') loadTabStorage();
   if (name === 'bookmarks') loadBookmarks();
@@ -3700,6 +4200,183 @@ function closeDeleteHistoryModal() {
   if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = 'Delete'; confirmBtn.disabled = true; }
   const warn = document.getElementById('dhConfirmWarn');
   if (warn) warn.style.display = 'none';
+}
+
+// ══ DEV MODE ═════════════════════════════════════════════════════════════
+// Internal diagnostics panel: background timer stats (next history merge)
+// and the live per-tab idle-time tracking state that drives auto-store.
+let _devTabsVisible = false;
+let _devModeWired = false;
+
+function fmtDur(ms) {
+  if (ms == null || ms < 0) ms = 0;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0 && m === 0) return '0m';
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function fmtWhen(ts) {
+  if (!ts) return '—';
+  const diff = ts - Date.now();
+  const past = diff < 0;
+  const label = fmtDur(Math.abs(diff));
+  return past ? `${label} ago` : `in ${label}`;
+}
+
+function openDevModeModal() {
+  document.getElementById('devModeModal').classList.add('open');
+  loadDevStats();
+  if (_devTabsVisible) loadDevTabs();
+}
+function closeDevModeModal() {
+  document.getElementById('devModeModal').classList.remove('open');
+}
+
+async function loadDevStats() {
+  const grid = document.getElementById('devStatsGrid');
+  if (!grid) return;
+  try {
+    const s = await send('GET_DEV_STATS');
+    const nextFlushLabel = s.syncIntervalMins === 0
+      ? 'Every visit (instant mode)'
+      : s.nextFlushAt ? fmtWhen(s.nextFlushAt) : 'Due on next check (~1m)';
+    const overdue = s.syncIntervalMins > 0 && s.nextFlushAt && s.nextFlushAt <= s.now;
+
+    grid.innerHTML = '';
+    const stats = [
+      { label: 'Next history merge', value: nextFlushLabel, warn: overdue },
+      { label: 'Last merge', value: s.lastFlushAt ? fmtWhen(s.lastFlushAt) : 'Never yet' },
+      { label: 'Merge interval', value: s.syncIntervalMins === 0 ? 'Instant' : `${s.syncIntervalMins} min` },
+      { label: 'Auto-store tabs', value: s.autoStoreEnabled ? `On · ${s.autoStoreHours}h idle threshold` : 'Off' },
+      { label: 'Ignore-list cleanup', value: s.ignoreCleanupActive
+          ? `Running… ${s.ignoreCleanupProgress.done}/${s.ignoreCleanupProgress.total}`
+          : 'Idle', warn: s.ignoreCleanupActive },
+    ];
+    for (const st of stats) {
+      const card = document.createElement('div');
+      card.className = 'dev-stat';
+      card.innerHTML = `<div class="dev-stat-label">${esc(st.label)}</div><div class="dev-stat-value${st.warn ? ' warn' : ''}">${esc(st.value)}</div>`;
+      grid.appendChild(card);
+    }
+  } catch (err) {
+    grid.innerHTML = `<div class="state-msg" style="grid-column:1/-1"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+  }
+}
+
+async function loadDevTabs() {
+  const list = document.getElementById('devTabsList');
+  if (!list) return;
+  list.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🗂</span>Loading…</div>';
+  try {
+    const r = await send('GET_DEV_TAB_IDLE');
+    if (!r.tabs.length) {
+      list.innerHTML = '<div class="empty-msg">No open tabs</div>';
+      return;
+    }
+    list.innerHTML = '';
+    for (const t of r.tabs) {
+      const row = document.createElement('div');
+      row.className = 'dev-tab-row';
+      let tag;
+      if (t.active) tag = 'active';
+      else if (!t.trackable) tag = 'not trackable';
+      else if (t.alreadyStored) tag = 'already stored';
+      else tag = 'idle-tracked';
+      const hot = t.trackable && !t.active && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
+      // Both idleMs (our accumulator) and wallIdleMs (raw lastAccessed gap)
+      // have to clear the threshold before a store happens — show both
+      // whenever they diverge by more than a minute so it's obvious which
+      // gate, if any, is currently holding a tab back.
+      const diverges = !t.active && Math.abs(t.idleMs - t.wallIdleMs) > 60000;
+      const idleLabel = t.active ? '—' : fmtDur(t.idleMs);
+      const wallNote = diverges ? ` <span style="color:var(--text3);font-weight:400">(wall: ${esc(fmtDur(t.wallIdleMs))})</span>` : '';
+      row.innerHTML = `
+        <span class="dtr-title" title="${esc(t.url)}">${esc(t.title)}</span>
+        <span class="dtr-tag">${esc(tag)}</span>
+        <span class="dtr-idle${hot ? ' hot' : ''}">${idleLabel}${wallNote}</span>`;
+      list.appendChild(row);
+    }
+  } catch (err) {
+    list.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+  }
+}
+
+function wireDevMode() {
+  if (_devModeWired) return;
+  _devModeWired = true;
+
+  document.getElementById('devModeBtn')?.addEventListener('click', openDevModeModal);
+  document.getElementById('devModeCloseBtn')?.addEventListener('click', closeDevModeModal);
+  document.getElementById('devModeModal')?.addEventListener('click', ev => {
+    if (ev.target.id === 'devModeModal') closeDevModeModal();
+  });
+  document.getElementById('devRefreshBtn')?.addEventListener('click', () => {
+    loadDevStats();
+    if (_devTabsVisible) loadDevTabs();
+  });
+  document.getElementById('devListTabsBtn')?.addEventListener('click', () => {
+    _devTabsVisible = !_devTabsVisible;
+    const list = document.getElementById('devTabsList');
+    if (list) list.style.display = _devTabsVisible ? 'block' : 'none';
+    if (_devTabsVisible) loadDevTabs();
+  });
+}
+// "Use as sidebar" is enabled (height doesn't apply to the sidebar panel).
+function setupPopupSettingsListeners() {
+  const heightInput  = document.getElementById('popupHeightInput');
+  const heightVal    = document.getElementById('popupHeightVal');
+  const heightRow    = document.getElementById('popupHeightRow');
+  const sidebarToggle = document.getElementById('popupSidebarToggle');
+
+  if (heightInput && heightVal) {
+    heightInput.addEventListener('input', () => {
+      heightVal.textContent = heightInput.value + 'px';
+    });
+  }
+  if (sidebarToggle && heightRow) {
+    sidebarToggle.addEventListener('change', () => {
+      heightRow.style.opacity = sidebarToggle.checked ? '0.4' : '';
+    });
+  }
+
+  const wheelToggle  = document.getElementById('datePillsWheelToggle');
+  const wheelSensRow = document.getElementById('datePillsWheelSensRow');
+  const wheelSensInput = document.getElementById('datePillsWheelSensInput');
+  const wheelSensVal   = document.getElementById('datePillsWheelSensVal');
+  if (wheelToggle && wheelSensRow) {
+    wheelToggle.addEventListener('change', () => {
+      wheelSensRow.style.opacity = wheelToggle.checked ? '' : '0.4';
+    });
+  }
+  if (wheelSensInput && wheelSensVal) {
+    wheelSensInput.addEventListener('input', () => {
+      const n = wheelSensInput.value;
+      wheelSensVal.textContent = `${n} day${n === '1' ? '' : 's'}/click`;
+    });
+  }
+
+  const highContrastToggle = document.getElementById('highContrastToggle');
+  if (highContrastToggle) {
+    highContrastToggle.addEventListener('change', () => {
+      applyHighContrastMode(highContrastToggle.checked);
+    });
+  }
+
+  const roundedCornersToggle = document.getElementById('roundedCornersToggle');
+  if (roundedCornersToggle) {
+    roundedCornersToggle.addEventListener('change', () => {
+      applyRoundedCorners(roundedCornersToggle.checked);
+    });
+  }
+
+  const calendarModeToggle = document.getElementById('calendarModeToggle');
+  if (calendarModeToggle) {
+    calendarModeToggle.addEventListener('change', () => {
+      applyCalendarMode(calendarModeToggle.checked);
+    });
+  }
 }
 
 // Setup background tint event listeners
@@ -3789,6 +4466,7 @@ function applyWallpaper(wp) {
       pointer-events:none;
     }
     html.wallpaper-mode .sidebar,
+    html.wallpaper-mode .cal-sidebar
     html.wallpaper-mode .modal-box,
     html.wallpaper-mode .topbar,
     html.wallpaper-mode .s-card,
@@ -3833,6 +4511,10 @@ function applyWallpaper(wp) {
     height:100%
     }
     html.wallpaper-mode .sidebar {
+      background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
+    }
+    html.wallpaper-mode .cal-sidebar
+    {
       background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
     }
     html.wallpaper-mode .topbar {
@@ -4203,9 +4885,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // so retentionDays reflects the actual saved value (e.g. 5 years = 1825 days).
   buildDateNav(_curSettings.retentionDays);
   buildHourNav();
+  applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
+  applyHighContrastMode(_curSettings.highContrastMode === true);
   setupToolbar();
   setupSelActions();
   setupBgTintListeners();
+  setupPopupSettingsListeners();
+  wireDevMode();
+  wireCalendarSidebar();
   setupWallpaperListeners();
   loadAndApplyWallpaper();
    // ── Scroll-to-bottom buttons ──────────────────────────────────────────────
