@@ -101,6 +101,15 @@ Fixed/changed in version 4.1.5 (in Web Store):
 -Added scroll date pills by scroll wheel without holding shift
 -Fixed 'URLs' toggle for popup being enabled falsely by default
 -Fixed right clicking triggering selection mode in popup
+
+Fixed/changed in version 4.1.6 (testing branch):
+-Added search for devices tabs
+-Added calendar mode for main page
+-Fixed/changed CSS 
+-Added rounded corners option
+-Added delete option for multi selection in popup in tab storage
+-Added option to hide sites in time spent list
+-Fixed auto tab storing to not auto store after browser restores after PC was off for long
 </pre>
 
 
