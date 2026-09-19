@@ -105,11 +105,13 @@ Fixed/changed in version 4.1.5 (in Web Store):
 Fixed/changed in version 4.1.6 (testing branch):
 -Added search for devices tabs
 -Added calendar mode for main page
--Fixed/changed CSS 
+-Fixed and changed CSS styles
 -Added rounded corners option
 -Added delete option for multi selection in popup in tab storage
 -Added option to hide sites in time spent list
 -Fixed auto tab storing to not auto store after browser restores after PC was off for long
+-Fixed deleting bug if quick filters are applied
+-Fixed performance when deleting links individually
 </pre>
 
 
