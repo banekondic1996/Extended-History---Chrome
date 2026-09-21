@@ -109,11 +109,13 @@ Fixed/changed in version 4.1.6 (testing branch):
 -Added delete option for multi selection in popup in tab storage
 -Added option to hide sites in time spent list
 -Added domain exception list for history deletion
+-Added option to disable navigation emoji icons
 -Fixed and changed certain CSS styles
 -Fixed auto tab storing to not auto store after browser restores after PC was off for long
 -Fixed deleting bug if quick filters are applied
 -Fixed performance when deleting links individually
 -Fixed session restoring to restore in individual windows
+-Fixed UI translations for other languages
 </pre>
 
 
