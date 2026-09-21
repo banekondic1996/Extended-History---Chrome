@@ -57,7 +57,7 @@
     <button class="nav-item" data-panel="ignorelist">
       <span class="ni-icon">🚫</span><span data-i18n-key="ignore_list">Ignore List</span>
     </button>
-    <button class="nav-item" data-panel="quickfilters">
+    <button class="nav-item" data-panel="quickfilters" data-i18n-key="quick_filters">
       <span class="ni-icon">⚡</span><span>Quick Filters</span>
     </button>
     <button class="nav-item" data-panel="settings">
@@ -200,12 +200,12 @@
   <div class="panel" id="panel-devices">
     <div class="panel-scroll" id="devicesScroll">
       <div class="panel-heading" data-i18n-key="devices">Devices</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:0 16px 10px">
+      <div style="display:flex;align-items:center;gap:10px;padding:0px 0px 15px">
         <div class="search-box" style="flex:1;max-width:420px">
           <input type="text" id="deviceSearchInput" placeholder="Search device tabs by title or URL…" spellcheck="false" autocomplete="off">
           <button class="search-clear-btn" id="deviceSearchClearBtn" title="Clear" data-i18n-title="clear">&#10005;</button>
         </div>
-        <button class="tb-btn" id="devicesRefreshBtn" style="font-size:0.72rem;padding:4px 10px;flex-shrink:0" data-i18n-key="refresh">↻ Refresh</button>
+        <button class="tb-btn" id="devicesRefreshBtn" style="font-size:0.72rem;padding:10px 12px;flex-shrink:0" data-i18n-key="refresh">↻ Refresh</button>
       </div>
       <div id="devicesContent"><div class="state-msg"><span class="state-msg-icon">📱</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
@@ -305,15 +305,16 @@
         <input type="text" id="bmSearch" placeholder="Search bookmarks…"/>
         <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
       </div>
-      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" style="display:none">Selection Mode</button>
+      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" title="Select multiple bookmarks" data-i18n-key="select">Select</button>
     </div>
     <!-- Bookmark multiselect bar (hidden until selection mode active) -->
     <div class="bm-sel-bar" id="bmSelBar" style="display:none">
       <span class="bm-sel-count" id="bmSelCount">0 selected</span>
+      <button class="bm-sel-btn" id="bmSelOpenBtn">Open</button>
       <button class="bm-sel-btn" id="bmSelMoveBtn">Move to…</button>
       <button class="bm-sel-btn" id="bmSelCopyBtn">Copy Links</button>
       <button class="bm-sel-btn bm-sel-del" id="bmSelDeleteBtn">Delete</button>
-      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn">Unselect All</button>
+      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn">Cancel</button>
     </div>
     <!-- Split pane: tree left, items right -->
     <div class="bm-split">
@@ -758,7 +759,31 @@
               </label>
             </div>
           </div>
+                    <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="nav_icons">Navigation icons</div>
+              <div class="s-row-desc" data-i18n-key="nav_icons_desc">Show the icons next to the items in the sidebar navigation. Turn off for a text-only menu.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="navIconsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
           <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="match_ui_colors">Match UI colors</div>
+              <div class="s-row-desc" data-i18n-key="match_ui_colors_desc">Makes the history list the same color as the rest of the interface (sidebar, calendar sidebar and panels) instead of a distinct shade.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="matchUiColorsToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+<div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="ui_calendar_mode">UI calendar mode</div>
               <div class="s-row-desc" data-i18n-key="ui_calendar_mode_desc">Replaces the date/hour pill navigation on the History page with a right-side calendar sidebar — pick dates, months and years, and jump straight to any hour.</div>
@@ -772,8 +797,8 @@
           </div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll date pills with mouse wheel</div>
-              <div class="s-row-desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
+              <div class="s-row-lbl" data-i18n-key="scroll_date">Scroll date pills with mouse wheel</div>
+              <div class="s-row-desc" data-i18n-key="scroll_date_desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
@@ -784,8 +809,8 @@
           </div>
           <div class="s-row" id="datePillsWheelSensRow">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll sensitivity</div>
-              <div class="s-row-desc">How many day pills each scroll click moves</div>
+              <div class="s-row-lbl" data-i18n-key="scroll_sensitivity">Scroll sensitivity</div>
+              <div class="s-row-desc" data-i18n-key="scroll_sensitivity_desc">How many day pills each scroll click moves</div>
             </div>
             <div class="s-ctrl" style="gap:10px">
               <input type="range" id="datePillsWheelSensInput" value="1" min="1" max="6" step="1" style="width:120px;accent-color:var(--accent)"/>
@@ -982,8 +1007,9 @@
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
+  <div class="ctx-item" id="ctx-rename-bookmark" style="display:none" data-i18n-key="rename_bookmark">Rename bookmark</div>
   <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
-  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none">🗑 Remove bookmark</div>
+  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none" data-i18n-key="remove_bookmark">🗑 Remove bookmark</div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
 </div>
@@ -1081,7 +1107,7 @@
 <div class="cal-hover-zone" id="calHoverZone"></div>
 <aside class="cal-sidebar" id="calSidebar">
   <div class="cal-sidebar-inner">
-    <button class="cal-alltime-btn" id="calAllTimeBtn" data-i18n-key="cal_all_time">🗓 All Time</button>
+    <button class="cal-alltime-btn" id="calAllTimeBtn" data-i18n-key="cal_all_time">All Time</button>
 
     <div class="cal-widget">
       <div class="cal-head">
@@ -1118,13 +1144,13 @@
 <!-- Ignore List Password Modal -->
 <div class="modal-backdrop" id="ignorePasswordModal">
   <div class="modal-box" style="max-width:360px">
-    <div class="modal-title" id="ignorePwTitle">🔒 Ignore List Access</div>
-    <div class="modal-sub" id="ignorePwDesc">Enter your master password to view the ignore list.</div>
+    <div class="modal-title" id="ignorePwTitle" data-i18n-key="ignore_list_access">🔒 Ignore List Access</div>
+    <div class="modal-sub" id="ignorePwDesc" data-i18n-key="ignore_list_enter_password">Enter your master password to view the ignore list.</div>
     <input type="password" id="ignorePwInput" placeholder="Master password" style="width:100%;padding:8px 12px;margin-top:12px;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none"/>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)">Reset</button>
-      <button class="sa-btn" id="ignorePwCancelBtn">Cancel</button>
-      <button class="sa-btn" id="ignorePwOkBtn">OK</button>
+      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)" data-i18n-key="reset">Reset</button>
+      <button class="sa-btn" id="ignorePwCancelBtn" data-i18n-key="cancel">Cancel</button>
+      <button class="sa-btn" id="ignorePwOkBtn" data-i18n-key="ok">OK</button>
     </div>
     <div id="ignorePwError" style="color:#e05252;font-size:0.78rem;margin-top:8px;display:none"></div>
   </div>

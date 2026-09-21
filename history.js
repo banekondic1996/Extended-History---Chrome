@@ -111,7 +111,7 @@ function favUrl(domain) {
 function setFavicon(img, domain) {
   if (!domain) return;
   if (_curSettings && _curSettings.faviconResolver === 'cached') {
-    chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
+        chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
       if (resp && resp.dataUrl && !img.dataset.favLoaded) {
         img.dataset.favLoaded = '1';
         img.src = resp.dataUrl;
@@ -358,6 +358,15 @@ function applyHighContrastMode(enabled) {
 // UI rounded corners toggle — .sidebar/.main read both their margin and
 // border-radius from CSS variables (falling back to the original 8px/20px
 // when unset), so disabling zeroes both for a flush, edge-to-edge layout.
+// Settings > Navigation icons: off => <html class="hide-nav-icons"> (CSS: display:none on the icons)
+function applyNavIcons(enabled) {
+  document.documentElement.classList.toggle('hide-nav-icons', enabled === false);
+}
+// Settings > Match UI colors: on => <html class="match-ui-colors"> (list = same colour as the UI)
+function applyMatchUiColors(enabled) {
+  document.documentElement.classList.toggle('match-ui-colors', enabled === true);
+}
+
 function applyRoundedCorners(enabled) {
   const root = document.documentElement;
   if (enabled === false) {
@@ -607,28 +616,8 @@ function updateHourPillsState() {
 // ══ CALENDAR MODE ═══════════════════════════════════════════════════════════
 // Right-side calendar sidebar, shown instead of the date/hour pill nav when
 // the "UI calendar mode" setting is on and the History panel is active.
-// Month / weekday names: Intl in the language currently in use (Settings >
-// Language, or the browser language). Latin has no Intl data, so it is spelled out.
-const _CAL_MONTHS_LA = ['Ianuarius','Februarius','Martius','Aprilis','Maius','Iunius','Iulius','Augustus','September','October','November','December'];
-const _CAL_WEEKDAYS_LA = ['D','L','M','M','I','V','S'];
-function _calLocale() {
-  const l = String(window._currentLang || 'en').replace('_', '-');
-  return l.toLowerCase() === 'no' ? 'nb' : l;
-}
-function calMonths() {
-  if (String(window._currentLang) === 'la') return _CAL_MONTHS_LA;
-  try {
-    const f = new Intl.DateTimeFormat(_calLocale(), { month: 'long' });
-    return Array.from({ length: 12 }, (_, i) => { const n = f.format(new Date(2021, i, 1)); return n.charAt(0).toUpperCase() + n.slice(1); });
-  } catch { return ['January','February','March','April','May','June','July','August','September','October','November','December']; }
-}
-function calWeekdays() { // Sunday-first initials
-  if (String(window._currentLang) === 'la') return _CAL_WEEKDAYS_LA;
-  try {
-    const f = new Intl.DateTimeFormat(_calLocale(), { weekday: 'narrow' });
-    return Array.from({ length: 7 }, (_, i) => f.format(new Date(2021, 7, 1 + i))); // 1 Aug 2021 = Sunday
-  } catch { return ['S','M','T','W','T','F','S']; }
-}
+function calMonths() { return window._ehMonthNames(); }
+function calWeekdays() { return window._ehWeekdayInitials(); }
 
 function calDateKey(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -2029,9 +2018,6 @@ function exportDeviceAsHtml(deviceName, tabs) {
 let _bmTree        = null;   // full Chrome bookmark tree
 let _bmActiveNode  = null;   // currently selected folder node (null = root)
 let _bmItems       = [];     // flat list of bookmark items for current view
-let _bmOffset      = 0;      // pagination offset
-let _bmLoading     = false;  // pagination in-flight guard
-const BM_PAGE      = 80;     // bookmarks per page
 let _bmNodeMap     = new Map(); // id → node, rebuilt whenever tree loads
 let _bmFlat        = [];        // precomputed flat search index — rebuilt with tree
 
@@ -2079,6 +2065,7 @@ async function loadBookmarks() {
   const listPane = document.getElementById('bookmarksContent');
   if (treePane) treePane.innerHTML = '<div class="state-msg" style="padding:20px"><span class="state-msg-icon" style="font-size:20px">⏳</span></div>';
   listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
+  _bmFavCache.clear(); // favicon resolver setting may have changed since last visit
   if (!loadBookmarks._setup) {
     loadBookmarks._setup = true;
 
@@ -2369,18 +2356,13 @@ function renderBmTree() {
         _bmFolderDragId = n.id;
         ev.dataTransfer.effectAllowed = 'move';
         ev.dataTransfer.setData('text/plain', 'folder:' + n.id);
-        setTimeout(() => {
-          row.classList.add('bm-folder-dragging');
-          // Canvas snapshot of the bookmarks list (right pane) — same as bookmark-item drag
-          _bmSnapshotCanvas(document.getElementById('bookmarksContent'));
-        }, 0);
+        setTimeout(() => { row.classList.add('bm-folder-dragging'); }, 0);
       });
 
       row.addEventListener('dragend', () => {
         _bmFolderDragId = null;
         document.querySelectorAll('.bm-folder-dragging,.bm-folder-drop-into,.bm-folder-drop-above,.bm-folder-drop-below')
           .forEach(el => el.classList.remove('bm-folder-dragging','bm-folder-drop-into','bm-folder-drop-above','bm-folder-drop-below'));
-        _bmTeardownCanvas(document.getElementById('bookmarksContent'));
       });
       // ────────────────────────────────────────────────────────────────────────
 
@@ -2472,77 +2454,6 @@ document.addEventListener('click', async ev => {
   }
 });
 // ── Bookmark multiselect helpers ─────────────────────────────────────────────
-function _bmSnapshotCanvas(itemsPane) {
-  if (itemsPane._dragCanvas) return; // already live
-  const W = itemsPane.clientWidth, H = itemsPane.clientHeight;
-  const dpr = devicePixelRatio || 1;
-  const canvas = document.createElement('canvas');
-  canvas.width  = W * dpr; canvas.height = H * dpr;
-  canvas.style.cssText = `position:absolute;inset:0;width:${W}px;height:${H}px;pointer-events:none;z-index:222;display:block`;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const cs      = getComputedStyle(document.documentElement);
-  const bgColor = cs.getPropertyValue('--surf0').trim()  || '#18181f';
-  const textCol = cs.getPropertyValue('--text').trim()   || '#f0eee8';
-  const sepCol  = cs.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
-  const text3   = cs.getPropertyValue('--text3').trim()  || '#5a5870';
-  const accentC = cs.getPropertyValue('--accent').trim() || '#3b9eff';
-  ctx.fillStyle = bgColor; ctx.fillRect(0, 0, W, H);
-  const scrollTop = itemsPane.scrollTop;
-  const paneRect  = itemsPane.getBoundingClientRect();
-  const rows = Array.from(itemsPane.querySelectorAll('.bm-item'));
-  ctx.font = `13px system-ui,-apple-system,'Segoe UI',sans-serif`;
-  ctx.textBaseline = 'middle';
-  rows.forEach(r => {
-    const rRect = r.getBoundingClientRect();
-    const y = rRect.top - paneRect.top;
-    const rowH = rRect.height || 34;
-    if (y + rowH < 0 || y > H) return;
-    const isChecked = r.classList.contains('bm-checked');
-    ctx.fillStyle = isChecked ? `color-mix(in srgb, ${accentC} 8%, ${bgColor})` : bgColor;
-    ctx.fillRect(0, y, W, rowH);
-    // checkbox circle
-    if (_bmSelMode) {
-      ctx.beginPath(); ctx.arc(22, y + rowH / 2, 7, 0, Math.PI * 2);
-      if (isChecked) { ctx.fillStyle = accentC; ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.fillText('✓', 18, y + rowH / 2 + 1); ctx.font = `13px system-ui,-apple-system,'Segoe UI',sans-serif`; }
-      else { ctx.strokeStyle = text3; ctx.lineWidth = 1.5; ctx.stroke(); }
-    }
-    const favX = _bmSelMode ? 38 : 32;
-    const img = r.querySelector('img');
-    if (img && img.complete && img.naturalWidth > 0) {
-      try { ctx.globalAlpha = 0.8; ctx.drawImage(img, favX, y + (rowH - 15) / 2, 15, 15); ctx.globalAlpha = 1; } catch {}
-    } else {
-      ctx.fillStyle = text3; ctx.beginPath(); ctx.arc(favX + 7, y + rowH / 2, 5, 0, Math.PI * 2); ctx.fill();
-    }
-    const titleEl = r.querySelector('.bm-title');
-    if (titleEl) { ctx.fillStyle = textCol; ctx.fillText(titleEl.textContent, favX + 22, y + rowH / 2, W - favX - 30); }
-    ctx.fillStyle = sepCol; ctx.fillRect(0, y + rowH - 1, W, 1);
-  });
-  itemsPane.style.position = 'relative';
-  itemsPane._dragScrollTop = scrollTop;
-  // Zero the spacer height before moving to fragment — avoids phantom empty
-  // space being restored on dragend (spacer height is stale after full render)
-  const spacer = itemsPane.querySelector('.bm-spacer');
-  if (spacer) spacer.style.height = '0';
-  const frag = document.createDocumentFragment();
-  while (itemsPane.firstChild) frag.appendChild(itemsPane.firstChild);
-  itemsPane._dragFragment = frag;
-  itemsPane._dragCanvas   = canvas;
-  itemsPane.appendChild(canvas);
-}
-
-function _bmTeardownCanvas(itemsPane) {
-  if (!itemsPane || !itemsPane._dragCanvas) return;
-  itemsPane._dragCanvas.remove();
-  itemsPane._dragCanvas = null;
-  const savedScroll = itemsPane._dragScrollTop || 0;
-  itemsPane.appendChild(itemsPane._dragFragment);
-  itemsPane._dragFragment = null;
-  itemsPane._dragScrollTop = null;
-  itemsPane.style.position = '';
-  itemsPane.scrollTop = savedScroll;
-}
-
 function _updateBmSelBar() {
   const bar     = document.getElementById('bmSelBar');
   const toolbar = document.getElementById('bmToolbar');
@@ -2578,19 +2489,36 @@ function _exitBmSelMode() {
 function _toggleBmItem(id, row) {
   if (_bmSelected.has(id)) { _bmSelected.delete(id); row.classList.remove('bm-checked'); }
   else { _bmSelected.add(id); row.classList.add('bm-checked'); }
-  if (_bmSelected.size === 0) _exitBmSelMode();
-  else _updateBmSelBar();
+  _updateBmSelBar();
 }
 
-// Build a single bookmark row DOM element (shared by both render paths)
+// ── Bookmark list (virtualized) ──────────────────────────────────────────────
+// The whole bookmark list lives in memory as plain objects (_bmItems). Only the
+// rows in/near the viewport are ever real DOM nodes (~40-60), no matter whether
+// there are 200 bookmarks or 20,000. Rows are absolutely positioned inside a
+// "sizer" div whose height = rowCount × rowHeight, so the scrollbar behaves as
+// if every row existed. All row interaction (click / right-click / drag) is
+// handled by ONE delegated listener per event on the pane instead of 4-6
+// listeners per row.
+//
+// One shared formatter: toLocaleDateString(locale, options) builds a new Intl
+// formatter on every call, which is costly across thousands of rows.
+const _bmDateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const _bmFavCache = new Map();   // domain → resolved favicon src (avoids re-asking the background on every re-scroll)
+const BM_BUFFER   = 10;          // extra rows rendered above/below the viewport
+let _bmRowH       = 38;          // measured row height in px (all rows are the same height)
+let _bmNeedMeasure = false;      // true if the list was built while the panel was hidden
+let _bmSizer      = null;        // the tall positioning container inside #bookmarksContent
+const _bmVRows    = new Map();   // item index → live row element
+let _bmVRaf       = 0;
+
+// Build a single bookmark row DOM element (no listeners — see _bmSetupList)
 function _buildBmRow(n) {
   const dom = tryDomain(n.url || '');
   const row = document.createElement('div');
-  row.className = 'bm-item';
-  row.dataset.url = n.url;
+  row.className = _bmSelected.has(n.id) ? 'bm-item bm-checked' : 'bm-item';
   row.dataset.bmId = n.id;
   row.draggable = true;
-  row.style.userSelect = 'none';
 
   const check = document.createElement('span');
   check.className = 'bm-item-check';
@@ -2603,7 +2531,15 @@ function _buildBmRow(n) {
 
   const fav = document.createElement('img');
   fav.className = 'bm-fav';
-  setFavicon(fav, dom);
+  const cachedSrc = _bmFavCache.get(dom);
+  if (cachedSrc) {
+    fav.src = cachedSrc;
+  } else {
+    setFavicon(fav, dom);
+    fav.addEventListener('load', () => {
+      if (dom && fav.src && !_bmFavCache.has(dom)) _bmFavCache.set(dom, fav.src);
+    }, { once: true });
+  }
   fav.loading = 'lazy';
   fav.addEventListener('error', function(){ this.style.opacity='0'; });
 
@@ -2614,149 +2550,172 @@ function _buildBmRow(n) {
   // Secondary label — folder name during search, date added otherwise
   const folderLabel = document.createElement('span');
   folderLabel.className = 'bm-folder-label';
+  let labelText = '';
   if (_bmIsSearch) {
     // Show parent folder name (skip top-level Chrome root folders)
     const parentNode = n.parentId ? _bmNodeMap.get(n.parentId) : null;
     const isTopLevelRoot = !parentNode || parentNode.parentId === '0' || !parentNode.parentId;
-    const folderName = (!isTopLevelRoot && parentNode) ? (parentNode.title || '') : '';
-    folderLabel.textContent = folderName;
-    folderLabel.style.display = folderName ? '' : 'none';
-  } else {
-    // Show date added
-    const dateText = n.dateAdded
-      ? new Date(n.dateAdded).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-      : '';
-    folderLabel.textContent = dateText;
-    folderLabel.style.display = dateText ? '' : 'none';
+    labelText = (!isTopLevelRoot && parentNode) ? (parentNode.title || '') : '';
+  } else if (n.dateAdded) {
+    labelText = _bmDateFmt.format(new Date(n.dateAdded));
   }
+  folderLabel.textContent = labelText;
+  folderLabel.style.display = labelText ? '' : 'none';
 
   row.appendChild(check);
   row.appendChild(handle);
   row.appendChild(fav);
   row.appendChild(title);
   row.appendChild(folderLabel);
-
-  // Long-press (150ms) enters selection mode. If the user starts dragging before
-  // the timer fires, the drag takes priority and selection mode is NOT entered.
-  let _lpTimer = null;
-  let _lpDragging = false;
-  let _lpJustSelected = false; // swallow the click that fires right after long-press
-  let _lpStartX = 0, _lpStartY = 0;
-  row.addEventListener('pointerdown', ev => {
-    if (ev.button !== 0) return;
-    _lpDragging = false;
-    _lpJustSelected = false;
-    _lpStartX = ev.clientX; _lpStartY = ev.clientY;
-    _lpTimer = setTimeout(() => {
-      _lpTimer = null;
-      if (_lpDragging) return;
-      _lpJustSelected = true;
-      if (!_bmSelMode) _enterBmSelMode(n.id);
-      else _toggleBmItem(n.id, row);
-      row.classList.toggle('bm-checked', _bmSelected.has(n.id));
-    }, 150);
-  });
-  row.addEventListener('pointermove', ev => {
-    // Only cancel if moved more than 5px (avoids cancelling on tiny jitter)
-    if (_lpTimer) {
-      const dx = ev.clientX - _lpStartX, dy = ev.clientY - _lpStartY;
-      if (dx * dx + dy * dy > 25) { clearTimeout(_lpTimer); _lpTimer = null; }
-    }
-  });
-  row.addEventListener('pointerup',    () => { clearTimeout(_lpTimer); _lpTimer = null; });
-  row.addEventListener('pointercancel',() => { clearTimeout(_lpTimer); _lpTimer = null; _lpJustSelected = false; });
-
-  // Click: select if in sel mode, else open
-  row.addEventListener('click', ev => {
-    if (_lpJustSelected) { _lpJustSelected = false; return; } // swallow post-long-press click
-    if (_bmSelMode) {
-      ev.preventDefault();
-      _toggleBmItem(n.id, row);
-      row.classList.toggle('bm-checked', _bmSelected.has(n.id));
-    } else {
-      // Open in background tab — keep focus on extension page
-      chrome.tabs.create({ url: n.url, active: false });
-    }
-  });
-
-  row.addEventListener('contextmenu', ev => {
-    ev.preventDefault(); ev.stopPropagation();
-    if (_bmSelMode) return; // suppress ctx menu in sel mode
-    showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
-  });
-
-  // Drag-to-folder (only when NOT in sel mode)
-  row.addEventListener('dragstart', ev => {
-    if (_bmSelMode) { ev.preventDefault(); return; }
-    // Cancel any pending long-press — user is dragging, not holding to select
-    _lpDragging = true;
-    if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
-    _bmDragId = n.id;
-    window._bmReorderSetDrag && window._bmReorderSetDrag(n.id);
-    ev.dataTransfer.effectAllowed = 'move';
-    ev.dataTransfer.setData('text/plain', n.id);
-    setTimeout(() => {
-      row.classList.add('bm-dragging');
-      document.getElementById('panel-bookmarks')?.classList.add('bm-dragging-active');
-      _bmSnapshotCanvas(document.getElementById('bookmarksContent'));
-    }, 0);
-  });
-  row.addEventListener('dragend', () => {
-    row.classList.remove('bm-dragging');
-    _bmDragId = null;
-    window._bmReorderClearDrag && window._bmReorderClearDrag();
-    document.getElementById('panel-bookmarks')?.classList.remove('bm-dragging-active');
-    document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
-    _bmTeardownCanvas(document.getElementById('bookmarksContent'));
-  });
-
   return row;
 }
 
-// Append next batch of _bmItems — called repeatedly via setTimeout until done
-function _bmAppendPage() {
-  if (_bmOffset >= _bmItems.length) return;
-  const pane = document.getElementById('bookmarksContent');
-  if (!pane) return;
-  const slice = _bmItems.slice(_bmOffset, _bmOffset + BM_PAGE);
-  const frag = document.createDocumentFragment();
-  for (const n of slice) frag.appendChild(_buildBmRow(n));
-  // Insert before spacer so total scrollHeight stays stable
-  const spacer = pane.querySelector('.bm-spacer');
-  if (spacer) pane.insertBefore(frag, spacer);
-  else pane.appendChild(frag);
-  _bmOffset += slice.length;
-  // Shrink spacer to match remaining unrendered rows
-  if (spacer) spacer.style.height = Math.max(0, (_bmItems.length - _bmOffset) * 34) + 'px';
-  // Schedule next batch if more remain
-  if (_bmOffset < _bmItems.length) setTimeout(_bmAppendPage, 0);
+// Measure the real rendered row height (depends on the user's font-size setting).
+// Returns 0 if it can't be measured (e.g. panel currently display:none).
+function _bmMeasureRowH(sample) {
+  if (!_bmSizer) return 0;
+  const row = _buildBmRow(sample);
+  row.style.visibility = 'hidden';
+  _bmSizer.appendChild(row);
+  const h = Math.ceil(row.getBoundingClientRect().height);
+  row.remove();
+  return h;
 }
 
-function _bmInitList(items) {
+function _bmVRender() {
+  _bmVRaf = 0;
+  const pane = document.getElementById('bookmarksContent');
+  const total = _bmItems.length;
+  if (!pane || !_bmSizer || !_bmSizer.isConnected || !total) return;
+
+  // List was built while the panel was hidden → measure now that it is visible
+  if (_bmNeedMeasure && pane.clientHeight > 0) {
+    const h = _bmMeasureRowH(_bmItems[0]);
+    if (h) {
+      _bmRowH = h;
+      _bmNeedMeasure = false;
+      _bmSizer.style.height = (total * _bmRowH) + 'px';
+      for (const row of _bmVRows.values()) row.remove();
+      _bmVRows.clear();
+    }
+  }
+
+  const top   = pane.scrollTop;
+  const view  = pane.clientHeight || 600;
+  const first = Math.max(0, Math.floor(top / _bmRowH) - BM_BUFFER);
+  const last  = Math.min(total - 1, Math.ceil((top + view) / _bmRowH) + BM_BUFFER);
+
+  // Drop rows that scrolled far out of view (never the one being dragged —
+  // removing a drag source mid-drag would swallow its dragend event)
+  for (const [i, row] of _bmVRows) {
+    if ((i < first || i > last) && row.dataset.bmId !== _bmDragId) {
+      row.remove();
+      _bmVRows.delete(i);
+    }
+  }
+
+  // Add rows that just came into range
+  const frag = document.createDocumentFragment();
+  for (let i = first; i <= last; i++) {
+    if (_bmVRows.has(i)) continue;
+    const row = _buildBmRow(_bmItems[i]);
+    row.style.top    = (i * _bmRowH) + 'px';
+    row.style.height = _bmRowH + 'px';
+    _bmVRows.set(i, row);
+    frag.appendChild(row);
+  }
+  if (frag.firstChild) _bmSizer.appendChild(frag);
+}
+
+function _bmVSchedule() {
+  if (!_bmVRaf) _bmVRaf = requestAnimationFrame(_bmVRender);
+}
+
+function _bmInitList(items, emptyMsg) {
   // Exit select mode when navigating to a different folder
   if (_bmSelMode) _exitBmSelMode();
   const pane = document.getElementById('bookmarksContent');
   pane.innerHTML = '';
-  pane.onscroll = null;
   pane.scrollTop = 0;
   _bmItems = items;
-  _bmOffset = 0;
+  _bmVRows.clear();
+  _bmSizer = null;
 
   if (!items.length) {
-    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No bookmarks here</div>';
+    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>' + (emptyMsg || 'No bookmarks here') + '</div>';
     return;
   }
 
-  // Pre-size with a spacer so scrollbar thumb stays constant during batch rendering
-  const spacer = document.createElement('div');
-  spacer.className = 'bm-spacer';
-  spacer.style.height = (items.length * 34) + 'px';
-  spacer.style.pointerEvents = 'none';
-  pane.appendChild(spacer);
+  _bmSizer = document.createElement('div');
+  _bmSizer.className = 'bm-vsizer';
+  pane.appendChild(_bmSizer);
 
-  // Render first batch immediately, rest async
-  _bmAppendPage();
+  const h = _bmMeasureRowH(items[0]);
+  _bmNeedMeasure = !h;
+  if (h) _bmRowH = h;
+  _bmSizer.style.height = (items.length * _bmRowH) + 'px';
+  _bmVRender();
 }
+
+// One-time wiring: scroll/resize + delegated row interaction
+function _bmSetupList() {
+  const pane = document.getElementById('bookmarksContent');
+  if (!pane) return;
+
+  pane.addEventListener('scroll', _bmVSchedule, { passive: true });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(_bmVSchedule).observe(pane);
+
+  // Click: toggle in selection mode, otherwise open in a background tab
+  pane.addEventListener('click', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    const id = row.dataset.bmId;
+    if (_bmSelMode) {
+      ev.preventDefault();
+      _toggleBmItem(id, row);
+      return;
+    }
+    const n = _bmNodeMap.get(id);
+    // Open in background tab — keep focus on extension page
+    if (n && n.url) chrome.tabs.create({ url: n.url, active: false });
+  });
+
+  pane.addEventListener('contextmenu', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (_bmSelMode) return; // suppress ctx menu in sel mode
+    const n = _bmNodeMap.get(row.dataset.bmId);
+    if (n) showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
+  });
+
+  // Drag-to-folder (only when NOT in sel mode)
+  pane.addEventListener('dragstart', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    if (_bmSelMode) { ev.preventDefault(); return; }
+    const id = row.dataset.bmId;
+    _bmDragId = id;
+    window._bmReorderSetDrag && window._bmReorderSetDrag(id);
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', id);
+    setTimeout(() => {
+      row.classList.add('bm-dragging');
+      document.getElementById('panel-bookmarks')?.classList.add('bm-dragging-active');
+    }, 0);
+  });
+
+  pane.addEventListener('dragend', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (row) row.classList.remove('bm-dragging');
+    _bmDragId = null;
+    window._bmReorderClearDrag && window._bmReorderClearDrag();
+    document.getElementById('panel-bookmarks')?.classList.remove('bm-dragging-active');
+    document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
+    _bmVSchedule(); // release the pinned drag row if it is now off-screen
+  });
+}
+_bmSetupList();
 
 // Render the right bookmark list for a folder node (null = show all)
 function renderBmItems(folderNode) {
@@ -2789,28 +2748,8 @@ function renderBookmarksWithFilter(query) {
     words.every(w => _title.includes(w) || _url.includes(w) || _folder.includes(w))
   ).map(e => e.node);
 
-  const pane = document.getElementById('bookmarksContent');
-  if (!results.length) {
-    _bmItems  = [];
-    _bmOffset = 0;
-    _bmIsSearch = true;
-    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No matching bookmarks</div>';
-    return;
-  }
-
   _bmIsSearch = true;
-
-  // Render synchronously — search result sets are small, no need for batched pagination
-  if (_bmSelMode) _exitBmSelMode();
-  _bmItems  = results;
-  _bmOffset = results.length;
-  pane.onscroll  = null;
-  pane.scrollTop = 0;
-
-  const frag = document.createDocumentFragment();
-  for (const n of results) frag.appendChild(_buildBmRow(n));
-  pane.innerHTML = '';
-  pane.appendChild(frag);
+  _bmInitList(results, 'No matching bookmarks');
 }
 // ── Bookmark multiselect bar buttons ────────────────────────────────────────
 document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
@@ -2820,24 +2759,29 @@ document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
 
 document.getElementById('bmSelCancelBtn')?.addEventListener('click', () => _exitBmSelMode());
 
-document.getElementById('bmSelCopyBtn')?.addEventListener('click', async () => {
-  if (!_bmSelected.size) return;
-  // Collect URLs preserving order from _bmItems (covers both rendered and virtual-scroll items)
+// Selected bookmark URLs, in on-screen order. Reads from _bmItems (the full
+// list), not the DOM, since only a window of rows is rendered at any time.
+function _bmSelectedUrls() {
   const urls = [];
-  const seen = new Set();
   for (const item of _bmItems) {
-    if (_bmSelected.has(item.id) && item.url && !seen.has(item.id)) {
-      urls.push(item.url);
-      seen.add(item.id);
-    }
+    if (_bmSelected.has(item.id) && item.url) urls.push(item.url);
   }
-  // Fallback: pick up any rendered rows whose IDs weren't in _bmItems
-  document.querySelectorAll('#bookmarksContent .bm-item').forEach(r => {
-    if (_bmSelected.has(r.dataset.bmId) && r.dataset.url && !seen.has(r.dataset.bmId)) {
-      urls.push(r.dataset.url);
-      seen.add(r.dataset.bmId);
-    }
-  });
+  return urls;
+}
+
+document.getElementById('bmSelOpenBtn')?.addEventListener('click', () => {
+  const urls = _bmSelectedUrls();
+  if (!urls.length) return;
+  if (urls.length > 15 && !confirm(`Open ${urls.length} bookmarks in new tabs?`)) return;
+  // Background tabs, same as a normal click — keeps focus on this page
+  for (const url of urls) chrome.tabs.create({ url, active: false });
+  toast(`Opened ${urls.length} tab${urls.length === 1 ? '' : 's'}`, 'ok');
+  _exitBmSelMode();
+});
+
+document.getElementById('bmSelCopyBtn')?.addEventListener('click', async () => {
+  const urls = _bmSelectedUrls();
+  if (!urls.length) return;
   try {
     await navigator.clipboard.writeText(urls.join(' \r\n'));
     toast(`Copied ${urls.length} link${urls.length === 1 ? '' : 's'}`, 'ok');
@@ -3133,6 +3077,10 @@ function populateSettings(s) {
   if (highContrastTgl) highContrastTgl.checked = s.highContrastMode === true;
   const roundedCornersTgl = document.getElementById('roundedCornersToggle');
   if (roundedCornersTgl) roundedCornersTgl.checked = s.roundedCorners !== false;
+  const navIconsTgl = document.getElementById('navIconsToggle');
+  if (navIconsTgl) navIconsTgl.checked = s.navIcons !== false;
+  const matchUiColorsTgl = document.getElementById('matchUiColorsToggle');
+  if (matchUiColorsTgl) matchUiColorsTgl.checked = s.matchUiColors === true;
   const calendarModeTgl = document.getElementById('calendarModeToggle');
   if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
   const contextMenuTgl = document.getElementById('contextMenuToggle');
@@ -3212,6 +3160,8 @@ function applyVisuals(s) {
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
   applyRoundedCorners(s.roundedCorners !== false);
+  applyNavIcons(s.navIcons !== false);
+  applyMatchUiColors(s.matchUiColors === true);
   applyCalendarMode(s.calendarMode === true);
   applyIconVariant(s.toolbarIcon || 'default');
   
@@ -3304,6 +3254,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
   const highContrastMode = document.getElementById('highContrastToggle')?.checked === true;
   const roundedCorners = document.getElementById('roundedCornersToggle')?.checked !== false;
+  const navIcons = document.getElementById('navIconsToggle')?.checked !== false;
+  const matchUiColors = document.getElementById('matchUiColorsToggle')?.checked === true;
   const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
   const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
@@ -3336,6 +3288,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         datePillsWheelScroll,
         highContrastMode,
         roundedCorners,
+        navIcons,
+        matchUiColors,
         calendarMode,
         datePillsWheelSensitivity,
         toolbarIcon,
@@ -4633,6 +4587,12 @@ function setupPopupSettingsListeners() {
     });
   }
 
+  // Live preview, like the other appearance toggles (persisted with Save)
+  const navIconsToggle = document.getElementById('navIconsToggle');
+  if (navIconsToggle) navIconsToggle.addEventListener('change', () => applyNavIcons(navIconsToggle.checked));
+  const matchUiColorsToggle = document.getElementById('matchUiColorsToggle');
+  if (matchUiColorsToggle) matchUiColorsToggle.addEventListener('change', () => applyMatchUiColors(matchUiColorsToggle.checked));
+
   const calendarModeToggle = document.getElementById('calendarModeToggle');
   if (calendarModeToggle) {
     calendarModeToggle.addEventListener('change', () => {
@@ -4774,6 +4734,9 @@ function applyWallpaper(wp) {
     /* Sticky date headers must blend into that list surface: no tint of their
        own (a second layer would show as a lighter band), just a blur so rows
        scrolling underneath stay legible. */
+    /* Settings > Match UI colors: no tint of its own - the list shows the same
+       glass as the sidebar / calendar sidebar / main panel behind it. */
+    html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
     html.wallpaper-mode .list-area .day-label {
       background: transparent !important;
       backdrop-filter: blur(10px) !important;
@@ -5450,4 +5413,3 @@ document.getElementById('mvPeriodFilter')?.addEventListener('click', ev => {
   }
 });
 // ══ MOST VISITED END ════════════════════════════════════════════════════════════
-

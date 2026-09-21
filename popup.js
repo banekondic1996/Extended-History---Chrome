@@ -230,7 +230,7 @@ document.getElementById('storeBtn').addEventListener('click', () => {
         if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
             const btn = document.getElementById('storeBtn');
             const orig = btn.textContent;
-            btn.textContent = "Can't store this page";
+            btn.textContent = tr('pop_cant_store', "Can't store this page");
             btn.style.background = '#c0392b';
             btn.style.color = 'var(--text1)';
             btn.style.fontSize = '0.62rem';
@@ -346,7 +346,7 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
         return;
     }
 
-    document.getElementById('searchResults').innerHTML = '<div class="loading">Searching...</div>';
+    document.getElementById('searchResults').innerHTML = '<div class="loading">' + tr('pop_searching', 'Searching...') + '</div>';
     openSearchOverlay();
 
     _searchTimer = setTimeout(() => {
@@ -393,7 +393,7 @@ function performSearch(query) {
         limit: 100
     }, (response) => {
         if (chrome.runtime.lastError) {
-            resultsEl.innerHTML = '<div class="empty">Search error</div>';
+            resultsEl.innerHTML = '<div class="empty">' + tr('pop_search_error', 'Search error') + '</div>';
             return;
         }
 
@@ -401,7 +401,7 @@ function performSearch(query) {
         _srchEntries = matches;
 
         if (!matches.length) {
-            resultsEl.innerHTML = '<div class="empty">No results found</div>';
+            resultsEl.innerHTML = '<div class="empty">' + tr('pop_no_results', 'No results found') + '</div>';
             return;
         }
 
@@ -530,7 +530,7 @@ function exitSelMode() {
 }
 function updateSelModeBar() {
     const delBtn = document.getElementById('selDelBtn');
-    if (delBtn) delBtn.textContent = _selItems.size > 0 ? `Delete (${_selItems.size})` : 'Delete';
+    if (delBtn) delBtn.textContent = _selItems.size > 0 ? `${tr('delete', 'Delete')} (${_selItems.size})` : tr('delete', 'Delete');
 }
 function toggleSelItem(id, row) {
     if (_selItems.has(id)) { _selItems.delete(id); row.classList.remove('sel-checked'); }
@@ -656,8 +656,8 @@ function renderTodayHistory(entries, preserveScroll) {
     el._entries = entries;
     if (!entries.length) {
         const msg = typeof isViewingToday === 'function' && !isViewingToday()
-            ? 'No history for this day'
-            : 'No history yet today';
+            ? tr('pop_no_history_day', 'No history for this day')
+            : tr('pop_no_history_today', 'No history yet today');
         el.innerHTML = `<div class="empty">${msg}</div>`;
         if (container) container.scrollTop = 0;
         return;
@@ -759,7 +759,7 @@ function loadRecentTabs() {
         const el = document.getElementById('recentTabs');
 
         if (!sessions || !sessions.length) {
-            el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
             return;
         }
 
@@ -785,7 +785,7 @@ function loadRecentTabs() {
         }
 
         if (!tabs.length) {
-            el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
             return;
         }
 
@@ -810,7 +810,7 @@ function loadRecentTabs() {
             }).sort((a, b) => b.lastModified - a.lastModified);
 
             if (!validTabs.length) {
-                el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+                el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
                 return;
             }
 
@@ -837,10 +837,10 @@ function loadRecentTabs() {
 // Helper: format time ago
 function getTimeAgo(timestamp) {
     const seconds = Math.floor((Date.now() - timestamp * 1000) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 60) return tr('pop_just_now', 'just now');
+    if (seconds < 3600) return tr('pop_min_ago', '{0}m ago', Math.floor(seconds / 60));
+    if (seconds < 86400) return tr('pop_hour_ago', '{0}h ago', Math.floor(seconds / 3600));
+    return tr('pop_day_ago', '{0}d ago', Math.floor(seconds / 86400));
 }
 
 // ── Tab Storage ───────────────────────────────────────────────────────────────
@@ -853,7 +853,7 @@ function showTsStored() {
 
 function showTsStoredLabel() {
   const t = document.querySelector('.tab[data-tab="tabstorage"]');
-  if (t) t.textContent = 'Tab Storage';
+  if (t) t.textContent = tr('tab_storage', 'Tab Storage');
 }
 
 // Show quick-store sub-view (right-click)
@@ -866,7 +866,7 @@ function showTsQuickStore() {
 function renderQuickStoreList() {
   const list = document.getElementById('ts-quickstore-list');
   if (!list) return;
-  list.innerHTML = '<div class="loading">Loading…</div>';
+  list.innerHTML = '<div class="loading">' + tr('loading', 'Loading…') + '</div>';
 
   chrome.tabs.query({ currentWindow: true }, (tabs) => {
     chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
@@ -882,7 +882,7 @@ function renderQuickStoreList() {
       list.innerHTML = '';
 
       if (!validTabs.length) {
-        list.innerHTML = '<div class="empty">No storable tabs open</div>';
+        list.innerHTML = '<div class="empty">' + tr('pop_no_storable', 'No storable tabs open') + '</div>';
         return;
       }
 
@@ -919,7 +919,7 @@ function renderQuickStoreList() {
               item.remove();
               chrome.tabs.remove(tab.id);
               if (!list.querySelector('.ts-quick-item')) {
-                list.innerHTML = '<div class="empty">No storable tabs open</div>';
+                list.innerHTML = '<div class="empty">' + tr('pop_no_storable', 'No storable tabs open') + '</div>';
               }
             });
           });
@@ -949,7 +949,7 @@ function exitTsSelMode() {
 }
 function updateTsModeBar() {
     const btn = document.getElementById('tsUnstoreBtn');
-    if (btn) btn.textContent = _tsSelItems.size > 0 ? `Restore (${_tsSelItems.size})` : 'Restore';
+    if (btn) btn.textContent = _tsSelItems.size > 0 ? `${tr('restore', 'Restore')} (${_tsSelItems.size})` : tr('restore', 'Restore');
 }
 function toggleTsSelItem(id, row) {
     if (_tsSelItems.has(id)) { _tsSelItems.delete(id); row.classList.remove('sel-checked'); }
@@ -965,7 +965,7 @@ function loadTabStoragePopup() {
 
   chrome.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
     if (chrome.runtime.lastError || !response) {
-      el.innerHTML = '<div class="empty">Error loading tab storage</div>';
+      el.innerHTML = '<div class="empty">' + tr('pop_ts_error', 'Error loading tab storage') + '</div>';
       return;
     }
 
@@ -973,7 +973,7 @@ function loadTabStoragePopup() {
     _tsEntries = entries;
 
     if (!entries.length) {
-      el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
+      el.innerHTML = '<div class="empty" style="text-align:center">' + tr('pop_no_stored', 'No stored tabs.') + '<br><small style="opacity:0.6">' + tr('pop_no_stored_hint', 'Right-click this tab button to store open tabs') + '</small></div>';
       return;
     }
 
@@ -1062,7 +1062,7 @@ function loadTabStoragePopup() {
           row.remove();
           const remaining = el.querySelectorAll('.ritem');
           if (!remaining.length) {
-            el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
+            el.innerHTML = '<div class="empty" style="text-align:center">' + tr('pop_no_stored', 'No stored tabs.') + '<br><small style="opacity:0.6">' + tr('pop_no_stored_hint', 'Right-click this tab button to store open tabs') + '</small></div>';
           }
           // Fire open + storage removal async — no need to wait
           chrome.tabs.create({ url: entry.url, active: false });
@@ -1081,7 +1081,7 @@ function showHistoryRecent() {
     document.getElementById('h-recent').classList.add('active');
     document.getElementById('h-mostvisited').classList.remove('active');
     const tab = document.getElementById('historyTab');
-    if (tab) tab.textContent = 'Recent History';
+    if (tab) tab.textContent = tr('pop_recent_history', 'Recent History');
     updateSidebarDayNavVisibility();
 }
 
@@ -1089,7 +1089,7 @@ function showHistoryMostVisited() {
     document.getElementById('h-recent').classList.remove('active');
     document.getElementById('h-mostvisited').classList.add('active');
     const tab = document.getElementById('historyTab');
-    if (tab) tab.textContent = 'Most Visited';
+    if (tab) tab.textContent = tr('most_visited', 'Most Visited');
     loadMostVisitedPopup();
     updateSidebarDayNavVisibility();
 }
@@ -1097,10 +1097,10 @@ function showHistoryMostVisited() {
 function loadMostVisitedPopup() {
     const el = document.getElementById('mvPopup');
     if (!el) return;
-    el.innerHTML = '<div class="loading">Loading…</div>';
+    el.innerHTML = '<div class="loading">' + tr('loading', 'Loading…') + '</div>';
     chrome.runtime.sendMessage({ type: 'GET_MOST_VISITED', viewType: 'domain', period: '10' }, (r) => {
         if (chrome.runtime.lastError || !r || !r.items || !r.items.length) {
-            el.innerHTML = '<div class="empty">No data yet</div>';
+            el.innerHTML = '<div class="empty">' + tr('pop_no_data', 'No data yet') + '</div>';
             return;
         }
         el.innerHTML = '';
@@ -1146,7 +1146,7 @@ function loadMostVisitedPopup() {
   if (!tabStorageTab) return;
 
   tabStorageTab.addEventListener('click', () => {
-    tabStorageTab.textContent = 'Tab Storage';
+    tabStorageTab.textContent = tr('tab_storage', 'Tab Storage');
     showTsStored();
     loadTabStoragePopup();
   });
@@ -1157,7 +1157,7 @@ function loadMostVisitedPopup() {
     tabStorageTab.classList.add('active');
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-tabstorage').classList.add('active');
-    tabStorageTab.textContent = 'Active Tabs';
+    tabStorageTab.textContent = tr('pop_active_tabs', 'Active Tabs');
     showTsQuickStore();
   });
 })();
@@ -1230,7 +1230,7 @@ document.getElementById('tsUnstoreBtn').addEventListener('click', () => {
 document.getElementById('tsDeleteBtn').addEventListener('click', () => {
     if (!_tsSelItems.size) { exitTsSelMode(); return; }
     const ids = [..._tsSelItems];
-    if (!confirm(`Remove ${ids.length} stored tab${ids.length === 1 ? '' : 's'} from Tab Storage?`)) return;
+    if (!confirm(tr('pop_remove_stored_confirm', 'Remove {0} stored tab(s) from Tab Storage?', ids.length))) return;
     chrome.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRIES', ids }, () => {
         exitTsSelMode();
         loadTabStoragePopup();
@@ -1258,8 +1258,8 @@ function updateSrchModeBar() {
     const selBtn = document.getElementById('srchSelAllBtn');
     const delBtn = document.getElementById('srchDelBtn');
     const allSelected = _srchEntries.length > 0 && _srchSelItems.size === _srchEntries.length;
-    if (selBtn) selBtn.textContent = allSelected ? 'Unselect All' : 'Select All';
-    if (delBtn) delBtn.textContent = _srchSelItems.size > 0 ? `Delete (${_srchSelItems.size})` : 'Delete';
+    if (selBtn) selBtn.textContent = allSelected ? tr('pop_unselect_all', 'Unselect All') : tr('pop_select_all', 'Select All');
+    if (delBtn) delBtn.textContent = _srchSelItems.size > 0 ? `${tr('delete', 'Delete')} (${_srchSelItems.size})` : tr('delete', 'Delete');
 }
 function toggleSrchSelItem(id, row) {
     if (_srchSelItems.has(id)) { _srchSelItems.delete(id); row.classList.remove('sel-checked'); }
@@ -1406,8 +1406,8 @@ function isViewingToday() {
 function sdnFormatLabel(date) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    if (date.getTime() === today.getTime()) return 'Today';
-    if (date.getTime() === yesterday.getTime()) return 'Yesterday';
+    if (date.getTime() === today.getTime()) return tr('today', 'Today');
+    if (date.getTime() === yesterday.getTime()) return tr('yesterday', 'Yesterday');
     const opts = { month: 'short', day: 'numeric' };
     if (date.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
     return date.toLocaleDateString(undefined, opts);
@@ -1507,7 +1507,7 @@ function sdnRenderCalendar() {
     const weekdaysWrap = document.getElementById('sdnCalWeekdays');
     if (!title || !daysWrap || !monthsWrap) return;
 
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthNames = window._ehMonthNames();
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
     if (_calMode === 'months') {
@@ -1535,6 +1535,7 @@ function sdnRenderCalendar() {
 
     // Day-grid view
     weekdaysWrap.style.display = 'grid';
+    { const wd = window._ehWeekdayInitials(); [...weekdaysWrap.children].forEach((c, i) => { if (wd[i] !== undefined) c.textContent = wd[i]; }); }
     daysWrap.style.display = 'grid';
     monthsWrap.style.display = 'none';
     title.textContent = `${monthNames[_calViewMonth]} ${_calViewYear}`;

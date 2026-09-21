@@ -1,6 +1,64 @@
 {
+
   "ext_name": {
     "message": "Проширена историја"
+  },
+  "rename_bookmark": {
+  "message": "✏️ Переименовать закладку"
+},
+ "remove_bookmark": {
+    "message": "🗑 Уклони обележивач"
+  },
+  "select": {
+    "message": "Изабери"
+  },
+  "quick_filters": {
+    "message": "Брзи филтери"
+  },
+  "quick_filter_desc": {
+    "message": "Сачувајте именовану групу домена, кључних речи или URL адреса (нпр. „Друштвене мреже“ → facebook.com, instagram.com, pinterest.com). Изаберите је из падајућег менија поред поља за претрагу на страници Историја да бисте одмах филтрирали само те ставке."
+  },
+  "filter_name": {
+    "message": "Назив филтера (нпр. Друштвене мреже)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Један домен, кључна реч или URL по реду — нпр.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Сачувај измене"
+  },
+  "add_filter": {
+    "message": "Додај филтер"
+  },
+  "no_qfilters": {
+    "message": "Још нема брзих филтера"
+  },
+   "scroll_sensitivity": {
+    "message": "Осетљивост померања"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Колико дугмади са данима се помера при сваком кораку померања"
+  },
+  "scroll_date": {
+    "message": "Померај датуме точкићем миша"
+  },
+  "scroll_date_desc": {
+    "message": "Омогућава да обичан точкић миша (који помера само вертикално) помера траку са датумима бочно — корисно на рачунару, где точкић не може самостално да помера садржај хоризонтално."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Приступ листи игнорисаних"
+  },
+  "ignore_list_enter_password": {
+    "message": "Унесите главну лозинку да бисте видели листу игнорисаних."
+  },
+  "reset": {
+    "message": "Ресетуј"
+  },
+  "cancel": {
+    "message": "Откажи"
+  },
+  "ok": {
+    "message": "У реду"
   },
   "choose_a_time_range": {
     "message": "Изабери временски опсег за брисанје. Ово ће обрсати историју у Хрому и екстензији"
@@ -654,7 +712,7 @@
     "message": "🗂 Прикажи отворене картице и време мировања"
   },
   "cal_all_time": {
-    "message": "🗓 Све време"
+    "message": "Све време"
   },
   "prev_day": {
     "message": "‹ Претходни дан"
@@ -732,16 +790,31 @@
     "message": "Тај домен је већ на листи"
   },
   "dh_confirm_warn": {
-    "message": "Ово ће трајно обрисати историју за: {0}. Кликните поново на Обриши за потврду."
+    "message": "Ово ће трајно обрисати историју за: $N1$. Кликните поново на Обриши за потврду.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Домени са ваше листе изузетака ({0}) биће задржани."
+    "message": "Домени са ваше листе изузетака ($N1$) биће задржани.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Брисање…"
   },
   "deleted_history_entries": {
-    "message": "Обрисано уноса из историје: {0}"
+    "message": "Обрисано уноса из историје: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "колачићи"
@@ -750,13 +823,31 @@
     "message": "кеш"
   },
   "confirm_restore_tabs": {
-    "message": "Повратити {0} картица?"
+    "message": "Повратити $N1$ картица?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "Повраћено {0} картица у {1} прозора"
+    "message": "Повраћено $N1$ картица у $N2$ прозора",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "Повраћено {0} картица у новом прозору"
+    "message": "Повраћено $N1$ картица у новом прозору",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Шаблон уклоњен"
@@ -765,7 +856,12 @@
     "message": "Унесите шаблон"
   },
   "toast_pattern_added": {
-    "message": "Шаблон додат: {0}"
+    "message": "Шаблон додат: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Листа игнорисаних је укључена"
@@ -795,13 +891,23 @@
     "message": "Чишћење игнорисаних URL-ова из историје…"
   },
   "toast_removed_ignored": {
-    "message": "Уклоњено {0} игнорисаних URL-ова из историје"
+    "message": "Уклоњено $N1$ игнорисаних URL-ова из историје",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Нису пронађени игнорисани URL-ови у историји"
   },
   "keyword_prefix": {
-    "message": "кључна реч: {0}"
+    "message": "кључна реч: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "Кеширано (локално)"
@@ -832,5 +938,130 @@
   },
   "wallpaper_opacity_desc": {
     "message": "Затамњује саму позадинску слику — одвојено од нијансе стакленог панела испод."
+  },
+  "language_auto": {
+    "message": "Аутоматски (језик прегледача)"
+  },
+  "nav_icons": {
+    "message": "Иконе навигације"
+  },
+  "nav_icons_desc": {
+    "message": "Приказује иконе поред ставки у менију бочне траке. Искључите за мени само са текстом."
+  },
+  "match_ui_colors": {
+    "message": "Усклади са бојама интерфејса"
+  },
+  "match_ui_colors_desc": {
+    "message": "Даје листи историје исту боју као остатак интерфејса (бочна трака, календар и панели) уместо посебне нијансе."
+  },
+  "pop_store": {
+    "message": "Сачувај"
+  },
+  "pop_open": {
+    "message": "Отвори"
+  },
+  "pop_prev_day": {
+    "message": "Претходни дан"
+  },
+  "pop_next_day": {
+    "message": "Следећи дан"
+  },
+  "pop_clear_search": {
+    "message": "Обриши претрагу и врати се на данас"
+  },
+  "pop_recent_history": {
+    "message": "Недавна историја"
+  },
+  "pop_closed_tabs": {
+    "message": "Затворене картице"
+  },
+  "pop_active_tabs": {
+    "message": "Активне картице"
+  },
+  "pop_unselect_all": {
+    "message": "Поништи избор свега"
+  },
+  "pop_select_all": {
+    "message": "Изабери све"
+  },
+  "pop_search_results": {
+    "message": "Резултати претраге"
+  },
+  "pop_start_typing": {
+    "message": "Почните да куцате за претрагу..."
+  },
+  "pop_export_session_title": {
+    "message": "Кликните десним тастером да извезете последњу сесију"
+  },
+  "pop_searching": {
+    "message": "Претраживање..."
+  },
+  "pop_search_error": {
+    "message": "Грешка у претрази"
+  },
+  "pop_no_results": {
+    "message": "Нема резултата"
+  },
+  "pop_no_closed": {
+    "message": "Нема недавно затворених картица"
+  },
+  "pop_no_storable": {
+    "message": "Нема отворених картица које се могу сачувати"
+  },
+  "pop_ts_error": {
+    "message": "Грешка при учитавању складишта картица"
+  },
+  "pop_no_stored": {
+    "message": "Нема сачуваних картица."
+  },
+  "pop_no_stored_hint": {
+    "message": "Кликните десним тастером на ово дугме да сачувате отворене картице"
+  },
+  "pop_no_data": {
+    "message": "Још нема података"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Уклонити $N1$ сачуваних картица из складишта?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Ова страница се не може сачувати"
+  },
+  "pop_no_history_day": {
+    "message": "Нема историје за овај дан"
+  },
+  "pop_no_history_today": {
+    "message": "Данас још нема историје"
+  },
+  "pop_just_now": {
+    "message": "управо сада"
+  },
+  "pop_min_ago": {
+    "message": "пре $N1$ мин",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "пре $N1$ ч",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "пре $N1$ д",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
+  "rename_bookmark": {
+  "message": "✏️ Renommer le favori"
+},
+"remove_bookmark": {
+    "message": "🗑 Supprimer le favori"
+  },
+  "scroll_sensitivity": {
+    "message": "Sensibilité du défilement"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Nombre de pastilles de jours déplacées à chaque défilement"
+  },
+  "scroll_date": {
+    "message": "Faire défiler les dates avec la molette de la souris"
+  },
+  "scroll_date_desc": {
+    "message": "Permet à une molette de souris classique (qui ne fait défiler que verticalement) de déplacer la barre des dates horizontalement — pratique sur ordinateur, où la molette ne peut pas faire défiler horizontalement toute seule."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Accès à la liste d'exclusion"
+  },
+  "ignore_list_enter_password": {
+    "message": "Entrez votre mot de passe principal pour afficher la liste d'exclusion."
+  },
+  "reset": {
+    "message": "Réinitialiser"
+  },
+ "quick_filters": {
+    "message": "Filtres rapides"
+  },
+  "quick_filter_desc": {
+    "message": "Enregistrez un groupe nommé de domaines, de mots-clés ou d'URL (par exemple « Réseaux sociaux » → facebook.com, instagram.com, pinterest.com). Sélectionnez-le dans la liste déroulante à côté de la barre de recherche sur la page Historique pour filtrer instantanément ces entrées."
+  },
+  "filter_name": {
+    "message": "Nom du filtre (ex. Réseaux sociaux)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Un domaine, mot-clé ou URL par ligne — ex.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Enregistrer les modifications"
+  },
+  "add_filter": {
+    "message": "Ajouter un filtre"
+  },
+  "no_qfilters": {
+    "message": "Aucun filtre rapide pour le moment"
+  },
+  "ok": {
+    "message": "OK"
+  },
   "current_session": {
     "message": "Session actuelle"
   },
@@ -672,7 +723,7 @@
     "message": "🗂 Lister les onglets ouverts et le temps d'inactivité"
   },
   "cal_all_time": {
-    "message": "🗓 Toute la période"
+    "message": "Toute la période"
   },
   "prev_day": {
     "message": "‹ Jour préc."
@@ -750,16 +801,31 @@
     "message": "Ce domaine figure déjà dans la liste"
   },
   "dh_confirm_warn": {
-    "message": "Cela supprimera définitivement l'historique pour : {0}. Cliquez à nouveau sur Supprimer pour confirmer."
+    "message": "Cela supprimera définitivement l'historique pour : $N1$. Cliquez à nouveau sur Supprimer pour confirmer.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Les domaines de votre liste d'exceptions ({0}) seront conservés."
+    "message": "Les domaines de votre liste d'exceptions ($N1$) seront conservés.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Suppression…"
   },
   "deleted_history_entries": {
-    "message": "{0} entrées d'historique supprimées"
+    "message": "$N1$ entrées d'historique supprimées",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "cookies"
@@ -768,13 +834,31 @@
     "message": "cache"
   },
   "confirm_restore_tabs": {
-    "message": "Restaurer {0} onglets ?"
+    "message": "Restaurer $N1$ onglets ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "{0} onglets restaurés dans {1} fenêtres"
+    "message": "$N1$ onglets restaurés dans $N2$ fenêtres",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "{0} onglets restaurés dans une nouvelle fenêtre"
+    "message": "$N1$ onglets restaurés dans une nouvelle fenêtre",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Motif supprimé"
@@ -783,7 +867,12 @@
     "message": "Veuillez saisir un motif"
   },
   "toast_pattern_added": {
-    "message": "Motif ajouté : {0}"
+    "message": "Motif ajouté : $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Liste d'ignorés activée"
@@ -813,13 +902,23 @@
     "message": "Nettoyage des URL ignorées de l'historique…"
   },
   "toast_removed_ignored": {
-    "message": "{0} URL ignorées supprimées de l'historique"
+    "message": "$N1$ URL ignorées supprimées de l'historique",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Aucune URL ignorée trouvée dans l'historique"
   },
   "keyword_prefix": {
-    "message": "mot-clé : {0}"
+    "message": "mot-clé : $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "En cache (local)"
@@ -853,5 +952,130 @@
   },
   "yesterday": {
     "message": "Hier"
+  },
+  "language_auto": {
+    "message": "Automatique (langue du navigateur)"
+  },
+  "nav_icons": {
+    "message": "Icônes de navigation"
+  },
+  "nav_icons_desc": {
+    "message": "Affiche les icônes à côté des éléments du menu latéral. Désactivez pour un menu texte uniquement."
+  },
+  "match_ui_colors": {
+    "message": "Assortir aux couleurs de l'interface"
+  },
+  "match_ui_colors_desc": {
+    "message": "Donne à la liste de l'historique la même couleur que le reste de l'interface (barre latérale, calendrier et panneaux) au lieu d'une teinte distincte."
+  },
+  "pop_store": {
+    "message": "Stocker"
+  },
+  "pop_open": {
+    "message": "Ouvrir"
+  },
+  "pop_prev_day": {
+    "message": "Jour précédent"
+  },
+  "pop_next_day": {
+    "message": "Jour suivant"
+  },
+  "pop_clear_search": {
+    "message": "Effacer la recherche et revenir à aujourd'hui"
+  },
+  "pop_recent_history": {
+    "message": "Historique récent"
+  },
+  "pop_closed_tabs": {
+    "message": "Onglets fermés"
+  },
+  "pop_active_tabs": {
+    "message": "Onglets actifs"
+  },
+  "pop_unselect_all": {
+    "message": "Tout désélectionner"
+  },
+  "pop_select_all": {
+    "message": "Tout sélectionner"
+  },
+  "pop_search_results": {
+    "message": "Résultats de recherche"
+  },
+  "pop_start_typing": {
+    "message": "Commencez à taper pour rechercher..."
+  },
+  "pop_export_session_title": {
+    "message": "Clic droit pour exporter la dernière session"
+  },
+  "pop_searching": {
+    "message": "Recherche..."
+  },
+  "pop_search_error": {
+    "message": "Erreur de recherche"
+  },
+  "pop_no_results": {
+    "message": "Aucun résultat"
+  },
+  "pop_no_closed": {
+    "message": "Aucun onglet fermé récemment"
+  },
+  "pop_no_storable": {
+    "message": "Aucun onglet ouvert pouvant être stocké"
+  },
+  "pop_ts_error": {
+    "message": "Erreur de chargement du stockage d'onglets"
+  },
+  "pop_no_stored": {
+    "message": "Aucun onglet stocké."
+  },
+  "pop_no_stored_hint": {
+    "message": "Faites un clic droit sur ce bouton pour stocker les onglets ouverts"
+  },
+  "pop_no_data": {
+    "message": "Aucune donnée pour l'instant"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Retirer $N1$ onglet(s) stocké(s) du stockage d'onglets ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Impossible de stocker cette page"
+  },
+  "pop_no_history_day": {
+    "message": "Aucun historique pour ce jour"
+  },
+  "pop_no_history_today": {
+    "message": "Pas encore d'historique aujourd'hui"
+  },
+  "pop_just_now": {
+    "message": "à l'instant"
+  },
+  "pop_min_ago": {
+    "message": "il y a $N1$ min",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "il y a $N1$ h",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "il y a $N1$ j",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

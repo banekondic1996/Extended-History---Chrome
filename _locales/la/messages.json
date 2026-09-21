@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Historia Extensa"
   },
+  "quick_filters": {
+    "message": "Filtra celeria"
+  },
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 Signaculum remove"
+  },
+  "quick_filter_desc": {
+    "message": "Serva gregem nominatum ditionum, verborum clavium vel URL (exempli gratia \"Media socialia\" → facebook.com, instagram.com, pinterest.com). Elige eum ex indice iuxta capsam quaerendi in pagina Historiae ut statim tantum illa elementa filtres."
+  },
+  "filter_name": {
+    "message": "Nomen filtri (ex. Media socialia)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Una dition, verbum clavis vel URL in unaquaque linea — ex.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Serva mutationes"
+  },
+  "add_filter": {
+    "message": "Adde filtrum"
+  },
+  "no_qfilters": {
+    "message": "Nondum sunt filtra celeria"
+  },
+  "scroll_sensitivity": {
+    "message": "Sensibilitas volutationis"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Quot pittacia dierum singulus motus volutionis movet"
+  },
+  "scroll_date": {
+    "message": "Pittacia dierum rota muris voluta"
+  },
+  "scroll_date_desc": {
+    "message": "Permittit rotam muris ordinariam (quae tantum perpendiculariter volvitur) vectem dierum ad latera movere — utile in computatro, ubi rota sola horizontaliter volvere non potest."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Accessus ad indicem ignoratorum"
+  },
+  "ignore_list_enter_password": {
+    "message": "Tesseram magistralem tuam insere ut indicem ignoratorum videas."
+  },
+  "reset": {
+    "message": "Restitue"
+  },
+  "ok": {
+    "message": "OK"
+  },
   "current_session": {
     "message": "Sessio Praesens"
   },
@@ -483,7 +534,7 @@
     "message": "🗂 Tabulas apertas et tempus otii enumerare"
   },
   "cal_all_time": {
-    "message": "🗓 Omne tempus"
+    "message": "Omne tempus"
   },
   "prev_day": {
     "message": "‹ Dies prior"
@@ -561,16 +612,31 @@
     "message": "Hoc dominium iam in indice est"
   },
   "dh_confirm_warn": {
-    "message": "Hoc historiam in perpetuum delebit pro: {0}. Iterum Delere preme ad confirmandum."
+    "message": "Hoc historiam in perpetuum delebit pro: $N1$. Iterum Delere preme ad confirmandum.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Dominia in indice exceptionum tuarum ({0}) servabuntur."
+    "message": "Dominia in indice exceptionum tuarum ($N1$) servabuntur.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Delens…"
   },
   "deleted_history_entries": {
-    "message": "{0} ingressus historiae deleti"
+    "message": "$N1$ ingressus historiae deleti",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "crustula"
@@ -579,13 +645,31 @@
     "message": "cache"
   },
   "confirm_restore_tabs": {
-    "message": "{0} tabulas restituere?"
+    "message": "$N1$ tabulas restituere?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "{0} tabulae in {1} fenestris restitutae"
+    "message": "$N1$ tabulae in $N2$ fenestris restitutae",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "{0} tabulae in nova fenestra restitutae"
+    "message": "$N1$ tabulae in nova fenestra restitutae",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Forma remota"
@@ -594,7 +678,12 @@
     "message": "Formam insere"
   },
   "toast_pattern_added": {
-    "message": "Forma addita: {0}"
+    "message": "Forma addita: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Index neglectorum activatus"
@@ -624,13 +713,23 @@
     "message": "URL neglecta ex historia purgantur…"
   },
   "toast_removed_ignored": {
-    "message": "{0} URL neglecta ex historia remota"
+    "message": "$N1$ URL neglecta ex historia remota",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Nulla URL neglecta in historia inventa"
   },
   "keyword_prefix": {
-    "message": "verbum clavis: {0}"
+    "message": "verbum clavis: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "In cache (locale)"
@@ -673,5 +772,130 @@
   },
   "today": {
     "message": "Hodie"
+  },
+  "language_auto": {
+    "message": "Automaticum (lingua navigatri)"
+  },
+  "nav_icons": {
+    "message": "Icones navigationis"
+  },
+  "nav_icons_desc": {
+    "message": "Icones iuxta res in menu laterali ostendit. Exstingue ut menu solis verbis habeatur."
+  },
+  "match_ui_colors": {
+    "message": "Colores interfaciei aequare"
+  },
+  "match_ui_colors_desc": {
+    "message": "Indicem historiae eodem colore facit quo cetera interfaciei (latus, calendarium lateris et tabulae), non colore distincto."
+  },
+  "pop_store": {
+    "message": "Reponere"
+  },
+  "pop_open": {
+    "message": "Aperire"
+  },
+  "pop_prev_day": {
+    "message": "Dies prior"
+  },
+  "pop_next_day": {
+    "message": "Dies sequens"
+  },
+  "pop_clear_search": {
+    "message": "Quaestionem purgare et ad hodie redire"
+  },
+  "pop_recent_history": {
+    "message": "Historia recens"
+  },
+  "pop_closed_tabs": {
+    "message": "Tabulae clausae"
+  },
+  "pop_active_tabs": {
+    "message": "Tabulae activae"
+  },
+  "pop_unselect_all": {
+    "message": "Omnia deselegere"
+  },
+  "pop_select_all": {
+    "message": "Omnia eligere"
+  },
+  "pop_search_results": {
+    "message": "Eventus quaestionis"
+  },
+  "pop_start_typing": {
+    "message": "Incipe scribere ad quaerendum..."
+  },
+  "pop_export_session_title": {
+    "message": "Dextrum preme ad novissimam sessionem exportandam"
+  },
+  "pop_searching": {
+    "message": "Quaerens..."
+  },
+  "pop_search_error": {
+    "message": "Error quaestionis"
+  },
+  "pop_no_results": {
+    "message": "Nihil inventum"
+  },
+  "pop_no_closed": {
+    "message": "Nullae tabulae nuper clausae"
+  },
+  "pop_no_storable": {
+    "message": "Nullae tabulae apertae quae reponi possint"
+  },
+  "pop_ts_error": {
+    "message": "Error in tabulis repositis onerandis"
+  },
+  "pop_no_stored": {
+    "message": "Nullae tabulae repositae."
+  },
+  "pop_no_stored_hint": {
+    "message": "Dextrum preme in hoc bullo ad tabulas apertas reponendas"
+  },
+  "pop_no_data": {
+    "message": "Nulla data adhuc"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "$N1$ tabulas repositas ex repositorio removere?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Haec pagina reponi non potest"
+  },
+  "pop_no_history_day": {
+    "message": "Nulla historia huius diei"
+  },
+  "pop_no_history_today": {
+    "message": "Nulla historia hodie adhuc"
+  },
+  "pop_just_now": {
+    "message": "modo"
+  },
+  "pop_min_ago": {
+    "message": "ante $N1$ min",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "ante $N1$ h",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "ante $N1$ d",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

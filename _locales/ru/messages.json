@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Расширенная история"
   },
+  "rename_bookmark": {
+  "message": "✏️ Переименовать закладку"
+},
+  "remove_bookmark": {
+    "message": "🗑 Удалить закладку"
+  },
+  "quick_filters": {
+    "message": "Быстрые фильтры"
+  },
+  "quick_filter_desc": {
+    "message": "Сохраните именованную группу доменов, ключевых слов или URL (например, «Социальные сети» → facebook.com, instagram.com, pinterest.com). Выберите её в раскрывающемся списке рядом с полем поиска на странице истории, чтобы мгновенно отфильтровать только эти записи."
+  },
+  "filter_name": {
+    "message": "Название фильтра (например, Социальные сети)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Один домен, ключевое слово или URL в каждой строке — например:\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Сохранить изменения"
+  },
+  "add_filter": {
+    "message": "Добавить фильтр"
+  },
+  "no_qfilters": {
+    "message": "Быстрых фильтров пока нет"
+  },
+  "scroll_sensitivity": {
+    "message": "Чувствительность прокрутки"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Сколько кнопок дней перемещается за один шаг прокрутки"
+  },
+  "scroll_date": {
+    "message": "Прокручивать даты колёсиком мыши"
+  },
+  "scroll_date_desc": {
+    "message": "Позволяет обычному колёсику мыши (которое прокручивает только по вертикали) перемещать панель дат в стороны — удобно на компьютере, где колёсико само по себе не поддерживает горизонтальную прокрутку."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Доступ к списку исключений"
+  },
+  "ignore_list_enter_password": {
+    "message": "Введите мастер-пароль, чтобы просмотреть список исключений."
+  },
+  "reset": {
+    "message": "Сбросить"
+  },
+  "ok": {
+    "message": "ОК"
+  },
   "current_session": {
     "message": "Текущая сессия"
   },
@@ -672,7 +723,7 @@
     "message": "🗂 Список открытых вкладок и время простоя"
   },
   "cal_all_time": {
-    "message": "🗓 Всё время"
+    "message": "Всё время"
   },
   "prev_day": {
     "message": "‹ Пред. день"
@@ -750,16 +801,31 @@
     "message": "Этот домен уже в списке"
   },
   "dh_confirm_warn": {
-    "message": "Это навсегда удалит историю за период: {0}. Нажмите «Удалить» ещё раз для подтверждения."
+    "message": "Это навсегда удалит историю за период: $N1$. Нажмите «Удалить» ещё раз для подтверждения.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Домены из вашего списка исключений ({0}) будут сохранены."
+    "message": "Домены из вашего списка исключений ($N1$) будут сохранены.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Удаление…"
   },
   "deleted_history_entries": {
-    "message": "Удалено записей истории: {0}"
+    "message": "Удалено записей истории: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "cookie"
@@ -768,13 +834,31 @@
     "message": "кэш"
   },
   "confirm_restore_tabs": {
-    "message": "Восстановить вкладок: {0}?"
+    "message": "Восстановить вкладок: $N1$?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "Восстановлено вкладок: {0} (окон: {1})"
+    "message": "Восстановлено вкладок: $N1$ (окон: $N2$)",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "Восстановлено вкладок: {0} (в новом окне)"
+    "message": "Восстановлено вкладок: $N1$ (в новом окне)",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Шаблон удалён"
@@ -783,7 +867,12 @@
     "message": "Введите шаблон"
   },
   "toast_pattern_added": {
-    "message": "Шаблон добавлен: {0}"
+    "message": "Шаблон добавлен: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Список игнорирования включён"
@@ -813,13 +902,23 @@
     "message": "Очистка игнорируемых URL из истории…"
   },
   "toast_removed_ignored": {
-    "message": "Удалено игнорируемых URL из истории: {0}"
+    "message": "Удалено игнорируемых URL из истории: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Игнорируемые URL в истории не найдены"
   },
   "keyword_prefix": {
-    "message": "ключевое слово: {0}"
+    "message": "ключевое слово: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "В кэше (локально)"
@@ -853,5 +952,130 @@
   },
   "yesterday": {
     "message": "Вчера"
+  },
+  "language_auto": {
+    "message": "Автоматически (язык браузера)"
+  },
+  "nav_icons": {
+    "message": "Значки навигации"
+  },
+  "nav_icons_desc": {
+    "message": "Показывает значки рядом с пунктами меню боковой панели. Отключите, чтобы оставить только текст."
+  },
+  "match_ui_colors": {
+    "message": "Цвета как у интерфейса"
+  },
+  "match_ui_colors_desc": {
+    "message": "Окрашивает список истории в тот же цвет, что и остальной интерфейс (боковая панель, календарь и панели), вместо отдельного оттенка."
+  },
+  "pop_store": {
+    "message": "Сохранить"
+  },
+  "pop_open": {
+    "message": "Открыть"
+  },
+  "pop_prev_day": {
+    "message": "Предыдущий день"
+  },
+  "pop_next_day": {
+    "message": "Следующий день"
+  },
+  "pop_clear_search": {
+    "message": "Очистить поиск и вернуться к сегодняшнему дню"
+  },
+  "pop_recent_history": {
+    "message": "Недавняя история"
+  },
+  "pop_closed_tabs": {
+    "message": "Закрытые вкладки"
+  },
+  "pop_active_tabs": {
+    "message": "Активные вкладки"
+  },
+  "pop_unselect_all": {
+    "message": "Снять выделение"
+  },
+  "pop_select_all": {
+    "message": "Выбрать все"
+  },
+  "pop_search_results": {
+    "message": "Результаты поиска"
+  },
+  "pop_start_typing": {
+    "message": "Начните вводить для поиска..."
+  },
+  "pop_export_session_title": {
+    "message": "Щёлкните правой кнопкой, чтобы экспортировать последнюю сессию"
+  },
+  "pop_searching": {
+    "message": "Поиск..."
+  },
+  "pop_search_error": {
+    "message": "Ошибка поиска"
+  },
+  "pop_no_results": {
+    "message": "Ничего не найдено"
+  },
+  "pop_no_closed": {
+    "message": "Нет недавно закрытых вкладок"
+  },
+  "pop_no_storable": {
+    "message": "Нет открытых вкладок, которые можно сохранить"
+  },
+  "pop_ts_error": {
+    "message": "Ошибка загрузки хранилища вкладок"
+  },
+  "pop_no_stored": {
+    "message": "Нет сохранённых вкладок."
+  },
+  "pop_no_stored_hint": {
+    "message": "Щёлкните эту кнопку правой кнопкой мыши, чтобы сохранить открытые вкладки"
+  },
+  "pop_no_data": {
+    "message": "Данных пока нет"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Удалить сохранённые вкладки ($N1$) из хранилища?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Эту страницу нельзя сохранить"
+  },
+  "pop_no_history_day": {
+    "message": "Нет истории за этот день"
+  },
+  "pop_no_history_today": {
+    "message": "Сегодня истории пока нет"
+  },
+  "pop_just_now": {
+    "message": "только что"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ мин назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ ч назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ дн. назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

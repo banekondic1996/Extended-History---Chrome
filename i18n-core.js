@@ -58,6 +58,31 @@
   window._ehUiLangChoice = code;
   window._currentLang = override ? code : chrome.i18n.getUILanguage();
 
+  // Month / weekday names in the language in use. Intl covers everything Chrome
+  // supports; Latin has no Intl data, so it is spelled out.
+  var LA_MONTHS = ['Ianuarius','Februarius','Martius','Aprilis','Maius','Iunius','Iulius','Augustus','September','October','November','December'];
+  var LA_DAYS = ['D','L','M','M','I','V','S'];
+  function intlLocale() {
+    var l = String(window._currentLang || 'en').replace('_', '-');
+    return l.toLowerCase() === 'no' ? 'nb' : l;
+  }
+  window._ehMonthNames = function () {
+    if (String(window._currentLang) === 'la') return LA_MONTHS.slice();
+    try {
+      var f = new Intl.DateTimeFormat(intlLocale(), { month: 'long' }), out = [];
+      for (var i = 0; i < 12; i++) { var n = f.format(new Date(2021, i, 1)); out.push(n.charAt(0).toUpperCase() + n.slice(1)); }
+      return out;
+    } catch (e) { return ['January','February','March','April','May','June','July','August','September','October','November','December']; }
+  };
+  window._ehWeekdayInitials = function () {   // Sunday first
+    if (String(window._currentLang) === 'la') return LA_DAYS.slice();
+    try {
+      var f = new Intl.DateTimeFormat(intlLocale(), { weekday: 'narrow' }), out = [];
+      for (var i = 0; i < 7; i++) out.push(f.format(new Date(2021, 7, 1 + i)));  // 1 Aug 2021 = Sunday
+      return out;
+    } catch (e) { return ['S','M','T','W','T','F','S']; }
+  };
+
   // Strings built in JavaScript (toasts, confirms...). Extra arguments become the
   // message's substitutions; if the key is missing the English fallback is used
   // with {0}, {1} filled in.

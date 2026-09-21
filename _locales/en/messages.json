@@ -2,6 +2,60 @@
   "ext_name": {
     "message": "Extended History"
   },
+  "rename_bookmark": {
+  "message": "✏️ Rename bookmark"
+},
+  "remove_bookmark": {
+    "message": "🗑 Remove bookmark"
+  },
+   "select": {
+    "message": "Select"
+  },
+  "quick_filters": {
+    "message": "Quick Filters"
+  },
+  "quick_filter_desc": {
+    "message": "Save a named group of domains, keywords, or URLs (e.g. \"Social Media\" → facebook.com, instagram.com, pinterest.com). Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries."
+  },
+  "filter_name": {
+    "message": "Filter name (e.g. Social Media)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "One domain, keyword, or URL per line — e.g.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Save changes"
+  },
+  "add_filter": {
+    "message": "Add Filter"
+  },
+  "no_qfilters": {
+    "message": "No quick filters yet"
+  },
+  "scroll_sensitivity": {
+    "message": "Scroll sensitivity"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "How many day pills each scroll click moves"
+  },
+  "scroll_date": {
+    "message": "Scroll date pills with mouse wheel"
+  },
+  "scroll_date_desc": {
+    "message": "Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Ignore List Access"
+  },
+  "ignore_list_enter_password": {
+    "message": "Enter your master password to view the ignore list."
+  },
+  "reset": {
+    "message": "Reset"
+  },
+  "ok": {
+    "message": "OK"
+  },
   "popup_show_url": {
     "message": "URLs"
   },
@@ -678,7 +732,7 @@
     "message": "Close"
   },
   "cal_all_time": {
-    "message": "🗓 All Time"
+    "message": "All Time"
   },
   "prev_day": {
     "message": "‹ Prev day"
@@ -765,16 +819,31 @@
     "message": "That domain is already on the list"
   },
   "dh_confirm_warn": {
-    "message": "This will permanently delete history for: {0}. Click Delete again to confirm."
+    "message": "This will permanently delete history for: $N1$. Click Delete again to confirm.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Domains on your exceptions list ({0}) will be kept."
+    "message": "Domains on your exceptions list ($N1$) will be kept.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Deleting…"
   },
   "deleted_history_entries": {
-    "message": "Deleted {0} history entries"
+    "message": "Deleted $N1$ history entries",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "cookies"
@@ -783,13 +852,31 @@
     "message": "cache"
   },
   "confirm_restore_tabs": {
-    "message": "Restore {0} tabs?"
+    "message": "Restore $N1$ tabs?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "Restored {0} tabs in {1} windows"
+    "message": "Restored $N1$ tabs in $N2$ windows",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "Restored {0} tabs in a new window"
+    "message": "Restored $N1$ tabs in a new window",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Pattern removed"
@@ -798,7 +885,12 @@
     "message": "Please enter a pattern"
   },
   "toast_pattern_added": {
-    "message": "Pattern added: {0}"
+    "message": "Pattern added: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Ignore list enabled"
@@ -816,13 +908,23 @@
     "message": "Cleaning ignored URLs from history…"
   },
   "toast_removed_ignored": {
-    "message": "Removed {0} ignored URLs from history"
+    "message": "Removed $N1$ ignored URLs from history",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "No ignored URLs found in history"
   },
   "keyword_prefix": {
-    "message": "keyword: {0}"
+    "message": "keyword: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "Cached (local)"
@@ -853,5 +955,130 @@
   },
   "wallpaper_opacity_desc": {
     "message": "Fades the background image itself — separate from the glass panel tint below."
+  },
+  "language_auto": {
+    "message": "Auto (browser language)"
+  },
+  "nav_icons": {
+    "message": "Navigation icons"
+  },
+  "nav_icons_desc": {
+    "message": "Show the icons next to the items in the sidebar navigation. Turn off for a text-only menu."
+  },
+  "match_ui_colors": {
+    "message": "Match UI colors"
+  },
+  "match_ui_colors_desc": {
+    "message": "Makes the history list the same color as the rest of the interface (sidebar, calendar sidebar and panels) instead of a distinct shade."
+  },
+  "pop_store": {
+    "message": "Store"
+  },
+  "pop_open": {
+    "message": "Open"
+  },
+  "pop_prev_day": {
+    "message": "Previous day"
+  },
+  "pop_next_day": {
+    "message": "Next day"
+  },
+  "pop_clear_search": {
+    "message": "Clear search & reset to today"
+  },
+  "pop_recent_history": {
+    "message": "Recent History"
+  },
+  "pop_closed_tabs": {
+    "message": "Closed Tabs"
+  },
+  "pop_active_tabs": {
+    "message": "Active Tabs"
+  },
+  "pop_unselect_all": {
+    "message": "Unselect All"
+  },
+  "pop_select_all": {
+    "message": "Select All"
+  },
+  "pop_search_results": {
+    "message": "Search Results"
+  },
+  "pop_start_typing": {
+    "message": "Start typing to search..."
+  },
+  "pop_export_session_title": {
+    "message": "Right-click to export latest session"
+  },
+  "pop_searching": {
+    "message": "Searching..."
+  },
+  "pop_search_error": {
+    "message": "Search error"
+  },
+  "pop_no_results": {
+    "message": "No results found"
+  },
+  "pop_no_closed": {
+    "message": "No recently closed tabs"
+  },
+  "pop_no_storable": {
+    "message": "No storable tabs open"
+  },
+  "pop_ts_error": {
+    "message": "Error loading tab storage"
+  },
+  "pop_no_stored": {
+    "message": "No stored tabs."
+  },
+  "pop_no_stored_hint": {
+    "message": "Right-click this tab button to store open tabs"
+  },
+  "pop_no_data": {
+    "message": "No data yet"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Remove $N1$ stored tab(s) from Tab Storage?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Can't store this page"
+  },
+  "pop_no_history_day": {
+    "message": "No history for this day"
+  },
+  "pop_no_history_today": {
+    "message": "No history yet today"
+  },
+  "pop_just_now": {
+    "message": "just now"
+  },
+  "pop_min_ago": {
+    "message": "$N1$m ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$h ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$d ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

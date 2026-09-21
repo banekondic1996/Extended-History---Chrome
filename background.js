@@ -43,6 +43,8 @@ const DEFAULT_SETTINGS = {
   popupAsSidebar: false,     // Open Extended History in Chrome's side panel instead of the popup
   sidebarAutoHide: true,     // Close the sidebar automatically when the mouse leaves it
   roundedCorners: true,      // UI rounded corners on the sidebar/main panels (default on)
+  navIcons: true,            // Show the icons in the sidebar navigation (off = text only)
+  matchUiColors: false,      // History list uses the same colour as the rest of the UI instead of its own shade
   calendarMode: false,       // Replace date/hour pill nav with a right-side calendar sidebar
   hideIgnoredInTimeSpent: false, // Hide (not delete) ignore-list-matched domains from the Time Spent view
   autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest

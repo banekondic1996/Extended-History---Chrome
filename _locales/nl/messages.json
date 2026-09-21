@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+  "rename_bookmark": {
+  "message": "✏️ Bladwijzer hernoemen"
+},
+  "remove_bookmark": {
+    "message": "🗑 Bladwijzer verwijderen"
+  },
+  "quick_filters": {
+    "message": "Snelle filters"
+  },
+  "quick_filter_desc": {
+    "message": "Sla een benoemde groep van domeinen, trefwoorden of URL's op (bijv. \"Sociale media\" → facebook.com, instagram.com, pinterest.com). Kies deze uit de vervolgkeuzelijst naast het zoekvak op de Geschiedenis-pagina om direct alleen die vermeldingen te filteren."
+  },
+  "filter_name": {
+    "message": "Filternaam (bijv. Sociale media)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Eén domein, trefwoord of URL per regel — bijv.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Wijzigingen opslaan"
+  },
+  "add_filter": {
+    "message": "Filter toevoegen"
+  },
+  "no_qfilters": {
+    "message": "Nog geen snelle filters"
+  },
+   "scroll_sensitivity": {
+    "message": "Scrollgevoeligheid"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Hoeveel dagknoppen elke scrollbeweging verschuift"
+  },
+  "scroll_date": {
+    "message": "Datumknoppen scrollen met het muiswiel"
+  },
+  "scroll_date_desc": {
+    "message": "Hiermee kan een normaal muiswiel (dat alleen verticaal scrolt) de datumknoppenbalk zijwaarts verplaatsen — handig op desktop, waar het wiel niet uit zichzelf horizontaal kan scrollen."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Toegang tot negeerlijst"
+  },
+  "ignore_list_enter_password": {
+    "message": "Voer je hoofdwachtwoord in om de negeerlijst te bekijken."
+  },
+  "reset": {
+    "message": "Resetten"
+  },
+  "ok": {
+    "message": "OK"
+  },
   "current_session": {
     "message": "Huidige Sessie"
   },
@@ -672,7 +723,7 @@
     "message": "🗂 Open tabbladen en inactieve tijd weergeven"
   },
   "cal_all_time": {
-    "message": "🗓 Alle tijd"
+    "message": "Alle tijd"
   },
   "prev_day": {
     "message": "‹ Vorige dag"
@@ -750,16 +801,31 @@
     "message": "Dat domein staat al in de lijst"
   },
   "dh_confirm_warn": {
-    "message": "Hiermee wordt de geschiedenis permanent verwijderd voor: {0}. Klik nogmaals op Verwijderen om te bevestigen."
+    "message": "Hiermee wordt de geschiedenis permanent verwijderd voor: $N1$. Klik nogmaals op Verwijderen om te bevestigen.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Domeinen op je uitzonderingenlijst ({0}) blijven behouden."
+    "message": "Domeinen op je uitzonderingenlijst ($N1$) blijven behouden.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Verwijderen…"
   },
   "deleted_history_entries": {
-    "message": "{0} geschiedenisitems verwijderd"
+    "message": "$N1$ geschiedenisitems verwijderd",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "cookies"
@@ -768,13 +834,31 @@
     "message": "cache"
   },
   "confirm_restore_tabs": {
-    "message": "{0} tabbladen herstellen?"
+    "message": "$N1$ tabbladen herstellen?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "{0} tabbladen hersteld in {1} vensters"
+    "message": "$N1$ tabbladen hersteld in $N2$ vensters",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "{0} tabbladen hersteld in een nieuw venster"
+    "message": "$N1$ tabbladen hersteld in een nieuw venster",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Patroon verwijderd"
@@ -783,7 +867,12 @@
     "message": "Voer een patroon in"
   },
   "toast_pattern_added": {
-    "message": "Patroon toegevoegd: {0}"
+    "message": "Patroon toegevoegd: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Negeerlijst ingeschakeld"
@@ -813,13 +902,23 @@
     "message": "Genegeerde URL's uit geschiedenis verwijderen…"
   },
   "toast_removed_ignored": {
-    "message": "{0} genegeerde URL's uit geschiedenis verwijderd"
+    "message": "$N1$ genegeerde URL's uit geschiedenis verwijderd",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Geen genegeerde URL's gevonden in geschiedenis"
   },
   "keyword_prefix": {
-    "message": "trefwoord: {0}"
+    "message": "trefwoord: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "In cache (lokaal)"
@@ -853,5 +952,130 @@
   },
   "yesterday": {
     "message": "Gisteren"
+  },
+  "language_auto": {
+    "message": "Automatisch (browsertaal)"
+  },
+  "nav_icons": {
+    "message": "Navigatiepictogrammen"
+  },
+  "nav_icons_desc": {
+    "message": "Toont de pictogrammen naast de items in het zijbalkmenu. Schakel uit voor een menu met alleen tekst."
+  },
+  "match_ui_colors": {
+    "message": "Interfacekleuren aanpassen"
+  },
+  "match_ui_colors_desc": {
+    "message": "Geeft de geschiedenislijst dezelfde kleur als de rest van de interface (zijbalk, kalenderzijbalk en panelen) in plaats van een afwijkende tint."
+  },
+  "pop_store": {
+    "message": "Opslaan"
+  },
+  "pop_open": {
+    "message": "Openen"
+  },
+  "pop_prev_day": {
+    "message": "Vorige dag"
+  },
+  "pop_next_day": {
+    "message": "Volgende dag"
+  },
+  "pop_clear_search": {
+    "message": "Zoekopdracht wissen en terug naar vandaag"
+  },
+  "pop_recent_history": {
+    "message": "Recente geschiedenis"
+  },
+  "pop_closed_tabs": {
+    "message": "Gesloten tabbladen"
+  },
+  "pop_active_tabs": {
+    "message": "Actieve tabbladen"
+  },
+  "pop_unselect_all": {
+    "message": "Alles deselecteren"
+  },
+  "pop_select_all": {
+    "message": "Alles selecteren"
+  },
+  "pop_search_results": {
+    "message": "Zoekresultaten"
+  },
+  "pop_start_typing": {
+    "message": "Begin met typen om te zoeken..."
+  },
+  "pop_export_session_title": {
+    "message": "Klik met rechts om de laatste sessie te exporteren"
+  },
+  "pop_searching": {
+    "message": "Zoeken..."
+  },
+  "pop_search_error": {
+    "message": "Zoekfout"
+  },
+  "pop_no_results": {
+    "message": "Geen resultaten gevonden"
+  },
+  "pop_no_closed": {
+    "message": "Geen recent gesloten tabbladen"
+  },
+  "pop_no_storable": {
+    "message": "Geen opslaanbare tabbladen open"
+  },
+  "pop_ts_error": {
+    "message": "Fout bij laden van tabbladopslag"
+  },
+  "pop_no_stored": {
+    "message": "Geen opgeslagen tabbladen."
+  },
+  "pop_no_stored_hint": {
+    "message": "Klik met rechts op deze knop om open tabbladen op te slaan"
+  },
+  "pop_no_data": {
+    "message": "Nog geen gegevens"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "$N1$ opgeslagen tabblad(en) uit tabbladopslag verwijderen?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Deze pagina kan niet worden opgeslagen"
+  },
+  "pop_no_history_day": {
+    "message": "Geen geschiedenis voor deze dag"
+  },
+  "pop_no_history_today": {
+    "message": "Vandaag nog geen geschiedenis"
+  },
+  "pop_just_now": {
+    "message": "zojuist"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ min geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ u geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ d geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

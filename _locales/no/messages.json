@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Utvidet Historikk"
   },
+  "rename_bookmark": {
+  "message": "✏️ Gi bokmerket nytt navn"
+},
+  "remove_bookmark": {
+    "message": "🗑 Fjern bokmerke"
+  },
+  "quick_filters": {
+    "message": "Hurtigfiltre"
+  },
+  "quick_filter_desc": {
+    "message": "Lagre en navngitt gruppe med domener, nøkkelord eller URL-er (f.eks. \"Sosiale medier\" → facebook.com, instagram.com, pinterest.com). Velg den fra rullegardinmenyen ved siden av søkefeltet på historikksiden for å filtrere umiddelbart til bare disse oppføringene."
+  },
+  "filter_name": {
+    "message": "Filternavn (f.eks. Sosiale medier)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Ett domene, nøkkelord eller URL per linje — f.eks.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Lagre endringer"
+  },
+  "add_filter": {
+    "message": "Legg til filter"
+  },
+  "no_qfilters": {
+    "message": "Ingen hurtigfiltre ennå"
+  },
+   "scroll_sensitivity": {
+    "message": "Rullefølsomhet"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Hvor mange dagknapper hvert rulleklikk flytter"
+  },
+  "scroll_date": {
+    "message": "Rull datoknapper med musehjulet"
+  },
+  "scroll_date_desc": {
+    "message": "Lar et vanlig musehjul (som bare ruller vertikalt) flytte datolinjen sidelengs — praktisk på datamaskin, der hjulet ikke kan rulle horisontalt på egen hånd."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Tilgang til ignoreringslisten"
+  },
+  "ignore_list_enter_password": {
+    "message": "Skriv inn hovedpassordet ditt for å se ignoreringslisten."
+  },
+  "reset": {
+    "message": "Tilbakestill"
+  },
+  "ok": {
+    "message": "OK"
+  },
   "current_session": {
     "message": "Nåværende økt"
   },
@@ -660,7 +711,7 @@
     "message": "🗂 List opp åpne faner og inaktiv tid"
   },
   "cal_all_time": {
-    "message": "🗓 Hele tiden"
+    "message": "Hele tiden"
   },
   "prev_day": {
     "message": "‹ Forrige dag"
@@ -738,16 +789,31 @@
     "message": "Dette domenet er allerede i listen"
   },
   "dh_confirm_warn": {
-    "message": "Dette sletter historikken permanent for: {0}. Klikk Slett igjen for å bekrefte."
+    "message": "Dette sletter historikken permanent for: $N1$. Klikk Slett igjen for å bekrefte.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Domener på unntakslisten din ({0}) beholdes."
+    "message": "Domener på unntakslisten din ($N1$) beholdes.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Sletter…"
   },
   "deleted_history_entries": {
-    "message": "{0} historikkoppføringer slettet"
+    "message": "$N1$ historikkoppføringer slettet",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "informasjonskapsler"
@@ -756,13 +822,31 @@
     "message": "buffer"
   },
   "confirm_restore_tabs": {
-    "message": "Gjenopprette {0} faner?"
+    "message": "Gjenopprette $N1$ faner?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "{0} faner gjenopprettet i {1} vinduer"
+    "message": "$N1$ faner gjenopprettet i $N2$ vinduer",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "{0} faner gjenopprettet i et nytt vindu"
+    "message": "$N1$ faner gjenopprettet i et nytt vindu",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Mønster fjernet"
@@ -771,7 +855,12 @@
     "message": "Skriv inn et mønster"
   },
   "toast_pattern_added": {
-    "message": "Mønster lagt til: {0}"
+    "message": "Mønster lagt til: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Ignoreringslisten er slått på"
@@ -801,13 +890,23 @@
     "message": "Rydder ignorerte URL-er fra historikken…"
   },
   "toast_removed_ignored": {
-    "message": "Fjernet {0} ignorerte URL-er fra historikken"
+    "message": "Fjernet $N1$ ignorerte URL-er fra historikken",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "Fant ingen ignorerte URL-er i historikken"
   },
   "keyword_prefix": {
-    "message": "nøkkelord: {0}"
+    "message": "nøkkelord: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "Bufret (lokalt)"
@@ -841,5 +940,130 @@
   },
   "yesterday": {
     "message": "I går"
+  },
+  "language_auto": {
+    "message": "Automatisk (nettleserspråk)"
+  },
+  "nav_icons": {
+    "message": "Navigasjonsikoner"
+  },
+  "nav_icons_desc": {
+    "message": "Viser ikonene ved siden av elementene i sidefeltmenyen. Slå av for en meny med bare tekst."
+  },
+  "match_ui_colors": {
+    "message": "Tilpass grensesnittfargene"
+  },
+  "match_ui_colors_desc": {
+    "message": "Gir historikklisten samme farge som resten av grensesnittet (sidefelt, kalendersidefelt og paneler) i stedet for en egen nyanse."
+  },
+  "pop_store": {
+    "message": "Lagre"
+  },
+  "pop_open": {
+    "message": "Åpne"
+  },
+  "pop_prev_day": {
+    "message": "Forrige dag"
+  },
+  "pop_next_day": {
+    "message": "Neste dag"
+  },
+  "pop_clear_search": {
+    "message": "Tøm søket og gå tilbake til i dag"
+  },
+  "pop_recent_history": {
+    "message": "Nylig historikk"
+  },
+  "pop_closed_tabs": {
+    "message": "Lukkede faner"
+  },
+  "pop_active_tabs": {
+    "message": "Aktive faner"
+  },
+  "pop_unselect_all": {
+    "message": "Fjern alle valg"
+  },
+  "pop_select_all": {
+    "message": "Velg alle"
+  },
+  "pop_search_results": {
+    "message": "Søkeresultater"
+  },
+  "pop_start_typing": {
+    "message": "Begynn å skrive for å søke..."
+  },
+  "pop_export_session_title": {
+    "message": "Høyreklikk for å eksportere siste økt"
+  },
+  "pop_searching": {
+    "message": "Søker..."
+  },
+  "pop_search_error": {
+    "message": "Søkefeil"
+  },
+  "pop_no_results": {
+    "message": "Ingen resultater funnet"
+  },
+  "pop_no_closed": {
+    "message": "Ingen nylig lukkede faner"
+  },
+  "pop_no_storable": {
+    "message": "Ingen lagringsbare faner er åpne"
+  },
+  "pop_ts_error": {
+    "message": "Feil ved lasting av fanelagring"
+  },
+  "pop_no_stored": {
+    "message": "Ingen lagrede faner."
+  },
+  "pop_no_stored_hint": {
+    "message": "Høyreklikk på denne knappen for å lagre åpne faner"
+  },
+  "pop_no_data": {
+    "message": "Ingen data ennå"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Fjerne $N1$ lagrede fane(r) fra fanelagring?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Kan ikke lagre denne siden"
+  },
+  "pop_no_history_day": {
+    "message": "Ingen historikk for denne dagen"
+  },
+  "pop_no_history_today": {
+    "message": "Ingen historikk ennå i dag"
+  },
+  "pop_just_now": {
+    "message": "akkurat nå"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ min siden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ t siden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ d siden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

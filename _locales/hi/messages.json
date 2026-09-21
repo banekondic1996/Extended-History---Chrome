@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "विस्तारित इतिहास"
   },
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 बुकमार्क हटाएँ"
+  },
+  "quick_filters": {
+    "message": "त्वरित फ़िल्टर"
+  },
+  "quick_filter_desc": {
+    "message": "डोमेन, कीवर्ड या URL का एक नामित समूह सहेजें (जैसे \"सोशल मीडिया\" → facebook.com, instagram.com, pinterest.com)। इतिहास पृष्ठ पर खोज बॉक्स के पास ड्रॉपडाउन से इसे चुनकर तुरंत केवल उन प्रविष्टियों को फ़िल्टर करें।"
+  },
+  "filter_name": {
+    "message": "फ़िल्टर का नाम (जैसे सोशल मीडिया)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "प्रति पंक्ति एक डोमेन, कीवर्ड या URL — जैसे\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "परिवर्तन सहेजें"
+  },
+  "add_filter": {
+    "message": "फ़िल्टर जोड़ें"
+  },
+  "no_qfilters": {
+    "message": "अभी तक कोई त्वरित फ़िल्टर नहीं है"
+  },
+  "scroll_sensitivity": {
+    "message": "स्क्रॉल संवेदनशीलता"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "हर स्क्रॉल क्लिक पर कितने दिन के टैब आगे बढ़ें"
+  },
+  "scroll_date": {
+    "message": "माउस व्हील से तारीख के टैब स्क्रॉल करें"
+  },
+  "scroll_date_desc": {
+    "message": "सामान्य माउस व्हील (जो केवल लंबवत स्क्रॉल करता है) को तारीखों की पट्टी को क्षैतिज रूप से खिसकाने देता है — डेस्कटॉप पर उपयोगी, जहाँ व्हील अपने आप क्षैतिज रूप से स्क्रॉल नहीं कर सकता।"
+  },
+  "ignore_list_access": {
+    "message": "🔒 अनदेखी सूची तक पहुँच"
+  },
+  "ignore_list_enter_password": {
+    "message": "अनदेखी सूची देखने के लिए अपना मास्टर पासवर्ड दर्ज करें।"
+  },
+  "reset": {
+    "message": "रीसेट करें"
+  },
+  "ok": {
+    "message": "ठीक है"
+  },
   "current_session": {
     "message": "वर्तमान सत्र"
   },
@@ -633,7 +684,7 @@
     "message": "🗂 खुले टैब और निष्क्रिय समय सूचीबद्ध करें"
   },
   "cal_all_time": {
-    "message": "🗓 सभी समय"
+    "message": "सभी समय"
   },
   "prev_day": {
     "message": "‹ पिछला दिन"
@@ -711,16 +762,31 @@
     "message": "यह डोमेन पहले से सूची में है"
   },
   "dh_confirm_warn": {
-    "message": "यह {0} के लिए इतिहास को स्थायी रूप से हटा देगा। पुष्टि करने के लिए फिर से हटाएँ पर क्लिक करें।"
+    "message": "यह $N1$ के लिए इतिहास को स्थायी रूप से हटा देगा। पुष्टि करने के लिए फिर से हटाएँ पर क्लिक करें।",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "आपकी अपवाद सूची के डोमेन ({0}) सुरक्षित रहेंगे।"
+    "message": "आपकी अपवाद सूची के डोमेन ($N1$) सुरक्षित रहेंगे।",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "हटाया जा रहा है…"
   },
   "deleted_history_entries": {
-    "message": "{0} इतिहास प्रविष्टियाँ हटाई गईं"
+    "message": "$N1$ इतिहास प्रविष्टियाँ हटाई गईं",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "कुकीज़"
@@ -729,13 +795,31 @@
     "message": "कैश"
   },
   "confirm_restore_tabs": {
-    "message": "{0} टैब पुनर्स्थापित करें?"
+    "message": "$N1$ टैब पुनर्स्थापित करें?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "{1} विंडो में {0} टैब पुनर्स्थापित किए गए"
+    "message": "$N2$ विंडो में $N1$ टैब पुनर्स्थापित किए गए",
+    "placeholders": {
+      "n2": {
+        "content": "$2"
+      },
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "एक नई विंडो में {0} टैब पुनर्स्थापित किए गए"
+    "message": "एक नई विंडो में $N1$ टैब पुनर्स्थापित किए गए",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "पैटर्न हटाया गया"
@@ -744,7 +828,12 @@
     "message": "कृपया एक पैटर्न दर्ज करें"
   },
   "toast_pattern_added": {
-    "message": "पैटर्न जोड़ा गया: {0}"
+    "message": "पैटर्न जोड़ा गया: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "अनदेखी सूची चालू की गई"
@@ -774,13 +863,23 @@
     "message": "इतिहास से अनदेखे URL साफ़ किए जा रहे हैं…"
   },
   "toast_removed_ignored": {
-    "message": "इतिहास से {0} अनदेखे URL हटाए गए"
+    "message": "इतिहास से $N1$ अनदेखे URL हटाए गए",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "इतिहास में कोई अनदेखा URL नहीं मिला"
   },
   "keyword_prefix": {
-    "message": "कीवर्ड: {0}"
+    "message": "कीवर्ड: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "कैश्ड (लोकल)"
@@ -817,5 +916,130 @@
   },
   "today": {
     "message": "आज"
+  },
+  "language_auto": {
+    "message": "स्वचालित (ब्राउज़र की भाषा)"
+  },
+  "nav_icons": {
+    "message": "नेविगेशन आइकन"
+  },
+  "nav_icons_desc": {
+    "message": "साइडबार नेविगेशन के आइटम के साथ आइकन दिखाता है। केवल टेक्स्ट वाले मेनू के लिए बंद करें।"
+  },
+  "match_ui_colors": {
+    "message": "UI रंगों से मिलाएँ"
+  },
+  "match_ui_colors_desc": {
+    "message": "इतिहास सूची को इंटरफ़ेस के बाकी हिस्सों (साइडबार, कैलेंडर साइडबार और पैनल) जैसा ही रंग देता है, अलग शेड की जगह।"
+  },
+  "pop_store": {
+    "message": "स्टोर करें"
+  },
+  "pop_open": {
+    "message": "खोलें"
+  },
+  "pop_prev_day": {
+    "message": "पिछला दिन"
+  },
+  "pop_next_day": {
+    "message": "अगला दिन"
+  },
+  "pop_clear_search": {
+    "message": "खोज साफ़ करें और आज पर लौटें"
+  },
+  "pop_recent_history": {
+    "message": "हाल का इतिहास"
+  },
+  "pop_closed_tabs": {
+    "message": "बंद किए गए टैब"
+  },
+  "pop_active_tabs": {
+    "message": "सक्रिय टैब"
+  },
+  "pop_unselect_all": {
+    "message": "सभी अचयनित करें"
+  },
+  "pop_select_all": {
+    "message": "सभी चुनें"
+  },
+  "pop_search_results": {
+    "message": "खोज परिणाम"
+  },
+  "pop_start_typing": {
+    "message": "खोजने के लिए टाइप करना शुरू करें..."
+  },
+  "pop_export_session_title": {
+    "message": "नवीनतम सत्र निर्यात करने के लिए राइट-क्लिक करें"
+  },
+  "pop_searching": {
+    "message": "खोज रहे हैं..."
+  },
+  "pop_search_error": {
+    "message": "खोज में त्रुटि"
+  },
+  "pop_no_results": {
+    "message": "कोई परिणाम नहीं मिला"
+  },
+  "pop_no_closed": {
+    "message": "हाल ही में बंद किया गया कोई टैब नहीं"
+  },
+  "pop_no_storable": {
+    "message": "कोई स्टोर करने योग्य टैब खुला नहीं है"
+  },
+  "pop_ts_error": {
+    "message": "टैब स्टोरेज लोड करने में त्रुटि"
+  },
+  "pop_no_stored": {
+    "message": "कोई स्टोर किया गया टैब नहीं।"
+  },
+  "pop_no_stored_hint": {
+    "message": "खुले टैब स्टोर करने के लिए इस टैब बटन पर राइट-क्लिक करें"
+  },
+  "pop_no_data": {
+    "message": "अभी कोई डेटा नहीं"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "टैब स्टोरेज से $N1$ स्टोर किए गए टैब हटाएँ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "इस पेज को स्टोर नहीं किया जा सकता"
+  },
+  "pop_no_history_day": {
+    "message": "इस दिन का कोई इतिहास नहीं"
+  },
+  "pop_no_history_today": {
+    "message": "आज अभी तक कोई इतिहास नहीं"
+  },
+  "pop_just_now": {
+    "message": "अभी"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ मिनट पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ घंटे पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ दिन पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "היסטוריה מורחבת"
   },
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 הסר סימנייה"
+  },
+  "quick_filters": {
+    "message": "מסננים מהירים"
+  },
+  "quick_filter_desc": {
+    "message": "שמור קבוצה בעלת שם של דומיינים, מילות מפתח או כתובות URL (למשל \"רשתות חברתיות\" → facebook.com, instagram.com, pinterest.com). בחר אותה מהרשימה הנפתחת ליד תיבת החיפוש בדף ההיסטוריה כדי לסנן באופן מיידי רק את הרשומות האלה."
+  },
+  "filter_name": {
+    "message": "שם המסנן (למשל רשתות חברתיות)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "דומיין, מילת מפתח או כתובת URL אחת בכל שורה — למשל\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "שמור שינויים"
+  },
+  "add_filter": {
+    "message": "הוסף מסנן"
+  },
+  "no_qfilters": {
+    "message": "אין עדיין מסננים מהירים"
+  },
+  "scroll_sensitivity": {
+    "message": "רגישות הגלילה"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "כמה תאריכים הגלילה מזיזה בכל פעולה"
+  },
+  "scroll_date": {
+    "message": "גלילת תאריכים באמצעות גלגלת העכבר"
+  },
+  "scroll_date_desc": {
+    "message": "מאפשר לגלגלת עכבר רגילה (שגוללת רק אנכית) להזיז את סרגל התאריכים לצדדים — שימושי במחשב שולחני, שבו הגלגלת אינה יכולה לגלול אופקית בעצמה."
+  },
+  "ignore_list_access": {
+    "message": "🔒 גישה לרשימת ההתעלמות"
+  },
+  "ignore_list_enter_password": {
+    "message": "הזן את סיסמת האב שלך כדי לצפות ברשימת ההתעלמות."
+  },
+  "reset": {
+    "message": "איפוס"
+  },
+  "ok": {
+    "message": "אישור"
+  },
   "current_session": {
     "message": "סשן נוכחי"
   },
@@ -633,7 +684,7 @@
     "message": "🗂 הצג לשוניות פתוחות וזמן חוסר פעילות"
   },
   "cal_all_time": {
-    "message": "🗓 כל הזמן"
+    "message": "כל הזמן"
   },
   "prev_day": {
     "message": "‹ יום קודם"
@@ -711,16 +762,31 @@
     "message": "הדומיין כבר ברשימה"
   },
   "dh_confirm_warn": {
-    "message": "פעולה זו תמחק לצמיתות את ההיסטוריה עבור: {0}. לחצו שוב על מחק כדי לאשר."
+    "message": "פעולה זו תמחק לצמיתות את ההיסטוריה עבור: $N1$. לחצו שוב על מחק כדי לאשר.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "דומיינים ברשימת החריגות שלכם ({0}) יישמרו."
+    "message": "דומיינים ברשימת החריגות שלכם ($N1$) יישמרו.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "מוחק…"
   },
   "deleted_history_entries": {
-    "message": "נמחקו {0} רשומות היסטוריה"
+    "message": "נמחקו $N1$ רשומות היסטוריה",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "עוגיות"
@@ -729,13 +795,31 @@
     "message": "מטמון"
   },
   "confirm_restore_tabs": {
-    "message": "לשחזר {0} לשוניות?"
+    "message": "לשחזר $N1$ לשוניות?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "שוחזרו {0} לשוניות ב-{1} חלונות"
+    "message": "שוחזרו $N1$ לשוניות ב-$N2$ חלונות",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "שוחזרו {0} לשוניות בחלון חדש"
+    "message": "שוחזרו $N1$ לשוניות בחלון חדש",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "הדפוס הוסר"
@@ -744,7 +828,12 @@
     "message": "הזינו דפוס"
   },
   "toast_pattern_added": {
-    "message": "הדפוס נוסף: {0}"
+    "message": "הדפוס נוסף: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "רשימת ההתעלמות הופעלה"
@@ -774,13 +863,23 @@
     "message": "מנקה כתובות שהתעלמו מהן מההיסטוריה…"
   },
   "toast_removed_ignored": {
-    "message": "הוסרו {0} כתובות שהתעלמו מהן מההיסטוריה"
+    "message": "הוסרו $N1$ כתובות שהתעלמו מהן מההיסטוריה",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "לא נמצאו כתובות שהתעלמו מהן בהיסטוריה"
   },
   "keyword_prefix": {
-    "message": "מילת מפתח: {0}"
+    "message": "מילת מפתח: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "במטמון (מקומי)"
@@ -817,5 +916,130 @@
   },
   "today": {
     "message": "היום"
+  },
+  "language_auto": {
+    "message": "אוטומטי (שפת הדפדפן)"
+  },
+  "nav_icons": {
+    "message": "סמלי ניווט"
+  },
+  "nav_icons_desc": {
+    "message": "מציג את הסמלים לצד פריטי תפריט הניווט בסרגל הצד. כבו לקבלת תפריט טקסט בלבד."
+  },
+  "match_ui_colors": {
+    "message": "התאם לצבעי הממשק"
+  },
+  "match_ui_colors_desc": {
+    "message": "גורם לרשימת ההיסטוריה להיות באותו צבע כמו שאר הממשק (סרגל הצד, לוח השנה והלוחות) במקום גוון נפרד."
+  },
+  "pop_store": {
+    "message": "אחסן"
+  },
+  "pop_open": {
+    "message": "פתח"
+  },
+  "pop_prev_day": {
+    "message": "היום הקודם"
+  },
+  "pop_next_day": {
+    "message": "היום הבא"
+  },
+  "pop_clear_search": {
+    "message": "נקה חיפוש וחזור להיום"
+  },
+  "pop_recent_history": {
+    "message": "היסטוריה אחרונה"
+  },
+  "pop_closed_tabs": {
+    "message": "לשוניות שנסגרו"
+  },
+  "pop_active_tabs": {
+    "message": "לשוניות פעילות"
+  },
+  "pop_unselect_all": {
+    "message": "בטל בחירת הכול"
+  },
+  "pop_select_all": {
+    "message": "בחר הכול"
+  },
+  "pop_search_results": {
+    "message": "תוצאות חיפוש"
+  },
+  "pop_start_typing": {
+    "message": "התחילו להקליד כדי לחפש..."
+  },
+  "pop_export_session_title": {
+    "message": "לחיצה ימנית לייצוא הסשן האחרון"
+  },
+  "pop_searching": {
+    "message": "מחפש..."
+  },
+  "pop_search_error": {
+    "message": "שגיאת חיפוש"
+  },
+  "pop_no_results": {
+    "message": "לא נמצאו תוצאות"
+  },
+  "pop_no_closed": {
+    "message": "אין לשוניות שנסגרו לאחרונה"
+  },
+  "pop_no_storable": {
+    "message": "אין לשוניות פתוחות שניתן לאחסן"
+  },
+  "pop_ts_error": {
+    "message": "שגיאה בטעינת אחסון הלשוניות"
+  },
+  "pop_no_stored": {
+    "message": "אין לשוניות מאוחסנות."
+  },
+  "pop_no_stored_hint": {
+    "message": "לחצו לחיצה ימנית על כפתור זה כדי לאחסן לשוניות פתוחות"
+  },
+  "pop_no_data": {
+    "message": "אין נתונים עדיין"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "להסיר $N1$ לשוניות מאוחסנות מאחסון הלשוניות?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "לא ניתן לאחסן דף זה"
+  },
+  "pop_no_history_day": {
+    "message": "אין היסטוריה ליום זה"
+  },
+  "pop_no_history_today": {
+    "message": "אין עדיין היסטוריה היום"
+  },
+  "pop_just_now": {
+    "message": "עכשיו"
+  },
+  "pop_min_ago": {
+    "message": "לפני $N1$ ד׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "לפני $N1$ ש׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "לפני $N1$ י׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "Historial Extendido"
   },
+  "rename_bookmark": {
+  "message": "✏️ Cambiar nombre del marcador"
+},
+ "remove_bookmark": {
+    "message": "🗑 Eliminar marcador"
+  },
+   "quick_filters": {
+    "message": "Filtros rápidos"
+  },
+  "quick_filter_desc": {
+    "message": "Guarda un grupo con nombre de dominios, palabras clave o URL (por ejemplo, \"Redes sociales\" → facebook.com, instagram.com, pinterest.com). Selecciónalo en el menú desplegable junto al cuadro de búsqueda de la página Historial para filtrar al instante solo esas entradas."
+  },
+  "filter_name": {
+    "message": "Nombre del filtro (p. ej., Redes sociales)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Un dominio, palabra clave o URL por línea — p. ej.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Guardar cambios"
+  },
+  "add_filter": {
+    "message": "Añadir filtro"
+  },
+  "no_qfilters": {
+    "message": "Aún no hay filtros rápidos"
+  },
+   "scroll_sensitivity": {
+    "message": "Sensibilidad del desplazamiento"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Cuántas pastillas de días avanza cada desplazamiento"
+  },
+  "scroll_date": {
+    "message": "Desplazar las fechas con la rueda del ratón"
+  },
+  "scroll_date_desc": {
+    "message": "Permite que una rueda de ratón normal (que solo desplaza verticalmente) mueva lateralmente la barra de fechas — útil en el escritorio, donde la rueda no puede desplazarse horizontalmente por sí sola."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Acceso a la lista de ignorados"
+  },
+  "ignore_list_enter_password": {
+    "message": "Introduce tu contraseña maestra para ver la lista de ignorados."
+  },
+  "reset": {
+    "message": "Restablecer"
+  },
+  "ok": {
+    "message": "Aceptar"
+  },
   "current_session": {
     "message": "Sesión actual"
   },
@@ -672,7 +723,7 @@
     "message": "🗂 Listar pestañas abiertas y tiempo inactivo"
   },
   "cal_all_time": {
-    "message": "🗓 Todo el tiempo"
+    "message": "Todo el tiempo"
   },
   "prev_day": {
     "message": "‹ Día ant."
@@ -750,16 +801,31 @@
     "message": "Ese dominio ya está en la lista"
   },
   "dh_confirm_warn": {
-    "message": "Esto eliminará permanentemente el historial de: {0}. Haz clic en Eliminar de nuevo para confirmar."
+    "message": "Esto eliminará permanentemente el historial de: $N1$. Haz clic en Eliminar de nuevo para confirmar.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "Se conservarán los dominios de tu lista de excepciones ({0})."
+    "message": "Se conservarán los dominios de tu lista de excepciones ($N1$).",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "Eliminando…"
   },
   "deleted_history_entries": {
-    "message": "Se eliminaron {0} entradas del historial"
+    "message": "Se eliminaron $N1$ entradas del historial",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "cookies"
@@ -768,13 +834,31 @@
     "message": "caché"
   },
   "confirm_restore_tabs": {
-    "message": "¿Restaurar {0} pestañas?"
+    "message": "¿Restaurar $N1$ pestañas?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "Se restauraron {0} pestañas en {1} ventanas"
+    "message": "Se restauraron $N1$ pestañas en $N2$ ventanas",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "Se restauraron {0} pestañas en una ventana nueva"
+    "message": "Se restauraron $N1$ pestañas en una ventana nueva",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "Patrón eliminado"
@@ -783,7 +867,12 @@
     "message": "Introduce un patrón"
   },
   "toast_pattern_added": {
-    "message": "Patrón añadido: {0}"
+    "message": "Patrón añadido: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "Lista de ignorados activada"
@@ -813,13 +902,23 @@
     "message": "Limpiando URL ignoradas del historial…"
   },
   "toast_removed_ignored": {
-    "message": "Se quitaron {0} URL ignoradas del historial"
+    "message": "Se quitaron $N1$ URL ignoradas del historial",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "No se encontraron URL ignoradas en el historial"
   },
   "keyword_prefix": {
-    "message": "palabra clave: {0}"
+    "message": "palabra clave: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "En caché (local)"
@@ -853,5 +952,130 @@
   },
   "yesterday": {
     "message": "Ayer"
+  },
+  "language_auto": {
+    "message": "Automático (idioma del navegador)"
+  },
+  "nav_icons": {
+    "message": "Iconos de navegación"
+  },
+  "nav_icons_desc": {
+    "message": "Muestra los iconos junto a los elementos del menú lateral. Desactívalo para un menú solo de texto."
+  },
+  "match_ui_colors": {
+    "message": "Igualar colores de la interfaz"
+  },
+  "match_ui_colors_desc": {
+    "message": "Hace que la lista del historial tenga el mismo color que el resto de la interfaz (barra lateral, calendario y paneles) en lugar de un tono distinto."
+  },
+  "pop_store": {
+    "message": "Guardar"
+  },
+  "pop_open": {
+    "message": "Abrir"
+  },
+  "pop_prev_day": {
+    "message": "Día anterior"
+  },
+  "pop_next_day": {
+    "message": "Día siguiente"
+  },
+  "pop_clear_search": {
+    "message": "Borrar búsqueda y volver a hoy"
+  },
+  "pop_recent_history": {
+    "message": "Historial reciente"
+  },
+  "pop_closed_tabs": {
+    "message": "Pestañas cerradas"
+  },
+  "pop_active_tabs": {
+    "message": "Pestañas activas"
+  },
+  "pop_unselect_all": {
+    "message": "Deseleccionar todo"
+  },
+  "pop_select_all": {
+    "message": "Seleccionar todo"
+  },
+  "pop_search_results": {
+    "message": "Resultados de búsqueda"
+  },
+  "pop_start_typing": {
+    "message": "Empieza a escribir para buscar..."
+  },
+  "pop_export_session_title": {
+    "message": "Clic derecho para exportar la última sesión"
+  },
+  "pop_searching": {
+    "message": "Buscando..."
+  },
+  "pop_search_error": {
+    "message": "Error de búsqueda"
+  },
+  "pop_no_results": {
+    "message": "No se encontraron resultados"
+  },
+  "pop_no_closed": {
+    "message": "No hay pestañas cerradas recientemente"
+  },
+  "pop_no_storable": {
+    "message": "No hay pestañas abiertas que se puedan guardar"
+  },
+  "pop_ts_error": {
+    "message": "Error al cargar el almacén de pestañas"
+  },
+  "pop_no_stored": {
+    "message": "No hay pestañas guardadas."
+  },
+  "pop_no_stored_hint": {
+    "message": "Haz clic derecho en este botón para guardar las pestañas abiertas"
+  },
+  "pop_no_data": {
+    "message": "Aún no hay datos"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "¿Quitar $N1$ pestaña(s) guardada(s) del almacén de pestañas?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "No se puede guardar esta página"
+  },
+  "pop_no_history_day": {
+    "message": "Sin historial para este día"
+  },
+  "pop_no_history_today": {
+    "message": "Aún no hay historial hoy"
+  },
+  "pop_just_now": {
+    "message": "ahora mismo"
+  },
+  "pop_min_ago": {
+    "message": "hace $N1$ min",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "hace $N1$ h",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "hace $N1$ d",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }
