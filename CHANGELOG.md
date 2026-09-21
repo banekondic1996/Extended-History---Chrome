@@ -116,6 +116,7 @@ Fixed/changed in version 4.1.6 (testing branch):
 -Fixed performance when deleting links individually
 -Fixed session restoring to restore in individual windows
 -Fixed UI translations for other languages
+-Performance improvements 
 </pre>
 
 
