@@ -2176,113 +2176,146 @@ let _bmSelected = new Set();      // selected bookmark ids
 let _bmFolderDragId = null;       // folder node id being dragged in tree
 let _bmIsSearch = false;          // true when showing search results (show folder label), false = show date
 
-// Render the left folder tree pane
-function renderBmTree() {
+// ── Tree drag-and-drop ───────────────────────────────────────────────────────
+// Wired ONCE on the (persistent) pane. renderBmTree() replaces the rows on every
+// render, so nothing here may hold on to row elements across renders. Rows
+// identify themselves via data attributes:
+//   data-root="1"        → the "All Bookmarks" row
+//   data-folder-id=ID    → a folder row (data-has-sub="1" if it has subfolders)
+let _bmLastDropRow = null;   // row currently highlighted as drop target
+let _bmExpandTimer = null;   // pending "hover long enough → expand" timer
+const BM_HOVER_EXPAND_MS = 400;
+
+// undefined = not a drop target, null = "All Bookmarks" root, node = folder
+function _bmTreeRowNode(row) {
+  if (!row) return undefined;
+  if (row.dataset.root) return null;
+  if (row.dataset.folderId !== undefined) return _bmNodeMap.get(row.dataset.folderId) || undefined;
+  return undefined;
+}
+
+function _bmClearDropHighlight() {
+  clearTimeout(_bmExpandTimer);
+  _bmExpandTimer = null;
+  if (_bmLastDropRow) {
+    _bmLastDropRow.classList.remove('bm-drop-target', 'bm-folder-drop-into', 'bm-folder-drop-above', 'bm-folder-drop-below');
+    _bmLastDropRow = null;
+  }
+}
+
+// While a BOOKMARK is dragged over a collapsed folder that has subfolders, open
+// it after a short hover so the user can drop into a nested folder.
+// (Not done for folder drags: re-rendering the tree would remove the row being
+// dragged, and the browser would never fire its dragend.)
+function _bmScheduleHoverExpand(row) {
+  if (!row.dataset.hasSub) return;
+  const node = _bmNodeMap.get(row.dataset.folderId);
+  if (!node || node._expanded) return;
+  _bmExpandTimer = setTimeout(() => {
+    _bmExpandTimer = null;
+    if (!_bmDragId) return;
+    node._expanded = true;
+    renderBmTree();
+  }, BM_HOVER_EXPAND_MS);
+}
+
+function _bmSetupTreeDnD() {
   const pane = document.getElementById('bmTreePane');
   if (!pane) return;
-  pane.innerHTML = '';
 
-  // "All bookmarks" root entry
-  const rootRow = document.createElement('div');
-  rootRow.className = 'bm-tree-row' + (_bmActiveNode === null ? ' active' : '');
-  rootRow.innerHTML = '<span class="bm-tr-icon">📚</span><span class="bm-tr-label">All Bookmarks</span>';
-  rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
-  pane.appendChild(rootRow);
-
-  // ── Delegated drag-and-drop for entire tree pane ──────────────────────────
-  // Using a SINGLE dragover/dragleave/drop listener on the pane instead of one
-  // per row eliminates the per-row overhead that caused lag in large trees.
-  let _lastDropRow = null;
-  const _rowNodeMap = new WeakMap(); // maps DOM row → bookmark node (or null for root)
-
-  function clearDropHighlight() {
-    if (_lastDropRow) {
-      _lastDropRow.classList.remove('bm-drop-target', 'bm-folder-drop-into', 'bm-folder-drop-above', 'bm-folder-drop-below');
-      _lastDropRow = null;
-    }
-  }
-
-  // Attach delegated listeners once on the pane
-  // ev.preventDefault() must be called synchronously (browser requirement for drop to work),
-  // but the highlight DOM update is deferred via rAF so it runs at most once per frame.
-  let _rafPending = false;
-  let _pendingRow = null;
+  // ev.preventDefault() must be called synchronously (browser requirement for drop
+  // to work), but the highlight DOM update is deferred via rAF — at most once per frame.
+  let rafPending = false;
+  let pendingRow = null;
   pane.addEventListener('dragover', ev => {
     if (!_bmDragId && !_bmFolderDragId) return;
     ev.preventDefault();
     ev.dataTransfer.dropEffect = 'move';
-    _pendingRow = ev.target.closest('.bm-tree-row');
-    if (!_rafPending) {
-      _rafPending = true;
-      requestAnimationFrame(() => {
-        _rafPending = false;
-        const row = _pendingRow;
-        if (row && row !== _lastDropRow) {
-          clearDropHighlight();
-          if (_bmFolderDragId) {
-            // Folder-drag: highlight as drop-into target
-            if (row !== document.querySelector('.bm-tree-row.bm-folder-dragging')) {
-              row.classList.add('bm-folder-drop-into');
-              _lastDropRow = row;
-            }
-          } else if (_rowNodeMap.has(row)) {
-            // Bookmark-item drag: existing highlight
-            row.classList.add('bm-drop-target');
-            _lastDropRow = row;
-          }
+    pendingRow = ev.target.closest && ev.target.closest('.bm-tree-row');
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      const row = pendingRow;
+      if (!row || row === _bmLastDropRow) return;
+      _bmClearDropHighlight();
+      if (_bmFolderDragId) {
+        // Folder-drag: highlight as drop-into target
+        if (row !== document.querySelector('.bm-tree-row.bm-folder-dragging')) {
+          row.classList.add('bm-folder-drop-into');
+          _bmLastDropRow = row;
         }
-      });
-    }
+      } else if (_bmTreeRowNode(row) !== undefined) {
+        // Bookmark-item drag
+        row.classList.add('bm-drop-target');
+        _bmLastDropRow = row;
+        _bmScheduleHoverExpand(row);
+      }
+    });
   });
 
   pane.addEventListener('dragleave', ev => {
-    if (_lastDropRow && !pane.contains(ev.relatedTarget)) {
-      clearDropHighlight();
-    } else if (_lastDropRow && ev.target === _lastDropRow && !_lastDropRow.contains(ev.relatedTarget)) {
-      clearDropHighlight();
+    if (!_bmLastDropRow) return;
+    if (!pane.contains(ev.relatedTarget) ||
+        (ev.target === _bmLastDropRow && !_bmLastDropRow.contains(ev.relatedTarget))) {
+      _bmClearDropHighlight();
     }
   });
 
   pane.addEventListener('drop', async ev => {
     ev.preventDefault();
-    const row = ev.target.closest('.bm-tree-row');
-    const targetNode = row ? _rowNodeMap.get(row) : undefined;
-    clearDropHighlight();
+    const row = ev.target.closest && ev.target.closest('.bm-tree-row');
+    const targetNode = _bmTreeRowNode(row);
+    _bmClearDropHighlight();
 
     // ── Folder drag: move folder into target folder ──────────────────────────
     if (_bmFolderDragId) {
       const folderId = _bmFolderDragId;
       _bmFolderDragId = null;
-      if (!row) return; // dropped on no target
-      // Resolve target: use _rowNodeMap if available, or data attribute
-      let parentId;
-      if (targetNode !== undefined) {
-        parentId = targetNode ? targetNode.id : '1'; // null targetNode = root
-      } else {
-        // targetNode not in map (could be root row)
-        parentId = row.dataset.folderId || '1';
-      }
+      if (targetNode === undefined) return; // dropped on no target
+      const parentId = targetNode ? targetNode.id : '1'; // null targetNode = root
       if (parentId === folderId) return; // can't move into itself
       const r = await send('MOVE_BOOKMARK', { id: folderId, parentId });
       if (r?.error) toast(r.error, 'err');
-      else { toast('Folder moved', 'ok'); await reloadBookmarksKeepState(); }
+      else {
+        toast('Folder moved', 'ok');
+        if (targetNode) targetNode._expanded = true; // show what just landed inside it
+        await reloadBookmarksKeepState();
+      }
       return;
     }
 
-    // ── Bookmark-item drag: existing logic ───────────────────────────────────
+    // ── Bookmark-item drag ───────────────────────────────────────────────────
     if (!_bmDragId || targetNode === undefined) return;
     const dragId = _bmDragId;
     _bmDragId = null;
     const parentId = targetNode ? targetNode.id : '1';
     const r = await send('MOVE_BOOKMARK', { id: dragId, parentId });
     if (r?.error) toast(r.error, 'err');
-    else { toast('Bookmark moved', 'ok'); await reloadBookmarksKeepState(); }
+    else {
+      toast('Bookmark moved', 'ok');
+      if (targetNode) targetNode._expanded = true; // open the folder it was dropped into
+      await reloadBookmarksKeepState();
+    }
   });
+}
+_bmSetupTreeDnD();
 
-  // Register a row as a drop target (just records it in the map)
-  function makeDropTarget(row, targetNode) {
-    _rowNodeMap.set(row, targetNode);
-  }
+// Render the left folder tree pane
+function renderBmTree() {
+  const pane = document.getElementById('bmTreePane');
+  if (!pane) return;
+  const prevScroll = pane.scrollTop; // rebuilding rows would otherwise jump the tree to the top
+  _bmClearDropHighlight();           // rows are about to be replaced
+  pane.innerHTML = '';
+
+  // "All bookmarks" root entry
+  const rootRow = document.createElement('div');
+  rootRow.className = 'bm-tree-row' + (_bmActiveNode === null ? ' active' : '');
+  rootRow.dataset.root = '1';
+  rootRow.innerHTML = '<span class="bm-tr-icon">📚</span><span class="bm-tr-label">All Bookmarks</span>';
+  rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
+  pane.appendChild(rootRow);
 
   // Folder right-click context menu
   function addFolderCtx(row, n) {
@@ -2291,8 +2324,6 @@ function renderBmTree() {
       showBmFolderCtxMenu(ev.clientX, ev.clientY, n);
     });
   }
-
-  makeDropTarget(rootRow, null);
 
   // Render folder nodes recursively
   function walkFolders(nodes, depth) {
@@ -2343,12 +2374,10 @@ function renderBmTree() {
       // Right-click = folder context menu
       addFolderCtx(row, n);
 
-      // Drop target (for bookmark items dragged from right pane)
-      makeDropTarget(row, n);
-
       // ── Folder drag-and-drop (move folder into another folder) ──────────────
       row.draggable = true;
       row.dataset.folderId = n.id;
+      row.dataset.hasSub = hasSubFolders ? '1' : '';
 
       row.addEventListener('dragstart', ev => {
         // Don't interfere with bookmark-item drags
@@ -2375,6 +2404,7 @@ function renderBmTree() {
   }
 
   walkFolders(bmRootChildren(), 0);
+  pane.scrollTop = prevScroll;
 }
 
 // ── Folder context menu ───────────────────────────────────────────────────────
@@ -2751,6 +2781,50 @@ function renderBookmarksWithFilter(query) {
   _bmIsSearch = true;
   _bmInitList(results, 'No matching bookmarks');
 }
+// ── Resizable folder pane ────────────────────────────────────────────────────
+// Drag the thin handle between the folder tree and the bookmark list. The width
+// is remembered; double-click the handle to reset it.
+(function setupBmResizer() {
+  const split  = document.querySelector('#panel-bookmarks .bm-split');
+  const handle = document.getElementById('bmResizer');
+  if (!split || !handle) return;
+  const KEY = 'eh_bm_tree_w', DEF = 220, MIN = 160, MIN_LIST = 240;
+  const apply = w => split.style.setProperty('--bm-tree-w', w + 'px');
+
+  let saved = DEF;
+  try { const v = parseInt(localStorage.getItem(KEY), 10); if (v >= MIN) saved = v; } catch {}
+  apply(saved);
+
+  let startX = 0, startW = 0, curW = saved;
+  handle.addEventListener('pointerdown', ev => {
+    if (ev.button !== 0) return;
+    startX = ev.clientX;
+    startW = curW = split.querySelector('.bm-tree-pane').getBoundingClientRect().width;
+    handle.setPointerCapture(ev.pointerId);
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    ev.preventDefault();
+  });
+  handle.addEventListener('pointermove', ev => {
+    if (!handle.classList.contains('dragging')) return;
+    const max = Math.max(MIN, split.clientWidth - MIN_LIST);
+    curW = Math.max(MIN, Math.min(startW + (ev.clientX - startX), max));
+    apply(curW);
+  });
+  const end = () => {
+    if (!handle.classList.contains('dragging')) return;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    try { localStorage.setItem(KEY, String(Math.round(curW))); } catch {}
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('dblclick', () => {
+    curW = DEF; apply(DEF);
+    try { localStorage.removeItem(KEY); } catch {}
+  });
+})();
+
 // ── Bookmark multiselect bar buttons ────────────────────────────────────────
 document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
   if (_bmSelMode) _exitBmSelMode();
@@ -3501,6 +3575,7 @@ function showCtxMenu(x, y, entry, source) {
   const jumpSep    = document.getElementById('ctx-jump-sep');
   const bmRemove   = document.getElementById('ctx-remove-bookmark');
   const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
+  const bmRename   = document.getElementById('ctx-rename-bookmark');
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
   const hasBmId = !!entry.bmId;
@@ -3509,6 +3584,7 @@ function showCtxMenu(x, y, entry, source) {
   if (jumpEl)       jumpEl.style.display       = hasDate ? '' : 'none';
   if (jumpSep)      jumpSep.style.display      = hasDate ? '' : 'none';
   if (bmRemove)     bmRemove.style.display     = hasBmId ? '' : 'none';
+  if (bmRename)     bmRename.style.display     = hasBmId ? '' : 'none';
   if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
   const mw = 210, mh = 240;
@@ -3551,6 +3627,21 @@ document.getElementById('ctx-copy-title').addEventListener('click', () => {
 document.getElementById('ctx-delete').addEventListener('click', () => {
   if (_ctxEntry?.id) deleteSingle(_ctxEntry.id); hideCtxMenu();
 });
+document.getElementById('ctx-rename-bookmark').addEventListener('click', async () => {
+  const entry = _ctxEntry;          // hideCtxMenu() clears _ctxEntry, so grab it first
+  hideCtxMenu();
+  if (!entry?.bmId) return;
+  const newTitle = prompt('Rename bookmark:', entry.title || '');
+  if (newTitle === null) return;    // cancelled
+  const title = newTitle.trim();
+  if (title === (entry.title || '')) return;
+  const r = await send('RENAME_BOOKMARK', { id: entry.bmId, title });
+  if (r?.error) { toast(r.error, 'err'); return; }
+  toast('Bookmark renamed', 'ok');
+  // Refresh list + search index, keeping folder, search query and scroll position
+  reloadBookmarksKeepState(false).catch(() => loadBookmarks());
+});
+
 document.getElementById('ctx-remove-bookmark').addEventListener('click', () => {
   if (!_ctxEntry?.bmId) { hideCtxMenu(); return; }
   if (!confirm('Remove this bookmark?')) { hideCtxMenu(); return; }
