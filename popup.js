@@ -78,7 +78,8 @@ if (new URLSearchParams(location.search).get('sidebar') === '1') {
     // which hover-reveals from the right edge on narrow windows) know Chrome's
     // side panel is currently open, so they don't compete for the same edge.
     // Set on load, cleared on close/navigate-away — never left stale.
-    chrome.storage.local.set({ eh_sidebar_open: true }).catch(() => {});
+    // (deferred: a storage write at startup competes with the reads the first paint needs)
+    setTimeout(() => { chrome.storage.local.set({ eh_sidebar_open: true }).catch(() => {}); }, 600);
     const clearSidebarOpenFlag = () => { chrome.storage.local.set({ eh_sidebar_open: false }).catch(() => {}); };
     window.addEventListener('pagehide', clearSidebarOpenFlag);
     window.addEventListener('beforeunload', clearSidebarOpenFlag);
@@ -106,9 +107,20 @@ if (new URLSearchParams(location.search).get('sidebar') === '1') {
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
 let _popupShowUrl = true; // cached from settings — defaults on, matches "!== false" pattern below
 
-chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
+// PERF: eh_settings is tiny, but eh_wallpaper is the entire wallpaper image as a
+// data URL (often several MB). They used to be read together, so nothing -
+// including the recent-history list - could start until that whole blob had
+// been read and parsed. Settings now resolve on their own; the wallpaper is
+// fetched separately and applied whenever it arrives.
+chrome.storage.local.get('eh_wallpaper', w => {
+    const wp = w && w.eh_wallpaper;
+    if (!(wp && wp.enabled && wp.dataUrl)) return;
+    onSettingsReady(() => {
+        _applyPopupWallpaper(wp, document.documentElement.getAttribute('data-theme') || 'dark');
+    });
+});
+chrome.storage.local.get('eh_settings', r => {
     const s  = r.eh_settings  || {};
-    const wp = r.eh_wallpaper || null;
     document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
@@ -133,10 +145,6 @@ chrome.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
     if (s.faviconResolver) _popupFavMode = s.faviconResolver;
     _sidebarAutoHideEnabled = s.sidebarAutoHide !== false;
 
-    // Wallpaper mode
-    if (wp && wp.enabled && wp.dataUrl) {
-        _applyPopupWallpaper(wp, s.theme || 'dark');
-    }
     _resolveSettingsReady();
 });
 function _applyPopupWallpaper(wp, theme) {
@@ -494,12 +502,13 @@ function loadTodayHistory(preserveScroll) {
         if (chrome.runtime.lastError || !r) {
             // Fallback: read directly from storage (handles SW not running yet)
             chrome.storage.local.get('eh_today_history', s => {
-                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000), preserveScroll);
+                const fallback = (s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
+                onSettingsReady(() => renderTodayHistory(fallback, preserveScroll));
             });
             return;
         }
         const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
-        renderTodayHistory(entries, preserveScroll);
+        onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
 }
 
@@ -729,12 +738,28 @@ function matchesIgnorePatternPopup(url, pattern, title) {
 }
 
 // ── Recent closed tabs ────────────────────────────────────────────────────────
+// Sequence token: several refresh triggers can overlap (tab close, window close,
+// sessions.onChanged, tab click...). Only the newest call is allowed to paint,
+// so a slow older response can never overwrite a fresher list.
+let _recentTabsSeq = 0;
+let _recentTabsTimer = null;
+function scheduleLoadRecentTabs(delay = 120) {
+    clearTimeout(_recentTabsTimer);
+    _recentTabsTimer = setTimeout(loadRecentTabs, delay);
+}
+
 function loadRecentTabs() {
-    chrome.sessions.getRecentlyClosed({ maxResults: 25 }, sessions => {
+    const mySeq = ++_recentTabsSeq;
+    let sessionsApi;
+    try { sessionsApi = chrome.sessions; } catch { sessionsApi = null; }
+    if (!sessionsApi || !sessionsApi.getRecentlyClosed) return;
+    sessionsApi.getRecentlyClosed({ maxResults: 25 }, sessions => {
+        void chrome.runtime.lastError;
+        if (mySeq !== _recentTabsSeq) return; // a newer refresh superseded this one
         const el = document.getElementById('recentTabs');
 
         if (!sessions || !sessions.length) {
-            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
             return;
         }
 
@@ -760,14 +785,18 @@ function loadRecentTabs() {
         }
 
         if (!tabs.length) {
-            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
             return;
         }
 
-        // Fetch ignore list and filter before rendering
-        chrome.runtime.sendMessage({ type: 'GET_IGNORE_LIST' }, (ignoreResp) => {
-            const ignoreList = (ignoreResp && ignoreResp.list) || [];
-            const ignoreEnabled = ignoreResp && ignoreResp.enabled !== false;
+        // Read the ignore list straight from storage and filter before rendering.
+        // (Used to round-trip through the background service worker, which meant
+        // the list silently never repainted whenever that message got no reply.)
+        chrome.storage.local.get(['eh_ignore_list', 'eh_settings'], (stored) => {
+            if (mySeq !== _recentTabsSeq) return;
+            stored = stored || {};
+            const ignoreList = Array.isArray(stored.eh_ignore_list) ? stored.eh_ignore_list : [];
+            const ignoreEnabled = !stored.eh_settings || stored.eh_settings.ignoreListEnabled !== false;
 
             const validTabs = tabs.filter(tab => {
                 if (!tab.url || !tab.lastModified) return false;
@@ -781,9 +810,16 @@ function loadRecentTabs() {
             }).sort((a, b) => b.lastModified - a.lastModified);
 
             if (!validTabs.length) {
-                el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+                el.dataset.sig = ''; el.innerHTML = '<div class="empty">No recently closed tabs</div>';
                 return;
             }
+
+            // Skip the rebuild when nothing changed (keeps scroll/hover stable
+            // while the polling fallback runs).
+            const shown = validTabs.slice(0, 20);
+            const sig = shown.map(t => (t.sessionId || t.url) + '@' + t.lastModified).join('|');
+            if (el.dataset.sig === sig && el.children.length) return;
+            el.dataset.sig = sig;
 
             el.innerHTML = '';
             for (const tab of validTabs.slice(0, 20)) {
@@ -1269,9 +1305,15 @@ document.getElementById('srchDelBtn').addEventListener('click', () => {
 
 
 // Initial load for all panels — wait for settings so favicon mode is known
+// PERF: ask for the history right now instead of after the settings read - the
+// background service worker may be asleep, and waking it + running
+// chrome.history.search is the slowest part, so it now overlaps with the
+// settings read instead of following it. Rendering itself still waits for
+// settings (see onSettingsReady in loadTodayHistory) so favicon mode and
+// "show URL" are known when the rows are built.
+refreshRecentHistoryView();
 onSettingsReady(() => {
     loadRecentTabs();
-    refreshRecentHistoryView();
 });
 
 // Auto-refresh on storage change
@@ -1312,8 +1354,29 @@ if (chrome.history && chrome.history.onVisited) {
 }
 
 // Refresh closed tabs list when a tab/window closes
-chrome.tabs.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
-chrome.windows.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
+chrome.tabs.onRemoved.addListener(() => { scheduleLoadRecentTabs(150); });
+chrome.windows.onRemoved.addListener(() => { scheduleLoadRecentTabs(150); });
+// The sessions API announces every change to the recently-closed list itself -
+// the most reliable trigger, since Chrome may not have registered the closed
+// tab yet when tabs.onRemoved fires.
+try {
+    if (chrome.sessions && chrome.sessions.onChanged) {
+        chrome.sessions.onChanged.addListener(() => scheduleLoadRecentTabs(80));
+    }
+} catch {}
+// Refresh whenever the user looks at the list: switching to the Closed Tabs tab,
+// or returning focus to the popup/side panel.
+document.querySelectorAll('.tab[data-tab="tabs"]').forEach(t =>
+    t.addEventListener('click', () => scheduleLoadRecentTabs(0)));
+window.addEventListener('focus', () => scheduleLoadRecentTabs(0));
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scheduleLoadRecentTabs(0);
+});
+// Light polling fallback while the Closed Tabs panel is the visible one.
+setInterval(() => {
+    const panel = document.getElementById('panel-tabs');
+    if (panel && panel.classList.contains('active') && document.visibilityState === 'visible') loadRecentTabs();
+}, 3000);
 
 // Polling fallback — skip while in selection mode to avoid wiping checked state
 let lastCount = 0;
@@ -1370,7 +1433,7 @@ function loadHistoryForSidebarDate(preserveScroll) {
     }, r => {
         if (chrome.runtime.lastError || !r) return;
         const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime);
-        renderTodayHistory(entries, preserveScroll);
+        onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
 }
 

@@ -1,39 +1,97 @@
 {
-  "ext_name": { "message": "Utvidet Historikk" },
-
-  "current_session": { "message": "Nåværende økt" },
-  "active": { "message": "Aktiv" },
-  "all_fields": { "message": "Alle felt" },
-  "title": { "message": "Tittel" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Domene" },
-  "ph_search_history": { "message": "Søk i historikk…" },
-  "ph_search_bookmarks": { "message": "Søk i bokmerker…" },
-  "most_visited": {"message": "Mest besøkt"},
-
-  "tabs": {"message": "faner"},
-  "since": {"message": "siden"},
-  "most_visited_URLS_all_time": {"message": "Mest besøkte URL-er — Hele tiden"},
-  "urls": {"message": "URL-er"},
-  "domains": {"message": "Domener"},
-  "enable_ignore": {"message": "Aktiver ignoreringsliste"},
-  "filter_urls": {"message": "Filtrer URL-er som matcher mønstrene nedenfor"},
-  "popup_show_url": {
-  "message": "URL-er"
+  "ext_name": {
+    "message": "Utvidet Historikk"
   },
-  "wallpaper_mode": { "message": "🖼 Bakgrunnsmodus" },
-  "wallpaper_mode_desc": { "message": "Sett et tilpasset bakgrunnsbilde. Aktiverer frostet glass-effekt." },
-  "wallpaper_mode_custom_image": { "message": "📁 Egendefinert bilde" },
-  "wallpaper_random_unsplash": { "message": "🎲 Tilfeldig fra Unsplash" },
-  "wallpaper_drop_image": { "message": "Slipp bilde eller <strong>klikk for å bla</strong>" },
-  "wallpaper_fetch": { "message": "Henter tilfeldig høyoppløselig bilde" },
-  "wallpaper_randomize": { "message": "🎲 Tilfeldig" },
-  "wallpaper_auto_randomize": { "message": "Automatisk hver åpning" },
-  "wallpaper_current": { "message": "Nåværende bakgrunn:" },
-  "overlay_opacity": { "message": "Overleggsopasitet" },
-  "overlay_control_desc": { "message": "Kontrollerer mørkt eller lyst lag over bakgrunn." },
-  "wallpaper_blur": { "message": "Bakgrunnsuskarphet" },
-  "wallpaper_remove": { "message": "✕ Fjern bakgrunn" },
+  "current_session": {
+    "message": "Nåværende økt"
+  },
+  "active": {
+    "message": "Aktiv"
+  },
+  "all_fields": {
+    "message": "Alle felt"
+  },
+  "title": {
+    "message": "Tittel"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Domene"
+  },
+  "ph_search_history": {
+    "message": "Søk i historikk…"
+  },
+  "ph_search_bookmarks": {
+    "message": "Søk i bokmerker…"
+  },
+  "most_visited": {
+    "message": "Mest besøkt"
+  },
+  "tabs": {
+    "message": "faner"
+  },
+  "since": {
+    "message": "siden"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "Mest besøkte URL-er — Hele tiden"
+  },
+  "urls": {
+    "message": "URL-er"
+  },
+  "domains": {
+    "message": "Domener"
+  },
+  "enable_ignore": {
+    "message": "Aktiver ignoreringsliste"
+  },
+  "filter_urls": {
+    "message": "Filtrer URL-er som matcher mønstrene nedenfor"
+  },
+  "popup_show_url": {
+    "message": "URL-er"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 Bakgrunnsmodus"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Sett et tilpasset bakgrunnsbilde. Aktiverer frostet glass-effekt."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Egendefinert bilde"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Tilfeldig fra Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Slipp bilde eller <strong>klikk for å bla</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "Henter tilfeldig høyoppløselig bilde"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Tilfeldig"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Automatisk hver åpning"
+  },
+  "wallpaper_current": {
+    "message": "Nåværende bakgrunn:"
+  },
+  "overlay_opacity": {
+    "message": "Overleggsopasitet"
+  },
+  "overlay_control_desc": {
+    "message": "Kontrollerer mørkt eller lyst lag over bakgrunn."
+  },
+  "wallpaper_blur": {
+    "message": "Bakgrunnsuskarphet"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Fjern bakgrunn"
+  },
   "popup_show_url_desc": {
     "message": "Vis sidens URL under tittelen i popup-listen"
   },
@@ -58,190 +116,730 @@
   "apply_migrate": {
     "message": "Bruk og migrer"
   },
-
-  "reading_mode": {"message": "Lesemodus"},
-  "tab_storage": {"message": "Fanearkiv"},
-  "load_exported_history_read": {"message": "Last inn en eksportert historikkfil (.json) for å bla i den uten å importere den. Grensesnittet fungerer akkurat som Historikk-fanen — datofiltre, søk, alt."},
-  "choose_file": {"message": "Velg fil…"},
-  "choose_file_hint": {"message": "eller dra og slipp en .json-fil her"},
-  "leave_reading_mode": {"message": "✕ Forlat lesemodus"},
-  "reading": {"message": "Leser:"},
-
+  "reading_mode": {
+    "message": "Lesemodus"
+  },
+  "tab_storage": {
+    "message": "Fanearkiv"
+  },
+  "load_exported_history_read": {
+    "message": "Last inn en eksportert historikkfil (.json) for å bla i den uten å importere den. Grensesnittet fungerer akkurat som Historikk-fanen — datofiltre, søk, alt."
+  },
+  "choose_file": {
+    "message": "Velg fil…"
+  },
+  "choose_file_hint": {
+    "message": "eller dra og slipp en .json-fil her"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Forlat lesemodus"
+  },
+  "reading": {
+    "message": "Leser:"
+  },
   "confirm_delete_all_time": {
     "message": "⚠️ Bekreft sletting av resultater for hele perioden\n\nDette vil slette $COUNT$ samsvarende resultater fra hele historikken din.\n\nEr du sikker?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "Slette $COUNT$ samsvarende resultater?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "$COUNT$ elementer slettet",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-
-  "today": { "message": "I dag" },
-  "storage": { "message": "Lagring" },
-  "total_visits": { "message": "Totale besøk" },
-  "restore": { "message": "Gjenopprett" },
-  "most_visited_URLS": { "message": "Mest besøkte URL-er" },
-  "all":{"message":"Alle"},
-"auto_focus_search":{"message":"Auto-fokus på søk ved åpning"},
-"auto_focus_search_desc":{"message":"Fokuser automatisk søkefeltet når historikk åpnes"},
-"back":{"message":"← Tilbake"},
-"background_tint":{"message":"Bakgrunnsfarge"},
-"browser_cache":{"message":"Nettleserbuffer"},
-"delete_history_reset_password":{"message":"Slett historikk og tilbakestill passord"},
-"enable_bg_tint":{"message":"Aktiver bakgrunnsfarge"},
-"enable_lock":{"message":"Aktiver lås"},
-"enter_password_to_continue":{"message":"Skriv inn passord for å fortsette"},
-"ext_locked":{"message":"Extended History — Låst"},
-"favicon_resolver":{"message":"Favicon-henting"},
-"favicon_resolver_desc":{"message":"Hvordan nettsted-ikoner hentes."},
-"for_password_reset":{"message":"(for passord-reset)"},
-"forgot_password_reset":{"message":"Glemt passord / Reset"},
-"google_resolver":{"message":"Google resolver"},
-"history_merge_interval":{"message":"Historikk sammenslåingsintervall"},
-"history_merge_interval_desc":{"message":"Hvor ofte historikk lagres i lokal lagring."},
-"lock_extension_page":{"message":"Lås utvidelsessiden"},
-"lock_extension_page_desc":{"message":"Krev passord for å se historikk."},
-"password":{"message":"Passord"},
-"performance":{"message":"Ytelse"},
-"popup":{"message":"Popup"},
-"popup_height":{"message":"Popup høyde"},
-"popup_height_desc":{"message":"Maks høyde for listeområde (px)"},
-"refresh":{"message":"↻ Oppdater"},
-"reset_password_warning":{"message":"⚠️ Tilbakestilling vil permanent slette historikken."},
-"search_bar":{"message":"Søkefelt"},
-"search_bar_desc":{"message":"Vis søkefelt nederst i popup"},
-"security_answer":{"message":"Sikkerhetssvar"},
-"security_question":{"message":"Sikkerhetsspørsmål"},
-"set_up_page_lock":{"message":"🔐 Sett opp sidelås"},
-"tabs_bar":{"message":"Fanebar"},
-"tabs_bar_desc":{"message":"Vis Recent History / Closed Tabs bryter"},
-"time_spent_tracking":{"message":"Tids-sporing"},
-"time_spent_tracking_desc":{"message":"Spor tid brukt per domene"},
-"ui":{"message":"UI"},
-"unlock":{"message":"Lås opp"},
-"ph_ignore_pattern":{"message":"example.com eller nøkkelord"},
-"opt_all_fields":{"message":"Alle felt"},
-"opt_title":{"message":"Tittel"},
-"opt_url":{"message":"URL"},
-"opt_domain":{"message":"Domene"},
-"block_all_example_7":{"message":"Blokkerer kun nøkkelordet"},
-"specific_word":{"message":"Spesifikt nøkkelord"},
-"example_com_6":{"message":"eksempel"},
-  "browse": { "message": "Bla gjennom" },
-  "history": { "message": "Historikk" },
-  "sessions": { "message": "Økter" },
-  "devices": { "message": "Enheter" },
-  "insights": { "message": "Innsikt" },
-  "activity": { "message": "Aktivitet" },
-  "time_spent": { "message": "Brukt tid" },
-  "library": { "message": "Bibliotek" },
-  "bookmarks": { "message": "Bokmerker" },
-  "system": { "message": "System" },
-  "delete_history": { "message": "Slett historikk" },
-  "ignore_list": { "message": "Ignoreringsliste" },
-  "settings": { "message": "Innstillinger" },
-  "more": { "message": "Mer" },
-  "light": { "message": "Lys" },
-  "dark": { "message": "Mørk" },
-  "all_time": { "message": "Hele tiden" },
-  "delete_results": { "message": "Slett resultater" },
-  "selected_lower": { "message": "valgt" },
-  "select_all_visible": { "message": "Velg alle synlige" },
-  "deselect_all": { "message": "Fjern alle valg" },
-  "delete_selected": { "message": "Slett valgte" },
-  "loading": { "message": "Laster…" },
-  "daily_visits_90": { "message": "Daglige besøk — 90 dager" },
-  "daily_visits_30": { "message": "Daglige besøk — 30 dager" },
-  "hours": { "message": "timer" },
-  "days": { "message": "dager" },
-  "clear_time_data": { "message": "Tøm tidsdata" },
-  "daily_browsing_time": { "message": "Daglig nettlesingstid" },
-  "top_sites_by_time_spent": { "message": "Toppnettsteder etter tidsbruk" },
-  "export": { "message": "Eksporter" },
-  "import": { "message": "Importer" },
-  "history_retention": { "message": "Lagring av historikk" },
-  "keep_history_for": { "message": "Behold historikk i" },
-  "older_enteries_are_pruned": { "message": "Eldre oppføringer fjernes automatisk" },
-  "months": { "message": "måneder" },
-  "year": { "message": "år" },
-  "years": { "message": "år" },
-  "forever": { "message": "For alltid" },
-  "appearance": { "message": "Utseende" },
-  "language": { "message": "Språk" },
-  "select_pref_language": { "message": "Velg foretrukket språk" },
-  "font_family": { "message": "Skrifttype" },
-  "font_size": { "message": "Skriftstørrelse" },
-  "base_ui_text_size": { "message": "Grunnleggende tekststørrelse" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Aksentfarger" },
-  "primary": { "message": "Primær" },
-  "secondary": { "message": "Sekundær" },
-  "data": { "message": "Data" },
-  "export_history": { "message": "Eksporter historikk" },
-  "full_json_backup": { "message": "Full JSON-sikkerhetskopi av historikk og tid" },
-  "export_json": { "message": "Eksporter JSON" },
-  "import_history": { "message": "Importer historikk" },
-  "merge_entries_json": { "message": "Slå sammen oppføringer fra tidligere eksportert JSON" },
-  "import_json": { "message": "Importer JSON" },
-  "sessions_to_keep": { "message": "Økter å beholde" },
-  "how_many_past_sessions": { "message": "Hvor mange tidligere økter skal lagres (1–20)" },
-  "auto_save_session": { "message": "Lagre nåværende økt automatisk" },
-  "save_open_tabs_to": { "message": "Lagrer åpne faner i extended-history-session.html i Nedlastinger-mappen. Sett 0 for å deaktivere." },
-  "min": { "message": "min" },
-  "save_now": { "message": "Lagre nå" },
-  "save_settings": { "message": "Lagre innstillinger" },
-  "danger_zone": { "message": "Faresone" },
-  "reimport_chrome_history": { "message": "Importer Chrome-historikk på nytt" },
-  "pull_all_chrome_history": { "message": "Hent all lokal Chrome-historikk på nytt (uten duplikater)" },
-  "reimport": { "message": "Importer på nytt" },
-  "clear_all_history": { "message": "Slett all historikk" },
-  "permanently_delete_all_stored": { "message": "Sletter all lagret historikk permanent. Kan ikke angres." },
-  "clear_all": { "message": "Slett alt" },
-  "about": { "message": "Om" },
-  "created_by": { "message": "Laget av Bane Kondić fordi han ikke likte 90-dagersgrensen i Chromium." },
-  "github_profile": { "message": "Github-profil" },
-  "feedback": { "message": "Tilbakemelding" },
-  "link_to_discord": { "message": "Lenke til Discord-server for tilbakemeldinger" },
-  "discord_server": { "message": "Discord-server" },
-  "rate_extension": { "message": "Vurder utvidelsen" },
-  "link_to_chrome_webstore": { "message": "Lenke til Chrome Web Store" },
-  "click_to_rate": { "message": "Klikk for å vurdere" },
-  "ignored_domains": { "message": "Ignorerte domener" },
-  "domains_added_will_not_be": { "message": "Domener lagt til her vil ikke bli lagret i historikken." },
-  "add_patern": { "message": "Legg til mønster" },
-  "pattern_guide": { "message": "Mønsterguide" },
-  "basic_domain": { "message": "Grunnleggende domene" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Blokkerer hele example.com" },
-  "all_subdomains": { "message": "Alle underdomener" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Blokkerer blog.example.com, shop.example.com osv." },
-  "specific_subdomain": { "message": "Spesifikt underdomene" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Blokkerer kun blog.example.com" },
-  "specific_path": { "message": "Spesifikk sti" },
-  "specific_file": { "message": "Spesifikk fil" },
-  "no_patterns_added": { "message": "Ingen mønstre lagt til" },
-  "open_in_new_tab": { "message": "Åpne i ny fane" },
-  "open_in_incognito": { "message": "Åpne i inkognito" },
-  "copy_url": { "message": "Kopier URL" },
-  "copy_title": { "message": "Kopier tittel" },
-  "delete_from_history": { "message": "Slett fra historikk" },
-  "new_subfolder": { "message": "Ny undermappe" },
-  "rename_folder": { "message": "Gi nytt navn til mappe" },
-  "delete_folder": { "message": "Slett mappe" },
-  "cancel": { "message": "Avbryt" },
-  "delete": { "message": "Slett" },
-  "choose_a_time_range": { "message": "Velg tidsperiode som skal slettes." },
-  "last_1_hour": { "message": "Siste time" },
-  "last_24_hours": { "message": "Siste 24 timer" },
-  "last_7_days": { "message": "Siste 7 dager" },
-  "last_30_days": { "message": "Siste 30 dager" },
-  "last_5_months": { "message": "Siste 5 måneder" },
-  "clear_cookies_local_storage": { "message": "Slett informasjonskapsler og lokal lagring" },
-  "clear_cache": { "message": "Tøm hurtigbuffer" }
+  "today": {
+    "message": "I dag"
+  },
+  "storage": {
+    "message": "Lagring"
+  },
+  "total_visits": {
+    "message": "Totale besøk"
+  },
+  "restore": {
+    "message": "Gjenopprett"
+  },
+  "most_visited_URLS": {
+    "message": "Mest besøkte URL-er"
+  },
+  "all": {
+    "message": "Alle"
+  },
+  "auto_focus_search": {
+    "message": "Auto-fokus på søk ved åpning"
+  },
+  "auto_focus_search_desc": {
+    "message": "Fokuser automatisk søkefeltet når historikk åpnes"
+  },
+  "back": {
+    "message": "← Tilbake"
+  },
+  "background_tint": {
+    "message": "Bakgrunnsfarge"
+  },
+  "browser_cache": {
+    "message": "Nettleserbuffer"
+  },
+  "delete_history_reset_password": {
+    "message": "Slett historikk og tilbakestill passord"
+  },
+  "enable_bg_tint": {
+    "message": "Aktiver bakgrunnsfarge"
+  },
+  "enable_lock": {
+    "message": "Aktiver lås"
+  },
+  "enter_password_to_continue": {
+    "message": "Skriv inn passord for å fortsette"
+  },
+  "ext_locked": {
+    "message": "Extended History — Låst"
+  },
+  "favicon_resolver": {
+    "message": "Favicon-henting"
+  },
+  "favicon_resolver_desc": {
+    "message": "Hvordan nettsted-ikoner hentes."
+  },
+  "for_password_reset": {
+    "message": "(for passord-reset)"
+  },
+  "forgot_password_reset": {
+    "message": "Glemt passord / Reset"
+  },
+  "google_resolver": {
+    "message": "Google resolver"
+  },
+  "history_merge_interval": {
+    "message": "Historikk sammenslåingsintervall"
+  },
+  "history_merge_interval_desc": {
+    "message": "Hvor ofte historikk lagres i lokal lagring."
+  },
+  "lock_extension_page": {
+    "message": "Lås utvidelsessiden"
+  },
+  "lock_extension_page_desc": {
+    "message": "Krev passord for å se historikk."
+  },
+  "password": {
+    "message": "Passord"
+  },
+  "performance": {
+    "message": "Ytelse"
+  },
+  "popup": {
+    "message": "Popup"
+  },
+  "popup_height": {
+    "message": "Popup høyde"
+  },
+  "popup_height_desc": {
+    "message": "Maks høyde for listeområde (px)"
+  },
+  "refresh": {
+    "message": "↻ Oppdater"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ Tilbakestilling vil permanent slette historikken."
+  },
+  "search_bar": {
+    "message": "Søkefelt"
+  },
+  "search_bar_desc": {
+    "message": "Vis søkefelt nederst i popup"
+  },
+  "security_answer": {
+    "message": "Sikkerhetssvar"
+  },
+  "security_question": {
+    "message": "Sikkerhetsspørsmål"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Sett opp sidelås"
+  },
+  "tabs_bar": {
+    "message": "Fanebar"
+  },
+  "tabs_bar_desc": {
+    "message": "Vis Recent History / Closed Tabs bryter"
+  },
+  "time_spent_tracking": {
+    "message": "Tids-sporing"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Spor tid brukt per domene"
+  },
+  "ui": {
+    "message": "UI"
+  },
+  "unlock": {
+    "message": "Lås opp"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com eller nøkkelord"
+  },
+  "opt_all_fields": {
+    "message": "Alle felt"
+  },
+  "opt_title": {
+    "message": "Tittel"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Domene"
+  },
+  "block_all_example_7": {
+    "message": "Blokkerer kun nøkkelordet"
+  },
+  "specific_word": {
+    "message": "Spesifikt nøkkelord"
+  },
+  "example_com_6": {
+    "message": "eksempel"
+  },
+  "browse": {
+    "message": "Bla gjennom"
+  },
+  "history": {
+    "message": "Historikk"
+  },
+  "sessions": {
+    "message": "Økter"
+  },
+  "devices": {
+    "message": "Enheter"
+  },
+  "insights": {
+    "message": "Innsikt"
+  },
+  "activity": {
+    "message": "Aktivitet"
+  },
+  "time_spent": {
+    "message": "Brukt tid"
+  },
+  "library": {
+    "message": "Bibliotek"
+  },
+  "bookmarks": {
+    "message": "Bokmerker"
+  },
+  "system": {
+    "message": "System"
+  },
+  "delete_history": {
+    "message": "Slett historikk"
+  },
+  "ignore_list": {
+    "message": "Ignoreringsliste"
+  },
+  "settings": {
+    "message": "Innstillinger"
+  },
+  "more": {
+    "message": "Mer"
+  },
+  "light": {
+    "message": "Lys"
+  },
+  "dark": {
+    "message": "Mørk"
+  },
+  "all_time": {
+    "message": "Hele tiden"
+  },
+  "delete_results": {
+    "message": "Slett resultater"
+  },
+  "selected_lower": {
+    "message": "valgt"
+  },
+  "select_all_visible": {
+    "message": "Velg alle synlige"
+  },
+  "deselect_all": {
+    "message": "Fjern alle valg"
+  },
+  "delete_selected": {
+    "message": "Slett valgte"
+  },
+  "loading": {
+    "message": "Laster…"
+  },
+  "daily_visits_90": {
+    "message": "Daglige besøk — 90 dager"
+  },
+  "daily_visits_30": {
+    "message": "Daglige besøk — 30 dager"
+  },
+  "hours": {
+    "message": "timer"
+  },
+  "days": {
+    "message": "dager"
+  },
+  "clear_time_data": {
+    "message": "Tøm tidsdata"
+  },
+  "daily_browsing_time": {
+    "message": "Daglig nettlesingstid"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Toppnettsteder etter tidsbruk"
+  },
+  "export": {
+    "message": "Eksporter"
+  },
+  "import": {
+    "message": "Importer"
+  },
+  "history_retention": {
+    "message": "Lagring av historikk"
+  },
+  "keep_history_for": {
+    "message": "Behold historikk i"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Eldre oppføringer fjernes automatisk"
+  },
+  "months": {
+    "message": "måneder"
+  },
+  "year": {
+    "message": "år"
+  },
+  "years": {
+    "message": "år"
+  },
+  "forever": {
+    "message": "For alltid"
+  },
+  "appearance": {
+    "message": "Utseende"
+  },
+  "language": {
+    "message": "Språk"
+  },
+  "select_pref_language": {
+    "message": "Velg foretrukket språk"
+  },
+  "font_family": {
+    "message": "Skrifttype"
+  },
+  "font_size": {
+    "message": "Skriftstørrelse"
+  },
+  "base_ui_text_size": {
+    "message": "Grunnleggende tekststørrelse"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Aksentfarger"
+  },
+  "primary": {
+    "message": "Primær"
+  },
+  "secondary": {
+    "message": "Sekundær"
+  },
+  "data": {
+    "message": "Data"
+  },
+  "export_history": {
+    "message": "Eksporter historikk"
+  },
+  "full_json_backup": {
+    "message": "Full JSON-sikkerhetskopi av historikk og tid"
+  },
+  "export_json": {
+    "message": "Eksporter JSON"
+  },
+  "import_history": {
+    "message": "Importer historikk"
+  },
+  "merge_entries_json": {
+    "message": "Slå sammen oppføringer fra tidligere eksportert JSON"
+  },
+  "import_json": {
+    "message": "Importer JSON"
+  },
+  "sessions_to_keep": {
+    "message": "Økter å beholde"
+  },
+  "how_many_past_sessions": {
+    "message": "Hvor mange tidligere økter skal lagres (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Lagre nåværende økt automatisk"
+  },
+  "save_open_tabs_to": {
+    "message": "Lagrer åpne faner i extended-history-session.html i Nedlastinger-mappen. Sett 0 for å deaktivere."
+  },
+  "min": {
+    "message": "min"
+  },
+  "save_now": {
+    "message": "Lagre nå"
+  },
+  "save_settings": {
+    "message": "Lagre innstillinger"
+  },
+  "danger_zone": {
+    "message": "Faresone"
+  },
+  "reimport_chrome_history": {
+    "message": "Importer Chrome-historikk på nytt"
+  },
+  "pull_all_chrome_history": {
+    "message": "Hent all lokal Chrome-historikk på nytt (uten duplikater)"
+  },
+  "reimport": {
+    "message": "Importer på nytt"
+  },
+  "clear_all_history": {
+    "message": "Slett all historikk"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Sletter all lagret historikk permanent. Kan ikke angres."
+  },
+  "clear_all": {
+    "message": "Slett alt"
+  },
+  "about": {
+    "message": "Om"
+  },
+  "created_by": {
+    "message": "Laget av Bane Kondić fordi han ikke likte 90-dagersgrensen i Chromium."
+  },
+  "github_profile": {
+    "message": "Github-profil"
+  },
+  "feedback": {
+    "message": "Tilbakemelding"
+  },
+  "link_to_discord": {
+    "message": "Lenke til Discord-server for tilbakemeldinger"
+  },
+  "discord_server": {
+    "message": "Discord-server"
+  },
+  "rate_extension": {
+    "message": "Vurder utvidelsen"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Lenke til Chrome Web Store"
+  },
+  "click_to_rate": {
+    "message": "Klikk for å vurdere"
+  },
+  "ignored_domains": {
+    "message": "Ignorerte domener"
+  },
+  "domains_added_will_not_be": {
+    "message": "Domener lagt til her vil ikke bli lagret i historikken."
+  },
+  "add_patern": {
+    "message": "Legg til mønster"
+  },
+  "pattern_guide": {
+    "message": "Mønsterguide"
+  },
+  "basic_domain": {
+    "message": "Grunnleggende domene"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Blokkerer hele example.com"
+  },
+  "all_subdomains": {
+    "message": "Alle underdomener"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Blokkerer blog.example.com, shop.example.com osv."
+  },
+  "specific_subdomain": {
+    "message": "Spesifikt underdomene"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Blokkerer kun blog.example.com"
+  },
+  "specific_path": {
+    "message": "Spesifikk sti"
+  },
+  "specific_file": {
+    "message": "Spesifikk fil"
+  },
+  "no_patterns_added": {
+    "message": "Ingen mønstre lagt til"
+  },
+  "open_in_new_tab": {
+    "message": "Åpne i ny fane"
+  },
+  "open_in_incognito": {
+    "message": "Åpne i inkognito"
+  },
+  "copy_url": {
+    "message": "Kopier URL"
+  },
+  "copy_title": {
+    "message": "Kopier tittel"
+  },
+  "delete_from_history": {
+    "message": "Slett fra historikk"
+  },
+  "new_subfolder": {
+    "message": "Ny undermappe"
+  },
+  "rename_folder": {
+    "message": "Gi nytt navn til mappe"
+  },
+  "delete_folder": {
+    "message": "Slett mappe"
+  },
+  "cancel": {
+    "message": "Avbryt"
+  },
+  "delete": {
+    "message": "Slett"
+  },
+  "choose_a_time_range": {
+    "message": "Velg tidsperiode som skal slettes."
+  },
+  "last_1_hour": {
+    "message": "Siste time"
+  },
+  "last_24_hours": {
+    "message": "Siste 24 timer"
+  },
+  "last_7_days": {
+    "message": "Siste 7 dager"
+  },
+  "last_30_days": {
+    "message": "Siste 30 dager"
+  },
+  "last_5_months": {
+    "message": "Siste 5 måneder"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Slett informasjonskapsler og lokal lagring"
+  },
+  "clear_cache": {
+    "message": "Tøm hurtigbuffer"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Åpne utviklermodus"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 List opp åpne faner og inaktiv tid"
+  },
+  "cal_all_time": {
+    "message": "🗓 Hele tiden"
+  },
+  "prev_day": {
+    "message": "‹ Forrige dag"
+  },
+  "next_day": {
+    "message": "Neste dag ›"
+  },
+  "previous_month": {
+    "message": "Forrige måned"
+  },
+  "next_month": {
+    "message": "Neste måned"
+  },
+  "clear": {
+    "message": "Tøm"
+  },
+  "ui_rounded_corners": {
+    "message": "Avrundede hjørner i grensesnittet"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Runder av hjørnene på sidefeltet og hovedpanelet (og beholder det lille mellomrommet rundt dem). Slå av for et skarpkantet layout som går kant til kant."
+  },
+  "ui_calendar_mode": {
+    "message": "Kalendermodus"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Erstatter dato-/timenavigasjonen på Historikk-siden med et kalendersidefelt til høyre — velg datoer, måneder og år, og hopp rett til en hvilken som helst time."
+  },
+  "developer": {
+    "message": "Utvikler"
+  },
+  "dev_mode": {
+    "message": "Utviklermodus"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Utviklermodus"
+  },
+  "dev_mode_desc": {
+    "message": "Intern diagnostikk: sanntidsdata om inaktivitet i faner brukt til automatisk lagring, og statistikk for bakgrunnstimere. Kun for feilsøking."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Intern diagnostikk — bakgrunnstimere og sanntidsstatus for inaktivitetssporing av faner brukt til automatisk lagring."
+  },
+  "close": {
+    "message": "Lukk"
+  },
+  "hour": {
+    "message": "Time"
+  },
+  "all_hours": {
+    "message": "Alle timer"
+  },
+  "ph_search_devices": {
+    "message": "Søk i enhetsfaner etter tittel eller URL…"
+  },
+  "add": {
+    "message": "Legg til"
+  },
+  "domain_exceptions": {
+    "message": "Domenefritak"
+  },
+  "domain_exceptions_desc": {
+    "message": "Domener på denne listen hoppes over når du sletter historikk: historikkoppføringer, informasjonskapsler og nettstedsdata beholdes. Underdomener er inkludert."
+  },
+  "no_exceptions_yet": {
+    "message": "Ingen unntak ennå"
+  },
+  "remove": {
+    "message": "Fjern"
+  },
+  "invalid_domain": {
+    "message": "Skriv inn et gyldig domene, f.eks. example.com"
+  },
+  "domain_already_added": {
+    "message": "Dette domenet er allerede i listen"
+  },
+  "dh_confirm_warn": {
+    "message": "Dette sletter historikken permanent for: {0}. Klikk Slett igjen for å bekrefte."
+  },
+  "dh_confirm_exceptions": {
+    "message": "Domener på unntakslisten din ({0}) beholdes."
+  },
+  "deleting": {
+    "message": "Sletter…"
+  },
+  "deleted_history_entries": {
+    "message": "{0} historikkoppføringer slettet"
+  },
+  "word_cookies": {
+    "message": "informasjonskapsler"
+  },
+  "word_cache": {
+    "message": "buffer"
+  },
+  "confirm_restore_tabs": {
+    "message": "Gjenopprette {0} faner?"
+  },
+  "restored_tabs_windows": {
+    "message": "{0} faner gjenopprettet i {1} vinduer"
+  },
+  "restored_tabs_window": {
+    "message": "{0} faner gjenopprettet i et nytt vindu"
+  },
+  "toast_pattern_removed": {
+    "message": "Mønster fjernet"
+  },
+  "toast_enter_pattern": {
+    "message": "Skriv inn et mønster"
+  },
+  "toast_pattern_added": {
+    "message": "Mønster lagt til: {0}"
+  },
+  "toast_ignore_enabled": {
+    "message": "Ignoreringslisten er slått på"
+  },
+  "toast_ignore_disabled": {
+    "message": "Ignoreringslisten er slått av"
+  },
+  "toast_ts_hidden": {
+    "message": "Ignorerte domener er nå skjult fra Tid brukt"
+  },
+  "toast_ts_shown": {
+    "message": "Ignorerte domener er ikke lenger skjult fra Tid brukt"
+  },
+  "hide_from_time_spent": {
+    "message": "Skjul fra Tid brukt"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Skjuler domener som matcher mønstrene nedenfor fra Tid brukt-visningen — sletter ingen sporede tidsdata"
+  },
+  "url_pattern_guide": {
+    "message": "Veiledning for URL-mønstre"
+  },
+  "ignore_keywords_note": {
+    "message": "Ord uten punktum behandles som nøkkelord — de matcher alle URL-er eller sidetitler som inneholder ordet."
+  },
+  "toast_cleaning": {
+    "message": "Rydder ignorerte URL-er fra historikken…"
+  },
+  "toast_removed_ignored": {
+    "message": "Fjernet {0} ignorerte URL-er fra historikken"
+  },
+  "toast_no_ignored": {
+    "message": "Fant ingen ignorerte URL-er i historikken"
+  },
+  "keyword_prefix": {
+    "message": "nøkkelord: {0}"
+  },
+  "cached_resolver": {
+    "message": "Bufret (lokalt)"
+  },
+  "context_menu_on_pages": {
+    "message": "Høyreklikkmeny på nettsteder"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Viser \"Extended History\" når du høyreklikker på en nettside"
+  },
+  "no_sessions_yet": {
+    "message": "Ingen økter registrert ennå"
+  },
+  "popup_as_sidebar": {
+    "message": "Bruk som sidefelt"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Åpner Extended History i Chromes sidepanel i stedet for en popup, slik at den kan strekke seg over hele siden"
+  },
+  "toolbar_icon": {
+    "message": "Verktøylinjeikon"
+  },
+  "toolbar_icon_desc": {
+    "message": "Velg ikonet som vises i nettleserens verktøylinje"
+  },
+  "wallpaper_opacity": {
+    "message": "Bakgrunnsbildets dekkevne"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Toner ned selve bakgrunnsbildet — separat fra glasspanelets fargetone nedenfor."
+  },
+  "yesterday": {
+    "message": "I går"
+  }
 }

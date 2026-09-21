@@ -1,14 +1,31 @@
 {
-  "ext_name": { "message": "Проширена историја" },
-
-  "choose_a_time_range": { "message": "Изабери временски опсег за брисанје. Ово ће обрсати историју у Хрому и екстензији" },
-  "all_fields": { "message": "Сва поља" },
-  "title": { "message": "Наслов" },
-  "url": { "message": "УРЛ" },
-  "domain": { "message": "Домејн" },
-  "ph_search_history": { "message": "Претражи историју" },
-  "ph_search_bookmarks": { "message": "Претражи обележено" },
-  "yesterday": { "message": "Јуче" },
+  "ext_name": {
+    "message": "Проширена историја"
+  },
+  "choose_a_time_range": {
+    "message": "Изабери временски опсег за брисанје. Ово ће обрсати историју у Хрому и екстензији"
+  },
+  "all_fields": {
+    "message": "Сва поља"
+  },
+  "title": {
+    "message": "Наслов"
+  },
+  "url": {
+    "message": "УРЛ"
+  },
+  "domain": {
+    "message": "Домејн"
+  },
+  "ph_search_history": {
+    "message": "Претражи историју"
+  },
+  "ph_search_bookmarks": {
+    "message": "Претражи обележено"
+  },
+  "yesterday": {
+    "message": "Јуче"
+  },
   "popup_show_url": {
     "message": "URL-ови"
   },
@@ -36,215 +53,784 @@
   "apply_migrate": {
     "message": "Примени и мигрирај"
   },
-  "wallpaper_mode": { "message": "🖼 Режим позадине" },
-  "wallpaper_mode_desc": { "message": "Постави прилагођену слику позадине. Омогућава ефекат замућеног стакла." },
-  "wallpaper_mode_custom_image": { "message": "📁 Прилагођена слика" },
-  "wallpaper_random_unsplash": { "message": "🎲 Насумично са Unsplash-а" },
-  "wallpaper_drop_image": { "message": "Превуци слику или <strong>кликни за избор</strong>" },
-  "wallpaper_fetch": { "message": "Преузима насумичну фотографију високе резолуције (мења се сваки пут)" },
-  "wallpaper_randomize": { "message": "🎲 Насумично" },
-  "wallpaper_auto_randomize": { "message": "Аутоматски при сваком отварању" },
-  "wallpaper_current": { "message": "Тренутна позадина:" },
-  "overlay_opacity": { "message": "Прозирност слоја" },
-  "overlay_control_desc": { "message": "Контролише тамни или светли слој преко позадине." },
-  "wallpaper_blur": { "message": "Замућење позадине" },
-  "wallpaper_remove": { "message": "✕ Уклони позадину" },
-
- "confirm_delete_all_time": {
+  "wallpaper_mode": {
+    "message": "🖼 Режим позадине"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Постави прилагођену слику позадине. Омогућава ефекат замућеног стакла."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Прилагођена слика"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Насумично са Unsplash-а"
+  },
+  "wallpaper_drop_image": {
+    "message": "Превуци слику или <strong>кликни за избор</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "Преузима насумичну фотографију високе резолуције (мења се сваки пут)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Насумично"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Аутоматски при сваком отварању"
+  },
+  "wallpaper_current": {
+    "message": "Тренутна позадина:"
+  },
+  "overlay_opacity": {
+    "message": "Прозирност слоја"
+  },
+  "overlay_control_desc": {
+    "message": "Контролише тамни или светли слој преко позадине."
+  },
+  "wallpaper_blur": {
+    "message": "Замућење позадине"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Уклони позадину"
+  },
+  "confirm_delete_all_time": {
     "message": "⚠️ Потврдите брисање резултата за цео период\n\nОво ће обрисати $COUNT$ одговарајућих резултата из целе ваше историје.\n\nДа ли сте сигурни?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "Обрисати $COUNT$ одговарајућих резултата?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "Обрисано $COUNT$ ставки",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-
-  "today": { "message": "Данас" },
-  "storage": { "message": "Складиште" },
-  "total_visits": { "message": "Укупно посета" },
-  "restore": { "message": "Поврати" },
-  "most_visited_URLS": { "message": "Најпосећенији URL-ови" },
- 
-
-  "most_visited": {"message": "Најпосећеније"},
-  "tabs": {"message": "картице"},
-  "since": {"message": "од"},
-  "urls": {"message": "URL-ови"},
-  "domains": {"message": "Домени"},
-  "enable_ignore": {"message": "Омогући листу игнорисања"},
-  "filter_urls": {"message": "Филтрирај URL-ове који одговарају обрасцима испод"},
-
-  "reading_mode": {"message": "Режим читања"},
-  "tab_storage": {"message": "Складиште картица"},
-  "load_exported_history_read": {"message": "Учитај извезену датотеку историје (.json) да је прегледаш без увоза. Интерфејс ради исто као картица Историја — филтери датума, претрага и све остало."},
-  "choose_file": {"message": "Изабери датотеку…"},
-  "choose_file_hint": {"message": "или превуци .json датотеку овде"},
-  "leave_reading_mode": {"message": "✕ Напусти режим читања"},
-  "reading": {"message": "Читање:"},
-
-  "all":{"message":"Све"},
-  "auto_focus_search":{"message":"Аутоматски фокус на претрагу при отварању"},
-  "auto_focus_search_desc":{"message":"Аутоматски фокусира поље за претрагу када се отвори страница историје"},
-  "back":{"message":"← Назад"},
-  "background_tint":{"message":"Боја позадине"},
-  "browser_cache":{"message":"Кеш прегледача"},
-  "delete_history_reset_password":{"message":"Обриши историју и ресетуј лозинку"},
-  "enable_bg_tint":{"message":"Омогући боју позадине"},
-  "enable_lock":{"message":"Омогући закључавање"},
-  "enter_password_to_continue":{"message":"Унесите лозинку да наставите"},
-  "ext_locked":{"message":"Extended History — Закључано"},
-  "favicon_resolver":{"message":"Favicon резолвер"},
-  "favicon_resolver_desc":{"message":"Како се учитавају иконе сајтова."},
-  "for_password_reset":{"message":"(за ресет лозинке)"},
-  "forgot_password_reset":{"message":"Заборављена лозинка / Ресет"},
-  "google_resolver":{"message":"Google резолвер"},
-  "history_merge_interval":{"message":"Интервал спајања историје"},
-  "history_merge_interval_desc":{"message":"Колико често се историја прегледача спаја у локално складиште."},
-  "lock_extension_page":{"message":"Закључај страницу екстензије"},
-  "lock_extension_page_desc":{"message":"Захтева лозинку за приказ странице историје."},
-  "password":{"message":"Лозинка"},
-  "performance":{"message":"Перформансе"},
-  "popup":{"message":"Искачући прозор"},
-  "popup_height":{"message":"Висина popup-а"},
-  "popup_height_desc":{"message":"Максимална висина листе у popup-у (px)"},
-  "refresh":{"message":"↻ Освежи"},
-  "reset_password_warning":{"message":"⚠️ Упозорење: Ресет лозинке ће трајно обрисати сву историју."},
-  "search_bar":{"message":"Поље за претрагу"},
-  "search_bar_desc":{"message":"Прикажи поље за претрагу на дну popup-а"},
-  "security_answer":{"message":"Безбедносни одговор"},
-  "security_question":{"message":"Безбедносно питање"},
-  "set_up_page_lock":{"message":"🔐 Подеси закључавање странице"},
-  "tabs_bar":{"message":"Трака картица"},
-  "tabs_bar_desc":{"message":"Прикажи пребацивач Recent History / Closed Tabs"},
-  "time_spent_tracking":{"message":"Праћење времена"},
-  "time_spent_tracking_desc":{"message":"Прати време проведено по домену."},
-  "ui":{"message":"UI"},
-  "unlock":{"message":"Откључај"},
-  "ph_ignore_pattern":{"message":"example.com или кључна реч"},
-  "opt_all_fields":{"message":"Сва поља"},
-  "opt_title":{"message":"Наслов"},
-  "opt_url":{"message":"URL"},
-  "opt_domain":{"message":"Домен"},
-  "block_all_example_7":{"message":"Блокира само ту кључну реч"},
-  "specific_word":{"message":"Одређена кључна реч"},
-  "example_com_6":{"message":"пример"},
-  
-  "last_1_hour": { "message": "Протеклих сат времена" },
-  "last_24_hours": { "message": "Протеклих 24 сата" },
-  "last_7_days": { "message": "Протеклих 7 дана" },
-  "last_30_days": { "message": "Протеклих 30 дана" },
-  "last_5_months": { "message": "Протеклих 5 месеци" },
-  "clear_cookies_local_storage": { "message": "Обриши колачиће & локалну базу" },
-  "clear_cache": { "message": "Обриши кeширано" },
-  "current_session": { "message": "Тренутна сесија" },
-  "active": { "message": "Активна" },
-
-
-  "browse": { "message": "Преглед" },
-  "history": { "message": "Историја" },
-  "sessions": { "message": "Сесије" },
-  "devices": { "message": "Уређаји" },
-  "insights": { "message": "Увид" },
-  "activity": { "message": "Активност" },
-  "time_spent": { "message": "Време проведено" },
-  "library": { "message": "Библиотека" },
-  "bookmarks": { "message": "Обележивачи" },
-  "system": { "message": "Систем" },
-  "delete_history": { "message": "Обриши историју" },
-  "ignore_list": { "message": "Игнорисани сајтови" },
-  "settings": { "message": "Подешавања" },
-  "more": { "message": "Више" },
-  "light": { "message": "Светла" },
-  "dark": { "message": "Тамна" },
-  "all_time": { "message": "Сво време" },
-  "delete_results": { "message": "Обриши резултате" },
-  "selected_lower": { "message": "изабрано" },
-  "select_all_visible": { "message": "Изабери све видљиво" },
-  "deselect_all": { "message": "Поништи избор" },
-  "delete_selected": { "message": "Обриши изабрано" },
-  "loading": { "message": "Учитавање…" },
-  "daily_visits_90": { "message": "Дневне посете — 90 дана" },
-  "daily_visits_30": { "message": "Дневне посете — 30 дана" },
-  "hours": { "message": "часова" },
-  "days": { "message": "дана" },
-  "clear_time_data": { "message": "Обриши податке о времену" },
-  "daily_browsing_time": { "message": "Дневно време прегледања" },
-  "top_sites_by_time_spent": { "message": "Најпосећенији сајтови по времену проведеном" },
-  "export": { "message": "Извези" },
-  "import": { "message": "Увези" },
-  "history_retention": { "message": "Чување историје" },
-  "keep_history_for": { "message": "Чувај историју" },
-  "older_enteries_are_pruned": { "message": "Старији записи се аутоматски бришу" },
-  "months": { "message": "месеци" },
-  "year": { "message": "година" },
-  "years": { "message": "година" },
-  "forever": { "message": "Заувек" },
-  "appearance": { "message": "Изглед" },
-  "language": { "message": "Језик" },
-  "select_pref_language": { "message": "Изаберите жељени језик" },
-  "font_family": { "message": "Фонт" },
-  "font_size": { "message": "Величина фонта" },
-  "base_ui_text_size": { "message": "Величина текста интерфејса" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Акцент боје" },
-  "primary": { "message": "Примарна" },
-  "secondary": { "message": "Секундарна" },
-  "data": { "message": "Подаци" },
-  "export_history": { "message": "Извези историју" },
-  "full_json_backup": { "message": "Комплетна JSON резервна копија историје + података о времену" },
-  "export_json": { "message": "Извези JSON" },
-  "import_history": { "message": "Увези историју" },
-  "merge_entries_json": { "message": "Увеј уносе из претходно извезеног JSON фајла" },
-  "import_json": { "message": "Увези JSON" },
-  "sessions_to_keep": { "message": "Сесије за чување" },
-  "how_many_past_sessions": { "message": "Колико прошлог сесија се чува (1–20)" },
-  "auto_save_session": { "message": "Аутоматско чување тренутне сесије" },
-  "save_open_tabs_to": { "message": "Чува отворене картице у extended-history-session.html у вашој фасцикли за преузимање. Поставите на 0 да онемогућите." },
-  "min": { "message": "мин" },
-  "save_now": { "message": "Сачувај одмах" },
-  "save_settings": { "message": "Сачувај подешавања" },
-  "danger_zone": { "message": "Опасна зона" },
-  "reimport_chrome_history": { "message": "Поново увези Хром историју" },
-  "pull_all_chrome_history": { "message": "Повуците сву доступну нативну историју Хром поново (спаја, без дупликата)" },
-  "reimport": { "message": "Поново увези" },
-  "clear_all_history": { "message": "Обриши сву историју" },
-  "permanently_delete_all_stored": { "message": "Трајно брише све сачуване записе. Не може се опоравити." },
-  "clear_all": { "message": "Обриши све" },
-  "about": { "message": "О апликацији" },
-  "created_by": { "message": "Креирао Бранислав (Бане) Кондић, јер му се није допадао 90-дневни лимит у Хромиум-у. Ова екстензија не шаље податке и потпуно је open source, код је доступан на Гитхуб профилу аутора." },
-  "github_profile": { "message": "Гитхуб профил" },
-  "feedback": { "message": "Повратна информација" },
-  "link_to_discord": { "message": "Линк до Дискорд сервера за повратне информације (или оставите рецензију у Хром продавници)" },
-  "discord_server": { "message": "Дискорд сервер" },
-  "rate_extension": { "message": "Оцените екстензију" },
-  "link_to_chrome_webstore": { "message": "Линк до Хром Веб Продавнице екстензија" },
-  "click_to_rate": { "message": "Кликните да оцените" },
-  "ignored_domains": { "message": "Игнорисани сајтови" },
-  "domains_added_will_not_be": { "message": "Домени додати овде неће бити сачувани у историји. Постојећи записи ће бити аутоматски обрисани." },
-  "add_patern": { "message": "Додај шаблон" },
-  "pattern_guide": { "message": "Водич за шаблоне" },
-  "basic_domain": { "message": "Основни домен" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Брише све са example.com" },
-  "all_subdomains": { "message": "Сви поддомени" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Брише blog.example.com, shop.example.com итд." },
-  "specific_subdomain": { "message": "Конкретан поддомен" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Брише само blog.example.com" },
-  "specific_path": { "message": "Конкретна путања" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "Брише само URL-ове под /private" },
-  "specific_file": { "message": "Конкретан фајл" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "Брише само тај конкретан фајл" },
-  "no_patterns_added": { "message": "Још нема додатих шаблона" },
-  "open_in_new_tab": { "message": "Отвори у новој картици" },
-  "open_in_incognito": { "message": "Отвори у инкогнито режиму" },
-  "copy_url": { "message": "Копирај URL" },
-  "copy_title": { "message": "Копирај наслов"}
+  "today": {
+    "message": "Данас"
+  },
+  "storage": {
+    "message": "Складиште"
+  },
+  "total_visits": {
+    "message": "Укупно посета"
+  },
+  "restore": {
+    "message": "Поврати"
+  },
+  "most_visited_URLS": {
+    "message": "Најпосећенији URL-ови"
+  },
+  "most_visited": {
+    "message": "Најпосећеније"
+  },
+  "tabs": {
+    "message": "картице"
+  },
+  "since": {
+    "message": "од"
+  },
+  "urls": {
+    "message": "URL-ови"
+  },
+  "domains": {
+    "message": "Домени"
+  },
+  "enable_ignore": {
+    "message": "Омогући листу игнорисања"
+  },
+  "filter_urls": {
+    "message": "Филтрирај URL-ове који одговарају обрасцима испод"
+  },
+  "reading_mode": {
+    "message": "Режим читања"
+  },
+  "tab_storage": {
+    "message": "Складиште картица"
+  },
+  "load_exported_history_read": {
+    "message": "Учитај извезену датотеку историје (.json) да је прегледаш без увоза. Интерфејс ради исто као картица Историја — филтери датума, претрага и све остало."
+  },
+  "choose_file": {
+    "message": "Изабери датотеку…"
+  },
+  "choose_file_hint": {
+    "message": "или превуци .json датотеку овде"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Напусти режим читања"
+  },
+  "reading": {
+    "message": "Читање:"
+  },
+  "all": {
+    "message": "Све"
+  },
+  "auto_focus_search": {
+    "message": "Аутоматски фокус на претрагу при отварању"
+  },
+  "auto_focus_search_desc": {
+    "message": "Аутоматски фокусира поље за претрагу када се отвори страница историје"
+  },
+  "back": {
+    "message": "← Назад"
+  },
+  "background_tint": {
+    "message": "Боја позадине"
+  },
+  "browser_cache": {
+    "message": "Кеш прегледача"
+  },
+  "delete_history_reset_password": {
+    "message": "Обриши историју и ресетуј лозинку"
+  },
+  "enable_bg_tint": {
+    "message": "Омогући боју позадине"
+  },
+  "enable_lock": {
+    "message": "Омогући закључавање"
+  },
+  "enter_password_to_continue": {
+    "message": "Унесите лозинку да наставите"
+  },
+  "ext_locked": {
+    "message": "Extended History — Закључано"
+  },
+  "favicon_resolver": {
+    "message": "Favicon резолвер"
+  },
+  "favicon_resolver_desc": {
+    "message": "Како се учитавају иконе сајтова."
+  },
+  "for_password_reset": {
+    "message": "(за ресет лозинке)"
+  },
+  "forgot_password_reset": {
+    "message": "Заборављена лозинка / Ресет"
+  },
+  "google_resolver": {
+    "message": "Google резолвер"
+  },
+  "history_merge_interval": {
+    "message": "Интервал спајања историје"
+  },
+  "history_merge_interval_desc": {
+    "message": "Колико често се историја прегледача спаја у локално складиште."
+  },
+  "lock_extension_page": {
+    "message": "Закључај страницу екстензије"
+  },
+  "lock_extension_page_desc": {
+    "message": "Захтева лозинку за приказ странице историје."
+  },
+  "password": {
+    "message": "Лозинка"
+  },
+  "performance": {
+    "message": "Перформансе"
+  },
+  "popup": {
+    "message": "Искачући прозор"
+  },
+  "popup_height": {
+    "message": "Висина popup-а"
+  },
+  "popup_height_desc": {
+    "message": "Максимална висина листе у popup-у (px)"
+  },
+  "refresh": {
+    "message": "↻ Освежи"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ Упозорење: Ресет лозинке ће трајно обрисати сву историју."
+  },
+  "search_bar": {
+    "message": "Поље за претрагу"
+  },
+  "search_bar_desc": {
+    "message": "Прикажи поље за претрагу на дну popup-а"
+  },
+  "security_answer": {
+    "message": "Безбедносни одговор"
+  },
+  "security_question": {
+    "message": "Безбедносно питање"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Подеси закључавање странице"
+  },
+  "tabs_bar": {
+    "message": "Трака картица"
+  },
+  "tabs_bar_desc": {
+    "message": "Прикажи пребацивач Recent History / Closed Tabs"
+  },
+  "time_spent_tracking": {
+    "message": "Праћење времена"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Прати време проведено по домену."
+  },
+  "ui": {
+    "message": "UI"
+  },
+  "unlock": {
+    "message": "Откључај"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com или кључна реч"
+  },
+  "opt_all_fields": {
+    "message": "Сва поља"
+  },
+  "opt_title": {
+    "message": "Наслов"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Домен"
+  },
+  "block_all_example_7": {
+    "message": "Блокира само ту кључну реч"
+  },
+  "specific_word": {
+    "message": "Одређена кључна реч"
+  },
+  "example_com_6": {
+    "message": "пример"
+  },
+  "last_1_hour": {
+    "message": "Протеклих сат времена"
+  },
+  "last_24_hours": {
+    "message": "Протеклих 24 сата"
+  },
+  "last_7_days": {
+    "message": "Протеклих 7 дана"
+  },
+  "last_30_days": {
+    "message": "Протеклих 30 дана"
+  },
+  "last_5_months": {
+    "message": "Протеклих 5 месеци"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Обриши колачиће & локалну базу"
+  },
+  "clear_cache": {
+    "message": "Обриши кeширано"
+  },
+  "current_session": {
+    "message": "Тренутна сесија"
+  },
+  "active": {
+    "message": "Активна"
+  },
+  "browse": {
+    "message": "Преглед"
+  },
+  "history": {
+    "message": "Историја"
+  },
+  "sessions": {
+    "message": "Сесије"
+  },
+  "devices": {
+    "message": "Уређаји"
+  },
+  "insights": {
+    "message": "Увид"
+  },
+  "activity": {
+    "message": "Активност"
+  },
+  "time_spent": {
+    "message": "Време проведено"
+  },
+  "library": {
+    "message": "Библиотека"
+  },
+  "bookmarks": {
+    "message": "Обележивачи"
+  },
+  "system": {
+    "message": "Систем"
+  },
+  "delete_history": {
+    "message": "Обриши историју"
+  },
+  "ignore_list": {
+    "message": "Игнорисани сајтови"
+  },
+  "settings": {
+    "message": "Подешавања"
+  },
+  "more": {
+    "message": "Више"
+  },
+  "light": {
+    "message": "Светла"
+  },
+  "dark": {
+    "message": "Тамна"
+  },
+  "all_time": {
+    "message": "Сво време"
+  },
+  "delete_results": {
+    "message": "Обриши резултате"
+  },
+  "selected_lower": {
+    "message": "изабрано"
+  },
+  "select_all_visible": {
+    "message": "Изабери све видљиво"
+  },
+  "deselect_all": {
+    "message": "Поништи избор"
+  },
+  "delete_selected": {
+    "message": "Обриши изабрано"
+  },
+  "loading": {
+    "message": "Учитавање…"
+  },
+  "daily_visits_90": {
+    "message": "Дневне посете — 90 дана"
+  },
+  "daily_visits_30": {
+    "message": "Дневне посете — 30 дана"
+  },
+  "hours": {
+    "message": "часова"
+  },
+  "days": {
+    "message": "дана"
+  },
+  "clear_time_data": {
+    "message": "Обриши податке о времену"
+  },
+  "daily_browsing_time": {
+    "message": "Дневно време прегледања"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Најпосећенији сајтови по времену проведеном"
+  },
+  "export": {
+    "message": "Извези"
+  },
+  "import": {
+    "message": "Увези"
+  },
+  "history_retention": {
+    "message": "Чување историје"
+  },
+  "keep_history_for": {
+    "message": "Чувај историју"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Старији записи се аутоматски бришу"
+  },
+  "months": {
+    "message": "месеци"
+  },
+  "year": {
+    "message": "година"
+  },
+  "years": {
+    "message": "година"
+  },
+  "forever": {
+    "message": "Заувек"
+  },
+  "appearance": {
+    "message": "Изглед"
+  },
+  "language": {
+    "message": "Језик"
+  },
+  "select_pref_language": {
+    "message": "Изаберите жељени језик"
+  },
+  "font_family": {
+    "message": "Фонт"
+  },
+  "font_size": {
+    "message": "Величина фонта"
+  },
+  "base_ui_text_size": {
+    "message": "Величина текста интерфејса"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Акцент боје"
+  },
+  "primary": {
+    "message": "Примарна"
+  },
+  "secondary": {
+    "message": "Секундарна"
+  },
+  "data": {
+    "message": "Подаци"
+  },
+  "export_history": {
+    "message": "Извези историју"
+  },
+  "full_json_backup": {
+    "message": "Комплетна JSON резервна копија историје + података о времену"
+  },
+  "export_json": {
+    "message": "Извези JSON"
+  },
+  "import_history": {
+    "message": "Увези историју"
+  },
+  "merge_entries_json": {
+    "message": "Увеј уносе из претходно извезеног JSON фајла"
+  },
+  "import_json": {
+    "message": "Увези JSON"
+  },
+  "sessions_to_keep": {
+    "message": "Сесије за чување"
+  },
+  "how_many_past_sessions": {
+    "message": "Колико прошлог сесија се чува (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Аутоматско чување тренутне сесије"
+  },
+  "save_open_tabs_to": {
+    "message": "Чува отворене картице у extended-history-session.html у вашој фасцикли за преузимање. Поставите на 0 да онемогућите."
+  },
+  "min": {
+    "message": "мин"
+  },
+  "save_now": {
+    "message": "Сачувај одмах"
+  },
+  "save_settings": {
+    "message": "Сачувај подешавања"
+  },
+  "danger_zone": {
+    "message": "Опасна зона"
+  },
+  "reimport_chrome_history": {
+    "message": "Поново увези Хром историју"
+  },
+  "pull_all_chrome_history": {
+    "message": "Повуците сву доступну нативну историју Хром поново (спаја, без дупликата)"
+  },
+  "reimport": {
+    "message": "Поново увези"
+  },
+  "clear_all_history": {
+    "message": "Обриши сву историју"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Трајно брише све сачуване записе. Не може се опоравити."
+  },
+  "clear_all": {
+    "message": "Обриши све"
+  },
+  "about": {
+    "message": "О апликацији"
+  },
+  "created_by": {
+    "message": "Креирао Бранислав (Бане) Кондић, јер му се није допадао 90-дневни лимит у Хромиум-у. Ова екстензија не шаље податке и потпуно је open source, код је доступан на Гитхуб профилу аутора."
+  },
+  "github_profile": {
+    "message": "Гитхуб профил"
+  },
+  "feedback": {
+    "message": "Повратна информација"
+  },
+  "link_to_discord": {
+    "message": "Линк до Дискорд сервера за повратне информације (или оставите рецензију у Хром продавници)"
+  },
+  "discord_server": {
+    "message": "Дискорд сервер"
+  },
+  "rate_extension": {
+    "message": "Оцените екстензију"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Линк до Хром Веб Продавнице екстензија"
+  },
+  "click_to_rate": {
+    "message": "Кликните да оцените"
+  },
+  "ignored_domains": {
+    "message": "Игнорисани сајтови"
+  },
+  "domains_added_will_not_be": {
+    "message": "Домени додати овде неће бити сачувани у историји. Постојећи записи ће бити аутоматски обрисани."
+  },
+  "add_patern": {
+    "message": "Додај шаблон"
+  },
+  "pattern_guide": {
+    "message": "Водич за шаблоне"
+  },
+  "basic_domain": {
+    "message": "Основни домен"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Брише све са example.com"
+  },
+  "all_subdomains": {
+    "message": "Сви поддомени"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Брише blog.example.com, shop.example.com итд."
+  },
+  "specific_subdomain": {
+    "message": "Конкретан поддомен"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Брише само blog.example.com"
+  },
+  "specific_path": {
+    "message": "Конкретна путања"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "Брише само URL-ове под /private"
+  },
+  "specific_file": {
+    "message": "Конкретан фајл"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "Брише само тај конкретан фајл"
+  },
+  "no_patterns_added": {
+    "message": "Још нема додатих шаблона"
+  },
+  "open_in_new_tab": {
+    "message": "Отвори у новој картици"
+  },
+  "open_in_incognito": {
+    "message": "Отвори у инкогнито режиму"
+  },
+  "copy_url": {
+    "message": "Копирај URL"
+  },
+  "copy_title": {
+    "message": "Копирај наслов"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Отвори режим програмера"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 Прикажи отворене картице и време мировања"
+  },
+  "cal_all_time": {
+    "message": "🗓 Све време"
+  },
+  "prev_day": {
+    "message": "‹ Претходни дан"
+  },
+  "next_day": {
+    "message": "Следећи дан ›"
+  },
+  "previous_month": {
+    "message": "Претходни месец"
+  },
+  "next_month": {
+    "message": "Следећи месец"
+  },
+  "clear": {
+    "message": "Обриши"
+  },
+  "ui_rounded_corners": {
+    "message": "Заобљени углови интерфејса"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Заобљује углове бочне траке и главног панела (и задржава мали размак око њих). Искључите за оштре ивице и распоред од ивице до ивице."
+  },
+  "ui_calendar_mode": {
+    "message": "Режим календара"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Замењује навигацију по датумима и сатима на страници Историја календаром у десној бочној траци — бирајте датуме, месеце и године и одмах пређите на било који сат."
+  },
+  "developer": {
+    "message": "Програмер"
+  },
+  "dev_mode": {
+    "message": "Режим програмера"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Режим програмера"
+  },
+  "dev_mode_desc": {
+    "message": "Интерна дијагностика: подаци уживо о мировању картица који се користе за аутоматско складиштење и статистика позадинских тајмера. Само за решавање проблема."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Интерна дијагностика — позадински тајмери и стање уживо праћења мировања картица које се користи за аутоматско складиштење."
+  },
+  "close": {
+    "message": "Затвори"
+  },
+  "hour": {
+    "message": "Сат"
+  },
+  "all_hours": {
+    "message": "Сви сати"
+  },
+  "ph_search_devices": {
+    "message": "Претражи картице уређаја по наслову или URL-у…"
+  },
+  "add": {
+    "message": "Додај"
+  },
+  "domain_exceptions": {
+    "message": "Изузети домени"
+  },
+  "domain_exceptions_desc": {
+    "message": "Домени са ове листе се прескачу приликом брисања историје: њихови уноси у историји, колачићи и подаци сајта се задржавају. Поддомени су укључени."
+  },
+  "no_exceptions_yet": {
+    "message": "Још нема изузетака"
+  },
+  "remove": {
+    "message": "Уклони"
+  },
+  "invalid_domain": {
+    "message": "Унесите исправан домен, нпр. example.com"
+  },
+  "domain_already_added": {
+    "message": "Тај домен је већ на листи"
+  },
+  "dh_confirm_warn": {
+    "message": "Ово ће трајно обрисати историју за: {0}. Кликните поново на Обриши за потврду."
+  },
+  "dh_confirm_exceptions": {
+    "message": "Домени са ваше листе изузетака ({0}) биће задржани."
+  },
+  "deleting": {
+    "message": "Брисање…"
+  },
+  "deleted_history_entries": {
+    "message": "Обрисано уноса из историје: {0}"
+  },
+  "word_cookies": {
+    "message": "колачићи"
+  },
+  "word_cache": {
+    "message": "кеш"
+  },
+  "confirm_restore_tabs": {
+    "message": "Повратити {0} картица?"
+  },
+  "restored_tabs_windows": {
+    "message": "Повраћено {0} картица у {1} прозора"
+  },
+  "restored_tabs_window": {
+    "message": "Повраћено {0} картица у новом прозору"
+  },
+  "toast_pattern_removed": {
+    "message": "Шаблон уклоњен"
+  },
+  "toast_enter_pattern": {
+    "message": "Унесите шаблон"
+  },
+  "toast_pattern_added": {
+    "message": "Шаблон додат: {0}"
+  },
+  "toast_ignore_enabled": {
+    "message": "Листа игнорисаних је укључена"
+  },
+  "toast_ignore_disabled": {
+    "message": "Листа игнорисаних је искључена"
+  },
+  "toast_ts_hidden": {
+    "message": "Игнорисани домени су сада скривени из Проведеног времена"
+  },
+  "toast_ts_shown": {
+    "message": "Игнорисани домени више нису скривени из Проведеног времена"
+  },
+  "hide_from_time_spent": {
+    "message": "Сакриј из Проведеног времена"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Сакрива домене који одговарају шаблонима испод из приказа Проведеног времена — не брише забележене податке о времену"
+  },
+  "url_pattern_guide": {
+    "message": "Водич за URL шаблоне"
+  },
+  "ignore_keywords_note": {
+    "message": "Речи без тачке сматрају се кључним речима — поклапају се са сваким URL-ом или насловом странице који садржи ту реч."
+  },
+  "toast_cleaning": {
+    "message": "Чишћење игнорисаних URL-ова из историје…"
+  },
+  "toast_removed_ignored": {
+    "message": "Уклоњено {0} игнорисаних URL-ова из историје"
+  },
+  "toast_no_ignored": {
+    "message": "Нису пронађени игнорисани URL-ови у историји"
+  },
+  "keyword_prefix": {
+    "message": "кључна реч: {0}"
+  },
+  "cached_resolver": {
+    "message": "Кеширано (локално)"
+  },
+  "context_menu_on_pages": {
+    "message": "Мени десног клика на сајтовима"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Приказује ставку „Extended History“ када кликнете десним тастером на веб-страницу"
+  },
+  "no_sessions_yet": {
+    "message": "Још нема забележених сесија"
+  },
+  "popup_as_sidebar": {
+    "message": "Користи као бочну траку"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Отвара Extended History у бочном панелу Chrome-а уместо искачућег прозора, како би могао да се прошири преко целе странице"
+  },
+  "toolbar_icon": {
+    "message": "Икона на траци са алаткама"
+  },
+  "toolbar_icon_desc": {
+    "message": "Изаберите икону која се приказује на траци са алаткама прегледача"
+  },
+  "wallpaper_opacity": {
+    "message": "Провидност позадине"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Затамњује саму позадинску слику — одвојено од нијансе стакленог панела испод."
   }
+}

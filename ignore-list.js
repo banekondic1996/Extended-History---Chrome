@@ -58,8 +58,8 @@ function updateCleanupBubble(active, done, total) {
   const textEl = document.getElementById('ehCleanupBubbleText');
   if (textEl) {
     textEl.textContent = total
-      ? `Cleaning ignored URLs from history… ${done}/${total}`
-      : 'Cleaning ignored URLs from history…';
+      ? `${tr('toast_cleaning', 'Cleaning ignored URLs from history…')} ${done}/${total}`
+      : tr('toast_cleaning', 'Cleaning ignored URLs from history…');
   }
   el.style.opacity = '1';
 }
@@ -105,7 +105,7 @@ async function loadIgnoreList() {
     }
     
     if (!list || !list.length) {
-      container.innerHTML = '<div class="empty-msg">No patterns added yet</div>';
+      container.innerHTML = '<div class="empty-msg">' + tr('no_patterns_added', 'No patterns added yet') + '</div>';
       return;
     }
     
@@ -117,7 +117,7 @@ async function loadIgnoreList() {
       const code = document.createElement('code');
       // Display kw: patterns as readable keyword labels
       if (pattern.startsWith('kw:')) {
-        code.textContent = 'keyword: ' + pattern.slice(3);
+        code.textContent = tr('keyword_prefix', 'keyword: {0}', pattern.slice(3));
         code.title = 'Keyword pattern — matches any URL or page title containing "' + pattern.slice(3) + '"';
       } else {
         code.textContent = pattern;
@@ -125,12 +125,12 @@ async function loadIgnoreList() {
       
       const removeBtn = document.createElement('button');
       removeBtn.className = 'ignore-remove-btn';
-      removeBtn.textContent = 'Remove';
+      removeBtn.textContent = tr('remove', 'Remove');
       removeBtn.onclick = async () => {
         if (!confirm(`Remove pattern: ${pattern}?`)) return;
         try {
           await send('REMOVE_IGNORE_PATTERN', { pattern });
-          showToast('Pattern removed', 'ok');
+          showToast(tr('toast_pattern_removed', 'Pattern removed'), 'ok');
           loadIgnoreList(); // Reload list
         } catch (err) {
           showToast('Error: ' + err.message, 'err');
@@ -158,7 +158,7 @@ async function addIgnorePattern() {
   const pattern = input.value.trim();
   
   if (!pattern) {
-    showToast('Please enter a pattern', 'err');
+    showToast(tr('toast_enter_pattern', 'Please enter a pattern'), 'err');
     return;
   }
   
@@ -166,7 +166,7 @@ async function addIgnorePattern() {
   try {
     await send('ADD_IGNORE_PATTERN', { pattern });
     input.value = '';
-    showToast(`Pattern added: ${pattern}`, 'ok');
+    showToast(tr('toast_pattern_added', 'Pattern added: {0}', pattern), 'ok');
     loadIgnoreList(); // Reload list
   } catch (err) {
     //console.error('[IgnoreList] Add failed:', err);
@@ -187,21 +187,20 @@ async function toggleIgnoreList() {
   
   try {
     const result = await send('TOGGLE_IGNORE_LIST');
-    const statusText = result.enabled ? 'enabled' : 'disabled';
-    showToast(`Ignore list ${statusText}`, 'ok');
+    showToast(result.enabled ? tr('toast_ignore_enabled', 'Ignore list enabled') : tr('toast_ignore_disabled', 'Ignore list disabled'), 'ok');
     
     // If just enabled, clean history immediately
     if (result.enabled) {
-      showToast('Cleaning ignored URLs from history...', 'ok');
+      showToast(tr('toast_cleaning', 'Cleaning ignored URLs from history…'), 'ok');
       // The toast above fades on its own; the bubble (driven by CLEANUP_PROGRESS
       // broadcasts from background.js) stays visible for the whole operation,
       // including if this panel gets closed and reopened before it finishes.
       const cleanResult = await send('CLEAN_IGNORED_HISTORY');
       const count = cleanResult.removed || 0;
       if (count > 0) {
-        showToast(`Removed ${count} ignored URL${count === 1 ? '' : 's'} from history`, 'ok');
+        showToast(tr('toast_removed_ignored', 'Removed {0} ignored URLs from history', count), 'ok');
       } else {
-        showToast('No ignored URLs found in history', 'ok');
+        showToast(tr('toast_no_ignored', 'No ignored URLs found in history'), 'ok');
       }
     }
   } catch (err) {
@@ -224,8 +223,9 @@ async function toggleHideTimeSpent() {
   const enabled = toggle.checked;
   try {
     const result = await send('TOGGLE_HIDE_IGNORED_TIMESPENT');
-    const statusText = result.enabled ? 'now hidden from Time Spent' : 'no longer hidden from Time Spent';
-    showToast(`Ignored domains are ${statusText}`, 'ok');
+    showToast(result.enabled
+      ? tr('toast_ts_hidden', 'Ignored domains are now hidden from Time Spent')
+      : tr('toast_ts_shown', 'Ignored domains are no longer hidden from Time Spent'), 'ok');
   } catch (err) {
     showToast('Error: ' + err.message, 'err');
     toggle.checked = !enabled; // revert on error
@@ -241,10 +241,10 @@ function togglePatternGuide() {
   }
   if (guide.style.display === 'none') {
     guide.style.display = 'block';
-    btn.textContent = '▲ URL Pattern Guide';
+    btn.textContent = '▲ ' + tr('url_pattern_guide', 'URL Pattern Guide');
   } else {
     guide.style.display = 'none';
-    btn.textContent = '▼ URL Pattern Guide';
+    btn.textContent = '▼ ' + tr('url_pattern_guide', 'URL Pattern Guide');
   }
 }
 

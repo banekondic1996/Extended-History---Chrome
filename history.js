@@ -85,8 +85,8 @@ function dayLabel(ts) {
   
   const diff = Math.round((nDate - dDate) / 86400000);
   
-  if (diff === 0) return chrome.i18n.getMessage("today") || 'Today';
-  if (diff === 1) return chrome.i18n.getMessage("yesterday") || 'Yesterday';
+  if (diff === 0) return _ehMsg("today") || 'Today';
+  if (diff === 1) return _ehMsg("yesterday") || 'Yesterday';
   if (diff < 7)   return d.toLocaleDateString(undefined, { weekday: 'long' });
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -207,6 +207,7 @@ function appendPage() {
     if (dl !== prevDay) {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
+      hdr.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
       hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
       area.appendChild(hdr);
       prevDay = dl;
@@ -438,8 +439,8 @@ function buildDateNav(retentionDays) {
   for (let i = 0; i < pillCount; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
-    if (i === 0) { addBtn(chrome.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
-    if (i === 1) { addBtn(chrome.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
+    if (i === 0) { addBtn(_ehMsg('today')     || 'Today',     key, ''); continue; }
+    if (i === 1) { addBtn(_ehMsg('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
 
@@ -478,7 +479,7 @@ function buildDateNav(retentionDays) {
       _scrollStopTimer = setTimeout(() => {
         _isScrolling = false;
         // Restore the original label — "All" (use i18n if available)
-        allPill.textContent = chrome.i18n.getMessage('all') || 'All';
+        allPill.textContent = _ehMsg('all') || 'All';
       }, 600);
     }, { passive: true });
   })();
@@ -606,8 +607,28 @@ function updateHourPillsState() {
 // ══ CALENDAR MODE ═══════════════════════════════════════════════════════════
 // Right-side calendar sidebar, shown instead of the date/hour pill nav when
 // the "UI calendar mode" setting is on and the History panel is active.
-const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const CAL_WEEKDAYS = ['S','M','T','W','T','F','S'];
+// Month / weekday names: Intl in the language currently in use (Settings >
+// Language, or the browser language). Latin has no Intl data, so it is spelled out.
+const _CAL_MONTHS_LA = ['Ianuarius','Februarius','Martius','Aprilis','Maius','Iunius','Iulius','Augustus','September','October','November','December'];
+const _CAL_WEEKDAYS_LA = ['D','L','M','M','I','V','S'];
+function _calLocale() {
+  const l = String(window._currentLang || 'en').replace('_', '-');
+  return l.toLowerCase() === 'no' ? 'nb' : l;
+}
+function calMonths() {
+  if (String(window._currentLang) === 'la') return _CAL_MONTHS_LA;
+  try {
+    const f = new Intl.DateTimeFormat(_calLocale(), { month: 'long' });
+    return Array.from({ length: 12 }, (_, i) => { const n = f.format(new Date(2021, i, 1)); return n.charAt(0).toUpperCase() + n.slice(1); });
+  } catch { return ['January','February','March','April','May','June','July','August','September','October','November','December']; }
+}
+function calWeekdays() { // Sunday-first initials
+  if (String(window._currentLang) === 'la') return _CAL_WEEKDAYS_LA;
+  try {
+    const f = new Intl.DateTimeFormat(_calLocale(), { weekday: 'narrow' });
+    return Array.from({ length: 7 }, (_, i) => f.format(new Date(2021, 7, 1 + i))); // 1 Aug 2021 = Sunday
+  } catch { return ['S','M','T','W','T','F','S']; }
+}
 
 function calDateKey(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -647,12 +668,12 @@ function syncCalActiveDate(key) {
 function renderCalendarWidget() {
   const monthLbl = document.getElementById('calMonthLabel');
   const yearLbl  = document.getElementById('calYearLabel');
-  if (monthLbl) monthLbl.textContent = CAL_MONTHS[calViewMonth];
+  if (monthLbl) monthLbl.textContent = calMonths()[calViewMonth];
   if (yearLbl)  yearLbl.textContent  = String(calViewYear);
 
   const wdEl = document.getElementById('calWeekdays');
   if (wdEl && !wdEl.dataset.built) {
-    wdEl.innerHTML = CAL_WEEKDAYS.map(w => `<span>${w}</span>`).join('');
+    wdEl.innerHTML = calWeekdays().map(w => `<span>${w}</span>`).join('');
     wdEl.dataset.built = '1';
   }
 
@@ -734,7 +755,7 @@ function calOpenMonthPicker() {
   if (yp) yp.style.display = 'none';
   const open = el.style.display !== 'none';
   if (open) { el.style.display = 'none'; return; }
-  el.innerHTML = CAL_MONTHS.map((name, i) =>
+  el.innerHTML = calMonths().map((name, i) =>
     `<div class="cal-picker-cell${i === calViewMonth ? ' active' : ''}" data-m="${i}">${name.slice(0,3)}</div>`
   ).join('');
   el.querySelectorAll('.cal-picker-cell').forEach(cell => {
@@ -787,7 +808,7 @@ function buildCalHourGrid() {
   grid.innerHTML = '';
   const allBtn = document.createElement('button');
   allBtn.className = 'cal-hour-cell all-hours active';
-  allBtn.textContent = 'All hours';
+  allBtn.textContent = tr('all_hours', 'All hours');
   allBtn.dataset.h = 'all';
   allBtn.addEventListener('click', () => setFilterHour(null));
   grid.appendChild(allBtn);
@@ -805,6 +826,13 @@ function buildCalHourGrid() {
 
 // ── Scroll-spy: while browsing "All time", highlight the date of whatever's
 // currently at the top of the visible list, without touching filterDate. ──
+// NOTE: this used to scan every rendered `.entry` row (data-date lives on each
+// entry) to find the one at the top. Since the list is append-only infinite
+// scroll — old rows are never removed from the DOM — that scan grew with
+// however far you'd scrolled, and ran on every animation frame while
+// scrolling, which is what made scrolling feel like it was doing work.
+// `.day-label` headers carry the same date and there are orders of magnitude
+// fewer of them (one per day vs. one per visit), so scan those instead.
 let _calScrollSpyPending = false;
 function calScrollSpyCheck(area) {
   if (filterDate) return; // only meaningful in All-time mode
@@ -814,12 +842,12 @@ function calScrollSpyCheck(area) {
   requestAnimationFrame(() => {
     _calScrollSpyPending = false;
     const areaTop = area.getBoundingClientRect().top;
-    const rows = area.querySelectorAll('.entry[data-date]');
-    let topRow = null;
-    for (const row of rows) {
-      if (row.getBoundingClientRect().bottom >= areaTop) { topRow = row; break; }
+    const headers = area.querySelectorAll('.day-label[data-date]');
+    let topHeader = null;
+    for (const hdr of headers) {
+      if (hdr.getBoundingClientRect().bottom >= areaTop) { topHeader = hdr; break; }
     }
-    const key = topRow?.dataset.date;
+    const key = topHeader?.dataset.date;
     if (key && key !== calActiveDate) {
       calActiveDate = key;
       const [y, m] = key.split('-').map(Number);
@@ -927,6 +955,16 @@ function setupToolbar() {
   document.getElementById('dateFrom').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
   document.getElementById('dateTo').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
 
+  // The input itself has pointer-events:none (see history.css) so it can't be
+  // clicked into and typed over — the wrapper is what's actually clickable,
+  // and just opens the native picker. showPicker() needs a user gesture and
+  // isn't supported on every browser, so fall back to a focused click.
+  const openDatePicker = (input) => {
+    try { input.showPicker(); } catch { input.focus(); }
+  };
+  document.getElementById('dateFromBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateFrom')));
+  document.getElementById('dateToBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateTo')));
+
   // "All time" — clears only date/hour filters, NOT the search text
   document.getElementById('clearFiltersBtn').addEventListener('click', () => {
     document.getElementById('dateFrom').value = '';
@@ -974,23 +1012,100 @@ function exitSelMode() {
 }
 
 // ── Delete helpers ────────────────────────────────────────────────────────────
+// Removes one entry from the in-memory list + DOM directly, without a full
+// SEARCH round-trip. Used by deleteSingle() below so a single-row delete
+// doesn't re-fetch (and re-render) the entire result set just to drop one row.
+function removeEntryFromView(id) {
+  const idx = allResults.findIndex(e => e.id === id);
+  if (idx !== -1) allResults.splice(idx, 1);
+  vsRendered = vsRendered.filter(e => e.id !== id);
+  selected.delete(id);
+  updateSelBar();
+
+  const area = listArea();
+  const row = area.querySelector(`.entry[data-id="${CSS.escape(id)}"]`);
+  if (!row) return;
+
+  const date = row.dataset.date;
+  row.remove();
+  vsOffset = Math.max(0, vsOffset - 1); // keep pagination in sync with the shrunk array
+
+  // If that was the last entry for this date, drop the now-empty day header too.
+  if (date && !area.querySelector(`.entry[data-date="${CSS.escape(date)}"]`)) {
+    area.querySelector(`.day-label[data-date="${CSS.escape(date)}"]`)?.remove();
+  }
+
+  if (!allResults.length) {
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
+  }
+}
+
 async function deleteSingle(id) {
+  const entry = allResults.find(e => e.id === id);
+  const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
+
+  // Optimistic UI: drop the row immediately rather than waiting on the
+  // backend + a full re-search, which is what made this feel slow.
+  removeEntryFromView(id);
+
   try {
-    const entry = allResults.find(e => e.id === id);
-    const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
     console.log('[EH] deleteSingle:', id, urls);
     const result = await send('DELETE_IDS', { ids: [id], urls });
     console.log('[EH] deleteSingle response:', result);
-    selected.delete(id);
-    // Re-fetch from the backend instead of trusting a local patch — this is the
-    // only way to be sure the list reflects what's actually in storage/Chrome
-    // history after the delete, whatever happened on the backend.
-    await doSearch();
     toast('Deleted', 'ok');
   } catch (err) {
     console.error('[EH] deleteSingle failed:', err);
     toast(err.message || 'Delete failed — see console for details', 'err');
+    // We already removed it optimistically but the backend delete failed —
+    // re-sync with what's actually in storage instead of leaving a stale view.
+    await doSearch();
   }
+}
+
+// Does the actual DELETE_IDS call + urls lookup — shared by deleteIds() and
+// deleteMatching() so both paths delete exactly the ids they were given,
+// nothing derived/re-matched on the backend.
+async function performDelete(ids) {
+  const idSet = new Set(ids);
+  const urls = allResults
+    .filter(e => idSet.has(e.id))
+    .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
+  return send('DELETE_IDS', { ids, urls });
+}
+
+// ══ DELETE PROGRESS BUBBLE ══════════════════════════════════════════════════
+// Bulk deletes (deleteIds / deleteMatching) can take a while — each URL is a
+// separate chrome.history.deleteUrl() call on the backend, batched but not
+// instant for thousands of entries. This gives visible feedback that
+// something is actually happening instead of the UI looking frozen/idle.
+let _deleteBubbleEl = null;
+function showDeleteProgress(msg) {
+  let el = _deleteBubbleEl;
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ehDeleteBubble';
+    el.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:9999;' +
+      'background:var(--surf2,#222);color:var(--text,#eee);border:1px solid var(--border,#444);' +
+      'border-radius:20px;padding:8px 16px;font-size:0.8rem;font-weight:600;' +
+      'box-shadow:0 4px 14px rgba(0,0,0,0.35);display:flex;align-items:center;gap:8px;' +
+      'pointer-events:none;';
+    el.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;' +
+      'background:#e0555a;animation:ehDeletePulse 1s ease-in-out infinite"></span>' +
+      '<span id="ehDeleteBubbleText"></span>';
+    if (!document.getElementById('ehDeletePulseStyle')) {
+      const style = document.createElement('style');
+      style.id = 'ehDeletePulseStyle';
+      style.textContent = '@keyframes ehDeletePulse{0%,100%{opacity:1}50%{opacity:0.35}}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(el);
+    _deleteBubbleEl = el;
+  }
+  document.getElementById('ehDeleteBubbleText').textContent = msg;
+  el.style.display = 'flex';
+}
+function hideDeleteProgress() {
+  if (_deleteBubbleEl) _deleteBubbleEl.style.display = 'none';
 }
 
 async function deleteIds(ids) {
@@ -999,13 +1114,9 @@ async function deleteIds(ids) {
   const ok = confirm(`Delete ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}?`);
   console.log('[EH] confirm() returned:', ok);
   if (!ok) return;
+  showDeleteProgress(`Deleting ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}…`);
   try {
-    const idSet = new Set(ids);
-    const urls = allResults
-      .filter(e => idSet.has(e.id))
-      .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
-    console.log('[EH] sending DELETE_IDS, urls:', urls);
-    const result = await send('DELETE_IDS', { ids, urls });
+    const result = await performDelete(ids);
     console.log('[EH] DELETE_IDS response:', result);
     exitSelMode();
     // Re-fetch from the backend — see note in deleteSingle above.
@@ -1015,27 +1126,46 @@ async function deleteIds(ids) {
   } catch (err) {
     console.error('[EH] deleteIds failed:', err);
     toast(err.message || 'Delete failed — see console for details', 'err');
+  } finally {
+    hideDeleteProgress();
   }
 }
 
+// Deletes every entry currently in allResults — i.e. exactly what's on
+// screen after search text + quick filter + date range have all been
+// applied. IMPORTANT: this used to re-derive "what matches" on the backend
+// from the search query/date range alone (DELETE_MATCHING), which had no
+// idea a Quick Filter was active (quick filters are applied client-side,
+// on top of the search results — see applyQuickFilterEntries() in
+// quick-filters.js). With an active quick filter and an empty search box,
+// that backend match was effectively unfiltered and deleted the entire
+// history, even though the confirm dialog (correctly, from allResults.length)
+// said only the filtered count. Deleting the exact ids in allResults instead
+// guarantees the delete always matches what the confirm dialog told you.
 async function deleteMatching() {
   if (!allResults.length) { toast('No results to delete'); return; }
-  const { query, mode, startDate, endDate } = getFilters();
-  
+  const { startDate, endDate } = getFilters();
+
   // Check if "all time" is selected (no date filters)
   const isAllTime = !startDate && !endDate;
   const confirmMsg = isAllTime 
-   ? chrome.i18n.getMessage("confirm_delete_all_time", fmtNum(allResults.length))
-  : chrome.i18n.getMessage("confirm_delete_filtered", fmtNum(allResults.length));
+   ? _ehMsg("confirm_delete_all_time", fmtNum(allResults.length))
+  : _ehMsg("confirm_delete_filtered", fmtNum(allResults.length));
   
   if (!confirm(confirmMsg)) return;
-  
+
+  const ids = allResults.map(e => e.id);
+  showDeleteProgress(`Deleting ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}…`);
   try {
-    const r = await send('DELETE_MATCHING', { query, mode, startDate, endDate });
+    await performDelete(ids);
     exitSelMode();
     await doSearch();
-    toast(`Deleted ${fmtNum(r.deleted)} items`, 'ok');
-  } catch (err) { toast(err.message, 'err'); }
+    toast(`Deleted ${fmtNum(ids.length)} items`, 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally {
+    hideDeleteProgress();
+  }
 }
 
 // ══ ACTIVITY ════════════════════════════════════════════════════════════════
@@ -1051,9 +1181,7 @@ async function loadActivity() {
     <div class="kpi-card"><div class="kpi-label" data-i18n-key="since">Since</div><div class="kpi-val sm">${s.oldestEntry ? new Date(s.oldestEntry).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : '—'}</div></div>
     `;
     // Reapply translations to dynamically added content
-    if (typeof window.applyTranslations === 'function' && window._currentLang) {
-      window.applyTranslations(window._currentLang);
-    }
+    if (typeof window.applyTranslations === 'function') window.applyTranslations();
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
   } catch (err) { console.error(err); }
@@ -1382,16 +1510,20 @@ async function loadSessions() {
       if (!badgeText) {
         const restoreBtn = document.createElement('button');
         restoreBtn.className   = 'tb-btn';
-        restoreBtn.textContent = '↺ ' + (chrome.i18n.getMessage('restore') || 'Restore');
+        restoreBtn.textContent = '↺ ' + (_ehMsg('restore') || 'Restore');
         restoreBtn.setAttribute('data-i18n-key', 'restore');
         restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
         restoreBtn.addEventListener('click', async ev => {
           ev.stopPropagation();
           const urls = tabsArr.filter(t => t.url).map(t => t.url);
-          if (urls.length > 20 && !confirm(`Restore ${urls.length} tabs?`)) return;
+          if (urls.length > 20 && !confirm(tr('confirm_restore_tabs', 'Restore {0} tabs?', urls.length))) return;
           try {
-            await send('RESTORE_SESSION', { tabs: tabsArr });
-            toast(`Restored ${urls.length} tabs`, 'ok');
+            const r = await send('RESTORE_SESSION', { tabs: tabsArr });
+            const n = (r && r.restored != null) ? r.restored : urls.length;
+            const w = (r && r.windows) || 1;
+            toast(w > 1
+              ? tr('restored_tabs_windows', 'Restored {0} tabs in {1} windows', n, w)
+              : tr('restored_tabs_window', 'Restored {0} tabs in a new window', n), 'ok');
           } catch(err) { toast(err.message, 'err'); }
         });
         head.appendChild(restoreBtn); // will be inserted before toggle below
@@ -1449,8 +1581,8 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: chrome.i18n.getMessage("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
-                                      chrome.i18n.getMessage("active"), current.tabs
+        { main: _ehMsg("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+                                      _ehMsg("active"), current.tabs
       ));
     }
     
@@ -1809,7 +1941,19 @@ function wireDeviceSearch() {
   const refreshBtn = document.getElementById('devicesRefreshBtn');
   if (!input && !refreshBtn) return;
   _deviceSearchWired = true;
-  if (input) input.addEventListener('input', () => filterDeviceRows(input.value));
+  const clearBtn = document.getElementById('deviceSearchClearBtn');
+  const syncClearBtn = () => clearBtn?.classList.toggle('visible', !!(input && input.value.length));
+  if (input) input.addEventListener('input', () => { syncClearBtn(); filterDeviceRows(input.value); });
+  if (input) input.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && input.value) { ev.preventDefault(); input.value = ''; syncClearBtn(); filterDeviceRows(''); }
+  });
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (!input) return;
+    input.value = '';
+    syncClearBtn();
+    filterDeviceRows('');
+    input.focus();
+  });
   if (refreshBtn) refreshBtn.addEventListener('click', () => loadDevices());
 }
 
@@ -3071,20 +3215,16 @@ function applyVisuals(s) {
   applyCalendarMode(s.calendarMode === true);
   applyIconVariant(s.toolbarIcon || 'default');
   
-  // Apply background tint: hue-rotate filter on the wallpaper layer
+  // Apply background tint: hue-rotate filter on the wallpaper layer.
+  // The layer itself stays unblurred — blur now lives on the glass panels
+  // (see applyWallpaper), so this only ever touches hue-rotate.
   const wpLayer = document.getElementById('eh-wallpaper-layer');
   if (s.bgTintEnabled && s.bgTintHue !== undefined) {
-    const blurAmt = s.blurAmount ?? s.bgTintBlur ?? 8;
-    const hueRot  = s.bgTintHue;
-    if (wpLayer) {
-      wpLayer.style.filter = `blur(${blurAmt}px) hue-rotate(${hueRot}deg)`;
-    }
+    const hueRot = s.bgTintHue;
+    if (wpLayer) wpLayer.style.filter = `hue-rotate(${hueRot}deg)`;
     r.style.setProperty('--bg-tint-hue', hueRot + 'deg');
   } else {
-    if (wpLayer) {
-      const blurAmt = s.blurAmount ?? 8;
-      wpLayer.style.filter = `blur(${blurAmt}px)`;
-    }
+    if (wpLayer) wpLayer.style.removeProperty('filter');
     r.style.removeProperty('--bg-tint-hue');
   }
 }
@@ -3151,7 +3291,6 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const font    = document.getElementById('fontSel').value;
   const sz      = parseInt(document.getElementById('fontSzInput').value);
   const maxSess = parseInt(document.getElementById('maxSessionsInput')?.value || '4');
-  const lang    = document.getElementById('languageSelect')?.value || window._currentLang || 'en';
   const bgTintEnabled = document.getElementById('bgTintToggle')?.checked || false;
   const bgTintHue = parseInt(document.getElementById('bgTintHue')?.value || '220');
   const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
@@ -3182,7 +3321,6 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         font, 
         fontSize: sz, 
         theme: _curSettings.theme || 'dark',
-        language: lang,
         bgTintEnabled,
         bgTintHue,
         bgTintOpacity,
@@ -4020,10 +4158,10 @@ function _showIgnorePanel() {
     inner.dataset.loaded = '1';
     inner.innerHTML = `
       <div class="panel-scroll">
-        <div class="panel-heading">🚫 Ignored Domains</div>
+        <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
         <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
-          Domains added here will not be saved in history. Existing entries will be removed automatically.
-          Words without a dot are treated as <strong>keywords</strong> — they match any URL or page title containing that word.
+          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Existing entries will be removed automatically.</span>
+          <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
         <div class="ignore-toggle-wrapper">
           <label class="toggle-switch">
@@ -4032,8 +4170,8 @@ function _showIgnorePanel() {
           </label>
           <label class="ignore-toggle-label" for="ignoreListToggle">
             <div class="ignore-toggle-text">
-              <div class="ignore-toggle-title">Enable Ignore List</div>
-              <div class="ignore-toggle-subtitle">Filter URLs matching patterns below</div>
+              <div class="ignore-toggle-title" data-i18n-key="enable_ignore">Enable Ignore List</div>
+              <div class="ignore-toggle-subtitle" data-i18n-key="filter_urls">Filter URLs matching patterns below</div>
             </div>
           </label>
         </div>
@@ -4044,17 +4182,17 @@ function _showIgnorePanel() {
           </label>
           <label class="ignore-toggle-label" for="hideTimeSpentToggle">
             <div class="ignore-toggle-text">
-              <div class="ignore-toggle-title">Hide from Time Spent</div>
-              <div class="ignore-toggle-subtitle">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
+              <div class="ignore-toggle-title" data-i18n-key="hide_from_time_spent">Hide from Time Spent</div>
+              <div class="ignore-toggle-subtitle" data-i18n-key="hide_from_time_spent_desc">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
             </div>
           </label>
         </div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
-          <button id="addIgnoreBtn">Add Pattern</button>
+          <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
         </div>
         <div class="pattern-guide-toggle">
-          <button id="patternGuideToggle">▼ URL Pattern Guide</button>
+          <button id="patternGuideToggle">▼ <span data-i18n-key="url_pattern_guide">URL Pattern Guide</span></button>
         </div>
         <div id="patternGuide" class="pattern-guide" style="display:none">
       <table>
@@ -4123,9 +4261,7 @@ function _showIgnorePanel() {
   if (window.IgnoreList) window.IgnoreList.load();
 
   // Re-apply translations to newly injected content
-  if (typeof window.applyTranslations === 'function' && window._currentLang) {
-    window.applyTranslations(window._currentLang);
-  }
+  if (typeof window.applyTranslations === 'function') window.applyTranslations();
 }
 
 function switchPanel(name) {
@@ -4191,15 +4327,141 @@ function openDeleteHistoryModal() {
   document.getElementById('dhConfirmBtn').disabled = true;
   document.getElementById('dhCookies').checked = false;
   document.getElementById('dhCache').checked = false;
+  dhShowExceptionsView(false);
+  dhLoadExceptions().then(dhUpdateExcCount);
   document.getElementById('deleteHistoryModal').classList.add('open');
 }
 function closeDeleteHistoryModal() {
   document.getElementById('deleteHistoryModal').classList.remove('open');
   _dhSelectedRange = null;
   const confirmBtn = document.getElementById('dhConfirmBtn');
-  if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = 'Delete'; confirmBtn.disabled = true; }
+  if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = tr('delete', 'Delete'); confirmBtn.disabled = true; }
   const warn = document.getElementById('dhConfirmWarn');
   if (warn) warn.style.display = 'none';
+  dhShowExceptionsView(false);
+}
+
+// -- Delete History: domain exceptions ---------------------------------------
+// Domains on this list are skipped by the time-range delete (enforced in
+// background.js DELETE_HISTORY_RANGE, which reads the same storage key).
+// An exception for example.com also protects every subdomain of it.
+const DH_EXC_KEY = 'eh_delete_exceptions';
+let _dhExceptions = [];
+
+// Accepts "example.com", "www.Example.com", "https://example.com/path?x",
+// "*.example.com", "example.com:8080" ... and returns a bare lowercase host
+// (no www.), or '' when the input isn't a usable domain.
+function dhNormalizeDomain(raw) {
+  let v = String(raw || '').trim().toLowerCase();
+  if (!v) return '';
+  v = v.replace(/^[a-z][a-z0-9+.-]*:\/\//, '');   // scheme
+  v = v.replace(/^\*\./, '').replace(/^\./, '');   // "*.example.com" / ".example.com"
+  v = v.split(/[\/?#]/)[0];                         // path / query / hash
+  v = v.replace(/^[^@]*@/, '');                      // user:pass@
+  v = v.replace(/:\d+$/, '');                       // port
+  v = v.replace(/\.$/, '');                         // trailing dot
+  try { v = new URL('http://' + v).hostname; } catch { return ''; }
+  v = v.replace(/^www\./, '');
+  const valid = /^[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?(\.[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?)*$/.test(v);
+  if (!valid) return '';
+  if (!v.includes('.') && v !== 'localhost') return '';
+  return v;
+}
+
+async function dhLoadExceptions() {
+  try {
+    const r = await chrome.storage.local.get(DH_EXC_KEY);
+    _dhExceptions = Array.isArray(r[DH_EXC_KEY]) ? r[DH_EXC_KEY].filter(d => typeof d === 'string' && d) : [];
+  } catch { _dhExceptions = []; }
+  return _dhExceptions;
+}
+async function dhSaveExceptions() {
+  await chrome.storage.local.set({ [DH_EXC_KEY]: _dhExceptions });
+}
+function dhIsExcepted(url) {
+  if (!_dhExceptions.length) return false;
+  let host = '';
+  try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { return false; }
+  return _dhExceptions.some(d => host === d || host.endsWith('.' + d));
+}
+function dhUpdateExcCount() {
+  const el = document.getElementById('dhExcCount');
+  if (!el) return;
+  el.textContent = _dhExceptions.length ? String(_dhExceptions.length) : '';
+  el.classList.toggle('has', _dhExceptions.length > 0);
+}
+function dhRenderExceptions() {
+  const list = document.getElementById('dhExcList');
+  if (!list) return;
+  list.textContent = '';
+  if (!_dhExceptions.length) {
+    const empty = document.createElement('div');
+    empty.className = 'dh-exc-empty';
+    empty.textContent = tr('no_exceptions_yet', 'No exceptions yet');
+    list.appendChild(empty);
+    return;
+  }
+  [..._dhExceptions].sort().forEach(domain => {
+    const row = document.createElement('div');
+    row.className = 'dh-exc-item';
+    const name = document.createElement('span');
+    name.className = 'dh-exc-dom';
+    name.textContent = domain;
+    name.title = domain;
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'dh-exc-rm';
+    rm.title = tr('remove', 'Remove');
+    rm.textContent = '\u2715';
+    rm.addEventListener('click', async () => {
+      _dhExceptions = _dhExceptions.filter(d => d !== domain);
+      await dhSaveExceptions();
+      dhRenderExceptions();
+      dhUpdateExcCount();
+      dhResetConfirmState();
+    });
+    row.appendChild(name);
+    row.appendChild(rm);
+    list.appendChild(row);
+  });
+}
+function dhShowExceptionsView(show) {
+  const main = document.getElementById('dhMainView');
+  const view = document.getElementById('dhExcView');
+  if (!main || !view) return;
+  main.style.display = show ? 'none' : '';
+  view.style.display = show ? '' : 'none';
+  if (show) {
+    const err = document.getElementById('dhExcError');
+    if (err) err.textContent = '';
+    dhRenderExceptions();
+    document.getElementById('dhExcInput')?.focus();
+  }
+}
+// A changed exception list invalidates a pending "click Delete again" confirm.
+function dhResetConfirmState() {
+  const btn = document.getElementById('dhConfirmBtn');
+  if (btn) delete btn.dataset.confirmed;
+  const warn = document.getElementById('dhConfirmWarn');
+  if (warn) warn.style.display = 'none';
+}
+async function dhAddException() {
+  const input = document.getElementById('dhExcInput');
+  const err = document.getElementById('dhExcError');
+  if (!input) return;
+  const raw = input.value.trim();
+  if (!raw) return;
+  const domain = dhNormalizeDomain(raw);
+  if (!domain) { if (err) err.textContent = tr('invalid_domain', 'Enter a valid domain, e.g. example.com'); return; }
+  if (_dhExceptions.includes(domain)) { if (err) err.textContent = tr('domain_already_added', 'That domain is already on the list'); return; }
+  _dhExceptions.push(domain);
+  try { await dhSaveExceptions(); } catch (e) { _dhExceptions = _dhExceptions.filter(d => d !== domain); if (err) err.textContent = e.message; return; }
+  input.value = '';
+  if (err) err.textContent = '';
+  dhRenderExceptions();
+  dhUpdateExcCount();
+  dhResetConfirmState();
+  input.focus();
 }
 
 // ══ DEV MODE ═════════════════════════════════════════════════════════════
@@ -4434,49 +4696,61 @@ function applyWallpaper(wp) {
 
   root.classList.add('wallpaper-mode');
 
-  const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
-  const blurAmount     = wp.blurAmount ?? 8;
-  const isDark         = (root.getAttribute('data-theme') || 'dark') === 'dark';
-  const overlayColor   = isDark
-    ? `rgba(0,0,0,${overlayOpacity})`
-    : `rgba(255,255,255,${overlayOpacity})`;
+  const overlayOpacity   = (wp.overlayOpacity ?? 60) / 100;
+  const blurAmount       = wp.blurAmount ?? 8;
+  const wallpaperOpacity = (wp.wallpaperOpacity ?? 100) / 100;
+  const isDark            = (root.getAttribute('data-theme') || 'dark') === 'dark';
 
-  // Background layer div (fixed, behind everything)
+  // Glass tint for the frosted panels — black in dark mode, white in light
+  // mode, matching the old overlay look.
+  const glassRgba = a => isDark ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`;
+
+  // Background layer div (fixed, behind everything). Kept crisp — no blur
+  // filter here anymore. The blur + tint ("glass") now lives directly on
+  // the sidebar/main/calendar surfaces via backdrop-filter below, so the
+  // wallpaper stays sharp anywhere those panels aren't covering it, and the
+  // panels genuinely blur what's behind them instead of everything being
+  // uniformly blurred and dimmed. Wallpaper opacity (fading the photo
+  // itself) is independent of the glass panel tint above.
   const layer = document.createElement('div');
   layer.id = 'eh-wallpaper-layer';
   const hueRot = (_curSettings.bgTintEnabled && _curSettings.bgTintHue !== undefined)
-    ? ` hue-rotate(${_curSettings.bgTintHue}deg)` : '';
+    ? `hue-rotate(${_curSettings.bgTintHue}deg)` : '';
   layer.style.cssText = `
     position:fixed;inset:0;z-index:-1;
     background:url(${wp.dataUrl}) center/cover no-repeat;
-    filter:blur(${blurAmount}px)${hueRot};
+    ${hueRot ? `filter:${hueRot};` : ''}
+    opacity:${wallpaperOpacity};
     transform:scale(1.05);
     pointer-events:none;
   `;
   body.prepend(layer);
 
-  // Overlay + glass CSS injection
+  // Glass CSS injection
   const style = document.createElement('style');
   style.id = 'eh-wallpaper-style';
   style.textContent = `
     html.wallpaper-mode body { background: transparent !important; }
-    html.wallpaper-mode body::before {
-      content:''; position:fixed; inset:0; z-index:0;
-      background:${overlayColor};
-      pointer-events:none;
-    }
+
+    /* Primary glass surfaces — blur amount and tint come straight from the
+       wallpaper settings (Background blur / Glass color) instead of a
+       fixed full-page overlay. */
     html.wallpaper-mode .sidebar,
-    html.wallpaper-mode .cal-sidebar
+    html.wallpaper-mode .main,
+    html.wallpaper-mode .cal-sidebar {
+      background: ${glassRgba(overlayOpacity)} !important;
+      backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
+      -webkit-backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+    }
+
     html.wallpaper-mode .modal-box,
-    html.wallpaper-mode .topbar,
     html.wallpaper-mode .s-card,
     html.wallpaper-mode .chart-card,
     html.wallpaper-mode .ctxMenu,
     html.wallpaper-mode .kpi-card,
-    html.wallpaper-mode .entry,
     html.wallpaper-mode .modal-inner,
     html.wallpaper-mode .ignore-add,
-    html.wallpaper-mode .panel-scroll,
     html.wallpaper-mode .ignore-item,
     html.wallpaper-mode .session-card,
     html.wallpaper-mode .device-card,
@@ -4485,10 +4759,25 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .mv-item,
     html.wallpaper-mode .day-label, .bm-tree-pane, .bm-toolbar, .sel-bar.on{
       background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
-      backdrop-filter: saturate(1.4) !important;
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
       color:var(--text2);
+    }
+    /* The history list gets its own glass layer stacked on top of .main's
+       (which carries the same tint as the sidebar): a faint white lift over
+       the dark glass (list lighter than the UI in dark mode), and a faint
+       black shade over the light glass (list darker than the UI in light
+       mode). */
+    html.wallpaper-mode .list-area {
+      background: ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'} !important;
+    }
+    /* Sticky date headers must blend into that list surface: no tint of their
+       own (a second layer would show as a lighter band), just a blur so rows
+       scrolling underneath stay legible. */
+    html.wallpaper-mode .list-area .day-label {
+      background: transparent !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
     }
     html.wallpaper-mode #ctxMenu {
       background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
@@ -4510,15 +4799,21 @@ function applyWallpaper(wp) {
     background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
     height:100%
     }
-    html.wallpaper-mode .sidebar {
-      background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
-    }
-    html.wallpaper-mode .cal-sidebar
-    {
-      background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
-    }
+    /* .topbar has a solid background in the base stylesheet — let .main's
+       own glass layer show through it instead of covering it again. */
     html.wallpaper-mode .topbar {
-      background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
+      background: transparent !important;
+    }
+    /* .entry rows tile edge-to-edge across .list-area, so giving each one
+       its own glass layer (like the card elements above) stacked another
+       ~55% opaque layer on every row across the whole list — compounding
+       with .main's glass until the list read as solid instead of frosted.
+       Keep just the border for row separation; .main's glass carries the
+       actual background here. Hover/selected states still get their own
+       solid highlight from the base stylesheet. */
+    html.wallpaper-mode .entry {
+      background: transparent !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} !important;
     }
     html.wallpaper-mode .action-btn,
     html.wallpaper-mode .dn-pill,
@@ -4529,7 +4824,7 @@ function applyWallpaper(wp) {
   
     }
     html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
-      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
+      background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
       color:var(--text2) !important;
     }
@@ -4566,11 +4861,11 @@ function applyWallpaper(wp) {
     html.wallpaper-mode select,
     html.wallpaper-mode textarea,
     html.wallpaper-mode .search-box {
-      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
+      background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
       border-color: ${isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)'} !important;
     }
     html.wallpaper-mode .panel { background: transparent !important; }
-    html.wallpaper-mode .panel, html.wallpaper-mode #main { position: relative; z-index: 1; }
+    html.wallpaper-mode .panel, html.wallpaper-mode .main { position: relative; z-index: 1; }
   `;
   document.head.appendChild(style);
 }
@@ -4682,21 +4977,25 @@ function setupWallpaperListeners() {
   const blurSlider     = document.getElementById('wpBlurAmount');
   const blurVal        = document.getElementById('wpBlurVal');
   const clearBtn       = document.getElementById('wpClearBtn');
+  const imgOpacitySlider = document.getElementById('wpImageOpacity');
+  const imgOpacityVal    = document.getElementById('wpImageOpacityVal');
 
   if (!toggle) return;
 
-  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, wallpaperOpacity: 100, source: 'custom' };
 
   // Load existing wallpaper state into UI
   chrome.storage.local.get(WP_STORAGE_KEY, r => {
     const wp = r[WP_STORAGE_KEY];
     if (wp) {
-      _wpState = { ..._wpState, ...wp };
+      _wpState = { ..._wpState, ...wp, overlayOpacity: Math.max(40, wp.overlayOpacity ?? 60) };
       toggle.checked = wp.enabled || false;
-      overlaySlider.value = wp.overlayOpacity ?? 60;
-      overlayVal.textContent = (wp.overlayOpacity ?? 60) + '%';
+      overlaySlider.value = _wpState.overlayOpacity;
+      overlayVal.textContent = _wpState.overlayOpacity + '%';
       blurSlider.value = wp.blurAmount ?? 8;
       blurVal.textContent = (wp.blurAmount ?? 8) + 'px';
+      if (imgOpacitySlider) imgOpacitySlider.value = wp.wallpaperOpacity ?? 100;
+      if (imgOpacityVal)    imgOpacityVal.textContent = (wp.wallpaperOpacity ?? 100) + '%';
       if (wp.dataUrl) {
         previewWrap.style.display = 'block';
         currentPreview.src = wp.dataUrl;
@@ -4826,13 +5125,27 @@ function setupWallpaperListeners() {
     await saveWallpaper(_wpState);
   });
 
+  // Wallpaper (image) opacity — cheap direct style write while dragging so
+  // it doesn't lag, full apply+save only once the user lets go.
+  imgOpacitySlider?.addEventListener('input', () => {
+    _wpState.wallpaperOpacity = parseInt(imgOpacitySlider.value);
+    if (imgOpacityVal) imgOpacityVal.textContent = _wpState.wallpaperOpacity + '%';
+    const layer = document.getElementById('eh-wallpaper-layer');
+    if (layer) layer.style.opacity = _wpState.wallpaperOpacity / 100;
+  });
+  imgOpacitySlider?.addEventListener('change', async () => {
+    await saveWallpaper(_wpState);
+  });
+
   // Clear
   clearBtn?.addEventListener('click', async () => {
     if (!confirm('Remove the current wallpaper?')) return;
-    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, wallpaperOpacity: 100, source: 'custom' };
     toggle.checked = false;
     previewWrap.style.display    = 'none';
     document.getElementById('wpDropLabel').innerHTML = 'Drop image here or <strong>click to browse</strong>';
+    if (imgOpacitySlider) imgOpacitySlider.value = 100;
+    if (imgOpacityVal)    imgOpacityVal.textContent = '100%';
     applyWallpaper(_wpState);
     await saveWallpaper(_wpState);
     toast('Wallpaper removed', 'ok');
@@ -4947,6 +5260,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ev.target === document.getElementById('deleteHistoryModal')) closeDeleteHistoryModal();
   });
 
+  // Domain exceptions (list view inside the Delete History modal)
+  document.getElementById('dhExceptionsBtn')?.addEventListener('click', async () => {
+    await dhLoadExceptions();
+    dhShowExceptionsView(true);
+  });
+  document.getElementById('dhExcBackBtn')?.addEventListener('click', () => dhShowExceptionsView(false));
+  document.getElementById('dhExcAddBtn')?.addEventListener('click', dhAddException);
+  document.getElementById('dhExcInput')?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); dhAddException(); }
+    else if (ev.key === 'Escape') { ev.stopPropagation(); dhShowExceptionsView(false); }
+  });
+  document.getElementById('dhExcInput')?.addEventListener('input', () => {
+    const err = document.getElementById('dhExcError'); if (err) err.textContent = '';
+  });
+
   document.getElementById('dhRangeGrid').addEventListener('click', ev => {
     const btn = ev.target.closest('.dh-range-btn');
     if (!btn) return;
@@ -4967,10 +5295,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('dhConfirmBtn');
     if (!btn.dataset.confirmed) {
       // Step 1: show confirm state
-      const rangeLabels = { '1h':'last 1 hour','24h':'last 24 hours','7d':'last 7 days','30d':'last 30 days','5mo':'last 5 months','all':'ALL TIME' };
-      const label = rangeLabels[_dhSelectedRange] || _dhSelectedRange;
+      // Reuse the (already translated) label of the range button the user picked
+      const activeBtn = document.querySelector('.dh-range-btn.active');
+      const label = (activeBtn ? activeBtn.textContent.trim() : '') || _dhSelectedRange;
+      await dhLoadExceptions();
       const warn = document.getElementById('dhConfirmWarn');
-      if (warn) { warn.textContent = `⚠ This will permanently delete history for the ${label}. Click Delete again to confirm.`; warn.style.display = 'block'; }
+      if (warn) {
+        let msg = tr('dh_confirm_warn', 'This will permanently delete history for: {0}. Click Delete again to confirm.', label);
+        if (_dhExceptions.length) msg += ' ' + tr('dh_confirm_exceptions', 'Domains on your exceptions list ({0}) will be kept.', _dhExceptions.length);
+        warn.textContent = '\u26a0 ' + msg;
+        warn.style.display = 'block';
+      }
       btn.dataset.confirmed = '1';
       btn.style.animation = 'dhPulse 0.3s ease';
       return;
@@ -4983,79 +5318,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearCookies = document.getElementById('dhCookies').checked;
     const clearCache   = document.getElementById('dhCache').checked;
     btn.disabled = true;
-    btn.textContent = 'Deleting…';
+    btn.textContent = tr('deleting', 'Deleting…');
     try {
+      await dhLoadExceptions(); // same list the background will enforce
       const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
       if (r?.error) { toast(r.error, 'err'); }
       else {
-        toast(`Deleted ${fmtNum(r.deleted || 0)} history entries${clearCookies ? ' + cookies' : ''}${clearCache ? ' + cache' : ''}`, 'ok');
-        allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+        toast(tr('deleted_history_entries', 'Deleted {0} history entries', fmtNum(r.deleted || 0))
+          + (clearCookies ? ' + ' + tr('word_cookies', 'cookies') : '')
+          + (clearCache ? ' + ' + tr('word_cache', 'cache') : ''), 'ok');
+        // Keep anything on an excepted domain - it wasn't deleted.
+        allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || dhIsExcepted(e.url));
         buildVirtualList();
       }
     } catch(err) { toast(err.message, 'err'); }
-    btn.textContent = 'Delete';
+    btn.textContent = tr('delete', 'Delete');
     closeDeleteHistoryModal();
   });
 
 });
 
-// ══ LANGUAGE SUPPORT ════════════════════════════════════════════════════════
-async function initLanguage() {
-  try {
-    //console.log('[EH] initLanguage: Loading settings...');
-    const settings = await send('GET_SETTINGS');
-    //console.log('[EH] initLanguage: Settings received:', settings);
-    window._currentLang = settings.language || 'en';
-    const langSelect = document.getElementById('languageSelect');
-    if (langSelect) {
-      langSelect.value = window._currentLang;
-      //console.log('[EH] initLanguage: Language selector set to:', window._currentLang);
-    } else {
-      //console.warn('[EH] initLanguage: Language selector not found!');
-    }
-    
-    // Apply translations to UI
-    if (typeof window.applyTranslations === 'function') {
-      window.applyTranslations(window._currentLang);
-    }
-  } catch (err) {
-    //console.error('[EH] initLanguage: Failed to load language:', err);
-    window._currentLang = 'en';
-  }
-}
-
-document.getElementById('languageSelect')?.addEventListener('change', async (e) => {
-  const newLang = e.target.value;
-  //console.log('[EH] Language change requested:', newLang);
-  try {
-    // Update language in settings
-    const result = await send('SAVE_SETTINGS', { settings: { language: newLang } });
-    //console.log('[EH] Save result:', result);
-    
-    // Verify it was saved
-    const verifySettings = await send('GET_SETTINGS');
-    //console.log('[EH] Settings after save (verification):', verifySettings);
-    
-    window._currentLang = newLang;
-    
-    // Apply translations to UI immediately
-    if (typeof window.applyTranslations === 'function') {
-      window.applyTranslations(newLang);
-    }
-    
-    // Get language name
-    const langNames = {
-      en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français',
-      ru: 'Русский', zh: '中文', uk: 'Українська', tr: 'Türkçe',
-      it: 'Italiano', hi: 'हिन्दी', no: 'Norsk', he: 'עברית'
-    };
-    
-    toast(`Language changed to ${langNames[newLang] || newLang}`, 'ok');
-  } catch (err) {
-    //console.error('[EH] Language change failed:', err);
-    toast('Error: ' + err.message, 'err');
-  }
-});
+// -- Language menu (Settings > Appearance) -----------------------------------
+// "auto" follows the browser language through chrome.i18n. Any other choice is
+// applied by i18n-core.js (chrome.i18n itself can't be told to use a different
+// language). Stored in localStorage so it can be read synchronously at load.
+(function initLanguageMenu() {
+  const sel = document.getElementById('languageSelect');
+  if (!sel) return;
+  sel.value = window._ehUiLangChoice || 'auto';
+  sel.addEventListener('change', () => {
+    try {
+      if (sel.value === 'auto') localStorage.removeItem('eh_ui_lang');
+      else localStorage.setItem('eh_ui_lang', sel.value);
+    } catch {}
+    // Reload so every string - including ones built in JS - is in the new language;
+    // the #settings hash brings the user straight back to this panel.
+    location.hash = 'settings';
+    location.reload();
+  });
+})();
 
 // ══ MOST VISITED START ════════════════════════════════════════════════════════════
 let curMvType = 'url';     // 'url' or 'domain'
@@ -5072,9 +5373,9 @@ async function loadMostVisited() {
     b.classList.toggle('active', b.dataset.period === curMvPeriod));
   
   // Update chart title
-  const typeLabel = curMvType === 'url' ? chrome.i18n.getMessage("urls")  : chrome.i18n.getMessage("domains") ;
-  const periodLabel = curMvPeriod === 'all' ? chrome.i18n.getMessage("all_time") : `${curMvPeriod} `+ chrome.i18n.getMessage("days");
-  document.getElementById('mvChartTitle').textContent = chrome.i18n.getMessage("most_visited") +` ${typeLabel} — ${periodLabel}`;
+  const typeLabel = curMvType === 'url' ? _ehMsg("urls")  : _ehMsg("domains") ;
+  const periodLabel = curMvPeriod === 'all' ? _ehMsg("all_time") : `${curMvPeriod} `+ _ehMsg("days");
+  document.getElementById('mvChartTitle').textContent = _ehMsg("most_visited") +` ${typeLabel} — ${periodLabel}`;
 
   const el = document.getElementById('mvContent');
   el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div>';
@@ -5150,5 +5451,3 @@ document.getElementById('mvPeriodFilter')?.addEventListener('click', ev => {
 });
 // ══ MOST VISITED END ════════════════════════════════════════════════════════════
 
-// Call initLanguage after a short delay to ensure DOM is ready
-setTimeout(initLanguage, 100);

@@ -1668,6 +1668,61 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async details => {
   // Title will arrive via tabs.onUpdated
 });
 
+// ── Delete-History domain exceptions ─────────────────────────────────────────
+// Domains listed here are skipped by "Delete History" (time-range deletion):
+// their history entries, native Chrome history visits, cookies and site data
+// all survive. An exception for example.com also covers its subdomains.
+const DELETE_EXCEPTIONS_KEY = 'eh_delete_exceptions';
+
+async function getDeleteExceptions() {
+  try {
+    const r = await chrome.storage.local.get(DELETE_EXCEPTIONS_KEY);
+    const list = r[DELETE_EXCEPTIONS_KEY];
+    return Array.isArray(list) ? list.filter(d => typeof d === 'string' && d) : [];
+  } catch { return []; }
+}
+
+function makeExceptionMatcher(exceptions) {
+  if (!exceptions.length) return () => false;
+  return (url) => {
+    const host = domainOf(url);
+    return !!host && exceptions.some(d => host === d || host.endsWith('.' + d));
+  };
+}
+
+// chrome.history.deleteRange has no "except" option, so instead we find every
+// visit that belongs to an excepted domain inside the range and delete only the
+// gaps between them (each excepted visit is fenced off with a tiny 10-microsecond margin).
+async function deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted) {
+  let items = [];
+  try { items = await chrome.history.search({ text: '', startTime, endTime, maxResults: 100000 }); } catch {}
+
+  const keepTimes = [];
+  for (const it of items) {
+    if (!it.url || !isExcepted(it.url)) continue;
+    try {
+      const visits = await chrome.history.getVisits({ url: it.url });
+      for (const v of visits) {
+        if (v.visitTime >= startTime && v.visitTime <= endTime) keepTimes.push(v.visitTime);
+      }
+    } catch {}
+  }
+
+  if (!keepTimes.length) {
+    await chrome.history.deleteRange({ startTime, endTime });
+    return;
+  }
+
+  keepTimes.sort((a, b) => a - b);
+  const MARGIN = 0.01; // ms fence (10us) around each protected visit - visit times have us precision
+  let cursor = startTime;
+  for (const t of keepTimes) {
+    if (t - MARGIN > cursor) await chrome.history.deleteRange({ startTime: cursor, endTime: t - MARGIN });
+    cursor = Math.max(cursor, t + MARGIN);
+  }
+  if (endTime > cursor) await chrome.history.deleteRange({ startTime: cursor, endTime });
+}
+
 // ── Message API ──────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
 
@@ -1774,21 +1829,34 @@ async function handle(msg) {
     }
     case 'DELETE_HISTORY_RANGE': {
       const { startTime, endTime, clearCookies, clearCache } = msg;
-      // Delete from extension storage
+      const exceptions = await getDeleteExceptions();
+      const isExcepted = makeExceptionMatcher(exceptions);
+      // Delete from extension storage (entries on excepted domains are kept)
       let entries = await getAll();
       const before = entries.length;
-      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || isExcepted(e.url));
       await setAll(entries);
       const deleted = before - entries.length;
       // Delete from Chrome native history
-      try { await chrome.history.deleteRange({ startTime, endTime }); } catch {}
+      try {
+        if (exceptions.length) await deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted);
+        else await chrome.history.deleteRange({ startTime, endTime });
+      } catch {}
       // Optionally clear cookies and cache
       if (clearCookies || clearCache) {
         const since = startTime;
         const dataTypes = {};
         if (clearCookies) { dataTypes.cookies = true; dataTypes.localStorage = true; dataTypes.indexedDB = true; }
         if (clearCache)   { dataTypes.cache = true; dataTypes.cacheStorage = true; }
-        try { await chrome.browsingData.remove({ since }, dataTypes); } catch {}
+        const removalOptions = { since };
+        if (exceptions.length) {
+          // Cookies are excluded for the whole registrable domain; https + http
+          // origins are listed so both schemes of each excepted site are kept.
+          removalOptions.excludeOrigins = exceptions.flatMap(d => [`https://${d}`, `http://${d}`]);
+        }
+        // If exclusions can't be applied, fail safe: leave site data alone
+        // rather than wiping data the user asked to protect.
+        try { await chrome.browsingData.remove(removalOptions, dataTypes); } catch {}
       }
       // Update today's history
       await updateTodayHistory();
@@ -2023,12 +2091,34 @@ async function handle(msg) {
     case 'RESTORE_SESSION': {
       const { tabs } = msg;
       if (!Array.isArray(tabs)) return { success: false };
+
+      // Never pile the session into the window the user is currently in: every
+      // original window becomes its own NEW window. Tabs are grouped by the
+      // windowId they were saved with (first-seen order preserved); sessions
+      // saved before windowId was tracked have none, so they share one group
+      // and restore as a single window.
+      const groups = new Map();
       for (const t of tabs) {
-        if (t.url && isTrackable(t.url)) {
-          try { await chrome.tabs.create({ url: t.url, active: false }); } catch {}
+        if (!t || !t.url || !isTrackable(t.url)) continue;
+        const key = t.windowId != null ? String(t.windowId) : '__none__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(t.url);
+      }
+
+      let windows = 0, restored = 0;
+      for (const urls of groups.values()) {
+        let win;
+        try {
+          // First window takes focus; the rest open behind it so a 2-window
+          // session doesn't yank focus back and forth while tabs load.
+          win = await chrome.windows.create({ url: urls[0], focused: windows === 0 });
+        } catch { continue; }
+        windows++; restored++;
+        for (const url of urls.slice(1)) {
+          try { await chrome.tabs.create({ windowId: win.id, url, active: false }); restored++; } catch {}
         }
       }
-      return { success: true };
+      return { success: true, windows, restored };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
     case 'TRIGGER_AUTO_EXPORT': {

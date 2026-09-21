@@ -11,7 +11,9 @@
 }
 
 [data-theme="dark"] {
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a09eb0' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --bg:      #0d0d10;
+  --list-bg: #0d0d10; /* dark mode: the list is a step darker than the UI panels (--surf0) */
   --surf0:   #131318;
   --surf1:   #18181f;
   --surf2:   #1f1f28;
@@ -27,7 +29,9 @@
 }
 
 [data-theme="light"] {
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23555568' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --bg:      #ffffff;
+  --list-bg: var(--surf0); /* light mode: the list is the same colour as the UI panels */
   --surf0:   #f8f8f8;
   --surf1:   #f9f9fb;
   --surf2:   #f0f0f4;
@@ -58,6 +62,13 @@ body {
 }
 
 [data-theme="light"] body { -webkit-font-smoothing: subpixel-antialiased; -moz-osx-font-smoothing: auto; }
+
+/* Tell the browser which palette native controls (select popups, date
+   pickers, scrollbars, etc.) should render in. Without this the OS falls
+   back to a light-mode popup for <select>, regardless of our theme — which
+   is why dropdown option lists showed white-on-white text in dark mode. */
+[data-theme="dark"]  { color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
 
 /* Background tint overlay */
 [data-bg-tint="true"] body {
@@ -161,7 +172,7 @@ a { color: inherit; text-decoration: none; }
 .sa-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Main + Panels ── */
-.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; margin: var(--ui-margin, 8px);border-radius: var(--ui-radius, 20px);}
+.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; margin: var(--ui-margin, 8px); border-radius: var(--ui-radius, 20px); background: var(--surf0); }
 .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
 .panel.active { display: flex; }
 
@@ -306,7 +317,6 @@ a { color: inherit; text-decoration: none; }
   min-width: 150px;
 }
 .search-box:focus-within { border-color: var(--accent); }
-.search-box-icon { color: var(--text3); font-size: 15px; flex-shrink: 0; }
 
 input[type="text"] {
   background: none; border: none; outline: none;
@@ -321,13 +331,20 @@ select.mode-sel {
   border-radius: var(--r);
   color: var(--text2);
   font-size: 0.8rem;
-  padding: 8px 10px;
+  padding: 8px 26px 8px 10px;
   outline: none;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 11px;
 }
-select.mode-sel:focus { border-color: var(--accent); }
+select.mode-sel:hover  { border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); }
+select.mode-sel:focus  { border-color: var(--accent); }
 
 input[type="date"] {
   background: var(--surf1);
@@ -344,6 +361,21 @@ input[type="date"] {
 }
 [data-theme="light"] input[type="date"] { color-scheme: light; }
 input[type="date"]:focus { border-color: var(--accent); }
+
+/* Wrap the date input so the whole thing behaves like one button that opens
+   the picker, instead of a text field with independently-clickable/editable
+   day/month/year segments. The input itself ignores pointer events — all
+   clicks land on the wrapper, which calls showPicker() in JS — so you can't
+   click into a segment and type over it, only pick a date from the calendar. */
+.date-picker-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.date-picker-btn input[type="date"] {
+  pointer-events: none;
+  cursor: pointer;
+}
 
 .tb-btn {
   padding: 8px 14px;
@@ -397,7 +429,10 @@ input[type="date"]:focus { border-color: var(--accent); }
   position: relative;
   scrollbar-width: auto;
   scrollbar-color: var(--surf3) transparent;
+  background: var(--list-bg);
 }
+/* Wallpaper mode draws its own glass surface behind the list - keep it clear. */
+html.wallpaper-mode .list-area { background: transparent; }
 .list-area::-webkit-scrollbar { width: 10px; }
 .list-area::-webkit-scrollbar-thumb { background: var(--surf3); border-radius: 5px; }
 
@@ -411,7 +446,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text3);
-  background: var(--bg);
+  background: var(--list-bg); /* must match .list-area so the sticky header blends in */
   position: sticky; top: 0; z-index: 4;
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid var(--border);
@@ -768,12 +803,60 @@ select {
   border-radius: var(--r);
   color: var(--text);
   font-size: 0.86rem;
-  padding: 8px 12px;
+  padding: 8px 28px 8px 12px;
   outline: none;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 11px;
 }
+select:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); }
 select:focus { border-color: var(--accent); }
+
+/* ── Customizable Select (Chrome's new base-select model) ────────────────
+   Lets us actually style the OPEN dropdown list itself (rounded popup,
+   themed hover/selected states) instead of just the closed control.
+   Progressive enhancement: browsers without support keep the appearance:none
+   + custom-arrow fallback above. https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select */
+@supports (appearance: base-select) {
+  select,
+  select.mode-sel {
+    appearance: base-select;
+    background-image: none; /* the browser now draws its own picker-icon */
+  }
+  select::picker-icon {
+    color: var(--text3);
+  }
+  select:hover::picker-icon { color: var(--text2); }
+
+  select::picker(select) {
+    appearance: base-select;
+    background: var(--surf1);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--r);
+    padding: 4px;
+    margin-top: 4px;
+    box-shadow: 0 12px 32px var(--shadow);
+  }
+
+  select option {
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: var(--text);
+  }
+  select option:hover,
+  select option:focus {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  select option:checked {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
+  }
+}
 
 .unit { font-size: 0.8rem; color: var(--text3); }
 
@@ -1064,8 +1147,13 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
    History panel is active (both toggled via body classes from history.js). */
 :root { --cal-w: 300px; } /* sidebar content width — capped well under the 350px max */
 
-body.cal-mode .date-nav-row,
-body.cal-mode .hour-nav-row { display: none; }
+/* Scoped to #panel-history specifically — .date-nav-row/.hour-nav-row also
+   exist in the Reading Mode panel (its own date pills for filtering an
+   imported file), which has no calendar sidebar and shouldn't be affected
+   by this setting at all. A bare "body.cal-mode .date-nav-row" selector
+   used to hide those too any time calendar mode was on, regardless of panel. */
+body.cal-mode #panel-history .date-nav-row,
+body.cal-mode #panel-history .hour-nav-row { display: none; }
 
 .cal-sidebar {
   display: none;
@@ -1207,6 +1295,29 @@ body.cal-narrow .cal-sidebar.cal-revealed { transform: translateX(0); }
 .dh-option  { display:flex;align-items:center;gap:6px;font-size:0.83rem;color:var(--text2);cursor:pointer; }
 .dh-option input { accent-color:var(--danger); }
 .dh-actions { display:flex;justify-content:flex-end;gap:10px; }
+
+/* Delete History - domain exceptions */
+.dh-exc-open {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  padding:9px 12px;margin:0 0 14px;background:var(--surf2);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-size:0.85rem;font-family:inherit;cursor:pointer;
+  transition:border-color .12s,color .12s;
+}
+.dh-exc-open:hover { border-color:var(--accent);color:var(--accent); }
+.dh-exc-open::after { content:"\203A"; margin-left:auto; font-size:1.1rem; line-height:1; color:var(--text3); }
+.dh-exc-open:hover::after { color:var(--accent); }
+.dh-exc-count { font-size:0.7rem;font-weight:700;color:var(--text3);background:var(--surf3);border-radius:10px;padding:1px 8px; }
+.dh-exc-count:empty { display:none; }
+.dh-exc-count.has { color:#fff;background:var(--accent); }
+.dh-exc-add { display:flex;align-items:center;gap:8px;margin:14px 0 8px; }
+.dh-exc-error { min-height:1.1em;margin-bottom:6px;font-size:0.78rem;color:var(--danger); }
+.dh-exc-list { max-height:240px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px; }
+.dh-exc-item { display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border2);font-size:0.85rem; }
+.dh-exc-item:last-child { border-bottom:none; }
+.dh-exc-dom { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-family:var(--font-mono); }
+.dh-exc-rm { background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;line-height:1;padding:4px 6px;border-radius:4px;flex-shrink:0; }
+.dh-exc-rm:hover { color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent); }
+.dh-exc-empty { padding:16px;text-align:center;color:var(--text3);font-size:0.82rem; }
 .dh-cancel  { padding:9px 20px;border-radius:8px;border:1.5px solid var(--border2);background:none;color:var(--text2);font-size:0.83rem;font-weight:500; }
 .dh-cancel:hover { background:var(--surf2);color:var(--text); }
 .dh-confirm { padding:9px 20px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:0.83rem;font-weight:700; }
