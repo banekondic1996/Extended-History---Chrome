@@ -102,7 +102,7 @@ Fixed/changed in version 4.1.5:
 -Fixed 'URLs' toggle for popup being enabled falsely by default
 -Fixed right clicking triggering selection mode in popup
 
-Fixed/changed in version 4.1.6 (in Web Store):
+Fixed/changed in version 4.1.6:
 -Added search for devices tabs
 -Added calendar mode for main page
 -Added rounded corners option
@@ -121,6 +121,10 @@ Fixed/changed in version 4.1.6 (in Web Store):
 Fixed/changed in version 4.1.7:
 -Changes to default settings
 -Added option to move bookmarks inside the list
+
+Fixed/changed in version 4.1.8:
+-Changes to default settings
+-CSS fixes
 
 </pre>
 
