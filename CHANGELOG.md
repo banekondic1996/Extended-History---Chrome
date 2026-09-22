@@ -94,7 +94,7 @@ Fixed/changed in version 4.1.4:
 -Added auto export history interval option
 -Fixed option of not all tabs showing under devices
 
-Fixed/changed in version 4.1.5 (in Web Store):
+Fixed/changed in version 4.1.5:
 -Added high contrast mode
 -Added sidebar mode
 -Fixed quick filter filtering bug
@@ -102,7 +102,7 @@ Fixed/changed in version 4.1.5 (in Web Store):
 -Fixed 'URLs' toggle for popup being enabled falsely by default
 -Fixed right clicking triggering selection mode in popup
 
-Fixed/changed in version 4.1.6 (testing branch):
+Fixed/changed in version 4.1.6 (in Web Store):
 -Added search for devices tabs
 -Added calendar mode for main page
 -Added rounded corners option
@@ -117,6 +117,11 @@ Fixed/changed in version 4.1.6 (testing branch):
 -Fixed session restoring to restore in individual windows
 -Fixed UI translations for other languages
 -Performance improvements 
+
+Fixed/changed in version 4.1.7:
+-Changes to default settings
+-Added option to move bookmarks inside the list
+
 </pre>
 
 
