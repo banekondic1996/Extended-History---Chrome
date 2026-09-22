@@ -1,25 +1,108 @@
 {
-  "ext_name": { "message": "विस्तारित इतिहास" },
-
-  "current_session": { "message": "वर्तमान सत्र" },
-  "active": { "message": "सक्रिय" },
-  "all_fields": { "message": "सभी फ़ील्ड" },
-  "title": { "message": "शीर्षक" },
-  "url": { "message": "URL" },
-  "domain": { "message": "डोमेन" },
-  "ph_search_history": { "message": "इतिहास खोजें…" },
-  "ph_search_bookmarks": { "message": "बुकमार्क खोजें…" },
-
-  "most_visited": {"message": "सबसे अधिक देखे गए"},
-  "tabs": {"message": "टैब"},
-  "since": {"message": "से"},
-  "most_visited_URLS_all_time": {"message": "सबसे अधिक देखे गए URL — पूरे समय"},
-  "urls": {"message": "URL"},
-  "domains": {"message": "डोमेन"},
-  "enable_ignore": {"message": "इग्नोर सूची सक्षम करें"},
-  "filter_urls": {"message": "नीचे दिए गए पैटर्न से मेल खाने वाले URL फ़िल्टर करें"},
+  "ext_name": {
+    "message": "विस्तारित इतिहास"
+  },
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 बुकमार्क हटाएँ"
+  },
+  "quick_filters": {
+    "message": "त्वरित फ़िल्टर"
+  },
+  "quick_filter_desc": {
+    "message": "डोमेन, कीवर्ड या URL का एक नामित समूह सहेजें (जैसे \"सोशल मीडिया\" → facebook.com, instagram.com, pinterest.com)। इतिहास पृष्ठ पर खोज बॉक्स के पास ड्रॉपडाउन से इसे चुनकर तुरंत केवल उन प्रविष्टियों को फ़िल्टर करें।"
+  },
+  "filter_name": {
+    "message": "फ़िल्टर का नाम (जैसे सोशल मीडिया)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "प्रति पंक्ति एक डोमेन, कीवर्ड या URL — जैसे\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "परिवर्तन सहेजें"
+  },
+  "add_filter": {
+    "message": "फ़िल्टर जोड़ें"
+  },
+  "no_qfilters": {
+    "message": "अभी तक कोई त्वरित फ़िल्टर नहीं है"
+  },
+  "scroll_sensitivity": {
+    "message": "स्क्रॉल संवेदनशीलता"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "हर स्क्रॉल क्लिक पर कितने दिन के टैब आगे बढ़ें"
+  },
+  "scroll_date": {
+    "message": "माउस व्हील से तारीख के टैब स्क्रॉल करें"
+  },
+  "scroll_date_desc": {
+    "message": "सामान्य माउस व्हील (जो केवल लंबवत स्क्रॉल करता है) को तारीखों की पट्टी को क्षैतिज रूप से खिसकाने देता है — डेस्कटॉप पर उपयोगी, जहाँ व्हील अपने आप क्षैतिज रूप से स्क्रॉल नहीं कर सकता।"
+  },
+  "ignore_list_access": {
+    "message": "🔒 अनदेखी सूची तक पहुँच"
+  },
+  "ignore_list_enter_password": {
+    "message": "अनदेखी सूची देखने के लिए अपना मास्टर पासवर्ड दर्ज करें।"
+  },
+  "reset": {
+    "message": "रीसेट करें"
+  },
+  "ok": {
+    "message": "ठीक है"
+  },
+  "current_session": {
+    "message": "वर्तमान सत्र"
+  },
+  "active": {
+    "message": "सक्रिय"
+  },
+  "all_fields": {
+    "message": "सभी फ़ील्ड"
+  },
+  "title": {
+    "message": "शीर्षक"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "डोमेन"
+  },
+  "ph_search_history": {
+    "message": "इतिहास खोजें…"
+  },
+  "ph_search_bookmarks": {
+    "message": "बुकमार्क खोजें…"
+  },
+  "most_visited": {
+    "message": "सबसे अधिक देखे गए"
+  },
+  "tabs": {
+    "message": "टैब"
+  },
+  "since": {
+    "message": "से"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "सबसे अधिक देखे गए URL — पूरे समय"
+  },
+  "urls": {
+    "message": "URL"
+  },
+  "domains": {
+    "message": "डोमेन"
+  },
+  "enable_ignore": {
+    "message": "इग्नोर सूची सक्षम करें"
+  },
+  "filter_urls": {
+    "message": "नीचे दिए गए पैटर्न से मेल खाने वाले URL फ़िल्टर करें"
+  },
   "popup_show_url": {
-  "message": "URL"
+    "message": "URL"
   },
   "popup_show_url_desc": {
     "message": "पॉपअप सूची में शीर्षक के नीचे पेज URL दिखाएं"
@@ -45,187 +128,918 @@
   "apply_migrate": {
     "message": "लागू करें और माइग्रेट करें"
   },
-  "wallpaper_mode": { "message": "🖼 वॉलपेपर मोड" },
-  "wallpaper_mode_desc": { "message": "कस्टम बैकग्राउंड इमेज सेट करें। फ्रॉस्टेड-ग्लास UI सक्षम करता है।" },
-  "wallpaper_mode_custom_image": { "message": "📁 कस्टम इमेज" },
-  "wallpaper_random_unsplash": { "message": "🎲 Unsplash से रैंडम" },
-  "wallpaper_drop_image": { "message": "इमेज ड्रॉप करें या <strong>ब्राउज़ करें</strong>" },
-  "wallpaper_fetch": { "message": "रैंडम हाई-रेज़ फोटो लाता है" },
-  "wallpaper_randomize": { "message": "🎲 रैंडम" },
-  "wallpaper_auto_randomize": { "message": "हर बार ऑटो-रैंडम" },
-  "wallpaper_current": { "message": "वर्तमान वॉलपेपर:" },
-  "overlay_opacity": { "message": "ओवरले अपारदर्शिता" },
-  "overlay_control_desc": { "message": "डार्क या लाइट ओवरले को नियंत्रित करता है।" },
-  "wallpaper_blur": { "message": "बैकग्राउंड ब्लर" },
-  "wallpaper_remove": { "message": "✕ वॉलपेपर हटाएं" },
-  "reading_mode": {"message": "रीडिंग मोड"},
-  "tab_storage": {"message": "टैब स्टोरेज"},
-  "load_exported_history_read": {"message": "एक एक्सपोर्ट की गई हिस्ट्री फ़ाइल (.json) लोड करें ताकि बिना इम्पोर्ट किए उसे ब्राउज़ किया जा सके। इंटरफ़ेस बिल्कुल हिस्ट्री टैब जैसा काम करता है — तारीख फ़िल्टर, खोज आदि।"},
-  "choose_file": {"message": "फ़ाइल चुनें…"},
-  "choose_file_hint": {"message": "या .json फ़ाइल यहाँ ड्रैग और ड्रॉप करें"},
-  "leave_reading_mode": {"message": "✕ रीडिंग मोड छोड़ें"},
-  "reading": {"message": "पढ़ रहे हैं:"},
-  "all":{"message":"सभी"},
-"auto_focus_search":{"message":"खोलने पर खोज पर स्वतः फोकस"},
-"auto_focus_search_desc":{"message":"हिस्ट्री पेज खुलने पर खोज बॉक्स स्वतः सक्रिय होगा"},
-"back":{"message":"← वापस"},
-"background_tint":{"message":"पृष्ठभूमि रंग"},
-"browser_cache":{"message":"ब्राउज़र कैश"},
-"delete_history_reset_password":{"message":"हिस्ट्री हटाएँ और पासवर्ड रीसेट करें"},
-"enable_bg_tint":{"message":"पृष्ठभूमि रंग सक्षम करें"},
-"enable_lock":{"message":"लॉक सक्षम करें"},
-"enter_password_to_continue":{"message":"जारी रखने के लिए पासवर्ड दर्ज करें"},
-"ext_locked":{"message":"Extended History — लॉक्ड"},
-"favicon_resolver":{"message":"फेविकॉन रेज़ॉल्वर"},
-"favicon_resolver_desc":{"message":"साइट आइकन कैसे प्राप्त किए जाते हैं"},
-"for_password_reset":{"message":"(पासवर्ड रीसेट के लिए)"},
-"forgot_password_reset":{"message":"पासवर्ड भूल गए / रीसेट"},
-"google_resolver":{"message":"Google रेज़ॉल्वर"},
-"history_merge_interval":{"message":"हिस्ट्री मर्ज अंतराल"},
-"history_merge_interval_desc":{"message":"ब्राउज़र हिस्ट्री कितनी बार लोकल स्टोरेज में मर्ज होती है"},
-"lock_extension_page":{"message":"एक्सटेंशन पेज लॉक करें"},
-"lock_extension_page_desc":{"message":"हिस्ट्री देखने के लिए पासवर्ड आवश्यक होगा"},
-"password":{"message":"पासवर्ड"},
-"performance":{"message":"प्रदर्शन"},
-"popup":{"message":"पॉपअप"},
-"popup_height":{"message":"पॉपअप ऊँचाई"},
-"popup_height_desc":{"message":"पॉपअप सूची क्षेत्र की अधिकतम ऊँचाई (px)"},
-"refresh":{"message":"↻ रिफ्रेश"},
-"reset_password_warning":{"message":"⚠️ चेतावनी: पासवर्ड रीसेट करने से पूरी हिस्ट्री हट जाएगी"},
-"search_bar":{"message":"खोज बार"},
-"search_bar_desc":{"message":"पॉपअप के नीचे खोज बार दिखाएँ"},
-"security_answer":{"message":"सुरक्षा उत्तर"},
-"security_question":{"message":"सुरक्षा प्रश्न"},
-"set_up_page_lock":{"message":"🔐 पेज लॉक सेट करें"},
-"tabs_bar":{"message":"टैब बार"},
-"tabs_bar_desc":{"message":"Recent History / Closed Tabs स्विचर दिखाएँ"},
-"time_spent_tracking":{"message":"समय ट्रैकिंग"},
-"time_spent_tracking_desc":{"message":"डोमेन के अनुसार समय ट्रैक करें"},
-"ui":{"message":"UI"},
-"unlock":{"message":"अनलॉक"},
-"ph_ignore_pattern":{"message":"example.com या कीवर्ड"},
-"opt_all_fields":{"message":"सभी फ़ील्ड"},
-"opt_title":{"message":"शीर्षक"},
-"opt_url":{"message":"URL"},
-"opt_domain":{"message":"डोमेन"},
-"block_all_example_7":{"message":"केवल उस कीवर्ड को ब्लॉक करेगा"},
-"specific_word":{"message":"विशिष्ट कीवर्ड"},
-"example_com_6":{"message":"उदाहरण"},
-  "browse": { "message": "ब्राउज़ करें" },
-  "history": { "message": "इतिहास" },
-  "sessions": { "message": "सत्र" },
-  "devices": { "message": "उपकरण" },
-  "insights": { "message": "जानकारी" },
-  "activity": { "message": "गतिविधि" },
-  "time_spent": { "message": "समय व्यतीत" },
-  "library": { "message": "पुस्तकालय" },
-  "bookmarks": { "message": "बुकमार्क" },
-  "system": { "message": "सिस्टम" },
-  "delete_history": { "message": "इतिहास हटाएँ" },
-  "ignore_list": { "message": "अवहेलना सूची" },
-  "settings": { "message": "सेटिंग्स" },
-  "more": { "message": "और" },
-  "light": { "message": "हल्का" },
-  "dark": { "message": "अँधेरा" },
-  "all_time": { "message": "सभी समय" },
-  "delete_results": { "message": "परिणाम हटाएँ" },
-  "selected_lower": { "message": "चयनित" },
-  "select_all_visible": { "message": "सभी दिखाई देने वाले चुनें" },
-  "deselect_all": { "message": "सभी का चयन हटाएँ" },
-  "delete_selected": { "message": "चयनित हटाएँ" },
-  "loading": { "message": "लोड हो रहा है…" },
-  "daily_visits_90": { "message": "दैनिक दौरे — 90 दिन" },
-  "daily_visits_30": { "message": "दैनिक दौरे — 30 दिन" },
-  "hours": { "message": "घंटे" },
-  "days": { "message": "दिन" },
-  "clear_time_data": { "message": "समय डेटा साफ़ करें" },
-  "daily_browsing_time": { "message": "दैनिक ब्राउज़िंग समय" },
-  "top_sites_by_time_spent": { "message": "समय के आधार पर शीर्ष साइटें" },
-  "export": { "message": "निर्यात" },
-  "import": { "message": "आयात" },
-  "history_retention": { "message": "इतिहास रखरखाव" },
-  "keep_history_for": { "message": "इतिहास रखें" },
-  "older_enteries_are_pruned": { "message": "पुरानी प्रविष्टियाँ स्वचालित रूप से हटा दी जाती हैं" },
-  "months": { "message": "महीने" },
-  "year": { "message": "साल" },
-  "years": { "message": "साल" },
-  "forever": { "message": "हमेशा के लिए" },
-  "appearance": { "message": "दिखावट" },
-  "language": { "message": "भाषा" },
-  "select_pref_language": { "message": "अपनी पसंदीदा भाषा चुनें" },
-  "font_family": { "message": "फ़ॉन्ट परिवार" },
-  "font_size": { "message": "फ़ॉन्ट आकार" },
-  "base_ui_text_size": { "message": "बेस UI टेक्स्ट आकार" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "एक्सेंट रंग" },
-  "primary": { "message": "प्राथमिक" },
-  "secondary": { "message": "माध्यमिक" },
-  "data": { "message": "डेटा" },
-  "export_history": { "message": "इतिहास निर्यात करें" },
-  "full_json_backup": { "message": "सभी इतिहास + समय डेटा का पूर्ण JSON बैकअप" },
-  "export_json": { "message": "JSON निर्यात करें" },
-  "import_history": { "message": "इतिहास आयात करें" },
-  "merge_entries_json": { "message": "पहले निर्यात किए गए JSON फ़ाइल से प्रविष्टियाँ मिलाएँ" },
-  "import_json": { "message": "JSON आयात करें" },
-  "sessions_to_keep": { "message": "सहेजे जाने वाले सत्र" },
-  "how_many_past_sessions": { "message": "कितने पिछले सत्र संग्रहीत किए जाएँ (1–20)" },
-  "auto_save_session": { "message": "वर्तमान सत्र स्वचालित रूप से सहेजें" },
-  "save_open_tabs_to": { "message": "खुली टैब्स को आपकी डाउनलोड फ़ोल्डर में extended-history-session.html में सहेजता है। अक्षम करने के लिए 0 सेट करें।" },
-  "min": { "message": "मिन" },
-  "save_now": { "message": "अब सहेजें" },
-  "save_settings": { "message": "सेटिंग्स सहेजें" },
-  "danger_zone": { "message": "खतरे का क्षेत्र" },
-  "reimport_chrome_history": { "message": "Chrome इतिहास पुनः आयात करें" },
-  "pull_all_chrome_history": { "message": "सभी उपलब्ध Chrome मूल इतिहास फिर से खींचें (मर्ज, कोई डुप्लिकेट नहीं)" },
-  "reimport": { "message": "पुनः आयात करें" },
-  "clear_all_history": { "message": "सभी इतिहास साफ़ करें" },
-  "permanently_delete_all_stored": { "message": "सभी संग्रहीत इतिहास स्थायी रूप से हटा देता है। इसे पूर्ववत नहीं किया जा सकता।" },
-  "clear_all": { "message": "सब साफ़ करें" },
-  "about": { "message": "बारे में" },
-  "created_by": { "message": "Bane Kondić द्वारा बनाया गया, क्योंकि उन्हें Chromium में 90 दिन की इतिहास सीमा पसंद नहीं आई। यह एक्सटेंशन डेटा नहीं भेजता और पूरी तरह से ओपन सोर्स है, कोड क्रिएटर के Github प्रोफ़ाइल पर उपलब्ध है।" },
-  "github_profile": { "message": "Github प्रोफ़ाइल" },
-  "feedback": { "message": "प्रतिक्रिया" },
-  "link_to_discord": { "message": "प्रतिक्रियाओं के लिए Discord सर्वर लिंक (या Chrome स्टोर में समीक्षा छोड़ें)" },
-  "discord_server": { "message": "Discord सर्वर" },
-  "rate_extension": { "message": "एक्सटेंशन रेट करें" },
-  "link_to_chrome_webstore": { "message": "Chrome Web Store एक्सटेंशन पेज लिंक" },
-  "click_to_rate": { "message": "रेट करने के लिए क्लिक करें" },
-  "ignored_domains": { "message": "अनदेखा किए गए डोमेन" },
-  "domains_added_will_not_be": { "message": "यहाँ जो डोमेन जोड़े गए हैं, वे इतिहास में सहेजे नहीं जाएंगे। मौजूदा प्रविष्टियाँ स्वचालित रूप से हटा दी जाएँगी।" },
-  "add_patern": { "message": "पैटर्न जोड़ें" },
-  "pattern_guide": { "message": "पैटर्न गाइड" },
-  "basic_domain": { "message": "मूल डोमेन" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "सभी example.com को ब्लॉक करता है" },
-  "all_subdomains": { "message": "सभी सबडोमेन" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "ब्लॉग, शॉप आदि example.com को ब्लॉक करता है" },
-  "specific_subdomain": { "message": "विशिष्ट सबडोमेन" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "केवल blog.example.com को ब्लॉक करता है" },
-  "specific_path": { "message": "विशिष्ट पथ" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "केवल /private के तहत URL को ब्लॉक करता है" },
-  "specific_file": { "message": "विशिष्ट फ़ाइल" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "केवल उस फ़ाइल को ब्लॉक करता है" },
-  "no_patterns_added": { "message": "कोई पैटर्न अभी तक नहीं जोड़ा गया" },
-  "open_in_new_tab": { "message": "नई टैब में खोलें" },
-  "open_in_incognito": { "message": "इन्कॉग्निटो में खोलें" },
-  "copy_url": { "message": "URL कॉपी करें" },
-  "copy_title": { "message": "शीर्षक कॉपी करें" },
-  "delete_from_history": { "message": "इतिहास से हटाएँ" },
-  "new_subfolder": { "message": "नया उपफ़ोल्डर" },
-  "rename_folder": { "message": "फ़ोल्डर का नाम बदलें" },
-  "delete_folder": { "message": "फ़ोल्डर हटाएँ" },
-  "cancel": { "message": "रद्द करें" },
-  "delete": { "message": "हटाएँ" },
-  "choose_a_time_range": { "message": "हटाने के लिए समय सीमा चुनें। यह प्रविष्टियों को इस एक्सटेंशन और Chrome की मूल इतिहास दोनों से हटा देगा।" },
-  "last_1_hour": { "message": "पिछला 1 घंटा" },
-  "last_24_hours": { "message": "पिछले 24 घंटे" },
-  "last_7_days": { "message": "पिछले 7 दिन" },
-  "last_30_days": { "message": "पिछले 30 दिन (महीना)" },
-  "last_5_months": { "message": "पिछले 5 महीने" },
-  "clear_cookies_local_storage": { "message": "कुकीज़ और स्थानीय स्टोरेज साफ़ करें" },
-  "clear_cache": { "message": "कैश साफ़ करें" }
+  "wallpaper_mode": {
+    "message": "🖼 वॉलपेपर मोड"
+  },
+  "wallpaper_mode_desc": {
+    "message": "कस्टम बैकग्राउंड इमेज सेट करें। फ्रॉस्टेड-ग्लास UI सक्षम करता है।"
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 कस्टम इमेज"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Unsplash से रैंडम"
+  },
+  "wallpaper_drop_image": {
+    "message": "इमेज ड्रॉप करें या <strong>ब्राउज़ करें</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "रैंडम हाई-रेज़ फोटो लाता है"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 रैंडम"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "हर बार ऑटो-रैंडम"
+  },
+  "wallpaper_current": {
+    "message": "वर्तमान वॉलपेपर:"
+  },
+  "overlay_opacity": {
+    "message": "ओवरले अपारदर्शिता"
+  },
+  "overlay_control_desc": {
+    "message": "डार्क या लाइट ओवरले को नियंत्रित करता है।"
+  },
+  "wallpaper_blur": {
+    "message": "बैकग्राउंड ब्लर"
+  },
+  "wallpaper_remove": {
+    "message": "✕ वॉलपेपर हटाएं"
+  },
+  "reading_mode": {
+    "message": "रीडिंग मोड"
+  },
+  "tab_storage": {
+    "message": "टैब स्टोरेज"
+  },
+  "load_exported_history_read": {
+    "message": "एक एक्सपोर्ट की गई हिस्ट्री फ़ाइल (.json) लोड करें ताकि बिना इम्पोर्ट किए उसे ब्राउज़ किया जा सके। इंटरफ़ेस बिल्कुल हिस्ट्री टैब जैसा काम करता है — तारीख फ़िल्टर, खोज आदि।"
+  },
+  "choose_file": {
+    "message": "फ़ाइल चुनें…"
+  },
+  "choose_file_hint": {
+    "message": "या .json फ़ाइल यहाँ ड्रैग और ड्रॉप करें"
+  },
+  "leave_reading_mode": {
+    "message": "✕ रीडिंग मोड छोड़ें"
+  },
+  "reading": {
+    "message": "पढ़ रहे हैं:"
+  },
+  "all": {
+    "message": "सभी"
+  },
+  "auto_focus_search": {
+    "message": "खोलने पर खोज पर स्वतः फोकस"
+  },
+  "auto_focus_search_desc": {
+    "message": "हिस्ट्री पेज खुलने पर खोज बॉक्स स्वतः सक्रिय होगा"
+  },
+  "back": {
+    "message": "← वापस"
+  },
+  "background_tint": {
+    "message": "पृष्ठभूमि रंग"
+  },
+  "browser_cache": {
+    "message": "ब्राउज़र कैश"
+  },
+  "delete_history_reset_password": {
+    "message": "हिस्ट्री हटाएँ और पासवर्ड रीसेट करें"
+  },
+  "enable_bg_tint": {
+    "message": "पृष्ठभूमि रंग सक्षम करें"
+  },
+  "enable_lock": {
+    "message": "लॉक सक्षम करें"
+  },
+  "enter_password_to_continue": {
+    "message": "जारी रखने के लिए पासवर्ड दर्ज करें"
+  },
+  "ext_locked": {
+    "message": "Extended History — लॉक्ड"
+  },
+  "favicon_resolver": {
+    "message": "फेविकॉन रेज़ॉल्वर"
+  },
+  "favicon_resolver_desc": {
+    "message": "साइट आइकन कैसे प्राप्त किए जाते हैं"
+  },
+  "for_password_reset": {
+    "message": "(पासवर्ड रीसेट के लिए)"
+  },
+  "forgot_password_reset": {
+    "message": "पासवर्ड भूल गए / रीसेट"
+  },
+  "google_resolver": {
+    "message": "Google रेज़ॉल्वर"
+  },
+  "history_merge_interval": {
+    "message": "हिस्ट्री मर्ज अंतराल"
+  },
+  "history_merge_interval_desc": {
+    "message": "ब्राउज़र हिस्ट्री कितनी बार लोकल स्टोरेज में मर्ज होती है"
+  },
+  "lock_extension_page": {
+    "message": "एक्सटेंशन पेज लॉक करें"
+  },
+  "lock_extension_page_desc": {
+    "message": "हिस्ट्री देखने के लिए पासवर्ड आवश्यक होगा"
+  },
+  "password": {
+    "message": "पासवर्ड"
+  },
+  "performance": {
+    "message": "प्रदर्शन"
+  },
+  "popup": {
+    "message": "पॉपअप"
+  },
+  "popup_height": {
+    "message": "पॉपअप ऊँचाई"
+  },
+  "popup_height_desc": {
+    "message": "पॉपअप सूची क्षेत्र की अधिकतम ऊँचाई (px)"
+  },
+  "refresh": {
+    "message": "↻ रिफ्रेश"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ चेतावनी: पासवर्ड रीसेट करने से पूरी हिस्ट्री हट जाएगी"
+  },
+  "search_bar": {
+    "message": "खोज बार"
+  },
+  "search_bar_desc": {
+    "message": "पॉपअप के नीचे खोज बार दिखाएँ"
+  },
+  "security_answer": {
+    "message": "सुरक्षा उत्तर"
+  },
+  "security_question": {
+    "message": "सुरक्षा प्रश्न"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 पेज लॉक सेट करें"
+  },
+  "tabs_bar": {
+    "message": "टैब बार"
+  },
+  "tabs_bar_desc": {
+    "message": "Recent History / Closed Tabs स्विचर दिखाएँ"
+  },
+  "time_spent_tracking": {
+    "message": "समय ट्रैकिंग"
+  },
+  "time_spent_tracking_desc": {
+    "message": "डोमेन के अनुसार समय ट्रैक करें"
+  },
+  "ui": {
+    "message": "UI"
+  },
+  "unlock": {
+    "message": "अनलॉक"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com या कीवर्ड"
+  },
+  "opt_all_fields": {
+    "message": "सभी फ़ील्ड"
+  },
+  "opt_title": {
+    "message": "शीर्षक"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "डोमेन"
+  },
+  "block_all_example_7": {
+    "message": "केवल उस कीवर्ड को ब्लॉक करेगा"
+  },
+  "specific_word": {
+    "message": "विशिष्ट कीवर्ड"
+  },
+  "example_com_6": {
+    "message": "उदाहरण"
+  },
+  "browse": {
+    "message": "ब्राउज़ करें"
+  },
+  "history": {
+    "message": "इतिहास"
+  },
+  "sessions": {
+    "message": "सत्र"
+  },
+  "devices": {
+    "message": "उपकरण"
+  },
+  "insights": {
+    "message": "जानकारी"
+  },
+  "activity": {
+    "message": "गतिविधि"
+  },
+  "time_spent": {
+    "message": "समय व्यतीत"
+  },
+  "library": {
+    "message": "पुस्तकालय"
+  },
+  "bookmarks": {
+    "message": "बुकमार्क"
+  },
+  "system": {
+    "message": "सिस्टम"
+  },
+  "delete_history": {
+    "message": "इतिहास हटाएँ"
+  },
+  "ignore_list": {
+    "message": "अवहेलना सूची"
+  },
+  "settings": {
+    "message": "सेटिंग्स"
+  },
+  "more": {
+    "message": "और"
+  },
+  "light": {
+    "message": "हल्का"
+  },
+  "dark": {
+    "message": "अँधेरा"
+  },
+  "all_time": {
+    "message": "सभी समय"
+  },
+  "delete_results": {
+    "message": "परिणाम हटाएँ"
+  },
+  "selected_lower": {
+    "message": "चयनित"
+  },
+  "select_all_visible": {
+    "message": "सभी दिखाई देने वाले चुनें"
+  },
+  "deselect_all": {
+    "message": "सभी का चयन हटाएँ"
+  },
+  "delete_selected": {
+    "message": "चयनित हटाएँ"
+  },
+  "loading": {
+    "message": "लोड हो रहा है…"
+  },
+  "daily_visits_90": {
+    "message": "दैनिक दौरे — 90 दिन"
+  },
+  "daily_visits_30": {
+    "message": "दैनिक दौरे — 30 दिन"
+  },
+  "hours": {
+    "message": "घंटे"
+  },
+  "days": {
+    "message": "दिन"
+  },
+  "clear_time_data": {
+    "message": "समय डेटा साफ़ करें"
+  },
+  "daily_browsing_time": {
+    "message": "दैनिक ब्राउज़िंग समय"
+  },
+  "top_sites_by_time_spent": {
+    "message": "समय के आधार पर शीर्ष साइटें"
+  },
+  "export": {
+    "message": "निर्यात"
+  },
+  "import": {
+    "message": "आयात"
+  },
+  "history_retention": {
+    "message": "इतिहास रखरखाव"
+  },
+  "keep_history_for": {
+    "message": "इतिहास रखें"
+  },
+  "older_enteries_are_pruned": {
+    "message": "पुरानी प्रविष्टियाँ स्वचालित रूप से हटा दी जाती हैं"
+  },
+  "months": {
+    "message": "महीने"
+  },
+  "year": {
+    "message": "साल"
+  },
+  "years": {
+    "message": "साल"
+  },
+  "forever": {
+    "message": "हमेशा के लिए"
+  },
+  "appearance": {
+    "message": "दिखावट"
+  },
+  "language": {
+    "message": "भाषा"
+  },
+  "select_pref_language": {
+    "message": "अपनी पसंदीदा भाषा चुनें"
+  },
+  "font_family": {
+    "message": "फ़ॉन्ट परिवार"
+  },
+  "font_size": {
+    "message": "फ़ॉन्ट आकार"
+  },
+  "base_ui_text_size": {
+    "message": "बेस UI टेक्स्ट आकार"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "एक्सेंट रंग"
+  },
+  "primary": {
+    "message": "प्राथमिक"
+  },
+  "secondary": {
+    "message": "माध्यमिक"
+  },
+  "data": {
+    "message": "डेटा"
+  },
+  "export_history": {
+    "message": "इतिहास निर्यात करें"
+  },
+  "full_json_backup": {
+    "message": "सभी इतिहास + समय डेटा का पूर्ण JSON बैकअप"
+  },
+  "export_json": {
+    "message": "JSON निर्यात करें"
+  },
+  "import_history": {
+    "message": "इतिहास आयात करें"
+  },
+  "merge_entries_json": {
+    "message": "पहले निर्यात किए गए JSON फ़ाइल से प्रविष्टियाँ मिलाएँ"
+  },
+  "import_json": {
+    "message": "JSON आयात करें"
+  },
+  "sessions_to_keep": {
+    "message": "सहेजे जाने वाले सत्र"
+  },
+  "how_many_past_sessions": {
+    "message": "कितने पिछले सत्र संग्रहीत किए जाएँ (1–20)"
+  },
+  "auto_save_session": {
+    "message": "वर्तमान सत्र स्वचालित रूप से सहेजें"
+  },
+  "save_open_tabs_to": {
+    "message": "खुली टैब्स को आपकी डाउनलोड फ़ोल्डर में extended-history-session.html में सहेजता है। अक्षम करने के लिए 0 सेट करें।"
+  },
+  "min": {
+    "message": "मिन"
+  },
+  "save_now": {
+    "message": "अब सहेजें"
+  },
+  "save_settings": {
+    "message": "सेटिंग्स सहेजें"
+  },
+  "danger_zone": {
+    "message": "खतरे का क्षेत्र"
+  },
+  "reimport_chrome_history": {
+    "message": "Chrome इतिहास पुनः आयात करें"
+  },
+  "pull_all_chrome_history": {
+    "message": "सभी उपलब्ध Chrome मूल इतिहास फिर से खींचें (मर्ज, कोई डुप्लिकेट नहीं)"
+  },
+  "reimport": {
+    "message": "पुनः आयात करें"
+  },
+  "clear_all_history": {
+    "message": "सभी इतिहास साफ़ करें"
+  },
+  "permanently_delete_all_stored": {
+    "message": "सभी संग्रहीत इतिहास स्थायी रूप से हटा देता है। इसे पूर्ववत नहीं किया जा सकता।"
+  },
+  "clear_all": {
+    "message": "सब साफ़ करें"
+  },
+  "about": {
+    "message": "बारे में"
+  },
+  "created_by": {
+    "message": "Bane Kondić द्वारा बनाया गया, क्योंकि उन्हें Chromium में 90 दिन की इतिहास सीमा पसंद नहीं आई। यह एक्सटेंशन डेटा नहीं भेजता और पूरी तरह से ओपन सोर्स है, कोड क्रिएटर के Github प्रोफ़ाइल पर उपलब्ध है।"
+  },
+  "github_profile": {
+    "message": "Github प्रोफ़ाइल"
+  },
+  "feedback": {
+    "message": "प्रतिक्रिया"
+  },
+  "link_to_discord": {
+    "message": "प्रतिक्रियाओं के लिए Discord सर्वर लिंक (या Chrome स्टोर में समीक्षा छोड़ें)"
+  },
+  "discord_server": {
+    "message": "Discord सर्वर"
+  },
+  "rate_extension": {
+    "message": "एक्सटेंशन रेट करें"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Chrome Web Store एक्सटेंशन पेज लिंक"
+  },
+  "click_to_rate": {
+    "message": "रेट करने के लिए क्लिक करें"
+  },
+  "ignored_domains": {
+    "message": "अनदेखा किए गए डोमेन"
+  },
+  "domains_added_will_not_be": {
+    "message": "यहाँ जो डोमेन जोड़े गए हैं, वे इतिहास में सहेजे नहीं जाएंगे। मौजूदा प्रविष्टियाँ स्वचालित रूप से हटा दी जाएँगी।"
+  },
+  "add_patern": {
+    "message": "पैटर्न जोड़ें"
+  },
+  "pattern_guide": {
+    "message": "पैटर्न गाइड"
+  },
+  "basic_domain": {
+    "message": "मूल डोमेन"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "सभी example.com को ब्लॉक करता है"
+  },
+  "all_subdomains": {
+    "message": "सभी सबडोमेन"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "ब्लॉग, शॉप आदि example.com को ब्लॉक करता है"
+  },
+  "specific_subdomain": {
+    "message": "विशिष्ट सबडोमेन"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "केवल blog.example.com को ब्लॉक करता है"
+  },
+  "specific_path": {
+    "message": "विशिष्ट पथ"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "केवल /private के तहत URL को ब्लॉक करता है"
+  },
+  "specific_file": {
+    "message": "विशिष्ट फ़ाइल"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "केवल उस फ़ाइल को ब्लॉक करता है"
+  },
+  "no_patterns_added": {
+    "message": "कोई पैटर्न अभी तक नहीं जोड़ा गया"
+  },
+  "open_in_new_tab": {
+    "message": "नई टैब में खोलें"
+  },
+  "open_in_incognito": {
+    "message": "इन्कॉग्निटो में खोलें"
+  },
+  "copy_url": {
+    "message": "URL कॉपी करें"
+  },
+  "copy_title": {
+    "message": "शीर्षक कॉपी करें"
+  },
+  "delete_from_history": {
+    "message": "इतिहास से हटाएँ"
+  },
+  "new_subfolder": {
+    "message": "नया उपफ़ोल्डर"
+  },
+  "rename_folder": {
+    "message": "फ़ोल्डर का नाम बदलें"
+  },
+  "delete_folder": {
+    "message": "फ़ोल्डर हटाएँ"
+  },
+  "cancel": {
+    "message": "रद्द करें"
+  },
+  "delete": {
+    "message": "हटाएँ"
+  },
+  "choose_a_time_range": {
+    "message": "हटाने के लिए समय सीमा चुनें। यह प्रविष्टियों को इस एक्सटेंशन और Chrome की मूल इतिहास दोनों से हटा देगा।"
+  },
+  "last_1_hour": {
+    "message": "पिछला 1 घंटा"
+  },
+  "last_24_hours": {
+    "message": "पिछले 24 घंटे"
+  },
+  "last_7_days": {
+    "message": "पिछले 7 दिन"
+  },
+  "last_30_days": {
+    "message": "पिछले 30 दिन (महीना)"
+  },
+  "last_5_months": {
+    "message": "पिछले 5 महीने"
+  },
+  "clear_cookies_local_storage": {
+    "message": "कुकीज़ और स्थानीय स्टोरेज साफ़ करें"
+  },
+  "clear_cache": {
+    "message": "कैश साफ़ करें"
+  },
+  "open_dev_mode": {
+    "message": "🛠 डेवलपर मोड खोलें"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 खुले टैब और निष्क्रिय समय सूचीबद्ध करें"
+  },
+  "cal_all_time": {
+    "message": "सभी समय"
+  },
+  "prev_day": {
+    "message": "‹ पिछला दिन"
+  },
+  "next_day": {
+    "message": "अगला दिन ›"
+  },
+  "previous_month": {
+    "message": "पिछला महीना"
+  },
+  "next_month": {
+    "message": "अगला महीना"
+  },
+  "clear": {
+    "message": "साफ़ करें"
+  },
+  "ui_rounded_corners": {
+    "message": "UI गोल कोने"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "साइडबार और मुख्य पैनल के कोनों को गोल करता है (और उनके चारों ओर छोटा अंतर बनाए रखता है)। तेज़ किनारों वाले, किनारे से किनारे तक के लेआउट के लिए बंद करें।"
+  },
+  "ui_calendar_mode": {
+    "message": "कैलेंडर मोड"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "इतिहास पृष्ठ पर तिथि/घंटा पिल नेविगेशन को दाईं ओर के कैलेंडर साइडबार से बदल देता है — तिथियाँ, महीने और वर्ष चुनें, और सीधे किसी भी घंटे पर जाएँ।"
+  },
+  "developer": {
+    "message": "डेवलपर"
+  },
+  "dev_mode": {
+    "message": "डेवलपर मोड"
+  },
+  "developer_mode_title": {
+    "message": "🛠 डेवलपर मोड"
+  },
+  "dev_mode_desc": {
+    "message": "आंतरिक निदान: ऑटो-स्टोर के लिए उपयोग होने वाला टैब निष्क्रियता-ट्रैकिंग का लाइव डेटा, और बैकग्राउंड टाइमर के आँकड़े। केवल समस्या निवारण के लिए।"
+  },
+  "dev_mode_modal_sub": {
+    "message": "आंतरिक निदान — बैकग्राउंड टाइमर और ऑटो-स्टोर के लिए उपयोग होने वाली टैब निष्क्रियता-ट्रैकिंग की लाइव स्थिति।"
+  },
+  "close": {
+    "message": "बंद करें"
+  },
+  "hour": {
+    "message": "घंटा"
+  },
+  "all_hours": {
+    "message": "सभी घंटे"
+  },
+  "ph_search_devices": {
+    "message": "शीर्षक या URL से डिवाइस टैब खोजें…"
+  },
+  "add": {
+    "message": "जोड़ें"
+  },
+  "domain_exceptions": {
+    "message": "डोमेन अपवाद"
+  },
+  "domain_exceptions_desc": {
+    "message": "इस सूची के डोमेन इतिहास हटाते समय छोड़ दिए जाते हैं: उनकी इतिहास प्रविष्टियाँ, कुकीज़ और साइट डेटा सुरक्षित रहते हैं। सबडोमेन भी शामिल हैं।"
+  },
+  "no_exceptions_yet": {
+    "message": "अभी कोई अपवाद नहीं"
+  },
+  "remove": {
+    "message": "हटाएँ"
+  },
+  "invalid_domain": {
+    "message": "मान्य डोमेन दर्ज करें, जैसे example.com"
+  },
+  "domain_already_added": {
+    "message": "यह डोमेन पहले से सूची में है"
+  },
+  "dh_confirm_warn": {
+    "message": "यह $N1$ के लिए इतिहास को स्थायी रूप से हटा देगा। पुष्टि करने के लिए फिर से हटाएँ पर क्लिक करें।",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "आपकी अपवाद सूची के डोमेन ($N1$) सुरक्षित रहेंगे।",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "हटाया जा रहा है…"
+  },
+  "deleted_history_entries": {
+    "message": "$N1$ इतिहास प्रविष्टियाँ हटाई गईं",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "कुकीज़"
+  },
+  "word_cache": {
+    "message": "कैश"
+  },
+  "confirm_restore_tabs": {
+    "message": "$N1$ टैब पुनर्स्थापित करें?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "$N2$ विंडो में $N1$ टैब पुनर्स्थापित किए गए",
+    "placeholders": {
+      "n2": {
+        "content": "$2"
+      },
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "एक नई विंडो में $N1$ टैब पुनर्स्थापित किए गए",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "पैटर्न हटाया गया"
+  },
+  "toast_enter_pattern": {
+    "message": "कृपया एक पैटर्न दर्ज करें"
+  },
+  "toast_pattern_added": {
+    "message": "पैटर्न जोड़ा गया: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "अनदेखी सूची चालू की गई"
+  },
+  "toast_ignore_disabled": {
+    "message": "अनदेखी सूची बंद की गई"
+  },
+  "toast_ts_hidden": {
+    "message": "अनदेखे डोमेन अब बिताए गए समय से छिपे हैं"
+  },
+  "toast_ts_shown": {
+    "message": "अनदेखे डोमेन अब बिताए गए समय से छिपे नहीं हैं"
+  },
+  "hide_from_time_spent": {
+    "message": "बिताए गए समय से छिपाएँ"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "नीचे दिए पैटर्न से मेल खाने वाले डोमेन को बिताए गए समय के दृश्य से छिपाता है — ट्रैक किया गया कोई समय डेटा नहीं हटाता"
+  },
+  "url_pattern_guide": {
+    "message": "URL पैटर्न गाइड"
+  },
+  "ignore_keywords_note": {
+    "message": "बिना बिंदु वाले शब्दों को कीवर्ड माना जाता है — वे उस शब्द वाले किसी भी URL या पेज शीर्षक से मेल खाते हैं।"
+  },
+  "toast_cleaning": {
+    "message": "इतिहास से अनदेखे URL साफ़ किए जा रहे हैं…"
+  },
+  "toast_removed_ignored": {
+    "message": "इतिहास से $N1$ अनदेखे URL हटाए गए",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "इतिहास में कोई अनदेखा URL नहीं मिला"
+  },
+  "keyword_prefix": {
+    "message": "कीवर्ड: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "कैश्ड (लोकल)"
+  },
+  "context_menu_on_pages": {
+    "message": "वेबसाइटों पर राइट-क्लिक मेनू"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "किसी वेबपेज पर राइट-क्लिक करने पर \"Extended History\" प्रविष्टि दिखाएँ"
+  },
+  "no_sessions_yet": {
+    "message": "अभी तक कोई सत्र दर्ज नहीं हुआ"
+  },
+  "popup_as_sidebar": {
+    "message": "साइडबार के रूप में उपयोग करें"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Extended History को पॉपअप की जगह Chrome के साइड पैनल में खोलता है, ताकि वह पूरे पेज तक फैल सके"
+  },
+  "toolbar_icon": {
+    "message": "टूलबार आइकन"
+  },
+  "toolbar_icon_desc": {
+    "message": "अपने ब्राउज़र के टूलबार में दिखने वाला आइकन चुनें"
+  },
+  "wallpaper_opacity": {
+    "message": "वॉलपेपर की अपारदर्शिता"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "बैकग्राउंड इमेज को ही फीका करता है — नीचे के ग्लास पैनल की टिंट से अलग।"
+  },
+  "yesterday": {
+    "message": "कल"
+  },
+  "today": {
+    "message": "आज"
+  },
+  "language_auto": {
+    "message": "स्वचालित (ब्राउज़र की भाषा)"
+  },
+  "nav_icons": {
+    "message": "नेविगेशन आइकन"
+  },
+  "nav_icons_desc": {
+    "message": "साइडबार नेविगेशन के आइटम के साथ आइकन दिखाता है। केवल टेक्स्ट वाले मेनू के लिए बंद करें।"
+  },
+  "match_ui_colors": {
+    "message": "UI रंगों से मिलाएँ"
+  },
+  "match_ui_colors_desc": {
+    "message": "इतिहास सूची को इंटरफ़ेस के बाकी हिस्सों (साइडबार, कैलेंडर साइडबार और पैनल) जैसा ही रंग देता है, अलग शेड की जगह।"
+  },
+  "pop_store": {
+    "message": "स्टोर करें"
+  },
+  "pop_open": {
+    "message": "खोलें"
+  },
+  "pop_prev_day": {
+    "message": "पिछला दिन"
+  },
+  "pop_next_day": {
+    "message": "अगला दिन"
+  },
+  "pop_clear_search": {
+    "message": "खोज साफ़ करें और आज पर लौटें"
+  },
+  "pop_recent_history": {
+    "message": "हाल का इतिहास"
+  },
+  "pop_closed_tabs": {
+    "message": "बंद किए गए टैब"
+  },
+  "pop_active_tabs": {
+    "message": "सक्रिय टैब"
+  },
+  "pop_unselect_all": {
+    "message": "सभी अचयनित करें"
+  },
+  "pop_select_all": {
+    "message": "सभी चुनें"
+  },
+  "pop_search_results": {
+    "message": "खोज परिणाम"
+  },
+  "pop_start_typing": {
+    "message": "खोजने के लिए टाइप करना शुरू करें..."
+  },
+  "pop_export_session_title": {
+    "message": "नवीनतम सत्र निर्यात करने के लिए राइट-क्लिक करें"
+  },
+  "pop_searching": {
+    "message": "खोज रहे हैं..."
+  },
+  "pop_search_error": {
+    "message": "खोज में त्रुटि"
+  },
+  "pop_no_results": {
+    "message": "कोई परिणाम नहीं मिला"
+  },
+  "pop_no_closed": {
+    "message": "हाल ही में बंद किया गया कोई टैब नहीं"
+  },
+  "pop_no_storable": {
+    "message": "कोई स्टोर करने योग्य टैब खुला नहीं है"
+  },
+  "pop_ts_error": {
+    "message": "टैब स्टोरेज लोड करने में त्रुटि"
+  },
+  "pop_no_stored": {
+    "message": "कोई स्टोर किया गया टैब नहीं।"
+  },
+  "pop_no_stored_hint": {
+    "message": "खुले टैब स्टोर करने के लिए इस टैब बटन पर राइट-क्लिक करें"
+  },
+  "pop_no_data": {
+    "message": "अभी कोई डेटा नहीं"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "टैब स्टोरेज से $N1$ स्टोर किए गए टैब हटाएँ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "इस पेज को स्टोर नहीं किया जा सकता"
+  },
+  "pop_no_history_day": {
+    "message": "इस दिन का कोई इतिहास नहीं"
+  },
+  "pop_no_history_today": {
+    "message": "आज अभी तक कोई इतिहास नहीं"
+  },
+  "pop_just_now": {
+    "message": "अभी"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ मिनट पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ घंटे पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ दिन पहले",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }

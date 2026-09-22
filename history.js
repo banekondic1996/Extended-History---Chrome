@@ -85,8 +85,8 @@ function dayLabel(ts) {
   
   const diff = Math.round((nDate - dDate) / 86400000);
   
-  if (diff === 0) return chrome.i18n.getMessage("today") || 'Today';
-  if (diff === 1) return chrome.i18n.getMessage("yesterday") || 'Yesterday';
+  if (diff === 0) return _ehMsg("today") || 'Today';
+  if (diff === 1) return _ehMsg("yesterday") || 'Yesterday';
   if (diff < 7)   return d.toLocaleDateString(undefined, { weekday: 'long' });
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -111,7 +111,7 @@ function favUrl(domain) {
 function setFavicon(img, domain) {
   if (!domain) return;
   if (_curSettings && _curSettings.faviconResolver === 'cached') {
-    chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
+        chrome.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }, (resp) => {
       if (resp && resp.dataUrl && !img.dataset.favLoaded) {
         img.dataset.favLoaded = '1';
         img.src = resp.dataUrl;
@@ -152,6 +152,13 @@ let filterHour   = null; // 0-23
 let searchTimer  = null;
 let _curSettings = {};
 
+// ── Calendar Mode state ───────────────────────────────────────────────────
+let calViewYear   = new Date().getFullYear();
+let calViewMonth  = new Date().getMonth(); // 0-indexed
+let calActiveDate = null; // date highlighted in the widget; tracks filterDate when set,
+                           // or the scroll position while browsing "All time"
+let _extSidebarOpen = false; // cached eh_sidebar_open flag (Chrome side panel state)
+
 const PIE_COLORS = ['#3b9eff','#2dd4a0','#f97316','#a855f7','#ec4899','#eab308','#ef4444','#60a5fa','#34d399','#f472b6'];
 
 // ── Infinite scroll (no spacers — append-only, reset on new search) ──────────
@@ -177,6 +184,7 @@ function buildVirtualList() {
   area.innerHTML = '';
   appendPage();          // render first page immediately
   setupScrollObserver(area);
+  calScrollSpyCheck(area);
 }
 
 function appendPage() {
@@ -199,6 +207,7 @@ function appendPage() {
     if (dl !== prevDay) {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
+      hdr.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
       hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
       area.appendChild(hdr);
       prevDay = dl;
@@ -207,8 +216,9 @@ function appendPage() {
     const sel = selected.has(e.id);
     const row = document.createElement('div');
     row.className = `entry${sel ? ' sel' : ''}${selMode ? ' sel-mode-entry' : ''}`;
-    row.dataset.id  = e.id;
-    row.dataset.url = e.url;
+    row.dataset.id   = e.id;
+    row.dataset.url  = e.url;
+    row.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
     row.innerHTML = `
     <div class="entry-check" data-id="${esc(e.id)}" title="Select">✓</div>
     <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
@@ -269,6 +279,7 @@ function setupScrollObserver(area) {
     if (scrollTop + clientHeight >= scrollHeight - 400) {
       appendPage();
     }
+    calScrollSpyCheck(area);
   };
 }
 
@@ -344,6 +355,29 @@ function applyHighContrastMode(enabled) {
   }
 }
 
+// UI rounded corners toggle — .sidebar/.main read both their margin and
+// border-radius from CSS variables (falling back to the original 8px/20px
+// when unset), so disabling zeroes both for a flush, edge-to-edge layout.
+// Settings > Navigation icons: off => <html class="hide-nav-icons"> (CSS: display:none on the icons)
+function applyNavIcons(enabled) {
+  document.documentElement.classList.toggle('hide-nav-icons', enabled === false);
+}
+// Settings > Match UI colors: on => <html class="match-ui-colors"> (list = same colour as the UI)
+function applyMatchUiColors(enabled) {
+  document.documentElement.classList.toggle('match-ui-colors', enabled === true);
+}
+
+function applyRoundedCorners(enabled) {
+  const root = document.documentElement;
+  if (enabled === false) {
+    root.style.setProperty('--ui-radius', '0px');
+    root.style.setProperty('--ui-margin', '0px');
+  } else {
+    root.style.removeProperty('--ui-radius');
+    root.style.removeProperty('--ui-margin');
+  }
+}
+
 // ── Date nav ────────────────────────────────────────────────────────────────
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -414,8 +448,8 @@ function buildDateNav(retentionDays) {
   for (let i = 0; i < pillCount; i++) {
     const d   = new Date(now - i * 86400000);
     const key = d.toLocaleDateString('en-CA');
-    if (i === 0) { addBtn(chrome.i18n.getMessage('today')     || 'Today',     key, ''); continue; }
-    if (i === 1) { addBtn(chrome.i18n.getMessage('yesterday') || 'Yesterday', key, ''); continue; }
+    if (i === 0) { addBtn(_ehMsg('today')     || 'Today',     key, ''); continue; }
+    if (i === 1) { addBtn(_ehMsg('yesterday') || 'Yesterday', key, ''); continue; }
     addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
   }
 
@@ -454,7 +488,7 @@ function buildDateNav(retentionDays) {
       _scrollStopTimer = setTimeout(() => {
         _isScrolling = false;
         // Restore the original label — "All" (use i18n if available)
-        allPill.textContent = chrome.i18n.getMessage('all') || 'All';
+        allPill.textContent = _ehMsg('all') || 'All';
       }, 600);
     }, { passive: true });
   })();
@@ -522,6 +556,7 @@ function activateDatePill(key, silent) {
     }
   }
   updateHourPillsState();
+  syncCalActiveDate(key);
   if (!silent) doSearch();
 }
 
@@ -534,19 +569,7 @@ function buildHourNav() {
     b.className    = 'hn-pill';
     b.textContent  = label;
     b.dataset.h    = h === null ? 'all' : h;
-    b.addEventListener('click', () => {
-      if (h === null) {
-        filterHour = null;
-        document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-      } else {
-        filterHour = filterHour === h ? null : h;
-        document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
-        if (filterHour !== null) b.classList.add('active');
-        else document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
-      }
-      doSearch();
-    });
+    b.addEventListener('click', () => setFilterHour(h));
     row.appendChild(b);
     return b;
   }
@@ -559,6 +582,25 @@ function buildHourNav() {
   updateHourPillsState();
 }
 
+// Shared by the old hour-pill row and the calendar-mode hour grid — a single
+// source of truth for `filterHour` so both UIs (only one visible at a time)
+// stay in sync no matter which one triggered the change.
+function setFilterHour(h) {
+  if (h === null) {
+    filterHour = null;
+  } else {
+    filterHour = filterHour === h ? null : h;
+  }
+  document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
+  if (filterHour !== null) {
+    document.querySelector(`.hn-pill[data-h="${filterHour}"]`)?.classList.add('active');
+  } else {
+    document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
+  }
+  updateCalHourGridState();
+  doSearch();
+}
+
 // Enable/disable hour pills based on whether a date filter is active
 function updateHourPillsState() {
   const hasDate = !!filterDate;
@@ -568,6 +610,312 @@ function updateHourPillsState() {
     b.style.cursor  = hasDate ? '' : 'default';
     b.title = hasDate ? '' : 'Select a date first to filter by hour';
   });
+  updateCalHourGridState();
+}
+
+// ══ CALENDAR MODE ═══════════════════════════════════════════════════════════
+// Right-side calendar sidebar, shown instead of the date/hour pill nav when
+// the "UI calendar mode" setting is on and the History panel is active.
+function calMonths() { return window._ehMonthNames(); }
+function calWeekdays() { return window._ehWeekdayInitials(); }
+
+function calDateKey(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function calTodayKey() {
+  const t = new Date();
+  return calDateKey(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+// Calendar-mode hour grid — active/disabled state only (rebuilding the grid
+// itself happens once at init via buildCalHourGrid()).
+function updateCalHourGridState() {
+  const hasDate = !!filterDate;
+  document.querySelectorAll('.cal-hour-cell').forEach(b => {
+    const h = b.dataset.h;
+    const isAll = h === 'all';
+    b.disabled = !isAll && !hasDate;
+    b.classList.toggle('active', isAll ? filterHour === null : Number(h) === filterHour);
+    b.title = (!isAll && !hasDate) ? 'Select a date first to filter by hour' : '';
+  });
+}
+
+// Keeps the widget's notion of "active date" in sync with activateDatePill(),
+// regardless of whether the change came from the old pills, the calendar
+// itself, or programmatically. key === 'all' leaves calActiveDate as-is —
+// scroll-spy takes over from there once results render.
+function syncCalActiveDate(key) {
+  if (key && key !== 'all') {
+    calActiveDate = key;
+    const [y, m] = key.split('-').map(Number);
+    calViewYear = y; calViewMonth = m - 1;
+  }
+  document.getElementById('calAllTimeBtn')?.classList.toggle('active', key === 'all');
+  renderCalendarWidget();
+}
+
+function renderCalendarWidget() {
+  const monthLbl = document.getElementById('calMonthLabel');
+  const yearLbl  = document.getElementById('calYearLabel');
+  if (monthLbl) monthLbl.textContent = calMonths()[calViewMonth];
+  if (yearLbl)  yearLbl.textContent  = String(calViewYear);
+
+  const wdEl = document.getElementById('calWeekdays');
+  if (wdEl && !wdEl.dataset.built) {
+    wdEl.innerHTML = calWeekdays().map(w => `<span>${w}</span>`).join('');
+    wdEl.dataset.built = '1';
+  }
+
+  const daysEl = document.getElementById('calDays');
+  if (!daysEl) return;
+  daysEl.innerHTML = '';
+
+  const firstOfMonth = new Date(calViewYear, calViewMonth, 1);
+  const startOffset  = firstOfMonth.getDay(); // 0=Sun
+  const daysInMonth   = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+  const daysInPrev    = new Date(calViewYear, calViewMonth, 0).getDate();
+  const todayKey = calTodayKey();
+
+  const cells = [];
+  for (let i = startOffset - 1; i >= 0; i--) cells.push({ y: calViewMonth === 0 ? calViewYear - 1 : calViewYear, m: (calViewMonth + 11) % 12, d: daysInPrev - i, outside: true });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ y: calViewYear, m: calViewMonth, d, outside: false });
+  while (cells.length % 7 !== 0) {
+    const last = cells[cells.length - 1];
+    const nd = new Date(last.y, last.m, last.d + 1);
+    cells.push({ y: nd.getFullYear(), m: nd.getMonth(), d: nd.getDate(), outside: true });
+  }
+
+  for (const c of cells) {
+    const key = calDateKey(c.y, c.m, c.d);
+    const btn = document.createElement('button');
+    btn.className = 'cal-day-cell';
+    btn.textContent = c.d;
+    btn.dataset.date = key;
+    if (c.outside) btn.classList.add('outside');
+    if (key === todayKey) btn.classList.add('today');
+    if (key === filterDate) btn.classList.add('selected');
+    else if (!filterDate && key === calActiveDate) btn.classList.add('scroll-highlight');
+    if (key > todayKey) btn.classList.add('future');
+    btn.addEventListener('click', () => {
+      if (key > todayKey) return;
+      calSelectDate(key);
+    });
+    daysEl.appendChild(btn);
+  }
+}
+
+function calSelectDate(key) {
+  closeCalPickers();
+  activateDatePill(key); // handles filterDate, old pills, calendar sync, and doSearch
+}
+
+function calGoAllTime() {
+  closeCalPickers();
+  activateDatePill('all');
+}
+
+function calShiftMonth(delta) {
+  calViewMonth += delta;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderCalendarWidget();
+}
+
+function calShiftDay(delta) {
+  const anchor = filterDate || calActiveDate || calTodayKey();
+  const [y, m, d] = anchor.split('-').map(Number);
+  const nd = new Date(y, m - 1, d + delta);
+  const key = calDateKey(nd.getFullYear(), nd.getMonth(), nd.getDate());
+  if (key > calTodayKey()) return; // don't navigate into the future
+  calSelectDate(key);
+}
+
+function closeCalPickers() {
+  const mp = document.getElementById('calMonthPicker');
+  const yp = document.getElementById('calYearPicker');
+  if (mp) mp.style.display = 'none';
+  if (yp) yp.style.display = 'none';
+}
+
+function calOpenMonthPicker() {
+  const el = document.getElementById('calMonthPicker');
+  const yp = document.getElementById('calYearPicker');
+  if (!el) return;
+  if (yp) yp.style.display = 'none';
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; return; }
+  el.innerHTML = calMonths().map((name, i) =>
+    `<div class="cal-picker-cell${i === calViewMonth ? ' active' : ''}" data-m="${i}">${name.slice(0,3)}</div>`
+  ).join('');
+  el.querySelectorAll('.cal-picker-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calViewMonth = Number(cell.dataset.m);
+      el.style.display = 'none';
+      renderCalendarWidget();
+    });
+  });
+  el.style.display = 'grid';
+}
+
+let _calYearPageStart = null; // top-left year of the currently shown year-picker page
+function calOpenYearPicker() {
+  const el = document.getElementById('calYearPicker');
+  const mp = document.getElementById('calMonthPicker');
+  if (!el) return;
+  if (mp) mp.style.display = 'none';
+  const open = el.style.display !== 'none';
+  if (open) { el.style.display = 'none'; return; }
+  if (_calYearPageStart === null) _calYearPageStart = calViewYear - 4;
+  calRenderYearPicker();
+  el.style.display = 'grid';
+}
+function calRenderYearPicker() {
+  const el = document.getElementById('calYearPicker');
+  if (!el) return;
+  const years = [];
+  for (let i = 0; i < 9; i++) years.push(_calYearPageStart + i);
+  el.innerHTML = `
+    <div class="cal-picker-nav">
+      <button id="calYearPagePrev">‹ ${_calYearPageStart - 9}s</button>
+      <button id="calYearPageNext">${_calYearPageStart + 9}s ›</button>
+    </div>` +
+    years.map(y => `<div class="cal-picker-cell${y === calViewYear ? ' active' : ''}" data-y="${y}">${y}</div>`).join('');
+  el.querySelectorAll('.cal-picker-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      calViewYear = Number(cell.dataset.y);
+      el.style.display = 'none';
+      renderCalendarWidget();
+    });
+  });
+  document.getElementById('calYearPagePrev')?.addEventListener('click', () => { _calYearPageStart -= 9; calRenderYearPicker(); });
+  document.getElementById('calYearPageNext')?.addEventListener('click', () => { _calYearPageStart += 9; calRenderYearPicker(); });
+}
+
+function buildCalHourGrid() {
+  const grid = document.getElementById('calHoursGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cal-hour-cell all-hours active tb-btn';
+  allBtn.textContent = tr('all_hours', 'All hours');
+  allBtn.dataset.h = 'all';
+  allBtn.addEventListener('click', () => setFilterHour(null));
+  grid.appendChild(allBtn);
+  for (let h = 0; h < 24; h++) {
+    const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
+    const b = document.createElement('button');
+    b.className = 'cal-hour-cell tb-btn';
+    b.textContent = lbl;
+    b.dataset.h = h;
+    b.addEventListener('click', () => setFilterHour(h));
+    grid.appendChild(b);
+  }
+  updateCalHourGridState();
+}
+
+// ── Scroll-spy: while browsing "All time", highlight the date of whatever's
+// currently at the top of the visible list, without touching filterDate. ──
+// NOTE: this used to scan every rendered `.entry` row (data-date lives on each
+// entry) to find the one at the top. Since the list is append-only infinite
+// scroll — old rows are never removed from the DOM — that scan grew with
+// however far you'd scrolled, and ran on every animation frame while
+// scrolling, which is what made scrolling feel like it was doing work.
+// `.day-label` headers carry the same date and there are orders of magnitude
+// fewer of them (one per day vs. one per visit), so scan those instead.
+let _calScrollSpyPending = false;
+function calScrollSpyCheck(area) {
+  if (filterDate) return; // only meaningful in All-time mode
+  if (!document.body.classList.contains('cal-sidebar-active')) return;
+  if (_calScrollSpyPending) return;
+  _calScrollSpyPending = true;
+  requestAnimationFrame(() => {
+    _calScrollSpyPending = false;
+    const areaTop = area.getBoundingClientRect().top;
+    const headers = area.querySelectorAll('.day-label[data-date]');
+    let topHeader = null;
+    for (const hdr of headers) {
+      if (hdr.getBoundingClientRect().bottom >= areaTop) { topHeader = hdr; break; }
+    }
+    const key = topHeader?.dataset.date;
+    if (key && key !== calActiveDate) {
+      calActiveDate = key;
+      const [y, m] = key.split('-').map(Number);
+      calViewYear = y; calViewMonth = m - 1;
+      renderCalendarWidget();
+    }
+  });
+}
+
+// ── Settings integration ────────────────────────────────────────────────────
+function applyCalendarMode(enabled) {
+  document.body.classList.toggle('cal-mode', enabled === true);
+  updateCalSidebarVisibility();
+}
+
+function updateCalSidebarVisibility() {
+  const onHistoryPanel = document.getElementById('panel-history')?.classList.contains('active');
+  const active = document.body.classList.contains('cal-mode') && !!onHistoryPanel;
+  document.body.classList.toggle('cal-sidebar-active', active);
+  if (active) { renderCalendarWidget(); updateCalHourGridState(); }
+  checkCalNarrow();
+}
+
+// ── Narrow-viewport auto-hide (< 1000px) ────────────────────────────────────
+function checkCalNarrow() {
+  const narrow = document.body.classList.contains('cal-sidebar-active') && window.innerWidth < 1250;
+  document.body.classList.toggle('cal-narrow', narrow);
+  if (!narrow) document.getElementById('calSidebar')?.classList.remove('cal-revealed');
+}
+
+function wireCalendarSidebar() {
+  document.getElementById('calAllTimeBtn')?.addEventListener('click', calGoAllTime);
+  document.getElementById('calPrevMonthBtn')?.addEventListener('click', () => calShiftMonth(-1));
+  document.getElementById('calNextMonthBtn')?.addEventListener('click', () => calShiftMonth(1));
+  document.getElementById('calMonthLabel')?.addEventListener('click', calOpenMonthPicker);
+  document.getElementById('calYearLabel')?.addEventListener('click', calOpenYearPicker);
+  document.getElementById('calPrevDayBtn')?.addEventListener('click', () => calShiftDay(-1));
+  document.getElementById('calNextDayBtn')?.addEventListener('click', () => calShiftDay(1));
+
+  buildCalHourGrid();
+  renderCalendarWidget();
+
+  // ── Narrow-viewport hover-reveal, suppressed while the extension's own
+  // Chrome side panel (popup.html?sidebar=1) is open — see _extSidebarOpen. ──
+  const sidebar = document.getElementById('calSidebar');
+  const hoverZone = document.getElementById('calHoverZone');
+  let _hideTimer = null;
+  function reveal() {
+    if (_extSidebarOpen) return; // suppressed — don't fight the side panel
+    if (!document.body.classList.contains('cal-narrow')) return;
+    clearTimeout(_hideTimer);
+    sidebar?.classList.add('cal-revealed');
+  }
+  function scheduleHide() {
+    clearTimeout(_hideTimer);
+    _hideTimer = setTimeout(() => sidebar?.classList.remove('cal-revealed'), 350);
+  }
+  hoverZone?.addEventListener('mouseenter', reveal);
+  sidebar?.addEventListener('mouseenter', () => clearTimeout(_hideTimer));
+  sidebar?.addEventListener('mouseleave', scheduleHide);
+  hoverZone?.addEventListener('mouseleave', () => {
+    // Only schedule a hide if the cursor didn't just move onto the sidebar itself.
+    setTimeout(() => { if (!sidebar?.matches(':hover')) scheduleHide(); }, 30);
+  });
+
+  let _resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(checkCalNarrow, 150);
+  });
+
+  // Track the extension's Chrome side panel open/close state (set by popup.js)
+  // so the hover-reveal above never fights it for the same screen edge.
+  try {
+    chrome.storage.local.get('eh_sidebar_open', r => { _extSidebarOpen = r?.eh_sidebar_open === true; });
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.eh_sidebar_open) _extSidebarOpen = changes.eh_sidebar_open.newValue === true;
+    });
+  } catch {}
 }
 
 // ── Toolbar ─────────────────────────────────────────────────────────────────
@@ -595,6 +943,16 @@ function setupToolbar() {
   document.getElementById('searchMode').addEventListener('change', doSearch);
   document.getElementById('dateFrom').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
   document.getElementById('dateTo').addEventListener('change', () => { filterDate = null; updateHourPillsState(); doSearch(); });
+
+  // The input itself has pointer-events:none (see history.css) so it can't be
+  // clicked into and typed over — the wrapper is what's actually clickable,
+  // and just opens the native picker. showPicker() needs a user gesture and
+  // isn't supported on every browser, so fall back to a focused click.
+  const openDatePicker = (input) => {
+    try { input.showPicker(); } catch { input.focus(); }
+  };
+  document.getElementById('dateFromBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateFrom')));
+  document.getElementById('dateToBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateTo')));
 
   // "All time" — clears only date/hour filters, NOT the search text
   document.getElementById('clearFiltersBtn').addEventListener('click', () => {
@@ -643,23 +1001,100 @@ function exitSelMode() {
 }
 
 // ── Delete helpers ────────────────────────────────────────────────────────────
+// Removes one entry from the in-memory list + DOM directly, without a full
+// SEARCH round-trip. Used by deleteSingle() below so a single-row delete
+// doesn't re-fetch (and re-render) the entire result set just to drop one row.
+function removeEntryFromView(id) {
+  const idx = allResults.findIndex(e => e.id === id);
+  if (idx !== -1) allResults.splice(idx, 1);
+  vsRendered = vsRendered.filter(e => e.id !== id);
+  selected.delete(id);
+  updateSelBar();
+
+  const area = listArea();
+  const row = area.querySelector(`.entry[data-id="${CSS.escape(id)}"]`);
+  if (!row) return;
+
+  const date = row.dataset.date;
+  row.remove();
+  vsOffset = Math.max(0, vsOffset - 1); // keep pagination in sync with the shrunk array
+
+  // If that was the last entry for this date, drop the now-empty day header too.
+  if (date && !area.querySelector(`.entry[data-date="${CSS.escape(date)}"]`)) {
+    area.querySelector(`.day-label[data-date="${CSS.escape(date)}"]`)?.remove();
+  }
+
+  if (!allResults.length) {
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
+  }
+}
+
 async function deleteSingle(id) {
+  const entry = allResults.find(e => e.id === id);
+  const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
+
+  // Optimistic UI: drop the row immediately rather than waiting on the
+  // backend + a full re-search, which is what made this feel slow.
+  removeEntryFromView(id);
+
   try {
-    const entry = allResults.find(e => e.id === id);
-    const urls = entry ? [entry.url, entry.rawUrl].filter(Boolean) : [];
     console.log('[EH] deleteSingle:', id, urls);
     const result = await send('DELETE_IDS', { ids: [id], urls });
     console.log('[EH] deleteSingle response:', result);
-    selected.delete(id);
-    // Re-fetch from the backend instead of trusting a local patch — this is the
-    // only way to be sure the list reflects what's actually in storage/Chrome
-    // history after the delete, whatever happened on the backend.
-    await doSearch();
     toast('Deleted', 'ok');
   } catch (err) {
     console.error('[EH] deleteSingle failed:', err);
     toast(err.message || 'Delete failed — see console for details', 'err');
+    // We already removed it optimistically but the backend delete failed —
+    // re-sync with what's actually in storage instead of leaving a stale view.
+    await doSearch();
   }
+}
+
+// Does the actual DELETE_IDS call + urls lookup — shared by deleteIds() and
+// deleteMatching() so both paths delete exactly the ids they were given,
+// nothing derived/re-matched on the backend.
+async function performDelete(ids) {
+  const idSet = new Set(ids);
+  const urls = allResults
+    .filter(e => idSet.has(e.id))
+    .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
+  return send('DELETE_IDS', { ids, urls });
+}
+
+// ══ DELETE PROGRESS BUBBLE ══════════════════════════════════════════════════
+// Bulk deletes (deleteIds / deleteMatching) can take a while — each URL is a
+// separate chrome.history.deleteUrl() call on the backend, batched but not
+// instant for thousands of entries. This gives visible feedback that
+// something is actually happening instead of the UI looking frozen/idle.
+let _deleteBubbleEl = null;
+function showDeleteProgress(msg) {
+  let el = _deleteBubbleEl;
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ehDeleteBubble';
+    el.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:9999;' +
+      'background:var(--surf2,#222);color:var(--text,#eee);border:1px solid var(--border,#444);' +
+      'border-radius:20px;padding:8px 16px;font-size:0.8rem;font-weight:600;' +
+      'box-shadow:0 4px 14px rgba(0,0,0,0.35);display:flex;align-items:center;gap:8px;' +
+      'pointer-events:none;';
+    el.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;' +
+      'background:#e0555a;animation:ehDeletePulse 1s ease-in-out infinite"></span>' +
+      '<span id="ehDeleteBubbleText"></span>';
+    if (!document.getElementById('ehDeletePulseStyle')) {
+      const style = document.createElement('style');
+      style.id = 'ehDeletePulseStyle';
+      style.textContent = '@keyframes ehDeletePulse{0%,100%{opacity:1}50%{opacity:0.35}}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(el);
+    _deleteBubbleEl = el;
+  }
+  document.getElementById('ehDeleteBubbleText').textContent = msg;
+  el.style.display = 'flex';
+}
+function hideDeleteProgress() {
+  if (_deleteBubbleEl) _deleteBubbleEl.style.display = 'none';
 }
 
 async function deleteIds(ids) {
@@ -668,13 +1103,9 @@ async function deleteIds(ids) {
   const ok = confirm(`Delete ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}?`);
   console.log('[EH] confirm() returned:', ok);
   if (!ok) return;
+  showDeleteProgress(`Deleting ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}…`);
   try {
-    const idSet = new Set(ids);
-    const urls = allResults
-      .filter(e => idSet.has(e.id))
-      .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
-    console.log('[EH] sending DELETE_IDS, urls:', urls);
-    const result = await send('DELETE_IDS', { ids, urls });
+    const result = await performDelete(ids);
     console.log('[EH] DELETE_IDS response:', result);
     exitSelMode();
     // Re-fetch from the backend — see note in deleteSingle above.
@@ -684,27 +1115,46 @@ async function deleteIds(ids) {
   } catch (err) {
     console.error('[EH] deleteIds failed:', err);
     toast(err.message || 'Delete failed — see console for details', 'err');
+  } finally {
+    hideDeleteProgress();
   }
 }
 
+// Deletes every entry currently in allResults — i.e. exactly what's on
+// screen after search text + quick filter + date range have all been
+// applied. IMPORTANT: this used to re-derive "what matches" on the backend
+// from the search query/date range alone (DELETE_MATCHING), which had no
+// idea a Quick Filter was active (quick filters are applied client-side,
+// on top of the search results — see applyQuickFilterEntries() in
+// quick-filters.js). With an active quick filter and an empty search box,
+// that backend match was effectively unfiltered and deleted the entire
+// history, even though the confirm dialog (correctly, from allResults.length)
+// said only the filtered count. Deleting the exact ids in allResults instead
+// guarantees the delete always matches what the confirm dialog told you.
 async function deleteMatching() {
   if (!allResults.length) { toast('No results to delete'); return; }
-  const { query, mode, startDate, endDate } = getFilters();
-  
+  const { startDate, endDate } = getFilters();
+
   // Check if "all time" is selected (no date filters)
   const isAllTime = !startDate && !endDate;
   const confirmMsg = isAllTime 
-   ? chrome.i18n.getMessage("confirm_delete_all_time", fmtNum(allResults.length))
-  : chrome.i18n.getMessage("confirm_delete_filtered", fmtNum(allResults.length));
+   ? _ehMsg("confirm_delete_all_time", fmtNum(allResults.length))
+  : _ehMsg("confirm_delete_filtered", fmtNum(allResults.length));
   
   if (!confirm(confirmMsg)) return;
-  
+
+  const ids = allResults.map(e => e.id);
+  showDeleteProgress(`Deleting ${fmtNum(ids.length)} item${ids.length !== 1 ? 's' : ''}…`);
   try {
-    const r = await send('DELETE_MATCHING', { query, mode, startDate, endDate });
+    await performDelete(ids);
     exitSelMode();
     await doSearch();
-    toast(`Deleted ${fmtNum(r.deleted)} items`, 'ok');
-  } catch (err) { toast(err.message, 'err'); }
+    toast(`Deleted ${fmtNum(ids.length)} items`, 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  } finally {
+    hideDeleteProgress();
+  }
 }
 
 // ══ ACTIVITY ════════════════════════════════════════════════════════════════
@@ -720,9 +1170,7 @@ async function loadActivity() {
     <div class="kpi-card"><div class="kpi-label" data-i18n-key="since">Since</div><div class="kpi-val sm">${s.oldestEntry ? new Date(s.oldestEntry).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : '—'}</div></div>
     `;
     // Reapply translations to dynamically added content
-    if (typeof window.applyTranslations === 'function' && window._currentLang) {
-      window.applyTranslations(window._currentLang);
-    }
+    if (typeof window.applyTranslations === 'function') window.applyTranslations();
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
   } catch (err) { console.error(err); }
@@ -1051,16 +1499,20 @@ async function loadSessions() {
       if (!badgeText) {
         const restoreBtn = document.createElement('button');
         restoreBtn.className   = 'tb-btn';
-        restoreBtn.textContent = '↺ ' + (chrome.i18n.getMessage('restore') || 'Restore');
+        restoreBtn.textContent = '↺ ' + (_ehMsg('restore') || 'Restore');
         restoreBtn.setAttribute('data-i18n-key', 'restore');
         restoreBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
         restoreBtn.addEventListener('click', async ev => {
           ev.stopPropagation();
           const urls = tabsArr.filter(t => t.url).map(t => t.url);
-          if (urls.length > 20 && !confirm(`Restore ${urls.length} tabs?`)) return;
+          if (urls.length > 20 && !confirm(tr('confirm_restore_tabs', 'Restore {0} tabs?', urls.length))) return;
           try {
-            await send('RESTORE_SESSION', { tabs: tabsArr });
-            toast(`Restored ${urls.length} tabs`, 'ok');
+            const r = await send('RESTORE_SESSION', { tabs: tabsArr });
+            const n = (r && r.restored != null) ? r.restored : urls.length;
+            const w = (r && r.windows) || 1;
+            toast(w > 1
+              ? tr('restored_tabs_windows', 'Restored {0} tabs in {1} windows', n, w)
+              : tr('restored_tabs_window', 'Restored {0} tabs in a new window', n), 'ok');
           } catch(err) { toast(err.message, 'err'); }
         });
         head.appendChild(restoreBtn); // will be inserted before toggle below
@@ -1118,8 +1570,8 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: chrome.i18n.getMessage("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
-                                      chrome.i18n.getMessage("active"), current.tabs
+        { main: _ehMsg("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+                                      _ehMsg("active"), current.tabs
       ));
     }
     
@@ -1297,17 +1749,6 @@ async function loadDevices() {
 
     el.innerHTML = '';
 
-    // ── Refresh button at top ──
-    const topBar = document.createElement('div');
-    topBar.style.cssText = 'display:flex;justify-content:flex-end;padding:8px 16px 4px';
-    const refreshBtn = document.createElement('button');
-    refreshBtn.className = 'tb-btn';
-    refreshBtn.textContent = '↻ Refresh';
-    refreshBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;';
-    refreshBtn.addEventListener('click', () => loadDevices());
-    topBar.appendChild(refreshBtn);
-    el.appendChild(topBar);
-
     // ── Deduplicate: for same device name keep only the freshest session set ──
     const deviceMap = new Map();
     for (const dev of devices) {
@@ -1386,6 +1827,8 @@ async function loadDevices() {
           const dom = tryDomain(t.url || '');
           const row = document.createElement('div');
           row.className = 'dc-row';
+          row.dataset.title = (t.title || '').toLowerCase();
+          row.dataset.url   = (t.url || '').toLowerCase();
           row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
           const img = document.createElement('img');
@@ -1443,9 +1886,64 @@ async function loadDevices() {
 
       el.appendChild(card);
     });
+
+    filterDeviceRows(document.getElementById('deviceSearchInput')?.value || '');
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
+}
+
+// ── Devices search: filter tabs across all device cards by title or URL ─────
+function filterDeviceRows(rawQuery) {
+  const query = (rawQuery || '').trim().toLowerCase();
+  const cards = document.querySelectorAll('#devicesContent .device-card');
+  cards.forEach(card => {
+    const tabsEl = card.querySelector('.dc-tabs-list');
+    const toggle = card.querySelector('.dc-toggle');
+    if (!tabsEl) return;
+    const rows = tabsEl.querySelectorAll('.dc-row');
+    let anyVisible = false;
+    rows.forEach(row => {
+      const matches = !query || row.dataset.title.includes(query) || row.dataset.url.includes(query);
+      row.style.display = matches ? '' : 'none';
+      if (matches) anyVisible = true;
+    });
+    if (query) {
+      // Auto-expand cards that have a match so results are visible without
+      // needing to click into each device manually; hide cards with none.
+      card.style.display = anyVisible ? '' : 'none';
+      if (anyVisible) {
+        tabsEl.classList.add('open');
+        toggle?.classList.add('open');
+      }
+    } else {
+      // Search cleared — restore normal collapsed browsing behavior.
+      card.style.display = '';
+    }
+  });
+}
+
+let _deviceSearchWired = false;
+function wireDeviceSearch() {
+  if (_deviceSearchWired) return;
+  const input = document.getElementById('deviceSearchInput');
+  const refreshBtn = document.getElementById('devicesRefreshBtn');
+  if (!input && !refreshBtn) return;
+  _deviceSearchWired = true;
+  const clearBtn = document.getElementById('deviceSearchClearBtn');
+  const syncClearBtn = () => clearBtn?.classList.toggle('visible', !!(input && input.value.length));
+  if (input) input.addEventListener('input', () => { syncClearBtn(); filterDeviceRows(input.value); });
+  if (input) input.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && input.value) { ev.preventDefault(); input.value = ''; syncClearBtn(); filterDeviceRows(''); }
+  });
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (!input) return;
+    input.value = '';
+    syncClearBtn();
+    filterDeviceRows('');
+    input.focus();
+  });
+  if (refreshBtn) refreshBtn.addEventListener('click', () => loadDevices());
 }
 
 // ── Export device tabs as .html ──────────────────────────────────────────────
@@ -1520,9 +2018,6 @@ function exportDeviceAsHtml(deviceName, tabs) {
 let _bmTree        = null;   // full Chrome bookmark tree
 let _bmActiveNode  = null;   // currently selected folder node (null = root)
 let _bmItems       = [];     // flat list of bookmark items for current view
-let _bmOffset      = 0;      // pagination offset
-let _bmLoading     = false;  // pagination in-flight guard
-const BM_PAGE      = 80;     // bookmarks per page
 let _bmNodeMap     = new Map(); // id → node, rebuilt whenever tree loads
 let _bmFlat        = [];        // precomputed flat search index — rebuilt with tree
 
@@ -1570,6 +2065,7 @@ async function loadBookmarks() {
   const listPane = document.getElementById('bookmarksContent');
   if (treePane) treePane.innerHTML = '<div class="state-msg" style="padding:20px"><span class="state-msg-icon" style="font-size:20px">⏳</span></div>';
   listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
+  _bmFavCache.clear(); // favicon resolver setting may have changed since last visit
   if (!loadBookmarks._setup) {
     loadBookmarks._setup = true;
 
@@ -1680,113 +2176,154 @@ let _bmSelected = new Set();      // selected bookmark ids
 let _bmFolderDragId = null;       // folder node id being dragged in tree
 let _bmIsSearch = false;          // true when showing search results (show folder label), false = show date
 
-// Render the left folder tree pane
-function renderBmTree() {
+// In-list reorder state — dragging a bookmark up/down within the currently
+// viewed folder, dropping it between two other bookmarks. Set/cleared via
+// window._bmReorderSetDrag/_bmReorderClearDrag, called from the dragstart/
+// dragend handlers in _bmSetupList below.
+let _bmReorderDragId    = null;   // id of the bookmark being reordered, or null if this drag isn't eligible
+let _bmReorderTargetRow = null;   // row currently showing the insertion-line indicator
+let _bmReorderBefore    = true;   // true = indicator/insert above the target row, false = below
+
+// ── Tree drag-and-drop ───────────────────────────────────────────────────────
+// Wired ONCE on the (persistent) pane. renderBmTree() replaces the rows on every
+// render, so nothing here may hold on to row elements across renders. Rows
+// identify themselves via data attributes:
+//   data-root="1"        → the "All Bookmarks" row
+//   data-folder-id=ID    → a folder row (data-has-sub="1" if it has subfolders)
+let _bmLastDropRow = null;   // row currently highlighted as drop target
+let _bmExpandTimer = null;   // pending "hover long enough → expand" timer
+const BM_HOVER_EXPAND_MS = 400;
+
+// undefined = not a drop target, null = "All Bookmarks" root, node = folder
+function _bmTreeRowNode(row) {
+  if (!row) return undefined;
+  if (row.dataset.root) return null;
+  if (row.dataset.folderId !== undefined) return _bmNodeMap.get(row.dataset.folderId) || undefined;
+  return undefined;
+}
+
+function _bmClearDropHighlight() {
+  clearTimeout(_bmExpandTimer);
+  _bmExpandTimer = null;
+  if (_bmLastDropRow) {
+    _bmLastDropRow.classList.remove('bm-drop-target', 'bm-folder-drop-into', 'bm-folder-drop-above', 'bm-folder-drop-below');
+    _bmLastDropRow = null;
+  }
+}
+
+// While a BOOKMARK is dragged over a collapsed folder that has subfolders, open
+// it after a short hover so the user can drop into a nested folder.
+// (Not done for folder drags: re-rendering the tree would remove the row being
+// dragged, and the browser would never fire its dragend.)
+function _bmScheduleHoverExpand(row) {
+  if (!row.dataset.hasSub) return;
+  const node = _bmNodeMap.get(row.dataset.folderId);
+  if (!node || node._expanded) return;
+  _bmExpandTimer = setTimeout(() => {
+    _bmExpandTimer = null;
+    if (!_bmDragId) return;
+    node._expanded = true;
+    renderBmTree();
+  }, BM_HOVER_EXPAND_MS);
+}
+
+function _bmSetupTreeDnD() {
   const pane = document.getElementById('bmTreePane');
   if (!pane) return;
-  pane.innerHTML = '';
 
-  // "All bookmarks" root entry
-  const rootRow = document.createElement('div');
-  rootRow.className = 'bm-tree-row' + (_bmActiveNode === null ? ' active' : '');
-  rootRow.innerHTML = '<span class="bm-tr-icon">📚</span><span class="bm-tr-label">All Bookmarks</span>';
-  rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
-  pane.appendChild(rootRow);
-
-  // ── Delegated drag-and-drop for entire tree pane ──────────────────────────
-  // Using a SINGLE dragover/dragleave/drop listener on the pane instead of one
-  // per row eliminates the per-row overhead that caused lag in large trees.
-  let _lastDropRow = null;
-  const _rowNodeMap = new WeakMap(); // maps DOM row → bookmark node (or null for root)
-
-  function clearDropHighlight() {
-    if (_lastDropRow) {
-      _lastDropRow.classList.remove('bm-drop-target', 'bm-folder-drop-into', 'bm-folder-drop-above', 'bm-folder-drop-below');
-      _lastDropRow = null;
-    }
-  }
-
-  // Attach delegated listeners once on the pane
-  // ev.preventDefault() must be called synchronously (browser requirement for drop to work),
-  // but the highlight DOM update is deferred via rAF so it runs at most once per frame.
-  let _rafPending = false;
-  let _pendingRow = null;
+  // ev.preventDefault() must be called synchronously (browser requirement for drop
+  // to work), but the highlight DOM update is deferred via rAF — at most once per frame.
+  let rafPending = false;
+  let pendingRow = null;
   pane.addEventListener('dragover', ev => {
     if (!_bmDragId && !_bmFolderDragId) return;
     ev.preventDefault();
     ev.dataTransfer.dropEffect = 'move';
-    _pendingRow = ev.target.closest('.bm-tree-row');
-    if (!_rafPending) {
-      _rafPending = true;
-      requestAnimationFrame(() => {
-        _rafPending = false;
-        const row = _pendingRow;
-        if (row && row !== _lastDropRow) {
-          clearDropHighlight();
-          if (_bmFolderDragId) {
-            // Folder-drag: highlight as drop-into target
-            if (row !== document.querySelector('.bm-tree-row.bm-folder-dragging')) {
-              row.classList.add('bm-folder-drop-into');
-              _lastDropRow = row;
-            }
-          } else if (_rowNodeMap.has(row)) {
-            // Bookmark-item drag: existing highlight
-            row.classList.add('bm-drop-target');
-            _lastDropRow = row;
-          }
+    pendingRow = ev.target.closest && ev.target.closest('.bm-tree-row');
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      const row = pendingRow;
+      if (!row || row === _bmLastDropRow) return;
+      _bmClearDropHighlight();
+      if (_bmFolderDragId) {
+        // Folder-drag: highlight as drop-into target
+        if (row !== document.querySelector('.bm-tree-row.bm-folder-dragging')) {
+          row.classList.add('bm-folder-drop-into');
+          _bmLastDropRow = row;
         }
-      });
-    }
+      } else if (_bmTreeRowNode(row) !== undefined) {
+        // Bookmark-item drag
+        row.classList.add('bm-drop-target');
+        _bmLastDropRow = row;
+        _bmScheduleHoverExpand(row);
+      }
+    });
   });
 
   pane.addEventListener('dragleave', ev => {
-    if (_lastDropRow && !pane.contains(ev.relatedTarget)) {
-      clearDropHighlight();
-    } else if (_lastDropRow && ev.target === _lastDropRow && !_lastDropRow.contains(ev.relatedTarget)) {
-      clearDropHighlight();
+    if (!_bmLastDropRow) return;
+    if (!pane.contains(ev.relatedTarget) ||
+        (ev.target === _bmLastDropRow && !_bmLastDropRow.contains(ev.relatedTarget))) {
+      _bmClearDropHighlight();
     }
   });
 
   pane.addEventListener('drop', async ev => {
     ev.preventDefault();
-    const row = ev.target.closest('.bm-tree-row');
-    const targetNode = row ? _rowNodeMap.get(row) : undefined;
-    clearDropHighlight();
+    const row = ev.target.closest && ev.target.closest('.bm-tree-row');
+    const targetNode = _bmTreeRowNode(row);
+    _bmClearDropHighlight();
 
     // ── Folder drag: move folder into target folder ──────────────────────────
     if (_bmFolderDragId) {
       const folderId = _bmFolderDragId;
       _bmFolderDragId = null;
-      if (!row) return; // dropped on no target
-      // Resolve target: use _rowNodeMap if available, or data attribute
-      let parentId;
-      if (targetNode !== undefined) {
-        parentId = targetNode ? targetNode.id : '1'; // null targetNode = root
-      } else {
-        // targetNode not in map (could be root row)
-        parentId = row.dataset.folderId || '1';
-      }
+      if (targetNode === undefined) return; // dropped on no target
+      const parentId = targetNode ? targetNode.id : '1'; // null targetNode = root
       if (parentId === folderId) return; // can't move into itself
       const r = await send('MOVE_BOOKMARK', { id: folderId, parentId });
       if (r?.error) toast(r.error, 'err');
-      else { toast('Folder moved', 'ok'); await reloadBookmarksKeepState(); }
+      else {
+        toast('Folder moved', 'ok');
+        if (targetNode) targetNode._expanded = true; // show what just landed inside it
+        await reloadBookmarksKeepState();
+      }
       return;
     }
 
-    // ── Bookmark-item drag: existing logic ───────────────────────────────────
+    // ── Bookmark-item drag ───────────────────────────────────────────────────
     if (!_bmDragId || targetNode === undefined) return;
     const dragId = _bmDragId;
     _bmDragId = null;
     const parentId = targetNode ? targetNode.id : '1';
     const r = await send('MOVE_BOOKMARK', { id: dragId, parentId });
     if (r?.error) toast(r.error, 'err');
-    else { toast('Bookmark moved', 'ok'); await reloadBookmarksKeepState(); }
+    else {
+      toast('Bookmark moved', 'ok');
+      if (targetNode) targetNode._expanded = true; // open the folder it was dropped into
+      await reloadBookmarksKeepState();
+    }
   });
+}
+_bmSetupTreeDnD();
 
-  // Register a row as a drop target (just records it in the map)
-  function makeDropTarget(row, targetNode) {
-    _rowNodeMap.set(row, targetNode);
-  }
+// Render the left folder tree pane
+function renderBmTree() {
+  const pane = document.getElementById('bmTreePane');
+  if (!pane) return;
+  const prevScroll = pane.scrollTop; // rebuilding rows would otherwise jump the tree to the top
+  _bmClearDropHighlight();           // rows are about to be replaced
+  pane.innerHTML = '';
+
+  // "All bookmarks" root entry
+  const rootRow = document.createElement('div');
+  rootRow.className = 'bm-tree-row' + (_bmActiveNode === null ? ' active' : '');
+  rootRow.dataset.root = '1';
+  rootRow.innerHTML = '<span class="bm-tr-icon">📚</span><span class="bm-tr-label">All Bookmarks</span>';
+  rootRow.addEventListener('click', () => { _bmActiveNode = null; renderBmTree(); renderBmItems(null); });
+  pane.appendChild(rootRow);
 
   // Folder right-click context menu
   function addFolderCtx(row, n) {
@@ -1795,8 +2332,6 @@ function renderBmTree() {
       showBmFolderCtxMenu(ev.clientX, ev.clientY, n);
     });
   }
-
-  makeDropTarget(rootRow, null);
 
   // Render folder nodes recursively
   function walkFolders(nodes, depth) {
@@ -1847,12 +2382,10 @@ function renderBmTree() {
       // Right-click = folder context menu
       addFolderCtx(row, n);
 
-      // Drop target (for bookmark items dragged from right pane)
-      makeDropTarget(row, n);
-
       // ── Folder drag-and-drop (move folder into another folder) ──────────────
       row.draggable = true;
       row.dataset.folderId = n.id;
+      row.dataset.hasSub = hasSubFolders ? '1' : '';
 
       row.addEventListener('dragstart', ev => {
         // Don't interfere with bookmark-item drags
@@ -1860,18 +2393,13 @@ function renderBmTree() {
         _bmFolderDragId = n.id;
         ev.dataTransfer.effectAllowed = 'move';
         ev.dataTransfer.setData('text/plain', 'folder:' + n.id);
-        setTimeout(() => {
-          row.classList.add('bm-folder-dragging');
-          // Canvas snapshot of the bookmarks list (right pane) — same as bookmark-item drag
-          _bmSnapshotCanvas(document.getElementById('bookmarksContent'));
-        }, 0);
+        setTimeout(() => { row.classList.add('bm-folder-dragging'); }, 0);
       });
 
       row.addEventListener('dragend', () => {
         _bmFolderDragId = null;
         document.querySelectorAll('.bm-folder-dragging,.bm-folder-drop-into,.bm-folder-drop-above,.bm-folder-drop-below')
           .forEach(el => el.classList.remove('bm-folder-dragging','bm-folder-drop-into','bm-folder-drop-above','bm-folder-drop-below'));
-        _bmTeardownCanvas(document.getElementById('bookmarksContent'));
       });
       // ────────────────────────────────────────────────────────────────────────
 
@@ -1884,6 +2412,7 @@ function renderBmTree() {
   }
 
   walkFolders(bmRootChildren(), 0);
+  pane.scrollTop = prevScroll;
 }
 
 // ── Folder context menu ───────────────────────────────────────────────────────
@@ -1963,77 +2492,6 @@ document.addEventListener('click', async ev => {
   }
 });
 // ── Bookmark multiselect helpers ─────────────────────────────────────────────
-function _bmSnapshotCanvas(itemsPane) {
-  if (itemsPane._dragCanvas) return; // already live
-  const W = itemsPane.clientWidth, H = itemsPane.clientHeight;
-  const dpr = devicePixelRatio || 1;
-  const canvas = document.createElement('canvas');
-  canvas.width  = W * dpr; canvas.height = H * dpr;
-  canvas.style.cssText = `position:absolute;inset:0;width:${W}px;height:${H}px;pointer-events:none;z-index:222;display:block`;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const cs      = getComputedStyle(document.documentElement);
-  const bgColor = cs.getPropertyValue('--surf0').trim()  || '#18181f';
-  const textCol = cs.getPropertyValue('--text').trim()   || '#f0eee8';
-  const sepCol  = cs.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
-  const text3   = cs.getPropertyValue('--text3').trim()  || '#5a5870';
-  const accentC = cs.getPropertyValue('--accent').trim() || '#3b9eff';
-  ctx.fillStyle = bgColor; ctx.fillRect(0, 0, W, H);
-  const scrollTop = itemsPane.scrollTop;
-  const paneRect  = itemsPane.getBoundingClientRect();
-  const rows = Array.from(itemsPane.querySelectorAll('.bm-item'));
-  ctx.font = `13px system-ui,-apple-system,'Segoe UI',sans-serif`;
-  ctx.textBaseline = 'middle';
-  rows.forEach(r => {
-    const rRect = r.getBoundingClientRect();
-    const y = rRect.top - paneRect.top;
-    const rowH = rRect.height || 34;
-    if (y + rowH < 0 || y > H) return;
-    const isChecked = r.classList.contains('bm-checked');
-    ctx.fillStyle = isChecked ? `color-mix(in srgb, ${accentC} 8%, ${bgColor})` : bgColor;
-    ctx.fillRect(0, y, W, rowH);
-    // checkbox circle
-    if (_bmSelMode) {
-      ctx.beginPath(); ctx.arc(22, y + rowH / 2, 7, 0, Math.PI * 2);
-      if (isChecked) { ctx.fillStyle = accentC; ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.fillText('✓', 18, y + rowH / 2 + 1); ctx.font = `13px system-ui,-apple-system,'Segoe UI',sans-serif`; }
-      else { ctx.strokeStyle = text3; ctx.lineWidth = 1.5; ctx.stroke(); }
-    }
-    const favX = _bmSelMode ? 38 : 32;
-    const img = r.querySelector('img');
-    if (img && img.complete && img.naturalWidth > 0) {
-      try { ctx.globalAlpha = 0.8; ctx.drawImage(img, favX, y + (rowH - 15) / 2, 15, 15); ctx.globalAlpha = 1; } catch {}
-    } else {
-      ctx.fillStyle = text3; ctx.beginPath(); ctx.arc(favX + 7, y + rowH / 2, 5, 0, Math.PI * 2); ctx.fill();
-    }
-    const titleEl = r.querySelector('.bm-title');
-    if (titleEl) { ctx.fillStyle = textCol; ctx.fillText(titleEl.textContent, favX + 22, y + rowH / 2, W - favX - 30); }
-    ctx.fillStyle = sepCol; ctx.fillRect(0, y + rowH - 1, W, 1);
-  });
-  itemsPane.style.position = 'relative';
-  itemsPane._dragScrollTop = scrollTop;
-  // Zero the spacer height before moving to fragment — avoids phantom empty
-  // space being restored on dragend (spacer height is stale after full render)
-  const spacer = itemsPane.querySelector('.bm-spacer');
-  if (spacer) spacer.style.height = '0';
-  const frag = document.createDocumentFragment();
-  while (itemsPane.firstChild) frag.appendChild(itemsPane.firstChild);
-  itemsPane._dragFragment = frag;
-  itemsPane._dragCanvas   = canvas;
-  itemsPane.appendChild(canvas);
-}
-
-function _bmTeardownCanvas(itemsPane) {
-  if (!itemsPane || !itemsPane._dragCanvas) return;
-  itemsPane._dragCanvas.remove();
-  itemsPane._dragCanvas = null;
-  const savedScroll = itemsPane._dragScrollTop || 0;
-  itemsPane.appendChild(itemsPane._dragFragment);
-  itemsPane._dragFragment = null;
-  itemsPane._dragScrollTop = null;
-  itemsPane.style.position = '';
-  itemsPane.scrollTop = savedScroll;
-}
-
 function _updateBmSelBar() {
   const bar     = document.getElementById('bmSelBar');
   const toolbar = document.getElementById('bmToolbar');
@@ -2069,19 +2527,36 @@ function _exitBmSelMode() {
 function _toggleBmItem(id, row) {
   if (_bmSelected.has(id)) { _bmSelected.delete(id); row.classList.remove('bm-checked'); }
   else { _bmSelected.add(id); row.classList.add('bm-checked'); }
-  if (_bmSelected.size === 0) _exitBmSelMode();
-  else _updateBmSelBar();
+  _updateBmSelBar();
 }
 
-// Build a single bookmark row DOM element (shared by both render paths)
+// ── Bookmark list (virtualized) ──────────────────────────────────────────────
+// The whole bookmark list lives in memory as plain objects (_bmItems). Only the
+// rows in/near the viewport are ever real DOM nodes (~40-60), no matter whether
+// there are 200 bookmarks or 20,000. Rows are absolutely positioned inside a
+// "sizer" div whose height = rowCount × rowHeight, so the scrollbar behaves as
+// if every row existed. All row interaction (click / right-click / drag) is
+// handled by ONE delegated listener per event on the pane instead of 4-6
+// listeners per row.
+//
+// One shared formatter: toLocaleDateString(locale, options) builds a new Intl
+// formatter on every call, which is costly across thousands of rows.
+const _bmDateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+const _bmFavCache = new Map();   // domain → resolved favicon src (avoids re-asking the background on every re-scroll)
+const BM_BUFFER   = 10;          // extra rows rendered above/below the viewport
+let _bmRowH       = 38;          // measured row height in px (all rows are the same height)
+let _bmNeedMeasure = false;      // true if the list was built while the panel was hidden
+let _bmSizer      = null;        // the tall positioning container inside #bookmarksContent
+const _bmVRows    = new Map();   // item index → live row element
+let _bmVRaf       = 0;
+
+// Build a single bookmark row DOM element (no listeners — see _bmSetupList)
 function _buildBmRow(n) {
   const dom = tryDomain(n.url || '');
   const row = document.createElement('div');
-  row.className = 'bm-item';
-  row.dataset.url = n.url;
+  row.className = _bmSelected.has(n.id) ? 'bm-item bm-checked' : 'bm-item';
   row.dataset.bmId = n.id;
   row.draggable = true;
-  row.style.userSelect = 'none';
 
   const check = document.createElement('span');
   check.className = 'bm-item-check';
@@ -2094,7 +2569,15 @@ function _buildBmRow(n) {
 
   const fav = document.createElement('img');
   fav.className = 'bm-fav';
-  setFavicon(fav, dom);
+  const cachedSrc = _bmFavCache.get(dom);
+  if (cachedSrc) {
+    fav.src = cachedSrc;
+  } else {
+    setFavicon(fav, dom);
+    fav.addEventListener('load', () => {
+      if (dom && fav.src && !_bmFavCache.has(dom)) _bmFavCache.set(dom, fav.src);
+    }, { once: true });
+  }
   fav.loading = 'lazy';
   fav.addEventListener('error', function(){ this.style.opacity='0'; });
 
@@ -2105,149 +2588,267 @@ function _buildBmRow(n) {
   // Secondary label — folder name during search, date added otherwise
   const folderLabel = document.createElement('span');
   folderLabel.className = 'bm-folder-label';
+  let labelText = '';
   if (_bmIsSearch) {
     // Show parent folder name (skip top-level Chrome root folders)
     const parentNode = n.parentId ? _bmNodeMap.get(n.parentId) : null;
     const isTopLevelRoot = !parentNode || parentNode.parentId === '0' || !parentNode.parentId;
-    const folderName = (!isTopLevelRoot && parentNode) ? (parentNode.title || '') : '';
-    folderLabel.textContent = folderName;
-    folderLabel.style.display = folderName ? '' : 'none';
-  } else {
-    // Show date added
-    const dateText = n.dateAdded
-      ? new Date(n.dateAdded).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-      : '';
-    folderLabel.textContent = dateText;
-    folderLabel.style.display = dateText ? '' : 'none';
+    labelText = (!isTopLevelRoot && parentNode) ? (parentNode.title || '') : '';
+  } else if (n.dateAdded) {
+    labelText = _bmDateFmt.format(new Date(n.dateAdded));
   }
+  folderLabel.textContent = labelText;
+  folderLabel.style.display = labelText ? '' : 'none';
 
   row.appendChild(check);
   row.appendChild(handle);
   row.appendChild(fav);
   row.appendChild(title);
   row.appendChild(folderLabel);
-
-  // Long-press (150ms) enters selection mode. If the user starts dragging before
-  // the timer fires, the drag takes priority and selection mode is NOT entered.
-  let _lpTimer = null;
-  let _lpDragging = false;
-  let _lpJustSelected = false; // swallow the click that fires right after long-press
-  let _lpStartX = 0, _lpStartY = 0;
-  row.addEventListener('pointerdown', ev => {
-    if (ev.button !== 0) return;
-    _lpDragging = false;
-    _lpJustSelected = false;
-    _lpStartX = ev.clientX; _lpStartY = ev.clientY;
-    _lpTimer = setTimeout(() => {
-      _lpTimer = null;
-      if (_lpDragging) return;
-      _lpJustSelected = true;
-      if (!_bmSelMode) _enterBmSelMode(n.id);
-      else _toggleBmItem(n.id, row);
-      row.classList.toggle('bm-checked', _bmSelected.has(n.id));
-    }, 150);
-  });
-  row.addEventListener('pointermove', ev => {
-    // Only cancel if moved more than 5px (avoids cancelling on tiny jitter)
-    if (_lpTimer) {
-      const dx = ev.clientX - _lpStartX, dy = ev.clientY - _lpStartY;
-      if (dx * dx + dy * dy > 25) { clearTimeout(_lpTimer); _lpTimer = null; }
-    }
-  });
-  row.addEventListener('pointerup',    () => { clearTimeout(_lpTimer); _lpTimer = null; });
-  row.addEventListener('pointercancel',() => { clearTimeout(_lpTimer); _lpTimer = null; _lpJustSelected = false; });
-
-  // Click: select if in sel mode, else open
-  row.addEventListener('click', ev => {
-    if (_lpJustSelected) { _lpJustSelected = false; return; } // swallow post-long-press click
-    if (_bmSelMode) {
-      ev.preventDefault();
-      _toggleBmItem(n.id, row);
-      row.classList.toggle('bm-checked', _bmSelected.has(n.id));
-    } else {
-      // Open in background tab — keep focus on extension page
-      chrome.tabs.create({ url: n.url, active: false });
-    }
-  });
-
-  row.addEventListener('contextmenu', ev => {
-    ev.preventDefault(); ev.stopPropagation();
-    if (_bmSelMode) return; // suppress ctx menu in sel mode
-    showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
-  });
-
-  // Drag-to-folder (only when NOT in sel mode)
-  row.addEventListener('dragstart', ev => {
-    if (_bmSelMode) { ev.preventDefault(); return; }
-    // Cancel any pending long-press — user is dragging, not holding to select
-    _lpDragging = true;
-    if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
-    _bmDragId = n.id;
-    window._bmReorderSetDrag && window._bmReorderSetDrag(n.id);
-    ev.dataTransfer.effectAllowed = 'move';
-    ev.dataTransfer.setData('text/plain', n.id);
-    setTimeout(() => {
-      row.classList.add('bm-dragging');
-      document.getElementById('panel-bookmarks')?.classList.add('bm-dragging-active');
-      _bmSnapshotCanvas(document.getElementById('bookmarksContent'));
-    }, 0);
-  });
-  row.addEventListener('dragend', () => {
-    row.classList.remove('bm-dragging');
-    _bmDragId = null;
-    window._bmReorderClearDrag && window._bmReorderClearDrag();
-    document.getElementById('panel-bookmarks')?.classList.remove('bm-dragging-active');
-    document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
-    _bmTeardownCanvas(document.getElementById('bookmarksContent'));
-  });
-
   return row;
 }
 
-// Append next batch of _bmItems — called repeatedly via setTimeout until done
-function _bmAppendPage() {
-  if (_bmOffset >= _bmItems.length) return;
-  const pane = document.getElementById('bookmarksContent');
-  if (!pane) return;
-  const slice = _bmItems.slice(_bmOffset, _bmOffset + BM_PAGE);
-  const frag = document.createDocumentFragment();
-  for (const n of slice) frag.appendChild(_buildBmRow(n));
-  // Insert before spacer so total scrollHeight stays stable
-  const spacer = pane.querySelector('.bm-spacer');
-  if (spacer) pane.insertBefore(frag, spacer);
-  else pane.appendChild(frag);
-  _bmOffset += slice.length;
-  // Shrink spacer to match remaining unrendered rows
-  if (spacer) spacer.style.height = Math.max(0, (_bmItems.length - _bmOffset) * 34) + 'px';
-  // Schedule next batch if more remain
-  if (_bmOffset < _bmItems.length) setTimeout(_bmAppendPage, 0);
+// Measure the real rendered row height (depends on the user's font-size setting).
+// Returns 0 if it can't be measured (e.g. panel currently display:none).
+function _bmMeasureRowH(sample) {
+  if (!_bmSizer) return 0;
+  const row = _buildBmRow(sample);
+  row.style.visibility = 'hidden';
+  _bmSizer.appendChild(row);
+  const h = Math.ceil(row.getBoundingClientRect().height);
+  row.remove();
+  return h;
 }
 
-function _bmInitList(items) {
+function _bmVRender() {
+  _bmVRaf = 0;
+  const pane = document.getElementById('bookmarksContent');
+  const total = _bmItems.length;
+  if (!pane || !_bmSizer || !_bmSizer.isConnected || !total) return;
+
+  // List was built while the panel was hidden → measure now that it is visible
+  if (_bmNeedMeasure && pane.clientHeight > 0) {
+    const h = _bmMeasureRowH(_bmItems[0]);
+    if (h) {
+      _bmRowH = h;
+      _bmNeedMeasure = false;
+      _bmSizer.style.height = (total * _bmRowH) + 'px';
+      for (const row of _bmVRows.values()) row.remove();
+      _bmVRows.clear();
+    }
+  }
+
+  const top   = pane.scrollTop;
+  const view  = pane.clientHeight || 600;
+  const first = Math.max(0, Math.floor(top / _bmRowH) - BM_BUFFER);
+  const last  = Math.min(total - 1, Math.ceil((top + view) / _bmRowH) + BM_BUFFER);
+
+  // Drop rows that scrolled far out of view (never the one being dragged —
+  // removing a drag source mid-drag would swallow its dragend event)
+  for (const [i, row] of _bmVRows) {
+    if ((i < first || i > last) && row.dataset.bmId !== _bmDragId) {
+      row.remove();
+      _bmVRows.delete(i);
+    }
+  }
+
+  // Add rows that just came into range
+  const frag = document.createDocumentFragment();
+  for (let i = first; i <= last; i++) {
+    if (_bmVRows.has(i)) continue;
+    const row = _buildBmRow(_bmItems[i]);
+    row.style.top    = (i * _bmRowH) + 'px';
+    row.style.height = _bmRowH + 'px';
+    _bmVRows.set(i, row);
+    frag.appendChild(row);
+  }
+  if (frag.firstChild) _bmSizer.appendChild(frag);
+}
+
+function _bmVSchedule() {
+  if (!_bmVRaf) _bmVRaf = requestAnimationFrame(_bmVRender);
+}
+
+function _bmInitList(items, emptyMsg) {
   // Exit select mode when navigating to a different folder
   if (_bmSelMode) _exitBmSelMode();
   const pane = document.getElementById('bookmarksContent');
   pane.innerHTML = '';
-  pane.onscroll = null;
   pane.scrollTop = 0;
   _bmItems = items;
-  _bmOffset = 0;
+  _bmVRows.clear();
+  _bmSizer = null;
 
   if (!items.length) {
-    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No bookmarks here</div>';
+    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>' + (emptyMsg || 'No bookmarks here') + '</div>';
     return;
   }
 
-  // Pre-size with a spacer so scrollbar thumb stays constant during batch rendering
-  const spacer = document.createElement('div');
-  spacer.className = 'bm-spacer';
-  spacer.style.height = (items.length * 34) + 'px';
-  spacer.style.pointerEvents = 'none';
-  pane.appendChild(spacer);
+  _bmSizer = document.createElement('div');
+  _bmSizer.className = 'bm-vsizer';
+  pane.appendChild(_bmSizer);
 
-  // Render first batch immediately, rest async
-  _bmAppendPage();
+  const h = _bmMeasureRowH(items[0]);
+  _bmNeedMeasure = !h;
+  if (h) _bmRowH = h;
+  _bmSizer.style.height = (items.length * _bmRowH) + 'px';
+  _bmVRender();
 }
+
+// One-time wiring: scroll/resize + delegated row interaction
+function _bmSetupList() {
+  const pane = document.getElementById('bookmarksContent');
+  if (!pane) return;
+
+  pane.addEventListener('scroll', _bmVSchedule, { passive: true });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(_bmVSchedule).observe(pane);
+
+  // Click: toggle in selection mode, otherwise open in a background tab
+  pane.addEventListener('click', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    const id = row.dataset.bmId;
+    if (_bmSelMode) {
+      ev.preventDefault();
+      _toggleBmItem(id, row);
+      return;
+    }
+    const n = _bmNodeMap.get(id);
+    // Open in background tab — keep focus on extension page
+    if (n && n.url) chrome.tabs.create({ url: n.url, active: false });
+  });
+
+  pane.addEventListener('contextmenu', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (_bmSelMode) return; // suppress ctx menu in sel mode
+    const n = _bmNodeMap.get(row.dataset.bmId);
+    if (n) showCtxMenu(ev.clientX, ev.clientY, { url: n.url, title: n.title, bmId: n.id });
+  });
+
+  // Drag-to-folder (only when NOT in sel mode)
+  pane.addEventListener('dragstart', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row) return;
+    if (_bmSelMode) { ev.preventDefault(); return; }
+    const id = row.dataset.bmId;
+    _bmDragId = id;
+    window._bmReorderSetDrag && window._bmReorderSetDrag(id);
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', id);
+    setTimeout(() => {
+      row.classList.add('bm-dragging');
+      document.getElementById('panel-bookmarks')?.classList.add('bm-dragging-active');
+    }, 0);
+  });
+
+  pane.addEventListener('dragend', ev => {
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (row) row.classList.remove('bm-dragging');
+    _bmDragId = null;
+    window._bmReorderClearDrag && window._bmReorderClearDrag();
+    document.getElementById('panel-bookmarks')?.classList.remove('bm-dragging-active');
+    document.querySelectorAll('.bm-drop-target').forEach(el => el.classList.remove('bm-drop-target'));
+    _bmVSchedule(); // release the pinned drag row if it is now off-screen
+  });
+}
+_bmSetupList();
+
+// ── In-list reordering ───────────────────────────────────────────────────────
+// Only meaningful when viewing a single folder's own contents in their real
+// sibling order: "All Bookmarks" flattens every folder into one list, and
+// search results are ranked by match, so neither has a single per-folder
+// order to write back to via chrome.bookmarks.move.
+function _bmReorderEligible() {
+  return !!_bmActiveNode && !_bmIsSearch;
+}
+
+// Called from _bmSetupList's dragstart/dragend above.
+window._bmReorderSetDrag = function (id) {
+  _bmReorderDragId = _bmReorderEligible() ? id : null;
+};
+window._bmReorderClearDrag = function () {
+  _bmReorderDragId = null;
+  _bmClearReorderHighlight();
+};
+
+function _bmClearReorderHighlight() {
+  if (_bmReorderTargetRow) {
+    _bmReorderTargetRow.classList.remove('bm-reorder-above', 'bm-reorder-below');
+    _bmReorderTargetRow = null;
+  }
+}
+
+function _bmSetupReorderDnD() {
+  const pane = document.getElementById('bookmarksContent');
+  if (!pane) return;
+
+  pane.addEventListener('dragover', ev => {
+    if (!_bmReorderDragId) return;
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row || row.dataset.bmId === _bmReorderDragId) { _bmClearReorderHighlight(); return; }
+    ev.preventDefault(); // allow drop
+    ev.dataTransfer.dropEffect = 'move';
+    // Which side of the hovered row to insert on is based on drag direction,
+    // not cursor position within the row: hovering any row that started
+    // below the dragged item inserts after it, any row that started above
+    // inserts before it. (Splitting each row into a top/bottom drop zone by
+    // cursor Y seems more precise, but it means the cursor has to cross a
+    // row's exact midpoint to register a move — dragging down by one row's
+    // height only reaches the top half of the next row, which computes back
+    // to the item's own original slot, so a single-row drag down silently
+    // does nothing. Direction-based zones give one row of travel = one slot
+    // of movement in both directions, with no dead zone.)
+    const targetNode = _bmNodeMap.get(row.dataset.bmId);
+    const dragNode    = _bmNodeMap.get(_bmReorderDragId);
+    const before = !(targetNode && dragNode && targetNode.index > dragNode.index);
+    if (row !== _bmReorderTargetRow || before !== _bmReorderBefore) {
+      _bmClearReorderHighlight();
+      row.classList.add(before ? 'bm-reorder-above' : 'bm-reorder-below');
+      _bmReorderTargetRow = row;
+      _bmReorderBefore    = before;
+    }
+  });
+
+  pane.addEventListener('dragleave', ev => {
+    if (!_bmReorderTargetRow) return;
+    if (!pane.contains(ev.relatedTarget)) _bmClearReorderHighlight();
+  });
+
+  pane.addEventListener('drop', async ev => {
+    if (!_bmReorderDragId) return;
+    const dragId = _bmReorderDragId;
+    const before = _bmReorderBefore;
+    const row    = ev.target.closest && ev.target.closest('.bm-item');
+    _bmReorderDragId = null;
+    _bmClearReorderHighlight();
+    if (!row || row.dataset.bmId === dragId) return;
+    ev.preventDefault();
+
+    const targetNode = _bmNodeMap.get(row.dataset.bmId);
+    const dragNode    = _bmNodeMap.get(dragId);
+    if (!targetNode || !dragNode || targetNode.parentId !== dragNode.parentId) return;
+
+    // Desired final position, computed directly against the real sibling
+    // list (bookmarks AND subfolders — Chrome indexes both together, even
+    // though subfolders never show up as rows in this list) with the
+    // dragged item removed. This is the actual ground truth for where the
+    // item should end up; background.js's MOVE_BOOKMARK handler verifies
+    // the real result against it and self-corrects if needed, rather than
+    // us trying to pre-guess Chrome's internal index adjustment here.
+    const parent  = _bmNodeMap.get(targetNode.parentId);
+    const others  = (parent?.children || []).filter(n => n.id !== dragId);
+    const targetPos = others.findIndex(n => n.id === targetNode.id);
+    if (targetPos === -1) return;
+    const index = targetPos + (before ? 0 : 1);
+
+    const r = await send('MOVE_BOOKMARK', { id: dragId, parentId: targetNode.parentId, index });
+    if (r?.error) { toast(r.error, 'err'); return; }
+    await reloadBookmarksKeepState(false); // false = keep scroll position
+  });
+}
+_bmSetupReorderDnD();
 
 // Render the right bookmark list for a folder node (null = show all)
 function renderBmItems(folderNode) {
@@ -2280,29 +2881,53 @@ function renderBookmarksWithFilter(query) {
     words.every(w => _title.includes(w) || _url.includes(w) || _folder.includes(w))
   ).map(e => e.node);
 
-  const pane = document.getElementById('bookmarksContent');
-  if (!results.length) {
-    _bmItems  = [];
-    _bmOffset = 0;
-    _bmIsSearch = true;
-    pane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>No matching bookmarks</div>';
-    return;
-  }
-
   _bmIsSearch = true;
-
-  // Render synchronously — search result sets are small, no need for batched pagination
-  if (_bmSelMode) _exitBmSelMode();
-  _bmItems  = results;
-  _bmOffset = results.length;
-  pane.onscroll  = null;
-  pane.scrollTop = 0;
-
-  const frag = document.createDocumentFragment();
-  for (const n of results) frag.appendChild(_buildBmRow(n));
-  pane.innerHTML = '';
-  pane.appendChild(frag);
+  _bmInitList(results, 'No matching bookmarks');
 }
+// ── Resizable folder pane ────────────────────────────────────────────────────
+// Drag the thin handle between the folder tree and the bookmark list. The width
+// is remembered; double-click the handle to reset it.
+(function setupBmResizer() {
+  const split  = document.querySelector('#panel-bookmarks .bm-split');
+  const handle = document.getElementById('bmResizer');
+  if (!split || !handle) return;
+  const KEY = 'eh_bm_tree_w', DEF = 220, MIN = 160, MIN_LIST = 240;
+  const apply = w => split.style.setProperty('--bm-tree-w', w + 'px');
+
+  let saved = DEF;
+  try { const v = parseInt(localStorage.getItem(KEY), 10); if (v >= MIN) saved = v; } catch {}
+  apply(saved);
+
+  let startX = 0, startW = 0, curW = saved;
+  handle.addEventListener('pointerdown', ev => {
+    if (ev.button !== 0) return;
+    startX = ev.clientX;
+    startW = curW = split.querySelector('.bm-tree-pane').getBoundingClientRect().width;
+    handle.setPointerCapture(ev.pointerId);
+    handle.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    ev.preventDefault();
+  });
+  handle.addEventListener('pointermove', ev => {
+    if (!handle.classList.contains('dragging')) return;
+    const max = Math.max(MIN, split.clientWidth - MIN_LIST);
+    curW = Math.max(MIN, Math.min(startW + (ev.clientX - startX), max));
+    apply(curW);
+  });
+  const end = () => {
+    if (!handle.classList.contains('dragging')) return;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    try { localStorage.setItem(KEY, String(Math.round(curW))); } catch {}
+  };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('dblclick', () => {
+    curW = DEF; apply(DEF);
+    try { localStorage.removeItem(KEY); } catch {}
+  });
+})();
+
 // ── Bookmark multiselect bar buttons ────────────────────────────────────────
 document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
   if (_bmSelMode) _exitBmSelMode();
@@ -2311,24 +2936,29 @@ document.getElementById('bmSelModeBtn')?.addEventListener('click', () => {
 
 document.getElementById('bmSelCancelBtn')?.addEventListener('click', () => _exitBmSelMode());
 
-document.getElementById('bmSelCopyBtn')?.addEventListener('click', async () => {
-  if (!_bmSelected.size) return;
-  // Collect URLs preserving order from _bmItems (covers both rendered and virtual-scroll items)
+// Selected bookmark URLs, in on-screen order. Reads from _bmItems (the full
+// list), not the DOM, since only a window of rows is rendered at any time.
+function _bmSelectedUrls() {
   const urls = [];
-  const seen = new Set();
   for (const item of _bmItems) {
-    if (_bmSelected.has(item.id) && item.url && !seen.has(item.id)) {
-      urls.push(item.url);
-      seen.add(item.id);
-    }
+    if (_bmSelected.has(item.id) && item.url) urls.push(item.url);
   }
-  // Fallback: pick up any rendered rows whose IDs weren't in _bmItems
-  document.querySelectorAll('#bookmarksContent .bm-item').forEach(r => {
-    if (_bmSelected.has(r.dataset.bmId) && r.dataset.url && !seen.has(r.dataset.bmId)) {
-      urls.push(r.dataset.url);
-      seen.add(r.dataset.bmId);
-    }
-  });
+  return urls;
+}
+
+document.getElementById('bmSelOpenBtn')?.addEventListener('click', () => {
+  const urls = _bmSelectedUrls();
+  if (!urls.length) return;
+  if (urls.length > 15 && !confirm(`Open ${urls.length} bookmarks in new tabs?`)) return;
+  // Background tabs, same as a normal click — keeps focus on this page
+  for (const url of urls) chrome.tabs.create({ url, active: false });
+  toast(`Opened ${urls.length} tab${urls.length === 1 ? '' : 's'}`, 'ok');
+  _exitBmSelMode();
+});
+
+document.getElementById('bmSelCopyBtn')?.addEventListener('click', async () => {
+  const urls = _bmSelectedUrls();
+  if (!urls.length) return;
   try {
     await navigator.clipboard.writeText(urls.join(' \r\n'));
     toast(`Copied ${urls.length} link${urls.length === 1 ? '' : 's'}`, 'ok');
@@ -2622,6 +3252,14 @@ function populateSettings(s) {
   if (autoFocusTgl) autoFocusTgl.checked = s.searchAutoFocus !== false;
   const highContrastTgl = document.getElementById('highContrastToggle');
   if (highContrastTgl) highContrastTgl.checked = s.highContrastMode === true;
+  const roundedCornersTgl = document.getElementById('roundedCornersToggle');
+  if (roundedCornersTgl) roundedCornersTgl.checked = s.roundedCorners !== false;
+  const navIconsTgl = document.getElementById('navIconsToggle');
+  if (navIconsTgl) navIconsTgl.checked = s.navIcons !== false;
+  const matchUiColorsTgl = document.getElementById('matchUiColorsToggle');
+  if (matchUiColorsTgl) matchUiColorsTgl.checked = s.matchUiColors === true;
+  const calendarModeTgl = document.getElementById('calendarModeToggle');
+  if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
   const contextMenuTgl = document.getElementById('contextMenuToggle');
   if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
 
@@ -2698,22 +3336,22 @@ function applyVisuals(s) {
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
   if (s.theme)        setTheme(s.theme);
+  applyRoundedCorners(s.roundedCorners !== false);
+  applyNavIcons(s.navIcons !== false);
+  applyMatchUiColors(s.matchUiColors === true);
+  applyCalendarMode(s.calendarMode === true);
   applyIconVariant(s.toolbarIcon || 'default');
   
-  // Apply background tint: hue-rotate filter on the wallpaper layer
+  // Apply background tint: hue-rotate filter on the wallpaper layer.
+  // The layer itself stays unblurred — blur now lives on the glass panels
+  // (see applyWallpaper), so this only ever touches hue-rotate.
   const wpLayer = document.getElementById('eh-wallpaper-layer');
   if (s.bgTintEnabled && s.bgTintHue !== undefined) {
-    const blurAmt = s.blurAmount ?? s.bgTintBlur ?? 8;
-    const hueRot  = s.bgTintHue;
-    if (wpLayer) {
-      wpLayer.style.filter = `blur(${blurAmt}px) hue-rotate(${hueRot}deg)`;
-    }
+    const hueRot = s.bgTintHue;
+    if (wpLayer) wpLayer.style.filter = `hue-rotate(${hueRot}deg)`;
     r.style.setProperty('--bg-tint-hue', hueRot + 'deg');
   } else {
-    if (wpLayer) {
-      const blurAmt = s.blurAmount ?? 8;
-      wpLayer.style.filter = `blur(${blurAmt}px)`;
-    }
+    if (wpLayer) wpLayer.style.removeProperty('filter');
     r.style.removeProperty('--bg-tint-hue');
   }
 }
@@ -2780,7 +3418,6 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const font    = document.getElementById('fontSel').value;
   const sz      = parseInt(document.getElementById('fontSzInput').value);
   const maxSess = parseInt(document.getElementById('maxSessionsInput')?.value || '4');
-  const lang    = document.getElementById('languageSelect')?.value || window._currentLang || 'en';
   const bgTintEnabled = document.getElementById('bgTintToggle')?.checked || false;
   const bgTintHue = parseInt(document.getElementById('bgTintHue')?.value || '220');
   const bgTintOpacity = parseInt(document.getElementById('bgTintOpacity')?.value || '8');
@@ -2793,6 +3430,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
   const highContrastMode = document.getElementById('highContrastToggle')?.checked === true;
+  const roundedCorners = document.getElementById('roundedCornersToggle')?.checked !== false;
+  const navIcons = document.getElementById('navIconsToggle')?.checked !== false;
+  const matchUiColors = document.getElementById('matchUiColorsToggle')?.checked === true;
+  const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
   const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
   const datePillsWheelSensitivity = Math.max(1, Math.min(6, parseInt(document.getElementById('datePillsWheelSensInput')?.value || '1') || 1));
@@ -2809,7 +3450,6 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         font, 
         fontSize: sz, 
         theme: _curSettings.theme || 'dark',
-        language: lang,
         bgTintEnabled,
         bgTintHue,
         bgTintOpacity,
@@ -2824,6 +3464,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         contextMenuEnabled,
         datePillsWheelScroll,
         highContrastMode,
+        roundedCorners,
+        navIcons,
+        matchUiColors,
+        calendarMode,
         datePillsWheelSensitivity,
         toolbarIcon,
         autoExportIntervalMonths,
@@ -3034,6 +3678,7 @@ function showCtxMenu(x, y, entry, source) {
   const jumpSep    = document.getElementById('ctx-jump-sep');
   const bmRemove   = document.getElementById('ctx-remove-bookmark');
   const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
+  const bmRename   = document.getElementById('ctx-rename-bookmark');
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
   const hasBmId = !!entry.bmId;
@@ -3042,6 +3687,7 @@ function showCtxMenu(x, y, entry, source) {
   if (jumpEl)       jumpEl.style.display       = hasDate ? '' : 'none';
   if (jumpSep)      jumpSep.style.display      = hasDate ? '' : 'none';
   if (bmRemove)     bmRemove.style.display     = hasBmId ? '' : 'none';
+  if (bmRename)     bmRename.style.display     = hasBmId ? '' : 'none';
   if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
   const mw = 210, mh = 240;
@@ -3084,6 +3730,21 @@ document.getElementById('ctx-copy-title').addEventListener('click', () => {
 document.getElementById('ctx-delete').addEventListener('click', () => {
   if (_ctxEntry?.id) deleteSingle(_ctxEntry.id); hideCtxMenu();
 });
+document.getElementById('ctx-rename-bookmark').addEventListener('click', async () => {
+  const entry = _ctxEntry;          // hideCtxMenu() clears _ctxEntry, so grab it first
+  hideCtxMenu();
+  if (!entry?.bmId) return;
+  const newTitle = prompt('Rename bookmark:', entry.title || '');
+  if (newTitle === null) return;    // cancelled
+  const title = newTitle.trim();
+  if (title === (entry.title || '')) return;
+  const r = await send('RENAME_BOOKMARK', { id: entry.bmId, title });
+  if (r?.error) { toast(r.error, 'err'); return; }
+  toast('Bookmark renamed', 'ok');
+  // Refresh list + search index, keeping folder, search query and scroll position
+  reloadBookmarksKeepState(false).catch(() => loadBookmarks());
+});
+
 document.getElementById('ctx-remove-bookmark').addEventListener('click', () => {
   if (!_ctxEntry?.bmId) { hideCtxMenu(); return; }
   if (!confirm('Remove this bookmark?')) { hideCtxMenu(); return; }
@@ -3645,10 +4306,10 @@ function _showIgnorePanel() {
     inner.dataset.loaded = '1';
     inner.innerHTML = `
       <div class="panel-scroll">
-        <div class="panel-heading">🚫 Ignored Domains</div>
+        <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
         <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
-          Domains added here will not be saved in history. Existing entries will be removed automatically.
-          Words without a dot are treated as <strong>keywords</strong> — they match any URL or page title containing that word.
+          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Existing entries will be removed automatically.</span>
+          <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
         <div class="ignore-toggle-wrapper">
           <label class="toggle-switch">
@@ -3657,17 +4318,29 @@ function _showIgnorePanel() {
           </label>
           <label class="ignore-toggle-label" for="ignoreListToggle">
             <div class="ignore-toggle-text">
-              <div class="ignore-toggle-title">Enable Ignore List</div>
-              <div class="ignore-toggle-subtitle">Filter URLs matching patterns below</div>
+              <div class="ignore-toggle-title" data-i18n-key="enable_ignore">Enable Ignore List</div>
+              <div class="ignore-toggle-subtitle" data-i18n-key="filter_urls">Filter URLs matching patterns below</div>
+            </div>
+          </label>
+        </div>
+        <div class="ignore-toggle-wrapper">
+          <label class="toggle-switch">
+            <input type="checkbox" id="hideTimeSpentToggle">
+            <span class="toggle-slider"></span>
+          </label>
+          <label class="ignore-toggle-label" for="hideTimeSpentToggle">
+            <div class="ignore-toggle-text">
+              <div class="ignore-toggle-title" data-i18n-key="hide_from_time_spent">Hide from Time Spent</div>
+              <div class="ignore-toggle-subtitle" data-i18n-key="hide_from_time_spent_desc">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
             </div>
           </label>
         </div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
-          <button id="addIgnoreBtn">Add Pattern</button>
+          <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
         </div>
         <div class="pattern-guide-toggle">
-          <button id="patternGuideToggle">▼ URL Pattern Guide</button>
+          <button id="patternGuideToggle">▼ <span data-i18n-key="url_pattern_guide">URL Pattern Guide</span></button>
         </div>
         <div id="patternGuide" class="pattern-guide" style="display:none">
       <table>
@@ -3717,6 +4390,8 @@ function _showIgnorePanel() {
       if (addBtn) addBtn.addEventListener('click', window.IgnoreList.add);
       const toggle = document.getElementById('ignoreListToggle');
       if (toggle) toggle.addEventListener('change', window.IgnoreList.toggle);
+      const tsToggle = document.getElementById('hideTimeSpentToggle');
+      if (tsToggle) tsToggle.addEventListener('change', window.IgnoreList.toggleTimeSpent);
       const guideToggle = document.getElementById('patternGuideToggle');
       if (guideToggle) guideToggle.addEventListener('click', window.IgnoreList.toggleGuide);
       const input = document.getElementById('ignorePatternInput');
@@ -3734,9 +4409,7 @@ function _showIgnorePanel() {
   if (window.IgnoreList) window.IgnoreList.load();
 
   // Re-apply translations to newly injected content
-  if (typeof window.applyTranslations === 'function' && window._currentLang) {
-    window.applyTranslations(window._currentLang);
-  }
+  if (typeof window.applyTranslations === 'function') window.applyTranslations();
 }
 
 function switchPanel(name) {
@@ -3754,13 +4427,14 @@ function switchPanel(name) {
   b.classList.toggle('active', b.dataset.panel === name));
   document.querySelectorAll('.panel').forEach(p =>
   p.classList.toggle('active', p.id === `panel-${name}`));
+  updateCalSidebarVisibility();
 
   // Ignorelist: show panel then overlay modal on top (modal is position:fixed)
   if (name === 'ignorelist') { handleIgnoreListAccess(); return; }
 
   if (name === 'activity')  loadActivity();
   if (name === 'timespent') loadTimeSpent(curTimeDays || 15);
-  if (name === 'devices')    loadDevices();
+  if (name === 'devices')    { loadDevices(); wireDeviceSearch(); }
   if (name === 'sessions')   loadSessions();
   if (name === 'tabstorage') loadTabStorage();
   if (name === 'bookmarks') loadBookmarks();
@@ -3801,18 +4475,264 @@ function openDeleteHistoryModal() {
   document.getElementById('dhConfirmBtn').disabled = true;
   document.getElementById('dhCookies').checked = false;
   document.getElementById('dhCache').checked = false;
+  dhShowExceptionsView(false);
+  dhLoadExceptions().then(dhUpdateExcCount);
   document.getElementById('deleteHistoryModal').classList.add('open');
 }
 function closeDeleteHistoryModal() {
   document.getElementById('deleteHistoryModal').classList.remove('open');
   _dhSelectedRange = null;
   const confirmBtn = document.getElementById('dhConfirmBtn');
-  if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = 'Delete'; confirmBtn.disabled = true; }
+  if (confirmBtn) { delete confirmBtn.dataset.confirmed; confirmBtn.textContent = tr('delete', 'Delete'); confirmBtn.disabled = true; }
+  const warn = document.getElementById('dhConfirmWarn');
+  if (warn) warn.style.display = 'none';
+  dhShowExceptionsView(false);
+}
+
+// -- Delete History: domain exceptions ---------------------------------------
+// Domains on this list are skipped by the time-range delete (enforced in
+// background.js DELETE_HISTORY_RANGE, which reads the same storage key).
+// An exception for example.com also protects every subdomain of it.
+const DH_EXC_KEY = 'eh_delete_exceptions';
+let _dhExceptions = [];
+
+// Accepts "example.com", "www.Example.com", "https://example.com/path?x",
+// "*.example.com", "example.com:8080" ... and returns a bare lowercase host
+// (no www.), or '' when the input isn't a usable domain.
+function dhNormalizeDomain(raw) {
+  let v = String(raw || '').trim().toLowerCase();
+  if (!v) return '';
+  v = v.replace(/^[a-z][a-z0-9+.-]*:\/\//, '');   // scheme
+  v = v.replace(/^\*\./, '').replace(/^\./, '');   // "*.example.com" / ".example.com"
+  v = v.split(/[\/?#]/)[0];                         // path / query / hash
+  v = v.replace(/^[^@]*@/, '');                      // user:pass@
+  v = v.replace(/:\d+$/, '');                       // port
+  v = v.replace(/\.$/, '');                         // trailing dot
+  try { v = new URL('http://' + v).hostname; } catch { return ''; }
+  v = v.replace(/^www\./, '');
+  const valid = /^[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?(\.[a-z0-9\u00a1-\uffff]([a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?)*$/.test(v);
+  if (!valid) return '';
+  if (!v.includes('.') && v !== 'localhost') return '';
+  return v;
+}
+
+async function dhLoadExceptions() {
+  try {
+    const r = await chrome.storage.local.get(DH_EXC_KEY);
+    _dhExceptions = Array.isArray(r[DH_EXC_KEY]) ? r[DH_EXC_KEY].filter(d => typeof d === 'string' && d) : [];
+  } catch { _dhExceptions = []; }
+  return _dhExceptions;
+}
+async function dhSaveExceptions() {
+  await chrome.storage.local.set({ [DH_EXC_KEY]: _dhExceptions });
+}
+function dhIsExcepted(url) {
+  if (!_dhExceptions.length) return false;
+  let host = '';
+  try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { return false; }
+  return _dhExceptions.some(d => host === d || host.endsWith('.' + d));
+}
+function dhUpdateExcCount() {
+  const el = document.getElementById('dhExcCount');
+  if (!el) return;
+  el.textContent = _dhExceptions.length ? String(_dhExceptions.length) : '';
+  el.classList.toggle('has', _dhExceptions.length > 0);
+}
+function dhRenderExceptions() {
+  const list = document.getElementById('dhExcList');
+  if (!list) return;
+  list.textContent = '';
+  if (!_dhExceptions.length) {
+    const empty = document.createElement('div');
+    empty.className = 'dh-exc-empty';
+    empty.textContent = tr('no_exceptions_yet', 'No exceptions yet');
+    list.appendChild(empty);
+    return;
+  }
+  [..._dhExceptions].sort().forEach(domain => {
+    const row = document.createElement('div');
+    row.className = 'dh-exc-item';
+    const name = document.createElement('span');
+    name.className = 'dh-exc-dom';
+    name.textContent = domain;
+    name.title = domain;
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'dh-exc-rm';
+    rm.title = tr('remove', 'Remove');
+    rm.textContent = '\u2715';
+    rm.addEventListener('click', async () => {
+      _dhExceptions = _dhExceptions.filter(d => d !== domain);
+      await dhSaveExceptions();
+      dhRenderExceptions();
+      dhUpdateExcCount();
+      dhResetConfirmState();
+    });
+    row.appendChild(name);
+    row.appendChild(rm);
+    list.appendChild(row);
+  });
+}
+function dhShowExceptionsView(show) {
+  const main = document.getElementById('dhMainView');
+  const view = document.getElementById('dhExcView');
+  if (!main || !view) return;
+  main.style.display = show ? 'none' : '';
+  view.style.display = show ? '' : 'none';
+  if (show) {
+    const err = document.getElementById('dhExcError');
+    if (err) err.textContent = '';
+    dhRenderExceptions();
+    document.getElementById('dhExcInput')?.focus();
+  }
+}
+// A changed exception list invalidates a pending "click Delete again" confirm.
+function dhResetConfirmState() {
+  const btn = document.getElementById('dhConfirmBtn');
+  if (btn) delete btn.dataset.confirmed;
   const warn = document.getElementById('dhConfirmWarn');
   if (warn) warn.style.display = 'none';
 }
+async function dhAddException() {
+  const input = document.getElementById('dhExcInput');
+  const err = document.getElementById('dhExcError');
+  if (!input) return;
+  const raw = input.value.trim();
+  if (!raw) return;
+  const domain = dhNormalizeDomain(raw);
+  if (!domain) { if (err) err.textContent = tr('invalid_domain', 'Enter a valid domain, e.g. example.com'); return; }
+  if (_dhExceptions.includes(domain)) { if (err) err.textContent = tr('domain_already_added', 'That domain is already on the list'); return; }
+  _dhExceptions.push(domain);
+  try { await dhSaveExceptions(); } catch (e) { _dhExceptions = _dhExceptions.filter(d => d !== domain); if (err) err.textContent = e.message; return; }
+  input.value = '';
+  if (err) err.textContent = '';
+  dhRenderExceptions();
+  dhUpdateExcCount();
+  dhResetConfirmState();
+  input.focus();
+}
 
-// Live-update the popup height slider label + grey out the height row when
+// ══ DEV MODE ═════════════════════════════════════════════════════════════
+// Internal diagnostics panel: background timer stats (next history merge)
+// and the live per-tab idle-time tracking state that drives auto-store.
+let _devTabsVisible = false;
+let _devModeWired = false;
+
+function fmtDur(ms) {
+  if (ms == null || ms < 0) ms = 0;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0 && m === 0) return '0m';
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function fmtWhen(ts) {
+  if (!ts) return '—';
+  const diff = ts - Date.now();
+  const past = diff < 0;
+  const label = fmtDur(Math.abs(diff));
+  return past ? `${label} ago` : `in ${label}`;
+}
+
+function openDevModeModal() {
+  document.getElementById('devModeModal').classList.add('open');
+  loadDevStats();
+  if (_devTabsVisible) loadDevTabs();
+}
+function closeDevModeModal() {
+  document.getElementById('devModeModal').classList.remove('open');
+}
+
+async function loadDevStats() {
+  const grid = document.getElementById('devStatsGrid');
+  if (!grid) return;
+  try {
+    const s = await send('GET_DEV_STATS');
+    const nextFlushLabel = s.syncIntervalMins === 0
+      ? 'Every visit (instant mode)'
+      : s.nextFlushAt ? fmtWhen(s.nextFlushAt) : 'Due on next check (~1m)';
+    const overdue = s.syncIntervalMins > 0 && s.nextFlushAt && s.nextFlushAt <= s.now;
+
+    grid.innerHTML = '';
+    const stats = [
+      { label: 'Next history merge', value: nextFlushLabel, warn: overdue },
+      { label: 'Last merge', value: s.lastFlushAt ? fmtWhen(s.lastFlushAt) : 'Never yet' },
+      { label: 'Merge interval', value: s.syncIntervalMins === 0 ? 'Instant' : `${s.syncIntervalMins} min` },
+      { label: 'Auto-store tabs', value: s.autoStoreEnabled ? `On · ${s.autoStoreHours}h idle threshold` : 'Off' },
+      { label: 'Ignore-list cleanup', value: s.ignoreCleanupActive
+          ? `Running… ${s.ignoreCleanupProgress.done}/${s.ignoreCleanupProgress.total}`
+          : 'Idle', warn: s.ignoreCleanupActive },
+    ];
+    for (const st of stats) {
+      const card = document.createElement('div');
+      card.className = 'dev-stat';
+      card.innerHTML = `<div class="dev-stat-label">${esc(st.label)}</div><div class="dev-stat-value${st.warn ? ' warn' : ''}">${esc(st.value)}</div>`;
+      grid.appendChild(card);
+    }
+  } catch (err) {
+    grid.innerHTML = `<div class="state-msg" style="grid-column:1/-1"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+  }
+}
+
+async function loadDevTabs() {
+  const list = document.getElementById('devTabsList');
+  if (!list) return;
+  list.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🗂</span>Loading…</div>';
+  try {
+    const r = await send('GET_DEV_TAB_IDLE');
+    if (!r.tabs.length) {
+      list.innerHTML = '<div class="empty-msg">No open tabs</div>';
+      return;
+    }
+    list.innerHTML = '';
+    for (const t of r.tabs) {
+      const row = document.createElement('div');
+      row.className = 'dev-tab-row';
+      let tag;
+      if (t.active) tag = 'active';
+      else if (!t.trackable) tag = 'not trackable';
+      else if (t.alreadyStored) tag = 'already stored';
+      else tag = 'idle-tracked';
+      const hot = t.trackable && !t.active && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
+      // Both idleMs (our accumulator) and wallIdleMs (raw lastAccessed gap)
+      // have to clear the threshold before a store happens — show both
+      // whenever they diverge by more than a minute so it's obvious which
+      // gate, if any, is currently holding a tab back.
+      const diverges = !t.active && Math.abs(t.idleMs - t.wallIdleMs) > 60000;
+      const idleLabel = t.active ? '—' : fmtDur(t.idleMs);
+      const wallNote = diverges ? ` <span style="color:var(--text3);font-weight:400">(wall: ${esc(fmtDur(t.wallIdleMs))})</span>` : '';
+      row.innerHTML = `
+        <span class="dtr-title" title="${esc(t.url)}">${esc(t.title)}</span>
+        <span class="dtr-tag">${esc(tag)}</span>
+        <span class="dtr-idle${hot ? ' hot' : ''}">${idleLabel}${wallNote}</span>`;
+      list.appendChild(row);
+    }
+  } catch (err) {
+    list.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
+  }
+}
+
+function wireDevMode() {
+  if (_devModeWired) return;
+  _devModeWired = true;
+
+  document.getElementById('devModeBtn')?.addEventListener('click', openDevModeModal);
+  document.getElementById('devModeCloseBtn')?.addEventListener('click', closeDevModeModal);
+  document.getElementById('devModeModal')?.addEventListener('click', ev => {
+    if (ev.target.id === 'devModeModal') closeDevModeModal();
+  });
+  document.getElementById('devRefreshBtn')?.addEventListener('click', () => {
+    loadDevStats();
+    if (_devTabsVisible) loadDevTabs();
+  });
+  document.getElementById('devListTabsBtn')?.addEventListener('click', () => {
+    _devTabsVisible = !_devTabsVisible;
+    const list = document.getElementById('devTabsList');
+    if (list) list.style.display = _devTabsVisible ? 'block' : 'none';
+    if (_devTabsVisible) loadDevTabs();
+  });
+}
 // "Use as sidebar" is enabled (height doesn't apply to the sidebar panel).
 function setupPopupSettingsListeners() {
   const heightInput  = document.getElementById('popupHeightInput');
@@ -3851,6 +4771,26 @@ function setupPopupSettingsListeners() {
   if (highContrastToggle) {
     highContrastToggle.addEventListener('change', () => {
       applyHighContrastMode(highContrastToggle.checked);
+    });
+  }
+
+  const roundedCornersToggle = document.getElementById('roundedCornersToggle');
+  if (roundedCornersToggle) {
+    roundedCornersToggle.addEventListener('change', () => {
+      applyRoundedCorners(roundedCornersToggle.checked);
+    });
+  }
+
+  // Live preview, like the other appearance toggles (persisted with Save)
+  const navIconsToggle = document.getElementById('navIconsToggle');
+  if (navIconsToggle) navIconsToggle.addEventListener('change', () => applyNavIcons(navIconsToggle.checked));
+  const matchUiColorsToggle = document.getElementById('matchUiColorsToggle');
+  if (matchUiColorsToggle) matchUiColorsToggle.addEventListener('change', () => applyMatchUiColors(matchUiColorsToggle.checked));
+
+  const calendarModeToggle = document.getElementById('calendarModeToggle');
+  if (calendarModeToggle) {
+    calendarModeToggle.addEventListener('change', () => {
+      applyCalendarMode(calendarModeToggle.checked);
     });
   }
 }
@@ -3910,48 +4850,61 @@ function applyWallpaper(wp) {
 
   root.classList.add('wallpaper-mode');
 
-  const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
-  const blurAmount     = wp.blurAmount ?? 8;
-  const isDark         = (root.getAttribute('data-theme') || 'dark') === 'dark';
-  const overlayColor   = isDark
-    ? `rgba(0,0,0,${overlayOpacity})`
-    : `rgba(255,255,255,${overlayOpacity})`;
+  const overlayOpacity   = (wp.overlayOpacity ?? 40) / 100;
+  const blurAmount       = wp.blurAmount ?? 10;
+  const wallpaperOpacity = (wp.wallpaperOpacity ?? 60) / 100;
+  const isDark            = (root.getAttribute('data-theme') || 'dark') === 'dark';
 
-  // Background layer div (fixed, behind everything)
+  // Glass tint for the frosted panels — black in dark mode, white in light
+  // mode, matching the old overlay look.
+  const glassRgba = a => isDark ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`;
+
+  // Background layer div (fixed, behind everything). Kept crisp — no blur
+  // filter here anymore. The blur + tint ("glass") now lives directly on
+  // the sidebar/main/calendar surfaces via backdrop-filter below, so the
+  // wallpaper stays sharp anywhere those panels aren't covering it, and the
+  // panels genuinely blur what's behind them instead of everything being
+  // uniformly blurred and dimmed. Wallpaper opacity (fading the photo
+  // itself) is independent of the glass panel tint above.
   const layer = document.createElement('div');
   layer.id = 'eh-wallpaper-layer';
   const hueRot = (_curSettings.bgTintEnabled && _curSettings.bgTintHue !== undefined)
-    ? ` hue-rotate(${_curSettings.bgTintHue}deg)` : '';
+    ? `hue-rotate(${_curSettings.bgTintHue}deg)` : '';
   layer.style.cssText = `
     position:fixed;inset:0;z-index:-1;
     background:url(${wp.dataUrl}) center/cover no-repeat;
-    filter:blur(${blurAmount}px)${hueRot};
+    ${hueRot ? `filter:${hueRot};` : ''}
+    opacity:${wallpaperOpacity};
     transform:scale(1.05);
     pointer-events:none;
   `;
   body.prepend(layer);
 
-  // Overlay + glass CSS injection
+  // Glass CSS injection
   const style = document.createElement('style');
   style.id = 'eh-wallpaper-style';
   style.textContent = `
     html.wallpaper-mode body { background: transparent !important; }
-    html.wallpaper-mode body::before {
-      content:''; position:fixed; inset:0; z-index:0;
-      background:${overlayColor};
-      pointer-events:none;
-    }
+
+    /* Primary glass surfaces — blur amount and tint come straight from the
+       wallpaper settings (Background blur / Glass color) instead of a
+       fixed full-page overlay. */
     html.wallpaper-mode .sidebar,
+    html.wallpaper-mode .main,
+    html.wallpaper-mode .cal-sidebar {
+      background: ${glassRgba(overlayOpacity)} !important;
+      backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
+      -webkit-backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+    }
+
     html.wallpaper-mode .modal-box,
-    html.wallpaper-mode .topbar,
     html.wallpaper-mode .s-card,
     html.wallpaper-mode .chart-card,
     html.wallpaper-mode .ctxMenu,
     html.wallpaper-mode .kpi-card,
-    html.wallpaper-mode .entry,
     html.wallpaper-mode .modal-inner,
     html.wallpaper-mode .ignore-add,
-    html.wallpaper-mode .panel-scroll,
     html.wallpaper-mode .ignore-item,
     html.wallpaper-mode .session-card,
     html.wallpaper-mode .device-card,
@@ -3960,10 +4913,28 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .mv-item,
     html.wallpaper-mode .day-label, .bm-tree-pane, .bm-toolbar, .sel-bar.on{
       background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
-      backdrop-filter: saturate(1.4) !important;
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
       color:var(--text2);
+    }
+    /* The history list gets its own glass layer stacked on top of .main's
+       (which carries the same tint as the sidebar): a faint white lift over
+       the dark glass (list lighter than the UI in dark mode), and a faint
+       black shade over the light glass (list darker than the UI in light
+       mode). */
+    html.wallpaper-mode .list-area {
+      background: ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'} !important;
+    }
+    /* Sticky date headers must blend into that list surface: no tint of their
+       own (a second layer would show as a lighter band), just a blur so rows
+       scrolling underneath stay legible. */
+    /* Settings > Match UI colors: no tint of its own - the list shows the same
+       glass as the sidebar / calendar sidebar / main panel behind it. */
+    html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
+    html.wallpaper-mode .list-area .day-label {
+      background: transparent !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
     }
     html.wallpaper-mode #ctxMenu {
       background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
@@ -3985,11 +4956,21 @@ function applyWallpaper(wp) {
     background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
     height:100%
     }
-    html.wallpaper-mode .sidebar {
-      background: ${isDark ? 'rgba(13,13,18,0.65)' : 'rgba(245,245,247,0.65)'} !important;
-    }
+    /* .topbar has a solid background in the base stylesheet — let .main's
+       own glass layer show through it instead of covering it again. */
     html.wallpaper-mode .topbar {
-      background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
+      background: transparent !important;
+    }
+    /* .entry rows tile edge-to-edge across .list-area, so giving each one
+       its own glass layer (like the card elements above) stacked another
+       ~55% opaque layer on every row across the whole list — compounding
+       with .main's glass until the list read as solid instead of frosted.
+       Keep just the border for row separation; .main's glass carries the
+       actual background here. Hover/selected states still get their own
+       solid highlight from the base stylesheet. */
+    html.wallpaper-mode .entry {
+      background: transparent !important;
+      border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} !important;
     }
     html.wallpaper-mode .action-btn,
     html.wallpaper-mode .dn-pill,
@@ -4000,7 +4981,7 @@ function applyWallpaper(wp) {
   
     }
     html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
-      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
+      background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
       color:var(--text2) !important;
     }
@@ -4037,11 +5018,11 @@ function applyWallpaper(wp) {
     html.wallpaper-mode select,
     html.wallpaper-mode textarea,
     html.wallpaper-mode .search-box {
-      background: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
+      background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
       border-color: ${isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)'} !important;
     }
     html.wallpaper-mode .panel { background: transparent !important; }
-    html.wallpaper-mode .panel, html.wallpaper-mode #main { position: relative; z-index: 1; }
+    html.wallpaper-mode .panel, html.wallpaper-mode .main { position: relative; z-index: 1; }
   `;
   document.head.appendChild(style);
 }
@@ -4153,21 +5134,25 @@ function setupWallpaperListeners() {
   const blurSlider     = document.getElementById('wpBlurAmount');
   const blurVal        = document.getElementById('wpBlurVal');
   const clearBtn       = document.getElementById('wpClearBtn');
+  const imgOpacitySlider = document.getElementById('wpImageOpacity');
+  const imgOpacityVal    = document.getElementById('wpImageOpacityVal');
 
   if (!toggle) return;
 
-  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 50, blurAmount: 8, wallpaperOpacity: 60, source: 'custom' };
 
   // Load existing wallpaper state into UI
   chrome.storage.local.get(WP_STORAGE_KEY, r => {
     const wp = r[WP_STORAGE_KEY];
     if (wp) {
-      _wpState = { ..._wpState, ...wp };
+      _wpState = { ..._wpState, ...wp, overlayOpacity: Math.max(40, wp.overlayOpacity ?? 40) };
       toggle.checked = wp.enabled || false;
-      overlaySlider.value = wp.overlayOpacity ?? 60;
-      overlayVal.textContent = (wp.overlayOpacity ?? 60) + '%';
+      overlaySlider.value = _wpState.overlayOpacity;
+      overlayVal.textContent = _wpState.overlayOpacity + '%';
       blurSlider.value = wp.blurAmount ?? 8;
       blurVal.textContent = (wp.blurAmount ?? 8) + 'px';
+      if (imgOpacitySlider) imgOpacitySlider.value = wp.wallpaperOpacity ?? 60;
+      if (imgOpacityVal)    imgOpacityVal.textContent = (wp.wallpaperOpacity ?? 60) + '%';
       if (wp.dataUrl) {
         previewWrap.style.display = 'block';
         currentPreview.src = wp.dataUrl;
@@ -4297,13 +5282,27 @@ function setupWallpaperListeners() {
     await saveWallpaper(_wpState);
   });
 
+  // Wallpaper (image) opacity — cheap direct style write while dragging so
+  // it doesn't lag, full apply+save only once the user lets go.
+  imgOpacitySlider?.addEventListener('input', () => {
+    _wpState.wallpaperOpacity = parseInt(imgOpacitySlider.value);
+    if (imgOpacityVal) imgOpacityVal.textContent = _wpState.wallpaperOpacity + '%';
+    const layer = document.getElementById('eh-wallpaper-layer');
+    if (layer) layer.style.opacity = _wpState.wallpaperOpacity / 100;
+  });
+  imgOpacitySlider?.addEventListener('change', async () => {
+    await saveWallpaper(_wpState);
+  });
+
   // Clear
   clearBtn?.addEventListener('click', async () => {
     if (!confirm('Remove the current wallpaper?')) return;
-    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, source: 'custom' };
+    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 40, blurAmount: 10, wallpaperOpacity: 60, source: 'custom' };
     toggle.checked = false;
     previewWrap.style.display    = 'none';
     document.getElementById('wpDropLabel').innerHTML = 'Drop image here or <strong>click to browse</strong>';
+    if (imgOpacitySlider) imgOpacitySlider.value = 60;
+    if (imgOpacityVal)    imgOpacityVal.textContent = '60%';
     applyWallpaper(_wpState);
     await saveWallpaper(_wpState);
     toast('Wallpaper removed', 'ok');
@@ -4362,6 +5361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSelActions();
   setupBgTintListeners();
   setupPopupSettingsListeners();
+  wireDevMode();
+  wireCalendarSidebar();
   setupWallpaperListeners();
   loadAndApplyWallpaper();
    // ── Scroll-to-bottom buttons ──────────────────────────────────────────────
@@ -4416,6 +5417,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ev.target === document.getElementById('deleteHistoryModal')) closeDeleteHistoryModal();
   });
 
+  // Domain exceptions (list view inside the Delete History modal)
+  document.getElementById('dhExceptionsBtn')?.addEventListener('click', async () => {
+    await dhLoadExceptions();
+    dhShowExceptionsView(true);
+  });
+  document.getElementById('dhExcBackBtn')?.addEventListener('click', () => dhShowExceptionsView(false));
+  document.getElementById('dhExcAddBtn')?.addEventListener('click', dhAddException);
+  document.getElementById('dhExcInput')?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); dhAddException(); }
+    else if (ev.key === 'Escape') { ev.stopPropagation(); dhShowExceptionsView(false); }
+  });
+  document.getElementById('dhExcInput')?.addEventListener('input', () => {
+    const err = document.getElementById('dhExcError'); if (err) err.textContent = '';
+  });
+
   document.getElementById('dhRangeGrid').addEventListener('click', ev => {
     const btn = ev.target.closest('.dh-range-btn');
     if (!btn) return;
@@ -4436,10 +5452,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btn = document.getElementById('dhConfirmBtn');
     if (!btn.dataset.confirmed) {
       // Step 1: show confirm state
-      const rangeLabels = { '1h':'last 1 hour','24h':'last 24 hours','7d':'last 7 days','30d':'last 30 days','5mo':'last 5 months','all':'ALL TIME' };
-      const label = rangeLabels[_dhSelectedRange] || _dhSelectedRange;
+      // Reuse the (already translated) label of the range button the user picked
+      const activeBtn = document.querySelector('.dh-range-btn.active');
+      const label = (activeBtn ? activeBtn.textContent.trim() : '') || _dhSelectedRange;
+      await dhLoadExceptions();
       const warn = document.getElementById('dhConfirmWarn');
-      if (warn) { warn.textContent = `⚠ This will permanently delete history for the ${label}. Click Delete again to confirm.`; warn.style.display = 'block'; }
+      if (warn) {
+        let msg = tr('dh_confirm_warn', 'This will permanently delete history for: {0}. Click Delete again to confirm.', label);
+        if (_dhExceptions.length) msg += ' ' + tr('dh_confirm_exceptions', 'Domains on your exceptions list ({0}) will be kept.', _dhExceptions.length);
+        warn.textContent = '\u26a0 ' + msg;
+        warn.style.display = 'block';
+      }
       btn.dataset.confirmed = '1';
       btn.style.animation = 'dhPulse 0.3s ease';
       return;
@@ -4452,79 +5475,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearCookies = document.getElementById('dhCookies').checked;
     const clearCache   = document.getElementById('dhCache').checked;
     btn.disabled = true;
-    btn.textContent = 'Deleting…';
+    btn.textContent = tr('deleting', 'Deleting…');
     try {
+      await dhLoadExceptions(); // same list the background will enforce
       const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
       if (r?.error) { toast(r.error, 'err'); }
       else {
-        toast(`Deleted ${fmtNum(r.deleted || 0)} history entries${clearCookies ? ' + cookies' : ''}${clearCache ? ' + cache' : ''}`, 'ok');
-        allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+        toast(tr('deleted_history_entries', 'Deleted {0} history entries', fmtNum(r.deleted || 0))
+          + (clearCookies ? ' + ' + tr('word_cookies', 'cookies') : '')
+          + (clearCache ? ' + ' + tr('word_cache', 'cache') : ''), 'ok');
+        // Keep anything on an excepted domain - it wasn't deleted.
+        allResults = allResults.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || dhIsExcepted(e.url));
         buildVirtualList();
       }
     } catch(err) { toast(err.message, 'err'); }
-    btn.textContent = 'Delete';
+    btn.textContent = tr('delete', 'Delete');
     closeDeleteHistoryModal();
   });
 
 });
 
-// ══ LANGUAGE SUPPORT ════════════════════════════════════════════════════════
-async function initLanguage() {
-  try {
-    //console.log('[EH] initLanguage: Loading settings...');
-    const settings = await send('GET_SETTINGS');
-    //console.log('[EH] initLanguage: Settings received:', settings);
-    window._currentLang = settings.language || 'en';
-    const langSelect = document.getElementById('languageSelect');
-    if (langSelect) {
-      langSelect.value = window._currentLang;
-      //console.log('[EH] initLanguage: Language selector set to:', window._currentLang);
-    } else {
-      //console.warn('[EH] initLanguage: Language selector not found!');
-    }
-    
-    // Apply translations to UI
-    if (typeof window.applyTranslations === 'function') {
-      window.applyTranslations(window._currentLang);
-    }
-  } catch (err) {
-    //console.error('[EH] initLanguage: Failed to load language:', err);
-    window._currentLang = 'en';
-  }
-}
-
-document.getElementById('languageSelect')?.addEventListener('change', async (e) => {
-  const newLang = e.target.value;
-  //console.log('[EH] Language change requested:', newLang);
-  try {
-    // Update language in settings
-    const result = await send('SAVE_SETTINGS', { settings: { language: newLang } });
-    //console.log('[EH] Save result:', result);
-    
-    // Verify it was saved
-    const verifySettings = await send('GET_SETTINGS');
-    //console.log('[EH] Settings after save (verification):', verifySettings);
-    
-    window._currentLang = newLang;
-    
-    // Apply translations to UI immediately
-    if (typeof window.applyTranslations === 'function') {
-      window.applyTranslations(newLang);
-    }
-    
-    // Get language name
-    const langNames = {
-      en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français',
-      ru: 'Русский', zh: '中文', uk: 'Українська', tr: 'Türkçe',
-      it: 'Italiano', hi: 'हिन्दी', no: 'Norsk', he: 'עברית'
-    };
-    
-    toast(`Language changed to ${langNames[newLang] || newLang}`, 'ok');
-  } catch (err) {
-    //console.error('[EH] Language change failed:', err);
-    toast('Error: ' + err.message, 'err');
-  }
-});
+// -- Language menu (Settings > Appearance) -----------------------------------
+// "auto" follows the browser language through chrome.i18n. Any other choice is
+// applied by i18n-core.js (chrome.i18n itself can't be told to use a different
+// language). Stored in localStorage so it can be read synchronously at load.
+(function initLanguageMenu() {
+  const sel = document.getElementById('languageSelect');
+  if (!sel) return;
+  sel.value = window._ehUiLangChoice || 'auto';
+  sel.addEventListener('change', () => {
+    try {
+      if (sel.value === 'auto') localStorage.removeItem('eh_ui_lang');
+      else localStorage.setItem('eh_ui_lang', sel.value);
+    } catch {}
+    // Reload so every string - including ones built in JS - is in the new language;
+    // the #settings hash brings the user straight back to this panel.
+    location.hash = 'settings';
+    location.reload();
+  });
+})();
 
 // ══ MOST VISITED START ════════════════════════════════════════════════════════════
 let curMvType = 'url';     // 'url' or 'domain'
@@ -4541,9 +5530,9 @@ async function loadMostVisited() {
     b.classList.toggle('active', b.dataset.period === curMvPeriod));
   
   // Update chart title
-  const typeLabel = curMvType === 'url' ? chrome.i18n.getMessage("urls")  : chrome.i18n.getMessage("domains") ;
-  const periodLabel = curMvPeriod === 'all' ? chrome.i18n.getMessage("all_time") : `${curMvPeriod} `+ chrome.i18n.getMessage("days");
-  document.getElementById('mvChartTitle').textContent = chrome.i18n.getMessage("most_visited") +` ${typeLabel} — ${periodLabel}`;
+  const typeLabel = curMvType === 'url' ? _ehMsg("urls")  : _ehMsg("domains") ;
+  const periodLabel = curMvPeriod === 'all' ? _ehMsg("all_time") : `${curMvPeriod} `+ _ehMsg("days");
+  document.getElementById('mvChartTitle').textContent = _ehMsg("most_visited") +` ${typeLabel} — ${periodLabel}`;
 
   const el = document.getElementById('mvContent');
   el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div>';
@@ -4618,6 +5607,3 @@ document.getElementById('mvPeriodFilter')?.addEventListener('click', ev => {
   }
 });
 // ══ MOST VISITED END ════════════════════════════════════════════════════════════
-
-// Call initLanguage after a short delay to ensure DOM is ready
-setTimeout(initLanguage, 100);

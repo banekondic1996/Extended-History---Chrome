@@ -15,7 +15,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.1.5</div>
+      <div class="logo-sub">v4.1.8</div>
     </div>
   </div>
 
@@ -57,7 +57,7 @@
     <button class="nav-item" data-panel="ignorelist">
       <span class="ni-icon">🚫</span><span data-i18n-key="ignore_list">Ignore List</span>
     </button>
-    <button class="nav-item" data-panel="quickfilters">
+    <button class="nav-item" data-panel="quickfilters" data-i18n-key="quick_filters">
       <span class="ni-icon">⚡</span><span>Quick Filters</span>
     </button>
     <button class="nav-item" data-panel="settings">
@@ -93,9 +93,8 @@
       <!-- Search + controls -->
       <div class="search-row">
         <div class="search-box">
-          <span class="search-box-icon">🔍</span>
           <input type="text" id="searchInput" placeholder="Search history…"/>
-          <button class="search-clear-btn" id="searchClearBtn" title="Clear">✕</button>
+          <button class="search-clear-btn" id="searchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
         </div>
         <select class="mode-sel" id="quickFilterSelect" title="Quick Filters">
           <option value="">Quick Filters: None</option>
@@ -106,9 +105,9 @@
           <option value="url" data-i18n-key="url">URL</option>
           <option value="domain" data-i18n-key="domain">Domain</option>
         </select>
-        <input type="date" id="dateFrom"/>
+        <div class="date-picker-btn" id="dateFromBtn"><input type="date" id="dateFrom" tabindex="-1"/></div>
         <span style="color:var(--text3);flex-shrink:0">→</span>
-        <input type="date" id="dateTo"/>
+        <div class="date-picker-btn" id="dateToBtn"><input type="date" id="dateTo" tabindex="-1"/></div>
         <button class="tb-btn" id="clearFiltersBtn" data-i18n-key="all_time">All time</button>
         <button class="tb-btn danger" id="deleteResultsBtn" data-i18n-key="delete_results">Delete results</button>
       </div>
@@ -171,11 +170,10 @@
         </div>
         <div class="search-row" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <div class="search-box" style="flex:1;min-width:160px">
-            <span class="search-box-icon">🔍</span>
-            <input type="text" id="rmSearchInput" placeholder="Search this file…" data-i18n-key="ph_search_history"/>
-            <button class="search-clear-btn" id="rmSearchClearBtn" title="Clear">✕</button>
+              <input type="text" id="rmSearchInput" placeholder="Search this file…" data-i18n-key="ph_search_history"/>
+            <button class="search-clear-btn" id="rmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
           </div>
-          <select id="rmSearchMode" title="Search field" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;cursor:pointer;outline:none;flex-shrink:0">
+          <select id="rmSearchMode" class="mode-sel" title="Search field" style="height:36px">
             <option value="all" data-i18n-key="opt_all_fields">All fields</option>
             <option value="title" data-i18n-key="opt_title">Title</option>
             <option value="url" data-i18n-key="opt_url">URL</option>
@@ -200,8 +198,15 @@
 
   <!-- DEVICES -->
   <div class="panel" id="panel-devices">
-    <div class="panel-scroll">
+    <div class="panel-scroll" id="devicesScroll">
       <div class="panel-heading" data-i18n-key="devices">Devices</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:0px 0px 15px">
+        <div class="search-box" style="flex:1;max-width:420px">
+          <input type="text" id="deviceSearchInput" placeholder="Search device tabs by title or URL…" spellcheck="false" autocomplete="off">
+          <button class="search-clear-btn" id="deviceSearchClearBtn" title="Clear" data-i18n-title="clear">&#10005;</button>
+        </div>
+        <button class="tb-btn" id="devicesRefreshBtn" style="font-size:0.72rem;padding:10px 12px;flex-shrink:0" data-i18n-key="refresh">↻ Refresh</button>
+      </div>
       <div id="devicesContent"><div class="state-msg"><span class="state-msg-icon">📱</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
   </div>
@@ -297,23 +302,24 @@
       <button class="action-btn" id="importBmBtn" style="font-size:0.76rem;padding:6px 12px">⬆ <span data-i18n-key="import">Import</span></button>
       <input type="file" id="importBmFile" accept=".html" style="display:none"/>
       <div class="search-box" style="flex:1;min-width:160px;max-width:320px">
-        <span class="search-box-icon">🔍</span>
         <input type="text" id="bmSearch" placeholder="Search bookmarks…"/>
-        <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear">✕</button>
+        <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
       </div>
-      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" style="display:none">Selection Mode</button>
+      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" title="Select multiple bookmarks" data-i18n-key="select">Select</button>
     </div>
     <!-- Bookmark multiselect bar (hidden until selection mode active) -->
     <div class="bm-sel-bar" id="bmSelBar" style="display:none">
       <span class="bm-sel-count" id="bmSelCount">0 selected</span>
+      <button class="bm-sel-btn" id="bmSelOpenBtn">Open</button>
       <button class="bm-sel-btn" id="bmSelMoveBtn">Move to…</button>
       <button class="bm-sel-btn" id="bmSelCopyBtn">Copy Links</button>
       <button class="bm-sel-btn bm-sel-del" id="bmSelDeleteBtn">Delete</button>
-      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn">Unselect All</button>
+      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn">Cancel</button>
     </div>
     <!-- Split pane: tree left, items right -->
     <div class="bm-split">
       <div class="bm-tree-pane" id="bmTreePane"></div>
+      <div class="bm-resizer" id="bmResizer" title="Drag to resize · double-click to reset"></div>
       <div class="bm-items-pane" id="bookmarksContent">
         <div class="state-msg"><span class="state-msg-icon">🔖</span><span data-i18n-key="loading">Loading…</span></div>
         <button class="scroll-to-bottom" id="bmScrollBottom" title="Scroll by one page">↓</button>
@@ -353,28 +359,28 @@
 
         <div class="s-card">
           <div class="s-card-title" data-i18n-key="appearance">Appearance</div>
-          <div class="s-row" style="opacity: 0.2;">
+          <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="language">Language</div>
               <div class="s-row-desc" data-i18n-key="select_pref_language">Select your preferred language</div>
             </div>
             <div class="s-ctrl">
               <select id="languageSelect">
+                <option value="auto" data-i18n-key="language_auto">Auto (browser language)</option>
                 <option value="en">English</option>
-                <option value="nl">Dutch</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
-                <option value="sr">Српски</option>
-                <option value="ru">Русский</option>
-                <option value="zh">中文</option>
-                <option value="hi">हिन्दी</option>
-                <option value="la">Latin</option>
-                <option value="no">Norsk</option>
                 <option value="he">עברית</option>
+                <option value="hi">हिन्दी</option>
+                <option value="la">Latina</option>
+                <option value="nl">Nederlands</option>
+                <option value="no">Norsk</option>
+                <option value="ru">Русский</option>
+                <option value="sr">Српски</option>
+                <option value="zh_CN">中文</option>
               </select>
             </div>
           </div>
-            <a style="color: red;opacity: 0.6;margin: auto;display: flex;justify-content: center;"> Not ready yet! But you can partially translate</a>
           <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="font_family">Font family</div>
@@ -534,13 +540,22 @@
                 <div style="font-size:0.78rem;color:var(--text2);margin-bottom:6px" data-i18n-key="wallpaper_current">Current wallpaper:</div>
                 <img id="wpCurrentPreview" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
               </div>
+              <!-- Wallpaper (image) opacity -->
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="color:var(--text2);font-size:0.85rem" data-i18n-key="wallpaper_opacity">Wallpaper opacity</span>
+                  <span id="wpImageOpacityVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">60%</span>
+                </div>
+                <input type="range" id="wpImageOpacity" min="5" max="100" value="60" step="1" style="width:100%;accent-color:var(--accent)"/>
+                <div style="font-size:0.72rem;color:var(--text3)" data-i18n-key="wallpaper_opacity_desc">Fades the background image itself — separate from the glass panel tint below.</div>
+              </div>
               <!-- Overlay opacity -->
               <div style="display:flex;flex-direction:column;gap:8px">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                   <span style="color:var(--text2);font-size:0.85rem" data-i18n-key="overlay_opacity">Overlay opacity</span>
-                  <span id="wpOverlayVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">60%</span>
+                  <span id="wpOverlayVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">40%</span>
                 </div>
-                <input type="range" id="wpOverlayOpacity" min="0" max="95" value="60" step="1" style="width:100%;accent-color:var(--accent)"/>
+                <input type="range" id="wpOverlayOpacity" min="40" max="95" value="50" step="1" style="width:100%;accent-color:var(--accent)"/>
                 <div style="font-size:0.72rem;color:var(--text3)" data-i18n-key="overlay_control_desc">Controls the dark (dark mode) or white (light mode) overlay on top of the wallpaper.</div>
               </div>
               <!-- Blur -->
@@ -735,8 +750,56 @@
           </div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll date pills with mouse wheel</div>
-              <div class="s-row-desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
+              <div class="s-row-lbl" data-i18n-key="ui_rounded_corners">UI rounded corners</div>
+              <div class="s-row-desc" data-i18n-key="ui_rounded_corners_desc">Rounds the corners of the sidebar and main panel (and keeps the small gap around them). Turn off for a sharp-edged, flush, edge-to-edge layout.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="roundedCornersToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+                    <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="nav_icons">Navigation icons</div>
+              <div class="s-row-desc" data-i18n-key="nav_icons_desc">Show the icons next to the items in the sidebar navigation. Turn off for a text-only menu.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="navIconsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="match_ui_colors">Match UI colors</div>
+              <div class="s-row-desc" data-i18n-key="match_ui_colors_desc">Makes the history list the same color as the rest of the interface (sidebar, calendar sidebar and panels) instead of a distinct shade.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="matchUiColorsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+<div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="ui_calendar_mode">UI calendar mode</div>
+              <div class="s-row-desc" data-i18n-key="ui_calendar_mode_desc">Replaces the date/hour pill navigation on the History page with a right-side calendar sidebar — pick dates, months and years, and jump straight to any hour.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="calendarModeToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="scroll_date">Scroll date pills with mouse wheel</div>
+              <div class="s-row-desc" data-i18n-key="scroll_date_desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
@@ -747,8 +810,8 @@
           </div>
           <div class="s-row" id="datePillsWheelSensRow">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll sensitivity</div>
-              <div class="s-row-desc">How many day pills each scroll click moves</div>
+              <div class="s-row-lbl" data-i18n-key="scroll_sensitivity">Scroll sensitivity</div>
+              <div class="s-row-desc" data-i18n-key="scroll_sensitivity_desc">How many day pills each scroll click moves</div>
             </div>
             <div class="s-ctrl" style="gap:10px">
               <input type="range" id="datePillsWheelSensInput" value="1" min="1" max="6" step="1" style="width:120px;accent-color:var(--accent)"/>
@@ -834,6 +897,19 @@
               </select>
               <button class="action-btn" id="migrateStorageBtn" style="font-size:0.78rem;padding:5px 12px" data-i18n-key="apply_migrate">Apply &amp; Migrate</button>
               <div id="migrateStorageStatus" style="font-size:0.75rem;color:var(--text3);text-align:right"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-title" data-i18n-key="developer">Developer</div>
+          <div class="s-row" style="border-bottom:none">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="dev_mode">Dev Mode</div>
+              <div class="s-row-desc" data-i18n-key="dev_mode_desc">Internal diagnostics: live tab idle-tracking data used for auto-store, and background timer stats. For troubleshooting only.</div>
+            </div>
+            <div class="s-ctrl">
+              <button class="action-btn" id="devModeBtn" data-i18n-key="open_dev_mode">🛠 Open Dev Mode</button>
             </div>
           </div>
         </div>
@@ -932,8 +1008,9 @@
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
+  <div class="ctx-item" id="ctx-rename-bookmark" style="display:none" data-i18n-key="rename_bookmark">Rename bookmark</div>
   <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
-  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none">🗑 Remove bookmark</div>
+  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none" data-i18n-key="remove_bookmark">🗑 Remove bookmark</div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
 </div>
@@ -962,6 +1039,7 @@
 <!-- Delete History Modal -->
 <div class="modal-backdrop" id="deleteHistoryModal">
   <div class="modal-box">
+    <div id="dhMainView">
     <div class="modal-title">🗑 <span data-i18n-key="delete_history">Delete History</span></div>
     <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Chrome's native history.</div>
     <div class="dh-range-grid" id="dhRangeGrid">
@@ -976,13 +1054,90 @@
       <label class="dh-option"><input type="checkbox" id="dhCookies"/> <span data-i18n-key="clear_cookies_local_storage">Clear cookies &amp; local storage</span></label>
       <label class="dh-option"><input type="checkbox" id="dhCache"/> <span data-i18n-key="clear_cache">Clear cache</span></label>
     </div>
+    <button type="button" class="dh-exc-open" id="dhExceptionsBtn">
+      <span data-i18n-key="domain_exceptions">Domain exceptions</span>
+      <span class="dh-exc-count" id="dhExcCount"></span>
+    </button>
     <div id="dhConfirmWarn" style="display:none;background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);border-radius:8px;padding:9px 13px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;line-height:1.5"></div>
     <div class="dh-actions">
       <button class="dh-cancel" id="dhCancelBtn" data-i18n-key="cancel">Cancel</button>
       <button class="dh-confirm" id="dhConfirmBtn" disabled data-i18n-key="delete">Delete</button>
     </div>
+    </div>
+    <div id="dhExcView" style="display:none">
+      <div class="modal-title"><span data-i18n-key="domain_exceptions">Domain exceptions</span></div>
+      <div class="modal-sub" style="margin-top:8px" data-i18n-key="domain_exceptions_desc">Domains on this list are skipped when you delete history: their history entries, cookies and site data are kept. Subdomains are included.</div>
+      <div class="dh-exc-add">
+        <div class="search-box" style="flex:1;min-width:0">
+          <input type="text" id="dhExcInput" placeholder="example.com" spellcheck="false" autocomplete="off">
+        </div>
+        <button class="action-btn primary" id="dhExcAddBtn" type="button" data-i18n-key="add">Add</button>
+      </div>
+      <div class="dh-exc-error" id="dhExcError"></div>
+      <div class="dh-exc-list" id="dhExcList"></div>
+      <div class="dh-actions" style="margin-top:16px">
+        <button class="dh-cancel" id="dhExcBackBtn" type="button" data-i18n-key="back">&larr; Back</button>
+      </div>
+    </div>
   </div>
 </div>
+<!-- Dev Mode Modal -->
+<div class="modal-backdrop" id="devModeModal">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-title" data-i18n-key="developer_mode_title">🛠 Developer Mode</div>
+    <div class="modal-sub" style="margin-top:0" data-i18n-key="dev_mode_modal_sub">Internal diagnostics — background timers and the live tab idle-tracking state used for auto-store.</div>
+
+    <div id="devStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 18px">
+      <div class="state-msg" style="grid-column:1/-1"><span class="state-msg-icon">📊</span>Loading…</div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="action-btn" id="devListTabsBtn" data-i18n-key="dev_list_tabs">🗂 List open tabs &amp; idle time</button>
+      <button class="action-btn" id="devRefreshBtn" data-i18n-key="refresh">↻ Refresh</button>
+    </div>
+
+    <div id="devTabsList" style="display:none;max-height:320px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px;margin-top:10px"></div>
+
+    <div class="dh-actions" style="margin-top:16px">
+      <button class="dh-cancel" id="devModeCloseBtn" data-i18n-key="close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Sidebar (UI Calendar Mode) — replaces date/hour pills on the History page -->
+<div class="cal-hover-zone" id="calHoverZone"></div>
+<aside class="cal-sidebar" id="calSidebar">
+  <div class="cal-sidebar-inner">
+    <button class="cal-alltime-btn tb-btn" id="calAllTimeBtn" data-i18n-key="cal_all_time">All Time</button>
+
+    <div class="cal-widget">
+      <div class="cal-head">
+        <button class="cal-arrow-btn tb-btn" id="calPrevMonthBtn" title="Previous month" data-i18n-title="previous_month">‹</button>
+        <div class="cal-head-labels">
+          <button class="cal-label-btn" id="calMonthLabel">Month</button>
+          <button class="cal-label-btn" id="calYearLabel">Year</button>
+        </div>
+        <button class="cal-arrow-btn tb-btn" id="calNextMonthBtn" title="Next month" data-i18n-title="next_month">›</button>
+      </div>
+
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-days" id="calDays"></div>
+
+      <div class="cal-picker" id="calMonthPicker" style="display:none"></div>
+      <div class="cal-picker" id="calYearPicker" style="display:none"></div>
+    </div>
+
+    <div class="cal-daynav-row">
+      <button class="cal-daynav-btn tb-btn" id="calPrevDayBtn" data-i18n-key="prev_day">‹ Prev day</button>
+      <button class="cal-daynav-btn tb-btn" id="calNextDayBtn" data-i18n-key="next_day">Next day ›</button>
+    </div>
+
+    <div class="cal-hours-label" data-i18n-key="hour">Hour</div>
+    <div class="cal-hours-grid" id="calHoursGrid"></div>
+  </div>
+</aside>
+
+<script src="i18n-core.js"></script>
 <script src="history.js"></script>
 <script src="ignore-list.js"></script>
 <script src="quick-filters.js"></script>
@@ -990,13 +1145,13 @@
 <!-- Ignore List Password Modal -->
 <div class="modal-backdrop" id="ignorePasswordModal">
   <div class="modal-box" style="max-width:360px">
-    <div class="modal-title" id="ignorePwTitle">🔒 Ignore List Access</div>
-    <div class="modal-sub" id="ignorePwDesc">Enter your master password to view the ignore list.</div>
+    <div class="modal-title" id="ignorePwTitle" data-i18n-key="ignore_list_access">🔒 Ignore List Access</div>
+    <div class="modal-sub" id="ignorePwDesc" data-i18n-key="ignore_list_enter_password">Enter your master password to view the ignore list.</div>
     <input type="password" id="ignorePwInput" placeholder="Master password" style="width:100%;padding:8px 12px;margin-top:12px;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none"/>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)">Reset</button>
-      <button class="sa-btn" id="ignorePwCancelBtn">Cancel</button>
-      <button class="sa-btn" id="ignorePwOkBtn">OK</button>
+      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)" data-i18n-key="reset">Reset</button>
+      <button class="sa-btn" id="ignorePwCancelBtn" data-i18n-key="cancel">Cancel</button>
+      <button class="sa-btn" id="ignorePwOkBtn" data-i18n-key="ok">OK</button>
     </div>
     <div id="ignorePwError" style="color:#e05252;font-size:0.78rem;margin-top:8px;display:none"></div>
   </div>

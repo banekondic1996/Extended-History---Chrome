@@ -1,15 +1,82 @@
 {
-  "ext_name": { "message": "Historique Étendu" },
-
-  "current_session": { "message": "Session actuelle" },
-  "active": { "message": "Actif" },
-  "all_fields": { "message": "Tous les champs" },
-  "title": { "message": "Titre" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Domaine" },
-  "ph_search_history": { "message": "Rechercher dans l’historique…" },
-  "ph_search_bookmarks": { "message": "Rechercher dans les favoris…" },
-
+  "ext_name": {
+    "message": "Historique Étendu"
+  },
+  "rename_bookmark": {
+  "message": "✏️ Renommer le favori"
+},
+"remove_bookmark": {
+    "message": "🗑 Supprimer le favori"
+  },
+  "scroll_sensitivity": {
+    "message": "Sensibilité du défilement"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Nombre de pastilles de jours déplacées à chaque défilement"
+  },
+  "scroll_date": {
+    "message": "Faire défiler les dates avec la molette de la souris"
+  },
+  "scroll_date_desc": {
+    "message": "Permet à une molette de souris classique (qui ne fait défiler que verticalement) de déplacer la barre des dates horizontalement — pratique sur ordinateur, où la molette ne peut pas faire défiler horizontalement toute seule."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Accès à la liste d'exclusion"
+  },
+  "ignore_list_enter_password": {
+    "message": "Entrez votre mot de passe principal pour afficher la liste d'exclusion."
+  },
+  "reset": {
+    "message": "Réinitialiser"
+  },
+ "quick_filters": {
+    "message": "Filtres rapides"
+  },
+  "quick_filter_desc": {
+    "message": "Enregistrez un groupe nommé de domaines, de mots-clés ou d'URL (par exemple « Réseaux sociaux » → facebook.com, instagram.com, pinterest.com). Sélectionnez-le dans la liste déroulante à côté de la barre de recherche sur la page Historique pour filtrer instantanément ces entrées."
+  },
+  "filter_name": {
+    "message": "Nom du filtre (ex. Réseaux sociaux)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Un domaine, mot-clé ou URL par ligne — ex.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Enregistrer les modifications"
+  },
+  "add_filter": {
+    "message": "Ajouter un filtre"
+  },
+  "no_qfilters": {
+    "message": "Aucun filtre rapide pour le moment"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "current_session": {
+    "message": "Session actuelle"
+  },
+  "active": {
+    "message": "Actif"
+  },
+  "all_fields": {
+    "message": "Tous les champs"
+  },
+  "title": {
+    "message": "Titre"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Domaine"
+  },
+  "ph_search_history": {
+    "message": "Rechercher dans l’historique…"
+  },
+  "ph_search_bookmarks": {
+    "message": "Rechercher dans les favoris…"
+  },
   "popup_show_url": {
     "message": "URLs"
   },
@@ -37,215 +104,978 @@
   "apply_migrate": {
     "message": "Appliquer et migrer"
   },
-  "wallpaper_mode": { "message": "🖼 Mode fond d’écran" },
-  "wallpaper_mode_desc": { "message": "Définir une image de fond personnalisée. Active un effet de verre dépoli." },
-  "wallpaper_mode_custom_image": { "message": "📁 Image personnalisée" },
-  "wallpaper_random_unsplash": { "message": "🎲 Aléatoire depuis Unsplash" },
-  "wallpaper_drop_image": { "message": "Déposez une image ici ou <strong>cliquez pour parcourir</strong>" },
-  "wallpaper_fetch": { "message": "Récupère une photo aléatoire haute résolution (change à chaque fois)" },
-  "wallpaper_randomize": { "message": "🎲 Aléatoire" },
-  "wallpaper_auto_randomize": { "message": "Aléatoire automatique à chaque ouverture" },
-  "wallpaper_current": { "message": "Fond actuel :" },
-  "overlay_opacity": { "message": "Opacité de superposition" },
-  "overlay_control_desc": { "message": "Contrôle la superposition sombre (mode sombre) ou blanche (mode clair)." },
-  "wallpaper_blur": { "message": "Flou d’arrière-plan" },
-  "wallpaper_remove": { "message": "✕ Supprimer le fond" },
-  "most_visited": {"message": "Les plus visités"},
-  "tabs": {"message": "onglets"},
-  "since": {"message": "depuis"},
-  "most_visited_URLS_all_time": {"message": "URLs les plus visitées — Depuis toujours"},
-  "urls": {"message": "URLs"},
-  "domains": {"message": "Domaines"},
-  "enable_ignore": {"message": "Activer la liste d’ignorés"},
-  "filter_urls": {"message": "Filtrer les URLs correspondant aux modèles ci-dessous"},
-
-  "reading_mode": {"message": "Mode lecture"},
-  "tab_storage": {"message": "Stockage des onglets"},
-  "load_exported_history_read": {"message": "Chargez un fichier d’historique exporté (.json) pour le parcourir sans l’importer. L’interface fonctionne exactement comme l’onglet Historique — filtres de date, recherche, tout."},
-  "choose_file": {"message": "Choisir un fichier…"},
-  "choose_file_hint": {"message": "ou glissez-déposez un fichier .json ici"},
-  "leave_reading_mode": {"message": "✕ Quitter le mode lecture"},
-  "reading": {"message": "Lecture :"},
-
-   "confirm_delete_all_time": {
+  "wallpaper_mode": {
+    "message": "🖼 Mode fond d’écran"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Définir une image de fond personnalisée. Active un effet de verre dépoli."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Image personnalisée"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Aléatoire depuis Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Déposez une image ici ou <strong>cliquez pour parcourir</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "Récupère une photo aléatoire haute résolution (change à chaque fois)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Aléatoire"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Aléatoire automatique à chaque ouverture"
+  },
+  "wallpaper_current": {
+    "message": "Fond actuel :"
+  },
+  "overlay_opacity": {
+    "message": "Opacité de superposition"
+  },
+  "overlay_control_desc": {
+    "message": "Contrôle la superposition sombre (mode sombre) ou blanche (mode clair)."
+  },
+  "wallpaper_blur": {
+    "message": "Flou d’arrière-plan"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Supprimer le fond"
+  },
+  "most_visited": {
+    "message": "Les plus visités"
+  },
+  "tabs": {
+    "message": "onglets"
+  },
+  "since": {
+    "message": "depuis"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "URLs les plus visitées — Depuis toujours"
+  },
+  "urls": {
+    "message": "URLs"
+  },
+  "domains": {
+    "message": "Domaines"
+  },
+  "enable_ignore": {
+    "message": "Activer la liste d’ignorés"
+  },
+  "filter_urls": {
+    "message": "Filtrer les URLs correspondant aux modèles ci-dessous"
+  },
+  "reading_mode": {
+    "message": "Mode lecture"
+  },
+  "tab_storage": {
+    "message": "Stockage des onglets"
+  },
+  "load_exported_history_read": {
+    "message": "Chargez un fichier d’historique exporté (.json) pour le parcourir sans l’importer. L’interface fonctionne exactement comme l’onglet Historique — filtres de date, recherche, tout."
+  },
+  "choose_file": {
+    "message": "Choisir un fichier…"
+  },
+  "choose_file_hint": {
+    "message": "ou glissez-déposez un fichier .json ici"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Quitter le mode lecture"
+  },
+  "reading": {
+    "message": "Lecture :"
+  },
+  "confirm_delete_all_time": {
     "message": "⚠️ Confirmer la suppression des résultats pour toute la période\n\nCela supprimera $COUNT$ résultats correspondants de tout votre historique.\n\nÊtes-vous sûr ?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "Supprimer $COUNT$ résultats correspondants ?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "$COUNT$ éléments supprimés",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-
-  "today": { "message": "Aujourd’hui" },
-  "storage": { "message": "Stockage" },
-  "total_visits": { "message": "Total des visites" },
-  "restore": { "message": "Restaurer" },
-  "most_visited_URLS": { "message": "URLs les plus visitées" },
-  "all":{"message":"Tout"},
-"auto_focus_search":{"message":"Focus automatique sur la recherche"},
-"auto_focus_search_desc":{"message":"Met automatiquement le focus sur la barre de recherche à l’ouverture"},
-"back":{"message":"← Retour"},
-"background_tint":{"message":"Teinte d’arrière-plan"},
-"browser_cache":{"message":"Cache du navigateur"},
-"delete_history_reset_password":{"message":"Supprimer l’historique et réinitialiser le mot de passe"},
-"enable_bg_tint":{"message":"Activer la teinte d’arrière-plan"},
-"enable_lock":{"message":"Activer le verrou"},
-"enter_password_to_continue":{"message":"Entrez votre mot de passe pour continuer"},
-"ext_locked":{"message":"Extended History — Verrouillé"},
-"favicon_resolver":{"message":"Résolution du favicon"},
-"favicon_resolver_desc":{"message":"Comment les icônes de sites sont récupérées."},
-"for_password_reset":{"message":"(pour réinitialisation du mot de passe)"},
-"forgot_password_reset":{"message":"Mot de passe oublié / Réinitialiser"},
-"google_resolver":{"message":"Résolution Google"},
-"history_merge_interval":{"message":"Intervalle de fusion de l’historique"},
-"history_merge_interval_desc":{"message":"Fréquence de fusion de l’historique dans le stockage local."},
-"lock_extension_page":{"message":"Verrouiller la page de l’extension"},
-"lock_extension_page_desc":{"message":"Exiger un mot de passe pour voir la page d’historique."},
-"password":{"message":"Mot de passe"},
-"performance":{"message":"Performance"},
-"popup":{"message":"Popup"},
-"popup_height":{"message":"Hauteur du popup"},
-"popup_height_desc":{"message":"Hauteur maximale de la liste (px)"},
-"refresh":{"message":"↻ Actualiser"},
-"reset_password_warning":{"message":"⚠️ La réinitialisation supprimera définitivement tout l’historique."},
-"search_bar":{"message":"Barre de recherche"},
-"search_bar_desc":{"message":"Afficher la barre de recherche en bas du popup"},
-"security_answer":{"message":"Réponse de sécurité"},
-"security_question":{"message":"Question de sécurité"},
-"set_up_page_lock":{"message":"🔐 Configurer le verrouillage"},
-"tabs_bar":{"message":"Barre d’onglets"},
-"tabs_bar_desc":{"message":"Afficher le sélecteur Historique récent / Onglets fermés"},
-"time_spent_tracking":{"message":"Suivi du temps"},
-"time_spent_tracking_desc":{"message":"Suivre le temps passé par domaine"},
-"ui":{"message":"Interface"},
-"unlock":{"message":"Déverrouiller"},
-"ph_ignore_pattern":{"message":"example.com ou mot clé"},
-"opt_all_fields":{"message":"Tous les champs"},
-"opt_title":{"message":"Titre"},
-"opt_url":{"message":"URL"},
-"opt_domain":{"message":"Domaine"},
-"block_all_example_7":{"message":"Bloque seulement ce mot clé"},
-"specific_word":{"message":"Mot clé spécifique"},
-"example_com_6":{"message":"exemple"},
-  "browse": { "message": "Parcourir" },
-  "history": { "message": "Historique" },
-  "sessions": { "message": "Sessions" },
-  "devices": { "message": "Appareils" },
-  "insights": { "message": "Statistiques" },
-  "activity": { "message": "Activité" },
-  "time_spent": { "message": "Temps passé" },
-  "library": { "message": "Bibliothèque" },
-  "bookmarks": { "message": "Favoris" },
-  "system": { "message": "Système" },
-  "delete_history": { "message": "Supprimer l’historique" },
-  "ignore_list": { "message": "Liste d’exclusion" },
-  "settings": { "message": "Paramètres" },
-  "more": { "message": "Plus" },
-  "light": { "message": "Clair" },
-  "dark": { "message": "Sombre" },
-  "all_time": { "message": "Depuis toujours" },
-  "delete_results": { "message": "Supprimer les résultats" },
-  "selected_lower": { "message": "sélectionné(s)" },
-  "select_all_visible": { "message": "Tout sélectionner (visible)" },
-  "deselect_all": { "message": "Tout désélectionner" },
-  "delete_selected": { "message": "Supprimer la sélection" },
-  "loading": { "message": "Chargement…" },
-  "daily_visits_90": { "message": "Visites quotidiennes — 90 jours" },
-  "daily_visits_30": { "message": "Visites quotidiennes — 30 jours" },
-  "hours": { "message": "heures" },
-  "days": { "message": "jours" },
-  "clear_time_data": { "message": "Effacer les données de temps" },
-  "daily_browsing_time": { "message": "Temps de navigation quotidien" },
-  "top_sites_by_time_spent": { "message": "Sites les plus consultés (temps passé)" },
-  "export": { "message": "Exporter" },
-  "import": { "message": "Importer" },
-  "history_retention": { "message": "Conservation de l’historique" },
-  "keep_history_for": { "message": "Conserver l’historique pendant" },
-  "older_enteries_are_pruned": { "message": "Les anciennes entrées sont supprimées automatiquement" },
-  "months": { "message": "mois" },
-  "year": { "message": "an" },
-  "years": { "message": "ans" },
-  "forever": { "message": "Toujours" },
-  "appearance": { "message": "Apparence" },
-  "language": { "message": "Langue" },
-  "select_pref_language": { "message": "Sélectionnez la langue préférée" },
-  "font_family": { "message": "Police" },
-  "font_size": { "message": "Taille de police" },
-  "base_ui_text_size": { "message": "Taille de base du texte UI" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Couleurs d’accent" },
-  "primary": { "message": "Primaire" },
-  "secondary": { "message": "Secondaire" },
-  "data": { "message": "Données" },
-  "export_history": { "message": "Exporter l’historique" },
-  "full_json_backup": { "message": "Sauvegarde JSON complète de l’historique + temps" },
-  "export_json": { "message": "Exporter JSON" },
-  "import_history": { "message": "Importer l’historique" },
-  "merge_entries_json": { "message": "Fusionner les entrées d’un fichier JSON exporté précédemment" },
-  "import_json": { "message": "Importer JSON" },
-  "sessions_to_keep": { "message": "Sessions à conserver" },
-  "how_many_past_sessions": { "message": "Nombre de sessions passées à conserver (1–20)" },
-  "auto_save_session": { "message": "Enregistrement automatique de la session actuelle" },
-  "save_open_tabs_to": { "message": "Enregistre les onglets ouverts dans extended-history-session.html dans votre dossier Téléchargements. Mettre 0 pour désactiver." },
-  "min": { "message": "min" },
-  "save_now": { "message": "Enregistrer maintenant" },
-  "save_settings": { "message": "Enregistrer les paramètres" },
-  "danger_zone": { "message": "Zone dangereuse" },
-  "reimport_chrome_history": { "message": "Réimporter l’historique Chrome" },
-  "pull_all_chrome_history": { "message": "Récupérer tout l’historique Chrome local (fusion sans doublons)" },
-  "reimport": { "message": "Réimporter" },
-  "clear_all_history": { "message": "Effacer tout l’historique" },
-  "permanently_delete_all_stored": { "message": "Supprime définitivement tout l’historique stocké. Irréversible." },
-  "clear_all": { "message": "Tout effacer" },
-  "about": { "message": "À propos" },
-  "created_by": { "message": "Créé par Bane Kondić car il n’aimait pas la limite de 90 jours de Chromium. Cette extension n’envoie aucune donnée et est entièrement open source." },
-  "github_profile": { "message": "Profil Github" },
-  "feedback": { "message": "Retour" },
-  "link_to_discord": { "message": "Lien vers le serveur Discord pour les retours" },
-  "discord_server": { "message": "Serveur Discord" },
-  "rate_extension": { "message": "Évaluer l’extension" },
-  "link_to_chrome_webstore": { "message": "Lien vers la page Chrome Web Store" },
-  "click_to_rate": { "message": "Cliquez pour évaluer" },
-  "ignored_domains": { "message": "Domaines ignorés" },
-  "domains_added_will_not_be": { "message": "Les domaines ajoutés ici ne seront pas enregistrés dans l’historique." },
-  "add_patern": { "message": "Ajouter un motif" },
-  "pattern_guide": { "message": "Guide des motifs" },
-  "basic_domain": { "message": "Domaine de base" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Bloque tout example.com" },
-  "all_subdomains": { "message": "Tous les sous-domaines" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Bloque blog.example.com, shop.example.com, etc." },
-  "specific_subdomain": { "message": "Sous-domaine spécifique" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Bloque uniquement blog.example.com" },
-  "specific_path": { "message": "Chemin spécifique" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "Bloque uniquement les URL sous /private" },
-  "specific_file": { "message": "Fichier spécifique" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "Bloque uniquement ce fichier" },
-  "no_patterns_added": { "message": "Aucun motif ajouté" },
-  "open_in_new_tab": { "message": "Ouvrir dans un nouvel onglet" },
-  "open_in_incognito": { "message": "Ouvrir en navigation privée" },
-  "copy_url": { "message": "Copier l’URL" },
-  "copy_title": { "message": "Copier le titre" },
-  "delete_from_history": { "message": "Supprimer de l’historique" },
-  "new_subfolder": { "message": "Nouveau sous-dossier" },
-  "rename_folder": { "message": "Renommer le dossier" },
-  "delete_folder": { "message": "Supprimer le dossier" },
-  "cancel": { "message": "Annuler" },
-  "delete": { "message": "Supprimer" },
-  "choose_a_time_range": { "message": "Choisissez une période à supprimer." },
-  "last_1_hour": { "message": "Dernière heure" },
-  "last_24_hours": { "message": "Dernières 24 heures" },
-  "last_7_days": { "message": "7 derniers jours" },
-  "last_30_days": { "message": "30 derniers jours" },
-  "last_5_months": { "message": "5 derniers mois" },
-  "clear_cookies_local_storage": { "message": "Effacer les cookies et le stockage local" },
-  "clear_cache": { "message": "Effacer le cache" }
+  "today": {
+    "message": "Aujourd’hui"
+  },
+  "storage": {
+    "message": "Stockage"
+  },
+  "total_visits": {
+    "message": "Total des visites"
+  },
+  "restore": {
+    "message": "Restaurer"
+  },
+  "most_visited_URLS": {
+    "message": "URLs les plus visitées"
+  },
+  "all": {
+    "message": "Tout"
+  },
+  "auto_focus_search": {
+    "message": "Focus automatique sur la recherche"
+  },
+  "auto_focus_search_desc": {
+    "message": "Met automatiquement le focus sur la barre de recherche à l’ouverture"
+  },
+  "back": {
+    "message": "← Retour"
+  },
+  "background_tint": {
+    "message": "Teinte d’arrière-plan"
+  },
+  "browser_cache": {
+    "message": "Cache du navigateur"
+  },
+  "delete_history_reset_password": {
+    "message": "Supprimer l’historique et réinitialiser le mot de passe"
+  },
+  "enable_bg_tint": {
+    "message": "Activer la teinte d’arrière-plan"
+  },
+  "enable_lock": {
+    "message": "Activer le verrou"
+  },
+  "enter_password_to_continue": {
+    "message": "Entrez votre mot de passe pour continuer"
+  },
+  "ext_locked": {
+    "message": "Extended History — Verrouillé"
+  },
+  "favicon_resolver": {
+    "message": "Résolution du favicon"
+  },
+  "favicon_resolver_desc": {
+    "message": "Comment les icônes de sites sont récupérées."
+  },
+  "for_password_reset": {
+    "message": "(pour réinitialisation du mot de passe)"
+  },
+  "forgot_password_reset": {
+    "message": "Mot de passe oublié / Réinitialiser"
+  },
+  "google_resolver": {
+    "message": "Résolution Google"
+  },
+  "history_merge_interval": {
+    "message": "Intervalle de fusion de l’historique"
+  },
+  "history_merge_interval_desc": {
+    "message": "Fréquence de fusion de l’historique dans le stockage local."
+  },
+  "lock_extension_page": {
+    "message": "Verrouiller la page de l’extension"
+  },
+  "lock_extension_page_desc": {
+    "message": "Exiger un mot de passe pour voir la page d’historique."
+  },
+  "password": {
+    "message": "Mot de passe"
+  },
+  "performance": {
+    "message": "Performance"
+  },
+  "popup": {
+    "message": "Popup"
+  },
+  "popup_height": {
+    "message": "Hauteur du popup"
+  },
+  "popup_height_desc": {
+    "message": "Hauteur maximale de la liste (px)"
+  },
+  "refresh": {
+    "message": "↻ Actualiser"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ La réinitialisation supprimera définitivement tout l’historique."
+  },
+  "search_bar": {
+    "message": "Barre de recherche"
+  },
+  "search_bar_desc": {
+    "message": "Afficher la barre de recherche en bas du popup"
+  },
+  "security_answer": {
+    "message": "Réponse de sécurité"
+  },
+  "security_question": {
+    "message": "Question de sécurité"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Configurer le verrouillage"
+  },
+  "tabs_bar": {
+    "message": "Barre d’onglets"
+  },
+  "tabs_bar_desc": {
+    "message": "Afficher le sélecteur Historique récent / Onglets fermés"
+  },
+  "time_spent_tracking": {
+    "message": "Suivi du temps"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Suivre le temps passé par domaine"
+  },
+  "ui": {
+    "message": "Interface"
+  },
+  "unlock": {
+    "message": "Déverrouiller"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com ou mot clé"
+  },
+  "opt_all_fields": {
+    "message": "Tous les champs"
+  },
+  "opt_title": {
+    "message": "Titre"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Domaine"
+  },
+  "block_all_example_7": {
+    "message": "Bloque seulement ce mot clé"
+  },
+  "specific_word": {
+    "message": "Mot clé spécifique"
+  },
+  "example_com_6": {
+    "message": "exemple"
+  },
+  "browse": {
+    "message": "Parcourir"
+  },
+  "history": {
+    "message": "Historique"
+  },
+  "sessions": {
+    "message": "Sessions"
+  },
+  "devices": {
+    "message": "Appareils"
+  },
+  "insights": {
+    "message": "Statistiques"
+  },
+  "activity": {
+    "message": "Activité"
+  },
+  "time_spent": {
+    "message": "Temps passé"
+  },
+  "library": {
+    "message": "Bibliothèque"
+  },
+  "bookmarks": {
+    "message": "Favoris"
+  },
+  "system": {
+    "message": "Système"
+  },
+  "delete_history": {
+    "message": "Supprimer l’historique"
+  },
+  "ignore_list": {
+    "message": "Liste d’exclusion"
+  },
+  "settings": {
+    "message": "Paramètres"
+  },
+  "more": {
+    "message": "Plus"
+  },
+  "light": {
+    "message": "Clair"
+  },
+  "dark": {
+    "message": "Sombre"
+  },
+  "all_time": {
+    "message": "Depuis toujours"
+  },
+  "delete_results": {
+    "message": "Supprimer les résultats"
+  },
+  "selected_lower": {
+    "message": "sélectionné(s)"
+  },
+  "select_all_visible": {
+    "message": "Tout sélectionner (visible)"
+  },
+  "deselect_all": {
+    "message": "Tout désélectionner"
+  },
+  "delete_selected": {
+    "message": "Supprimer la sélection"
+  },
+  "loading": {
+    "message": "Chargement…"
+  },
+  "daily_visits_90": {
+    "message": "Visites quotidiennes — 90 jours"
+  },
+  "daily_visits_30": {
+    "message": "Visites quotidiennes — 30 jours"
+  },
+  "hours": {
+    "message": "heures"
+  },
+  "days": {
+    "message": "jours"
+  },
+  "clear_time_data": {
+    "message": "Effacer les données de temps"
+  },
+  "daily_browsing_time": {
+    "message": "Temps de navigation quotidien"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Sites les plus consultés (temps passé)"
+  },
+  "export": {
+    "message": "Exporter"
+  },
+  "import": {
+    "message": "Importer"
+  },
+  "history_retention": {
+    "message": "Conservation de l’historique"
+  },
+  "keep_history_for": {
+    "message": "Conserver l’historique pendant"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Les anciennes entrées sont supprimées automatiquement"
+  },
+  "months": {
+    "message": "mois"
+  },
+  "year": {
+    "message": "an"
+  },
+  "years": {
+    "message": "ans"
+  },
+  "forever": {
+    "message": "Toujours"
+  },
+  "appearance": {
+    "message": "Apparence"
+  },
+  "language": {
+    "message": "Langue"
+  },
+  "select_pref_language": {
+    "message": "Sélectionnez la langue préférée"
+  },
+  "font_family": {
+    "message": "Police"
+  },
+  "font_size": {
+    "message": "Taille de police"
+  },
+  "base_ui_text_size": {
+    "message": "Taille de base du texte UI"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Couleurs d’accent"
+  },
+  "primary": {
+    "message": "Primaire"
+  },
+  "secondary": {
+    "message": "Secondaire"
+  },
+  "data": {
+    "message": "Données"
+  },
+  "export_history": {
+    "message": "Exporter l’historique"
+  },
+  "full_json_backup": {
+    "message": "Sauvegarde JSON complète de l’historique + temps"
+  },
+  "export_json": {
+    "message": "Exporter JSON"
+  },
+  "import_history": {
+    "message": "Importer l’historique"
+  },
+  "merge_entries_json": {
+    "message": "Fusionner les entrées d’un fichier JSON exporté précédemment"
+  },
+  "import_json": {
+    "message": "Importer JSON"
+  },
+  "sessions_to_keep": {
+    "message": "Sessions à conserver"
+  },
+  "how_many_past_sessions": {
+    "message": "Nombre de sessions passées à conserver (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Enregistrement automatique de la session actuelle"
+  },
+  "save_open_tabs_to": {
+    "message": "Enregistre les onglets ouverts dans extended-history-session.html dans votre dossier Téléchargements. Mettre 0 pour désactiver."
+  },
+  "min": {
+    "message": "min"
+  },
+  "save_now": {
+    "message": "Enregistrer maintenant"
+  },
+  "save_settings": {
+    "message": "Enregistrer les paramètres"
+  },
+  "danger_zone": {
+    "message": "Zone dangereuse"
+  },
+  "reimport_chrome_history": {
+    "message": "Réimporter l’historique Chrome"
+  },
+  "pull_all_chrome_history": {
+    "message": "Récupérer tout l’historique Chrome local (fusion sans doublons)"
+  },
+  "reimport": {
+    "message": "Réimporter"
+  },
+  "clear_all_history": {
+    "message": "Effacer tout l’historique"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Supprime définitivement tout l’historique stocké. Irréversible."
+  },
+  "clear_all": {
+    "message": "Tout effacer"
+  },
+  "about": {
+    "message": "À propos"
+  },
+  "created_by": {
+    "message": "Créé par Bane Kondić car il n’aimait pas la limite de 90 jours de Chromium. Cette extension n’envoie aucune donnée et est entièrement open source."
+  },
+  "github_profile": {
+    "message": "Profil Github"
+  },
+  "feedback": {
+    "message": "Retour"
+  },
+  "link_to_discord": {
+    "message": "Lien vers le serveur Discord pour les retours"
+  },
+  "discord_server": {
+    "message": "Serveur Discord"
+  },
+  "rate_extension": {
+    "message": "Évaluer l’extension"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Lien vers la page Chrome Web Store"
+  },
+  "click_to_rate": {
+    "message": "Cliquez pour évaluer"
+  },
+  "ignored_domains": {
+    "message": "Domaines ignorés"
+  },
+  "domains_added_will_not_be": {
+    "message": "Les domaines ajoutés ici ne seront pas enregistrés dans l’historique."
+  },
+  "add_patern": {
+    "message": "Ajouter un motif"
+  },
+  "pattern_guide": {
+    "message": "Guide des motifs"
+  },
+  "basic_domain": {
+    "message": "Domaine de base"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Bloque tout example.com"
+  },
+  "all_subdomains": {
+    "message": "Tous les sous-domaines"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Bloque blog.example.com, shop.example.com, etc."
+  },
+  "specific_subdomain": {
+    "message": "Sous-domaine spécifique"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Bloque uniquement blog.example.com"
+  },
+  "specific_path": {
+    "message": "Chemin spécifique"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "Bloque uniquement les URL sous /private"
+  },
+  "specific_file": {
+    "message": "Fichier spécifique"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "Bloque uniquement ce fichier"
+  },
+  "no_patterns_added": {
+    "message": "Aucun motif ajouté"
+  },
+  "open_in_new_tab": {
+    "message": "Ouvrir dans un nouvel onglet"
+  },
+  "open_in_incognito": {
+    "message": "Ouvrir en navigation privée"
+  },
+  "copy_url": {
+    "message": "Copier l’URL"
+  },
+  "copy_title": {
+    "message": "Copier le titre"
+  },
+  "delete_from_history": {
+    "message": "Supprimer de l’historique"
+  },
+  "new_subfolder": {
+    "message": "Nouveau sous-dossier"
+  },
+  "rename_folder": {
+    "message": "Renommer le dossier"
+  },
+  "delete_folder": {
+    "message": "Supprimer le dossier"
+  },
+  "cancel": {
+    "message": "Annuler"
+  },
+  "delete": {
+    "message": "Supprimer"
+  },
+  "choose_a_time_range": {
+    "message": "Choisissez une période à supprimer."
+  },
+  "last_1_hour": {
+    "message": "Dernière heure"
+  },
+  "last_24_hours": {
+    "message": "Dernières 24 heures"
+  },
+  "last_7_days": {
+    "message": "7 derniers jours"
+  },
+  "last_30_days": {
+    "message": "30 derniers jours"
+  },
+  "last_5_months": {
+    "message": "5 derniers mois"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Effacer les cookies et le stockage local"
+  },
+  "clear_cache": {
+    "message": "Effacer le cache"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Ouvrir le mode développeur"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 Lister les onglets ouverts et le temps d'inactivité"
+  },
+  "cal_all_time": {
+    "message": "Toute la période"
+  },
+  "prev_day": {
+    "message": "‹ Jour préc."
+  },
+  "next_day": {
+    "message": "Jour suiv. ›"
+  },
+  "previous_month": {
+    "message": "Mois précédent"
+  },
+  "next_month": {
+    "message": "Mois suivant"
+  },
+  "clear": {
+    "message": "Effacer"
+  },
+  "ui_rounded_corners": {
+    "message": "Coins arrondis de l'interface"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Arrondit les coins de la barre latérale et du panneau principal (et conserve le petit espace autour). Désactivez pour une mise en page à angles droits, bord à bord."
+  },
+  "ui_calendar_mode": {
+    "message": "Mode calendrier"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Remplace la navigation par pastilles de date/heure de la page Historique par un calendrier dans la barre latérale droite : choisissez dates, mois et années, et accédez directement à n'importe quelle heure."
+  },
+  "developer": {
+    "message": "Développeur"
+  },
+  "dev_mode": {
+    "message": "Mode développeur"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Mode développeur"
+  },
+  "dev_mode_desc": {
+    "message": "Diagnostic interne : données en direct du suivi d'inactivité des onglets utilisées pour le stockage automatique et statistiques des minuteurs en arrière-plan. Réservé au dépannage."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Diagnostic interne : minuteurs en arrière-plan et état en direct du suivi d'inactivité des onglets utilisé pour le stockage automatique."
+  },
+  "close": {
+    "message": "Fermer"
+  },
+  "hour": {
+    "message": "Heure"
+  },
+  "all_hours": {
+    "message": "Toutes les heures"
+  },
+  "ph_search_devices": {
+    "message": "Rechercher des onglets d'appareils par titre ou URL…"
+  },
+  "add": {
+    "message": "Ajouter"
+  },
+  "domain_exceptions": {
+    "message": "Exceptions de domaine"
+  },
+  "domain_exceptions_desc": {
+    "message": "Les domaines de cette liste sont ignorés lors de la suppression de l'historique : leurs entrées d'historique, cookies et données de site sont conservés. Les sous-domaines sont inclus."
+  },
+  "no_exceptions_yet": {
+    "message": "Aucune exception pour l'instant"
+  },
+  "remove": {
+    "message": "Supprimer"
+  },
+  "invalid_domain": {
+    "message": "Saisissez un domaine valide, p. ex. example.com"
+  },
+  "domain_already_added": {
+    "message": "Ce domaine figure déjà dans la liste"
+  },
+  "dh_confirm_warn": {
+    "message": "Cela supprimera définitivement l'historique pour : $N1$. Cliquez à nouveau sur Supprimer pour confirmer.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "Les domaines de votre liste d'exceptions ($N1$) seront conservés.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "Suppression…"
+  },
+  "deleted_history_entries": {
+    "message": "$N1$ entrées d'historique supprimées",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "cookies"
+  },
+  "word_cache": {
+    "message": "cache"
+  },
+  "confirm_restore_tabs": {
+    "message": "Restaurer $N1$ onglets ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "$N1$ onglets restaurés dans $N2$ fenêtres",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "$N1$ onglets restaurés dans une nouvelle fenêtre",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "Motif supprimé"
+  },
+  "toast_enter_pattern": {
+    "message": "Veuillez saisir un motif"
+  },
+  "toast_pattern_added": {
+    "message": "Motif ajouté : $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "Liste d'ignorés activée"
+  },
+  "toast_ignore_disabled": {
+    "message": "Liste d'ignorés désactivée"
+  },
+  "toast_ts_hidden": {
+    "message": "Les domaines ignorés sont désormais masqués du Temps passé"
+  },
+  "toast_ts_shown": {
+    "message": "Les domaines ignorés ne sont plus masqués du Temps passé"
+  },
+  "hide_from_time_spent": {
+    "message": "Masquer du Temps passé"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Masque de la vue Temps passé les domaines correspondant aux motifs ci-dessous ; ne supprime aucune donnée de temps enregistrée"
+  },
+  "url_pattern_guide": {
+    "message": "Guide des motifs d'URL"
+  },
+  "ignore_keywords_note": {
+    "message": "Les mots sans point sont traités comme des mots-clés : ils correspondent à toute URL ou tout titre de page contenant ce mot."
+  },
+  "toast_cleaning": {
+    "message": "Nettoyage des URL ignorées de l'historique…"
+  },
+  "toast_removed_ignored": {
+    "message": "$N1$ URL ignorées supprimées de l'historique",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "Aucune URL ignorée trouvée dans l'historique"
+  },
+  "keyword_prefix": {
+    "message": "mot-clé : $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "En cache (local)"
+  },
+  "context_menu_on_pages": {
+    "message": "Menu contextuel sur les sites web"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Affiche l'entrée « Extended History » lors d'un clic droit sur une page web"
+  },
+  "no_sessions_yet": {
+    "message": "Aucune session enregistrée pour l'instant"
+  },
+  "popup_as_sidebar": {
+    "message": "Utiliser comme barre latérale"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Ouvre Extended History dans le panneau latéral de Chrome au lieu d'un popup, pour qu'il occupe toute la hauteur de la page"
+  },
+  "toolbar_icon": {
+    "message": "Icône de la barre d'outils"
+  },
+  "toolbar_icon_desc": {
+    "message": "Choisissez l'icône affichée dans la barre d'outils du navigateur"
+  },
+  "wallpaper_opacity": {
+    "message": "Opacité de l'arrière-plan"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Atténue l'image d'arrière-plan elle-même, indépendamment de la teinte du panneau en verre ci-dessous."
+  },
+  "yesterday": {
+    "message": "Hier"
+  },
+  "language_auto": {
+    "message": "Automatique (langue du navigateur)"
+  },
+  "nav_icons": {
+    "message": "Icônes de navigation"
+  },
+  "nav_icons_desc": {
+    "message": "Affiche les icônes à côté des éléments du menu latéral. Désactivez pour un menu texte uniquement."
+  },
+  "match_ui_colors": {
+    "message": "Assortir aux couleurs de l'interface"
+  },
+  "match_ui_colors_desc": {
+    "message": "Donne à la liste de l'historique la même couleur que le reste de l'interface (barre latérale, calendrier et panneaux) au lieu d'une teinte distincte."
+  },
+  "pop_store": {
+    "message": "Stocker"
+  },
+  "pop_open": {
+    "message": "Ouvrir"
+  },
+  "pop_prev_day": {
+    "message": "Jour précédent"
+  },
+  "pop_next_day": {
+    "message": "Jour suivant"
+  },
+  "pop_clear_search": {
+    "message": "Effacer la recherche et revenir à aujourd'hui"
+  },
+  "pop_recent_history": {
+    "message": "Historique récent"
+  },
+  "pop_closed_tabs": {
+    "message": "Onglets fermés"
+  },
+  "pop_active_tabs": {
+    "message": "Onglets actifs"
+  },
+  "pop_unselect_all": {
+    "message": "Tout désélectionner"
+  },
+  "pop_select_all": {
+    "message": "Tout sélectionner"
+  },
+  "pop_search_results": {
+    "message": "Résultats de recherche"
+  },
+  "pop_start_typing": {
+    "message": "Commencez à taper pour rechercher..."
+  },
+  "pop_export_session_title": {
+    "message": "Clic droit pour exporter la dernière session"
+  },
+  "pop_searching": {
+    "message": "Recherche..."
+  },
+  "pop_search_error": {
+    "message": "Erreur de recherche"
+  },
+  "pop_no_results": {
+    "message": "Aucun résultat"
+  },
+  "pop_no_closed": {
+    "message": "Aucun onglet fermé récemment"
+  },
+  "pop_no_storable": {
+    "message": "Aucun onglet ouvert pouvant être stocké"
+  },
+  "pop_ts_error": {
+    "message": "Erreur de chargement du stockage d'onglets"
+  },
+  "pop_no_stored": {
+    "message": "Aucun onglet stocké."
+  },
+  "pop_no_stored_hint": {
+    "message": "Faites un clic droit sur ce bouton pour stocker les onglets ouverts"
+  },
+  "pop_no_data": {
+    "message": "Aucune donnée pour l'instant"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Retirer $N1$ onglet(s) stocké(s) du stockage d'onglets ?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Impossible de stocker cette page"
+  },
+  "pop_no_history_day": {
+    "message": "Aucun historique pour ce jour"
+  },
+  "pop_no_history_today": {
+    "message": "Pas encore d'historique aujourd'hui"
+  },
+  "pop_just_now": {
+    "message": "à l'instant"
+  },
+  "pop_min_ago": {
+    "message": "il y a $N1$ min",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "il y a $N1$ h",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "il y a $N1$ j",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }

@@ -2,6 +2,57 @@
   "ext_name": {
     "message": "扩展历史"
   },
+  "rename_bookmark": {
+  "message": "✏️ 重命名书签"
+},
+"remove_bookmark": {
+    "message": "🗑 删除书签"
+  },
+   "quick_filters": {
+    "message": "快速筛选"
+  },
+  "quick_filter_desc": {
+    "message": "保存一组命名的域名、关键词或网址（例如“社交媒体” → facebook.com、instagram.com、pinterest.com）。在历史记录页面的搜索框旁边的下拉菜单中选择它，即可立即只筛选这些条目。"
+  },
+  "filter_name": {
+    "message": "筛选名称（例如：社交媒体）"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "每行输入一个域名、关键词或网址 — 例如：\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "保存更改"
+  },
+  "add_filter": {
+    "message": "添加筛选"
+  },
+  "no_qfilters": {
+    "message": "暂无快速筛选"
+  },
+    "scroll_sensitivity": {
+    "message": "滚动灵敏度"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "每次滚动移动多少个日期按钮"
+  },
+  "scroll_date": {
+    "message": "使用鼠标滚轮滚动日期按钮"
+  },
+  "scroll_date_desc": {
+    "message": "允许普通鼠标滚轮（只能垂直滚动）横向移动日期按钮栏 — 在桌面设备上很方便，因为鼠标滚轮本身无法进行水平滚动。"
+  },
+  "ignore_list_access": {
+    "message": "🔒 忽略列表访问"
+  },
+  "ignore_list_enter_password": {
+    "message": "请输入主密码以查看忽略列表。"
+  },
+  "reset": {
+    "message": "重置"
+  },
+  "ok": {
+    "message": "确定"
+  },
   "current_session": {
     "message": "当前会话"
   },
@@ -750,16 +801,31 @@
     "message": "该域名已在列表中"
   },
   "dh_confirm_warn": {
-    "message": "这将永久删除以下时间范围的历史记录：{0}。再次点击“删除”以确认。"
+    "message": "这将永久删除以下时间范围的历史记录：$N1$。再次点击“删除”以确认。",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "dh_confirm_exceptions": {
-    "message": "例外列表中的域名（{0}）将被保留。"
+    "message": "例外列表中的域名（$N1$）将被保留。",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "deleting": {
     "message": "正在删除…"
   },
   "deleted_history_entries": {
-    "message": "已删除 {0} 条历史记录"
+    "message": "已删除 $N1$ 条历史记录",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "word_cookies": {
     "message": "Cookie"
@@ -768,13 +834,31 @@
     "message": "缓存"
   },
   "confirm_restore_tabs": {
-    "message": "恢复 {0} 个标签页？"
+    "message": "恢复 $N1$ 个标签页？",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_windows": {
-    "message": "已在 {1} 个窗口中恢复 {0} 个标签页"
+    "message": "已在 $N2$ 个窗口中恢复 $N1$ 个标签页",
+    "placeholders": {
+      "n2": {
+        "content": "$2"
+      },
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "restored_tabs_window": {
-    "message": "已在新窗口中恢复 {0} 个标签页"
+    "message": "已在新窗口中恢复 $N1$ 个标签页",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_pattern_removed": {
     "message": "已移除模式"
@@ -783,7 +867,12 @@
     "message": "请输入模式"
   },
   "toast_pattern_added": {
-    "message": "已添加模式：{0}"
+    "message": "已添加模式：$N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_ignore_enabled": {
     "message": "已启用忽略列表"
@@ -813,13 +902,23 @@
     "message": "正在从历史记录中清理被忽略的 URL…"
   },
   "toast_removed_ignored": {
-    "message": "已从历史记录中移除 {0} 个被忽略的 URL"
+    "message": "已从历史记录中移除 $N1$ 个被忽略的 URL",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "toast_no_ignored": {
     "message": "历史记录中未发现被忽略的 URL"
   },
   "keyword_prefix": {
-    "message": "关键词：{0}"
+    "message": "关键词：$N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   },
   "cached_resolver": {
     "message": "已缓存（本地）"
@@ -853,5 +952,130 @@
   },
   "yesterday": {
     "message": "昨天"
+  },
+  "language_auto": {
+    "message": "自动（浏览器语言）"
+  },
+  "nav_icons": {
+    "message": "导航图标"
+  },
+  "nav_icons_desc": {
+    "message": "在侧边栏导航项旁显示图标。关闭后仅显示文字。"
+  },
+  "match_ui_colors": {
+    "message": "匹配界面颜色"
+  },
+  "match_ui_colors_desc": {
+    "message": "使历史记录列表与界面其余部分（侧边栏、日历侧边栏和面板）颜色一致，而非使用不同的色调。"
+  },
+  "pop_store": {
+    "message": "存储"
+  },
+  "pop_open": {
+    "message": "打开"
+  },
+  "pop_prev_day": {
+    "message": "前一天"
+  },
+  "pop_next_day": {
+    "message": "后一天"
+  },
+  "pop_clear_search": {
+    "message": "清除搜索并返回今天"
+  },
+  "pop_recent_history": {
+    "message": "最近历史记录"
+  },
+  "pop_closed_tabs": {
+    "message": "已关闭的标签页"
+  },
+  "pop_active_tabs": {
+    "message": "活动标签页"
+  },
+  "pop_unselect_all": {
+    "message": "取消全选"
+  },
+  "pop_select_all": {
+    "message": "全选"
+  },
+  "pop_search_results": {
+    "message": "搜索结果"
+  },
+  "pop_start_typing": {
+    "message": "开始输入以搜索..."
+  },
+  "pop_export_session_title": {
+    "message": "右键单击以导出最新会话"
+  },
+  "pop_searching": {
+    "message": "正在搜索..."
+  },
+  "pop_search_error": {
+    "message": "搜索出错"
+  },
+  "pop_no_results": {
+    "message": "未找到结果"
+  },
+  "pop_no_closed": {
+    "message": "没有最近关闭的标签页"
+  },
+  "pop_no_storable": {
+    "message": "没有可存储的已打开标签页"
+  },
+  "pop_ts_error": {
+    "message": "加载标签页存储时出错"
+  },
+  "pop_no_stored": {
+    "message": "没有已存储的标签页。"
+  },
+  "pop_no_stored_hint": {
+    "message": "右键单击此按钮以存储已打开的标签页"
+  },
+  "pop_no_data": {
+    "message": "暂无数据"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "要从标签页存储中移除 $N1$ 个已存储的标签页吗？",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "无法存储此页面"
+  },
+  "pop_no_history_day": {
+    "message": "这一天没有历史记录"
+  },
+  "pop_no_history_today": {
+    "message": "今天还没有历史记录"
+  },
+  "pop_just_now": {
+    "message": "刚刚"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ 分钟前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ 小时前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ 天前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
   }
 }

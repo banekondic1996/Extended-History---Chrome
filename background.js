@@ -42,6 +42,11 @@ const DEFAULT_SETTINGS = {
   datePillsWheelSensitivity: 1, // Days moved per wheel "click" (1-6) when the above is enabled
   popupAsSidebar: false,     // Open Extended History in Chrome's side panel instead of the popup
   sidebarAutoHide: true,     // Close the sidebar automatically when the mouse leaves it
+  roundedCorners: true,      // UI rounded corners on the sidebar/main panels (default on)
+  navIcons: true,            // Show the icons in the sidebar navigation (off = text only)
+  matchUiColors: true,       // History list uses the same colour as the rest of the UI instead of its own shade
+  calendarMode: false,       // Replace date/hour pill nav with a right-side calendar sidebar
+  hideIgnoredInTimeSpent: false, // Hide (not delete) ignore-list-matched domains from the Time Spent view
   autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
                                 // block of history once it's built up beyond the retained window.
   autoExportLastRunAt: 0,      // timestamp of the last successful auto-export (informational)
@@ -229,6 +234,34 @@ async function shouldIgnoreUrl(url, title) {
   return ignoreList.some(pattern => matchesIgnorePattern(url, pattern, title));
 }
 
+// Time Spent data is stored aggregated per-domain (no per-page path), so this
+// is a lighter sibling of matchesIgnorePattern() — no URL/title to check,
+// just a bare hostname. A path-specific ignore pattern (e.g. "example.com/x")
+// still hides the whole domain here, since we can't filter at a granularity
+// finer than what's actually tracked.
+function domainMatchesIgnorePattern(domain, pattern) {
+  try {
+    if (pattern.startsWith('kw:')) {
+      const kw = pattern.slice(3).toLowerCase();
+      return !!kw && (domain || '').toLowerCase().includes(kw);
+    }
+    const parsed = parseIgnorePattern(pattern);
+    if (!parsed) return false;
+    return hostMatchesPattern(domain, parsed.host, true);
+  } catch {
+    return false;
+  }
+}
+
+// Returns the ignore list to filter Time Spent domains against, or null if
+// the "hide ignored domains" option is off / there's nothing to hide.
+async function getTimeSpentIgnoreList() {
+  const settings = await getSettings();
+  if (!settings.hideIgnoredInTimeSpent) return null;
+  const ignoreList = await getIgnoreList();
+  return ignoreList.length ? ignoreList : null;
+}
+
 async function addIgnorePattern(pattern) {
   const clean = normalizeIgnorePattern(pattern);
   if (!clean) return { success: false, error: 'Invalid pattern' };
@@ -275,6 +308,40 @@ async function cleanupIgnoredUrlFromNativeHistory(url) {
   } catch {}
 }
 
+// ── Ignore-cleanup progress bubble ────────────────────────────────────────────
+// Purging ignored URLs from a large history can take a while (one native
+// chrome.history.deleteUrl call per matched entry), and history won't
+// re-load correctly while it's mid-purge. This state makes that visible even
+// if every extension page/popup gets closed while the cleanup keeps running
+// in the background — the badge on the toolbar icon persists regardless.
+let _ignoreCleanupActive = false;
+let _ignoreCleanupProgress = { done: 0, total: 0 };
+
+function broadcastCleanupStatus() {
+  try {
+    chrome.runtime.sendMessage({
+      type: 'CLEANUP_PROGRESS',
+      active: _ignoreCleanupActive,
+      done: _ignoreCleanupProgress.done,
+      total: _ignoreCleanupProgress.total,
+    }).catch(() => {}); // no listeners is fine
+  } catch {}
+}
+
+function setCleanupBadge(active, done, total) {
+  try {
+    if (active) {
+      chrome.action.setBadgeBackgroundColor({ color: '#e0a030' });
+      // Badge text is limited to ~4 visible chars by Chrome anyway; fall back
+      // to a plain "working" indicator once the done/total count gets long.
+      const label = total ? `${done}/${total}` : '…';
+      chrome.action.setBadgeText({ text: label.length <= 4 ? label : '…' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
+    }
+  } catch {}
+}
+
 // Clean all ignored URLs from history
 async function cleanIgnoredFromHistory() {
   const enabled = await isIgnoreListEnabled();
@@ -295,16 +362,33 @@ async function cleanIgnoredFromHistory() {
     }
   }
   
-  if (toDelete.length) {
+  if (!toDelete.length) return { removed: 0 };
+
+  _ignoreCleanupActive = true;
+  _ignoreCleanupProgress = { done: 0, total: toDelete.length };
+  setCleanupBadge(true, 0, toDelete.length);
+  broadcastCleanupStatus();
+
+  try {
     await setAll(toKeep);
     await updateTodayHistory();
-    
+
     // Also remove from Chrome native history
     for (const e of toDelete) {
       await deleteUrlSafe(e.url);
+      _ignoreCleanupProgress.done++;
+      // Throttle badge/broadcast updates so we're not hammering these APIs
+      if (_ignoreCleanupProgress.done % 10 === 0 || _ignoreCleanupProgress.done === toDelete.length) {
+        setCleanupBadge(true, _ignoreCleanupProgress.done, toDelete.length);
+        broadcastCleanupStatus();
+      }
     }
+  } finally {
+    _ignoreCleanupActive = false;
+    setCleanupBadge(false, 0, 0);
+    broadcastCleanupStatus();
   }
-  
+
   return { removed: toDelete.length };
 }
 
@@ -453,7 +537,29 @@ async function updateTodayHistory() {
 // Runs every `syncInterval` minutes (default 30). Pulls all of today's visits
 // from the Chrome history API and merges them into local storage, deduplicating
 // by (normalizedUrl, 5-second bucket). This replaces per-visit storage writes.
+// _lastFlush is cached in memory but backed by storage — MV3 service workers
+// can be torn down between the once-a-minute eh_flush ticks, which would
+// otherwise silently reset this to 0 and make the flush fire far more often
+// than `syncInterval` actually calls for (and make a "time until next merge"
+// stat useless, since it'd constantly read as overdue).
+const LAST_FLUSH_KEY = 'eh_last_flush';
 let _lastFlush = 0;
+let _lastFlushLoaded = false;
+
+async function getLastFlush() {
+  if (!_lastFlushLoaded) {
+    const r = await chrome.storage.local.get(LAST_FLUSH_KEY);
+    _lastFlush = r[LAST_FLUSH_KEY] || 0;
+    _lastFlushLoaded = true;
+  }
+  return _lastFlush;
+}
+
+async function setLastFlush(ts) {
+  _lastFlush = ts;
+  _lastFlushLoaded = true;
+  await chrome.storage.local.set({ [LAST_FLUSH_KEY]: ts });
+}
 
 async function flushTodayToHistory() {
   const settings = await getSettings();
@@ -482,7 +588,7 @@ async function flushTodayToHistory() {
   if (existing.length > settings.maxEntries) existing = existing.slice(existing.length - settings.maxEntries);
   existing.sort((a, b) => b.visitTime - a.visitTime);
   await setAll(existing);
-  _lastFlush = now;
+  await setLastFlush(now);
   //console.log(`[EH] Flushed ${added} new entries from today into history`);
 }
 
@@ -582,7 +688,8 @@ chrome.alarms.onAlarm.addListener(async alarm => {
   if (alarm.name === 'eh_flush') {
     const intervalMins = await getSyncInterval();
     // intervalMins === 0 means "flush on every visit" (legacy mode) — skip timer flush
-    if (intervalMins > 0 && Date.now() - _lastFlush >= intervalMins * 60 * 1000) {
+    const last = await getLastFlush();
+    if (intervalMins > 0 && Date.now() - last >= intervalMins * 60 * 1000) {
       await flushTodayToHistory().catch(() => {});
     }
     return;
@@ -948,10 +1055,69 @@ async function removeTabStorageEntry(id) {
   await chrome.storage.local.set({ [TAB_STORAGE_KEY]: next });
   return next;
 }
-// ── Auto-store: idle detection via tabs.Tab.lastAccessed ─────────────────────
-// The browser maintains tab.lastAccessed (ms epoch) natively — updated whenever
-// a tab is activated or navigated. No manual tracking map is needed, and the
-// value survives service-worker restarts automatically.
+// ── Auto-store: idle detection via accumulated browser-running time ──────────
+// IMPORTANT: we deliberately do NOT use `now - tab.lastAccessed` directly.
+// tab.lastAccessed is a wall-clock timestamp, so if the PC/browser is off or
+// asleep for the night, that entire downtime silently counts as "idle" the
+// moment the browser wakes up, causing tabs to get auto-stored almost
+// instantly even though they were only idle a few real minutes while the
+// browser was actually running.
+//
+// Instead we keep a persisted idle-time accumulator that only advances while
+// the extension itself is actually ticking (eh_tick fires every ~30s, and
+// only while Chrome is running). Each tick we add the elapsed time since the
+// last tick, but CAP that delta — if the gap since the last tick is
+// unusually large, the browser/PC was almost certainly off or suspended in
+// between, so we don't count that gap as idle-while-running time.
+//
+// KEYED BY NORMALIZED URL, NOT tab.id: Chrome hands out brand-new tab.id
+// values on every full browser restart (closing Chrome from the taskbar,
+// or a hard power-off/reboot) — even though chrome.storage.local persists
+// fine across a restart, an id-keyed accumulator would find no match for
+// any restored tab and silently reset every tab to 0 idle time on every
+// reboot. Keying by URL survives that, since the restored tab has the same
+// URL as before. Tradeoff: two simultaneously-open tabs with the exact same
+// URL share one accumulator (rare, and low-stakes if it happens).
+//
+// Resets are event-driven (see the onActivated/onUpdated listeners below)
+// rather than inferred by comparing tab.lastAccessed — lastAccessed's exact
+// behavior across a session restore isn't reliably documented, so trusting
+// it as a "was this tab actually used" signal risks the same reset-on-
+// reboot bug this whole scheme exists to avoid.
+const TAB_IDLE_TRACK_KEY = 'eh_tab_idle_track';
+const TAB_IDLE_TICK_CAP_MS = 5 * 60 * 1000; // ignore gaps longer than this between ticks
+
+async function getTabIdleTrack() {
+  const r = await chrome.storage.local.get(TAB_IDLE_TRACK_KEY);
+  const track = r[TAB_IDLE_TRACK_KEY] || { lastCheck: Date.now(), tabs: {} };
+  // Defensive: discard anything left over from the old tab.id-keyed schema
+  // (values used to be {idleMs, lastAccessed} objects; now they're plain numbers).
+  for (const k of Object.keys(track.tabs)) {
+    if (typeof track.tabs[k] !== 'number') delete track.tabs[k];
+  }
+  return track;
+}
+
+// Reset a URL's idle accumulator to 0 the moment it's actually used —
+// called from real tab-activation/navigation events, never inferred.
+async function resetTabIdle(url) {
+  if (!url || !isTrackable(url)) return;
+  const norm = normalizeUrl(url);
+  const track = await getTabIdleTrack();
+  if (track.tabs[norm] === 0) return; // nothing to change, skip the write
+  track.tabs[norm] = 0;
+  await chrome.storage.local.set({ [TAB_IDLE_TRACK_KEY]: track });
+}
+
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab?.url) await resetTabIdle(tab.url);
+  } catch {}
+});
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.url) resetTabIdle(info.url).catch(() => {});
+});
 
 async function runAutoStore() {
   if (!_autoStoreEnabled) return;
@@ -966,21 +1132,60 @@ async function runAutoStore() {
   const stored = await getTabStorage();
   const storedUrls = new Set(stored.map(e => e.url));
 
+  const track = await getTabIdleTrack();
+
+  // Elapsed time since the previous tick, capped so sleep/shutdown gaps
+  // between ticks are never counted as "browser running" idle time.
+  const rawDelta = now - (track.lastCheck || now);
+  const delta = Math.max(0, Math.min(rawDelta, TAB_IDLE_TICK_CAP_MS));
+  track.lastCheck = now;
+
+  const liveUrls = new Set();
   const toStore = [];
+
   for (const tab of tabs) {
     if (!tab.url || !isTrackable(tab.url)) continue;
-    if (tab.active) continue; // never auto-store the currently active tab
     const norm = normalizeUrl(tab.url);
+    liveUrls.add(norm);
+
+    if (tab.active) {
+      // Never auto-store the currently active tab, and make sure its
+      // accumulator reads 0 (the onActivated listener already does this on
+      // the switch itself; this just keeps things consistent every tick).
+      track.tabs[norm] = 0;
+      continue;
+    }
+
+    const idleMs = (track.tabs[norm] || 0) + delta;
+    track.tabs[norm] = idleMs;
+
     if (storedUrls.has(norm)) continue; // already in tab storage
 
-    // tab.lastAccessed is maintained natively by the browser (ms epoch).
-    // Fall back to now so a tab with no recorded access time is never stored
-    // immediately — treat it as freshly opened instead.
-    const lastAccessed = tab.lastAccessed ?? now;
-    if (now - lastAccessed >= thresholdMs) {
+    // Two independent gates must BOTH clear the threshold before storing:
+    //  1) idleMs        — our accumulator, immune to PC-off/sleep inflation
+    //  2) wallIdleMs     — raw now-vs-tab.lastAccessed, immune to a stale
+    //                      accumulator that never got reset (e.g. Chrome
+    //                      restores a background/discarded tab with the
+    //                      same URL after a reboot without ever firing
+    //                      onActivated/onUpdated for it, since it hasn't
+    //                      actually reloaded — our event-driven reset would
+    //                      silently miss that tab, but tab.lastAccessed
+    //                      itself still reflects the real, recent access).
+    // Neither gate is trustworthy alone (idleMs can go stale; lastAccessed
+    // alone is exactly the original wall-clock-inflation bug) — requiring
+    // both is what makes this safe.
+    const wallIdleMs = now - (tab.lastAccessed ?? now);
+    if (idleMs >= thresholdMs && wallIdleMs >= thresholdMs) {
       toStore.push({ tab, norm });
     }
   }
+
+  // Garbage-collect tracking entries for URLs no longer open in any tab.
+  for (const norm of Object.keys(track.tabs)) {
+    if (!liveUrls.has(norm)) delete track.tabs[norm];
+  }
+
+  await chrome.storage.local.set({ [TAB_IDLE_TRACK_KEY]: track });
 
   if (!toStore.length) return;
 
@@ -996,8 +1201,9 @@ async function runAutoStore() {
       });
     }
     try { await chrome.tabs.remove(tab.id); } catch {}
+    delete track.tabs[norm];
   }
-  await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored });
+  await chrome.storage.local.set({ [TAB_STORAGE_KEY]: stored, [TAB_IDLE_TRACK_KEY]: track });
 }
 
 async function getSessions() {
@@ -1464,6 +1670,61 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async details => {
   // Title will arrive via tabs.onUpdated
 });
 
+// ── Delete-History domain exceptions ─────────────────────────────────────────
+// Domains listed here are skipped by "Delete History" (time-range deletion):
+// their history entries, native Chrome history visits, cookies and site data
+// all survive. An exception for example.com also covers its subdomains.
+const DELETE_EXCEPTIONS_KEY = 'eh_delete_exceptions';
+
+async function getDeleteExceptions() {
+  try {
+    const r = await chrome.storage.local.get(DELETE_EXCEPTIONS_KEY);
+    const list = r[DELETE_EXCEPTIONS_KEY];
+    return Array.isArray(list) ? list.filter(d => typeof d === 'string' && d) : [];
+  } catch { return []; }
+}
+
+function makeExceptionMatcher(exceptions) {
+  if (!exceptions.length) return () => false;
+  return (url) => {
+    const host = domainOf(url);
+    return !!host && exceptions.some(d => host === d || host.endsWith('.' + d));
+  };
+}
+
+// chrome.history.deleteRange has no "except" option, so instead we find every
+// visit that belongs to an excepted domain inside the range and delete only the
+// gaps between them (each excepted visit is fenced off with a tiny 10-microsecond margin).
+async function deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted) {
+  let items = [];
+  try { items = await chrome.history.search({ text: '', startTime, endTime, maxResults: 100000 }); } catch {}
+
+  const keepTimes = [];
+  for (const it of items) {
+    if (!it.url || !isExcepted(it.url)) continue;
+    try {
+      const visits = await chrome.history.getVisits({ url: it.url });
+      for (const v of visits) {
+        if (v.visitTime >= startTime && v.visitTime <= endTime) keepTimes.push(v.visitTime);
+      }
+    } catch {}
+  }
+
+  if (!keepTimes.length) {
+    await chrome.history.deleteRange({ startTime, endTime });
+    return;
+  }
+
+  keepTimes.sort((a, b) => a - b);
+  const MARGIN = 0.01; // ms fence (10us) around each protected visit - visit times have us precision
+  let cursor = startTime;
+  for (const t of keepTimes) {
+    if (t - MARGIN > cursor) await chrome.history.deleteRange({ startTime: cursor, endTime: t - MARGIN });
+    cursor = Math.max(cursor, t + MARGIN);
+  }
+  if (endTime > cursor) await chrome.history.deleteRange({ startTime: cursor, endTime });
+}
+
 // ── Message API ──────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
 
@@ -1570,21 +1831,34 @@ async function handle(msg) {
     }
     case 'DELETE_HISTORY_RANGE': {
       const { startTime, endTime, clearCookies, clearCache } = msg;
-      // Delete from extension storage
+      const exceptions = await getDeleteExceptions();
+      const isExcepted = makeExceptionMatcher(exceptions);
+      // Delete from extension storage (entries on excepted domains are kept)
       let entries = await getAll();
       const before = entries.length;
-      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime));
+      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || isExcepted(e.url));
       await setAll(entries);
       const deleted = before - entries.length;
       // Delete from Chrome native history
-      try { await chrome.history.deleteRange({ startTime, endTime }); } catch {}
+      try {
+        if (exceptions.length) await deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted);
+        else await chrome.history.deleteRange({ startTime, endTime });
+      } catch {}
       // Optionally clear cookies and cache
       if (clearCookies || clearCache) {
         const since = startTime;
         const dataTypes = {};
         if (clearCookies) { dataTypes.cookies = true; dataTypes.localStorage = true; dataTypes.indexedDB = true; }
         if (clearCache)   { dataTypes.cache = true; dataTypes.cacheStorage = true; }
-        try { await chrome.browsingData.remove({ since }, dataTypes); } catch {}
+        const removalOptions = { since };
+        if (exceptions.length) {
+          // Cookies are excluded for the whole registrable domain; https + http
+          // origins are listed so both schemes of each excepted site are kept.
+          removalOptions.excludeOrigins = exceptions.flatMap(d => [`https://${d}`, `http://${d}`]);
+        }
+        // If exclusions can't be applied, fail safe: leave site data alone
+        // rather than wiping data the user asked to protect.
+        try { await chrome.browsingData.remove(removalOptions, dataTypes); } catch {}
       }
       // Update today's history
       await updateTodayHistory();
@@ -1609,14 +1883,25 @@ async function handle(msg) {
       const {days=30}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
       const now=Date.now(); const dateSet=new Set();
       for(let i=0;i<days;i++) dateSet.add(new Date(now-i*86400000).toLocaleDateString('en-CA'));
+
+      // "Hide ignored domains from Time Spent" — display-only filter, never
+      // touches the underlying eh_time storage. A domain is excluded here
+      // purely based on whether it currently matches an ignore pattern.
+      const hideList = await getTimeSpentIgnoreList();
+      const isHidden = hideList
+        ? (domain) => hideList.some(p => domainMatchesIgnorePattern(domain, p))
+        : () => false;
+
       const totals={};
       for(const [domain,dayMap] of Object.entries(map)){
+        if (isHidden(domain)) continue;
         let t=0; for(const [date,ms] of Object.entries(dayMap)){if(dateSet.has(date)) t+=ms;} if(t>0) totals[domain]=t;
       }
       const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,20)
       .map(([domain,ms])=>({domain,ms,minutes:Math.round(ms/60000),hours:(ms/3600000).toFixed(1)}));
       const dailyMap={};
       for(const [domain,dayMap] of Object.entries(map)){
+        if (isHidden(domain)) continue;
         for(const [date,ms] of Object.entries(dayMap)){
           if(!dateSet.has(date)) continue;
           if(!dailyMap[date]) dailyMap[date]={};
@@ -1738,11 +2023,60 @@ async function handle(msg) {
     case 'GET_SYNC_INTERVAL': {
       return { minutes: await getSyncInterval() };
     }
+    // ── Dev Mode diagnostics ────────────────────────────────────────────────
+    case 'GET_DEV_STATS': {
+      const settings = await getSettings();
+      const syncIntervalMins = await getSyncInterval();
+      const lastFlushAt = await getLastFlush();
+      const nextFlushAt = syncIntervalMins > 0 && lastFlushAt
+        ? lastFlushAt + syncIntervalMins * 60 * 1000
+        : null; // null = due on the very next minute-tick (no baseline yet)
+      return {
+        syncIntervalMins,
+        lastFlushAt,
+        nextFlushAt,
+        now: Date.now(),
+        autoStoreEnabled: _autoStoreEnabled,
+        autoStoreHours: _autoStoreHours,
+        ignoreCleanupActive: _ignoreCleanupActive,
+        ignoreCleanupProgress: { ..._ignoreCleanupProgress },
+      };
+    }
+    case 'GET_DEV_TAB_IDLE': {
+      const thresholdMs = _autoStoreHours * 3600000;
+      const track = await getTabIdleTrack();
+      let tabs = [];
+      try { tabs = await chrome.tabs.query({}); } catch {}
+
+      const stored = await getTabStorage();
+      const storedUrls = new Set(stored.map(e => e.url));
+
+      const result = tabs.map(tab => {
+        const trackable = !!(tab.url && isTrackable(tab.url));
+        const norm = trackable ? normalizeUrl(tab.url) : null;
+        const idleMs = tab.active ? 0 : (trackable ? (track.tabs[norm] || 0) : 0);
+        const wallIdleMs = tab.active ? 0 : Date.now() - (tab.lastAccessed ?? Date.now());
+        return {
+          id: tab.id,
+          title: tab.title || tab.url || '(untitled)',
+          url: tab.url || '',
+          active: !!tab.active,
+          trackable,
+          alreadyStored: trackable ? storedUrls.has(norm) : false,
+          idleMs,
+          wallIdleMs,
+          thresholdMs,
+        };
+      });
+      // Most-idle first so the tabs closest to auto-store are easy to spot.
+      result.sort((a, b) => b.idleMs - a.idleMs);
+      return { tabs: result, autoStoreEnabled: _autoStoreEnabled, thresholdMs };
+    }
     case 'SET_SYNC_INTERVAL': {
       const mins = parseInt(msg.minutes);
       const safe = isNaN(mins) ? 30 : Math.max(0, Math.min(1440, mins));
       await saveSettings({ syncInterval: safe });
-      _lastFlush = 0; // reset so next alarm tick re-evaluates
+      await setLastFlush(0); // reset so next alarm tick re-evaluates
       return { success: true, minutes: safe };
     }
     case 'FORCE_FLUSH': {
@@ -1759,12 +2093,34 @@ async function handle(msg) {
     case 'RESTORE_SESSION': {
       const { tabs } = msg;
       if (!Array.isArray(tabs)) return { success: false };
+
+      // Never pile the session into the window the user is currently in: every
+      // original window becomes its own NEW window. Tabs are grouped by the
+      // windowId they were saved with (first-seen order preserved); sessions
+      // saved before windowId was tracked have none, so they share one group
+      // and restore as a single window.
+      const groups = new Map();
       for (const t of tabs) {
-        if (t.url && isTrackable(t.url)) {
-          try { await chrome.tabs.create({ url: t.url, active: false }); } catch {}
+        if (!t || !t.url || !isTrackable(t.url)) continue;
+        const key = t.windowId != null ? String(t.windowId) : '__none__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(t.url);
+      }
+
+      let windows = 0, restored = 0;
+      for (const urls of groups.values()) {
+        let win;
+        try {
+          // First window takes focus; the rest open behind it so a 2-window
+          // session doesn't yank focus back and forth while tabs load.
+          win = await chrome.windows.create({ url: urls[0], focused: windows === 0 });
+        } catch { continue; }
+        windows++; restored++;
+        for (const url of urls.slice(1)) {
+          try { await chrome.tabs.create({ windowId: win.id, url, active: false }); restored++; } catch {}
         }
       }
-      return { success: true };
+      return { success: true, windows, restored };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
     case 'TRIGGER_AUTO_EXPORT': {
@@ -1798,6 +2154,12 @@ async function handle(msg) {
       if (next.timeTrackingEnabled !== undefined) _timeTrackingEnabled = next.timeTrackingEnabled !== false;
       if (next.autoStoreEnabled !== undefined)    _autoStoreEnabled    = next.autoStoreEnabled !== false;
       if (next.autoStoreHours   !== undefined)    _autoStoreHours      = typeof next.autoStoreHours === 'number' ? next.autoStoreHours : 6;
+      // runAutoStore() garbage-collects closed tabs out of the idle-time
+      // tracking store on every tick, but only while auto-store is enabled
+      // (it returns early otherwise). Wipe the store here so turning the
+      // feature off doesn't leave stale per-tab tracking data sitting
+      // around indefinitely until it's turned back on.
+      if (next.autoStoreEnabled === false) await chrome.storage.local.remove(TAB_IDLE_TRACK_KEY);
       if (msg.settings.hasOwnProperty('toolbarIcon'))       applyToolbarIcon(next.toolbarIcon);
       if (msg.settings.hasOwnProperty('popupAsSidebar'))    applyPopupMode(next.popupAsSidebar === true);
       if (msg.settings.hasOwnProperty('contextMenuEnabled')) await ensureContextMenus();
@@ -1902,8 +2264,28 @@ async function handle(msg) {
     case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
     case 'MOVE_BOOKMARK': {
       try {
-        await chrome.bookmarks.move(msg.id, { parentId: msg.parentId });
-        return { success: true };
+        // index is only passed for in-list reordering (dragging a bookmark
+        // between two others in its current folder) — omitted for plain
+        // folder-to-folder moves, which drop the bookmark at the end.
+        const wantIndex = (msg.index !== undefined && msg.index !== null) ? msg.index : undefined;
+        const dest = { parentId: msg.parentId };
+        if (wantIndex !== undefined) dest.index = wantIndex;
+        let moved = await chrome.bookmarks.move(msg.id, dest);
+        // Chrome has a long-standing quirk where asking to move a bookmark
+        // forward within its own folder can silently land it short of the
+        // requested index (the exact behaviour has shifted across Chrome
+        // versions and is still debated upstream). Rather than hard-code an
+        // adjustment and hope it matches the installed Chrome version,
+        // check where the bookmark actually ended up and nudge it again if
+        // it's not where we asked — self-correcting instead of guessing.
+        let guard = 0;
+        while (wantIndex !== undefined && moved.parentId === msg.parentId &&
+               moved.index !== wantIndex && guard < 3) {
+          const nudge = wantIndex + (wantIndex - moved.index);
+          moved = await chrome.bookmarks.move(msg.id, { parentId: msg.parentId, index: nudge });
+          guard++;
+        }
+        return { success: true, index: moved.index };
       } catch(e) { return { error: e.message }; }
     }
     case 'DELETE_BOOKMARK': {
@@ -1932,7 +2314,12 @@ async function handle(msg) {
     }
     case 'OPEN_INCOGNITO': { try{await chrome.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
     case 'GET_IGNORE_LIST': {
-      return { list: await getIgnoreList(), enabled: await isIgnoreListEnabled() };
+      const settings = await getSettings();
+      return {
+        list: await getIgnoreList(),
+        enabled: await isIgnoreListEnabled(),
+        hideInTimeSpent: settings.hideIgnoredInTimeSpent === true,
+      };
     }
     case 'ADD_IGNORE_PATTERN': {
       const result = await addIgnorePattern(msg.pattern);
@@ -1965,10 +2352,19 @@ async function handle(msg) {
       const res = await cleanIgnoredFromHistory();
       return { success: true, removed: res.removed || 0 };
     }
+    case 'GET_CLEANUP_STATUS': {
+      return { active: _ignoreCleanupActive, done: _ignoreCleanupProgress.done, total: _ignoreCleanupProgress.total };
+    }
     case 'TOGGLE_IGNORE_LIST': {
       const settings = await getSettings();
       const newEnabled = !settings.ignoreListEnabled;
       await saveSettings({ ignoreListEnabled: newEnabled });
+      return { success: true, enabled: newEnabled };
+    }
+    case 'TOGGLE_HIDE_IGNORED_TIMESPENT': {
+      const settings = await getSettings();
+      const newEnabled = !settings.hideIgnoredInTimeSpent;
+      await saveSettings({ hideIgnoredInTimeSpent: newEnabled });
       return { success: true, enabled: newEnabled };
     }
     // ── Quick Filters ──────────────────────────────────────────────────────

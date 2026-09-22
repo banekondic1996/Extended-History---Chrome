@@ -1,36 +1,144 @@
 {
-  "ext_name": { "message": "Uitgebreide Geschiedenis" },
-
-  "current_session": { "message": "Huidige Sessie" },
-  "active": { "message": "Actief" },
-  "all_fields": { "message": "Alle velden" },
-  "title": { "message": "Titel" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Domein" },
-  "ph_search_history": { "message": "Geschiedenis zoeken…" },
-  "ph_search_bookmarks": { "message": "Bladwijzers zoeken…" },
-  "wallpaper_mode": { "message": "🖼 Achtergrondmodus" },
-  "wallpaper_mode_desc": { "message": "Stel een aangepaste achtergrondafbeelding in. Schakelt een frosted-glass UI-look in." },
-  "wallpaper_mode_custom_image": { "message": "📁 Aangepaste afbeelding" },
-  "wallpaper_random_unsplash": { "message": "🎲 Willekeurig van Unsplash" },
-  "wallpaper_drop_image": { "message": "Sleep hier een afbeelding of <strong>klik om te bladeren</strong>" },
-  "wallpaper_fetch": { "message": "Haalt een willekeurige foto in hoge resolutie op (verandert elke keer)" },
-  "wallpaper_randomize": { "message": "🎲 Willekeurig maken" },
-  "wallpaper_auto_randomize": { "message": "Automatisch willekeurig bij elke opening" },
-  "wallpaper_current": { "message": "Huidige achtergrond:" },
-  "overlay_opacity": { "message": "Overlay transparantie" },
-  "overlay_control_desc": { "message": "Bepaalt de donkere (donkere modus) of witte (lichte modus) overlay bovenop de achtergrond." },
-  "wallpaper_blur": { "message": "Achtergrondvervaging" },
-  "wallpaper_remove": { "message": "✕ Achtergrond verwijderen" },
-  "reading_mode": {"message": "Leesmodus"},
-  "tab_storage": {"message": "Tabopslag"},
-  "load_exported_history_read": {"message": "Laad een geëxporteerd geschiedenisbestand (.json) om het te bekijken zonder het te importeren. De interface werkt precies zoals het Geschiedenis-tabblad — datumfilters, zoeken, alles."},
-  "choose_file": {"message": "Bestand kiezen…"},
-  "choose_file_hint": {"message": "of sleep een .json-bestand hierheen"},
-  "leave_reading_mode": {"message": "✕ Leesmodus verlaten"},
-  "reading": {"message": "Lezen:"},
+  "ext_name": {
+    "message": "Uitgebreide Geschiedenis"
+  },
+  "rename_bookmark": {
+  "message": "✏️ Bladwijzer hernoemen"
+},
+  "remove_bookmark": {
+    "message": "🗑 Bladwijzer verwijderen"
+  },
+  "quick_filters": {
+    "message": "Snelle filters"
+  },
+  "quick_filter_desc": {
+    "message": "Sla een benoemde groep van domeinen, trefwoorden of URL's op (bijv. \"Sociale media\" → facebook.com, instagram.com, pinterest.com). Kies deze uit de vervolgkeuzelijst naast het zoekvak op de Geschiedenis-pagina om direct alleen die vermeldingen te filteren."
+  },
+  "filter_name": {
+    "message": "Filternaam (bijv. Sociale media)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Eén domein, trefwoord of URL per regel — bijv.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Wijzigingen opslaan"
+  },
+  "add_filter": {
+    "message": "Filter toevoegen"
+  },
+  "no_qfilters": {
+    "message": "Nog geen snelle filters"
+  },
+   "scroll_sensitivity": {
+    "message": "Scrollgevoeligheid"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Hoeveel dagknoppen elke scrollbeweging verschuift"
+  },
+  "scroll_date": {
+    "message": "Datumknoppen scrollen met het muiswiel"
+  },
+  "scroll_date_desc": {
+    "message": "Hiermee kan een normaal muiswiel (dat alleen verticaal scrolt) de datumknoppenbalk zijwaarts verplaatsen — handig op desktop, waar het wiel niet uit zichzelf horizontaal kan scrollen."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Toegang tot negeerlijst"
+  },
+  "ignore_list_enter_password": {
+    "message": "Voer je hoofdwachtwoord in om de negeerlijst te bekijken."
+  },
+  "reset": {
+    "message": "Resetten"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "current_session": {
+    "message": "Huidige Sessie"
+  },
+  "active": {
+    "message": "Actief"
+  },
+  "all_fields": {
+    "message": "Alle velden"
+  },
+  "title": {
+    "message": "Titel"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Domein"
+  },
+  "ph_search_history": {
+    "message": "Geschiedenis zoeken…"
+  },
+  "ph_search_bookmarks": {
+    "message": "Bladwijzers zoeken…"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 Achtergrondmodus"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Stel een aangepaste achtergrondafbeelding in. Schakelt een frosted-glass UI-look in."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Aangepaste afbeelding"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Willekeurig van Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Sleep hier een afbeelding of <strong>klik om te bladeren</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "Haalt een willekeurige foto in hoge resolutie op (verandert elke keer)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Willekeurig maken"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Automatisch willekeurig bij elke opening"
+  },
+  "wallpaper_current": {
+    "message": "Huidige achtergrond:"
+  },
+  "overlay_opacity": {
+    "message": "Overlay transparantie"
+  },
+  "overlay_control_desc": {
+    "message": "Bepaalt de donkere (donkere modus) of witte (lichte modus) overlay bovenop de achtergrond."
+  },
+  "wallpaper_blur": {
+    "message": "Achtergrondvervaging"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Achtergrond verwijderen"
+  },
+  "reading_mode": {
+    "message": "Leesmodus"
+  },
+  "tab_storage": {
+    "message": "Tabopslag"
+  },
+  "load_exported_history_read": {
+    "message": "Laad een geëxporteerd geschiedenisbestand (.json) om het te bekijken zonder het te importeren. De interface werkt precies zoals het Geschiedenis-tabblad — datumfilters, zoeken, alles."
+  },
+  "choose_file": {
+    "message": "Bestand kiezen…"
+  },
+  "choose_file_hint": {
+    "message": "of sleep een .json-bestand hierheen"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Leesmodus verlaten"
+  },
+  "reading": {
+    "message": "Lezen:"
+  },
   "popup_show_url": {
-  "message": "URL's"
+    "message": "URL's"
   },
   "popup_show_url_desc": {
     "message": "Toon de pagina-URL onder de titel in de pop-uplijst"
@@ -56,196 +164,918 @@
   "apply_migrate": {
     "message": "Toepassen en migreren"
   },
-
-  "most_visited": {"message": "Meest bezocht"},
-  "tabs": {"message": "tabbladen"},
-  "since": {"message": "sinds"},
-  "most_visited_URLS_all_time": {"message": "Meest bezochte URL's — Altijd"},
-  "urls": {"message": "URL's"},
-  "domains": {"message": "Domeinen"},
-  "enable_ignore": {"message": "Negeerlijst inschakelen"},
-  "filter_urls": {"message": "Filter URL's die overeenkomen met onderstaande patronen"},
+  "most_visited": {
+    "message": "Meest bezocht"
+  },
+  "tabs": {
+    "message": "tabbladen"
+  },
+  "since": {
+    "message": "sinds"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "Meest bezochte URL's — Altijd"
+  },
+  "urls": {
+    "message": "URL's"
+  },
+  "domains": {
+    "message": "Domeinen"
+  },
+  "enable_ignore": {
+    "message": "Negeerlijst inschakelen"
+  },
+  "filter_urls": {
+    "message": "Filter URL's die overeenkomen met onderstaande patronen"
+  },
   "confirm_delete_all_time": {
     "message": "⚠️ Bevestig verwijderen van resultaten voor alle tijd\n\nDit zal $COUNT$ overeenkomende resultaten uit je volledige geschiedenis verwijderen.\n\nWeet je het zeker?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "$COUNT$ overeenkomende resultaten verwijderen?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "$COUNT$ items verwijderd",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-
-  "today": { "message": "Vandaag" },
-  "storage": { "message": "Opslag" },
-  "total_visits": { "message": "Totaal bezoeken" },
-  "restore": { "message": "Herstellen" },
-  "most_visited_URLS": { "message": "Meest bezochte URL's" },
-
-   "all":{"message":"Alles"},
-  "auto_focus_search":{"message":"Zoekveld automatisch focussen bij openen"},
-  "auto_focus_search_desc":{"message":"Automatisch focussen op het zoekveld wanneer de geschiedenis pagina opent"},
-  "back":{"message":"← Terug"},
-  "background_tint":{"message":"Achtergrondtint"},
-  "browser_cache":{"message":"Browsercache"},
-  "delete_history_reset_password":{"message":"Geschiedenis verwijderen & wachtwoord resetten"},
-  "enable_bg_tint":{"message":"Achtergrondtint inschakelen"},
-  "enable_lock":{"message":"Vergrendeling inschakelen"},
-  "enter_password_to_continue":{"message":"Voer uw wachtwoord in om verder te gaan"},
-  "ext_locked":{"message":"Extended History — Vergrendeld"},
-  "favicon_resolver":{"message":"Favicon resolver"},
-  "favicon_resolver_desc":{"message":"Hoe site-iconen worden opgehaald. \"Browsercache\" gebruikt Chrome's cache (sneller, privé). \"Google\" haalt iconen van Google's CDN (betere dekking)."},
-  "for_password_reset":{"message":"(voor wachtwoord reset)"},
-  "forgot_password_reset":{"message":"Wachtwoord vergeten / Reset"},
-  "google_resolver":{"message":"Google resolver"},
-  "history_merge_interval":{"message":"Geschiedenis samenvoeg interval"},
-  "history_merge_interval_desc":{"message":"Hoe vaak browsergeschiedenis naar lokale opslag wordt samengevoegd. 30 min is optimaal, maar kan hoger als de PC langer gebruikt wordt."},
-  "lock_extension_page":{"message":"Extensiepagina vergrendelen"},
-  "lock_extension_page_desc":{"message":"Vereis een wachtwoord om de geschiedenis pagina te bekijken en schakel zoek/tab functies in popup uit. Geschiedenis wordt NIET versleuteld."},
-  "password":{"message":"Wachtwoord"},
-  "performance":{"message":"Prestaties"},
-  "popup":{"message":"Popup"},
-  "popup_height":{"message":"Popup hoogte"},
-  "popup_height_desc":{"message":"Maximale hoogte van het popup lijstgebied (px)"},
-  "refresh":{"message":"↻ Vernieuwen"},
-  "reset_password_warning":{"message":"⚠️ Waarschuwing: Reset van wachtwoord verwijdert ALLE opgeslagen geschiedenis permanent."},
-  "search_bar":{"message":"Zoekbalk"},
-  "search_bar_desc":{"message":"Toon de zoekbalk onderaan de popup"},
-  "security_answer":{"message":"Beveiligingsantwoord"},
-  "security_question":{"message":"Beveiligingsvraag"},
-  "set_up_page_lock":{"message":"🔐 Pagina vergrendeling instellen"},
-  "tabs_bar":{"message":"Tabbalk"},
-  "tabs_bar_desc":{"message":"Toon Recent History / Closed Tabs schakelaar"},
-  "time_spent_tracking":{"message":"Tijdsbesteding tracking"},
-  "time_spent_tracking_desc":{"message":"Volg tijd per domein. Uitschakelen vermindert CPU gebruik."},
-  "ui":{"message":"UI"},
-  "unlock":{"message":"Ontgrendelen"},
-  "ph_ignore_pattern":{"message":"voorbeeld.com of trefwoord"},
-  "opt_all_fields":{"message":"Alle velden"},
-  "opt_title":{"message":"Titel"},
-  "opt_url":{"message":"URL"},
-  "opt_domain":{"message":"Domein"},
-  "block_all_example_7":{"message":"Blokkeert alleen dat trefwoord"},
-  "specific_word":{"message":"Specifiek trefwoord"},
-  "example_com_6":{"message":"voorbeeld"},
-
-  "browse": { "message": "Bladeren" },
-  "history": { "message": "Geschiedenis" },
-  "sessions": { "message": "Sessies" },
-  "devices": { "message": "Apparaten" },
-  "insights": { "message": "Inzichten" },
-  "activity": { "message": "Activiteit" },
-  "time_spent": { "message": "Besteedde Tijd" },
-  "library": { "message": "Bibliotheek" },
-  "bookmarks": { "message": "Bladwijzers" },
-  "system": { "message": "Systeem" },
-  "delete_history": { "message": "Geschiedenis Verwijderen" },
-  "ignore_list": { "message": "Negeerlijst" },
-  "settings": { "message": "Instellingen" },
-  "more": { "message": "Meer" },
-  "light": { "message": "Licht" },
-  "dark": { "message": "Donker" },
-  "all_time": { "message": "Alle tijd" },
-  "delete_results": { "message": "Resultaten verwijderen" },
-  "selected_lower": { "message": "geselecteerd" },
-  "select_all_visible": { "message": "Selecteer alles zichtbaar" },
-  "deselect_all": { "message": "Alles deselecteren" },
-  "delete_selected": { "message": "Geselecteerde verwijderen" },
-  "loading": { "message": "Laden…" },
-  "daily_visits_90": { "message": "Dagelijkse bezoeken — 90 dagen" },
-  "daily_visits_30": { "message": "Dagelijkse bezoeken — 30 dagen" },
-  "hours": { "message": "uren" },
-  "days": { "message": "dagen" },
-  "clear_time_data": { "message": "Tijdgegevens wissen" },
-  "daily_browsing_time": { "message": "Dagelijkse browse-tijd" },
-  "top_sites_by_time_spent": { "message": "Top-sites op tijd besteed" },
-  "export": { "message": "Exporteren" },
-  "import": { "message": "Importeren" },
-  "history_retention": { "message": "Geschiedenis Bewaren" },
-  "keep_history_for": { "message": "Bewaar geschiedenis voor" },
-  "older_enteries_are_pruned": { "message": "Oudere items worden automatisch verwijderd" },
-  "months": { "message": "maanden" },
-  "year": { "message": "jaar" },
-  "years": { "message": "jaren" },
-  "forever": { "message": "Voor altijd" },
-  "appearance": { "message": "Uiterlijk" },
-  "language": { "message": "Taal" },
-  "select_pref_language": { "message": "Selecteer uw voorkeurstaal" },
-  "font_family": { "message": "Lettertype" },
-  "font_size": { "message": "Lettergrootte" },
-  "base_ui_text_size": { "message": "Basis UI-tekstgrootte" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Accentkleuren" },
-  "primary": { "message": "Primair" },
-  "secondary": { "message": "Secundair" },
-  "data": { "message": "Data" },
-  "export_history": { "message": "Geschiedenis exporteren" },
-  "full_json_backup": { "message": "Volledige JSON-backup van alle geschiedenis + tijdgegevens" },
-  "export_json": { "message": "JSON exporteren" },
-  "import_history": { "message": "Geschiedenis importeren" },
-  "merge_entries_json": { "message": "Items samenvoegen uit eerder geëxporteerd JSON-bestand" },
-  "import_json": { "message": "JSON importeren" },
-  "sessions_to_keep": { "message": "Sessies om te bewaren" },
-  "how_many_past_sessions": { "message": "Aantal opgeslagen vorige sessies (1–20)" },
-  "auto_save_session": { "message": "Huidige sessie automatisch opslaan" },
-  "save_open_tabs_to": { "message": "Slaat geopende tabbladen op in extended-history-session.html in uw downloads map. Stel in op 0 om uit te schakelen." },
-  "min": { "message": "min" },
-  "save_now": { "message": "Nu opslaan" },
-  "save_settings": { "message": "Instellingen opslaan" },
-  "danger_zone": { "message": "Gevarenzone" },
-  "reimport_chrome_history": { "message": "Chrome geschiedenis opnieuw importeren" },
-  "pull_all_chrome_history": { "message": "Haal alle beschikbare Chrome-native geschiedenis opnieuw op (merges, geen duplicaten)" },
-  "reimport": { "message": "Opnieuw importeren" },
-  "clear_all_history": { "message": "Wis alle geschiedenis" },
-  "permanently_delete_all_stored": { "message": "Verwijdert permanent alle opgeslagen geschiedenis. Kan niet ongedaan worden gemaakt." },
-  "clear_all": { "message": "Alles wissen" },
-  "about": { "message": "Over" },
-  "created_by": { "message": "Gemaakt door Bane Kondić, omdat hij de 90 dagen limiet in Chromium niet leuk vond. Deze extensie stuurt geen data en is volledig open source, code beschikbaar op het Github-profiel van de maker." },
-  "github_profile": { "message": "Github-profiel" },
-  "feedback": { "message": "Feedback" },
-  "link_to_discord": { "message": "Link naar Discord-server voor feedback (of laat gewoon een review achter in de Chrome Store)" },
-  "discord_server": { "message": "Discord-server" },
-  "rate_extension": { "message": "Beoordeel deze extensie" },
-  "link_to_chrome_webstore": { "message": "Link naar Chrome Web Store extensiepagina" },
-  "click_to_rate": { "message": "Klik om te beoordelen" },
-  "ignored_domains": { "message": "Genegeerde domeinen" },
-  "domains_added_will_not_be": { "message": "Domeinen die hier zijn toegevoegd, worden niet opgeslagen in de geschiedenis. Bestaande items worden automatisch verwijderd." },
-  "add_patern": { "message": "Patroon toevoegen" },
-  "pattern_guide": { "message": "Patroonhandleiding" },
-  "basic_domain": { "message": "Basisdomein" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Blokkeert alles van example.com" },
-  "all_subdomains": { "message": "Alle subdomeinen" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Blokkeert blog.example.com, shop.example.com, enz." },
-  "specific_subdomain": { "message": "Specifiek subdomein" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Blokkeert alleen blog.example.com" },
-  "specific_path": { "message": "Specifiek pad" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "Blokkeert alleen URLs onder /private" },
-  "specific_file": { "message": "Specifiek bestand" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "Blokkeert alleen dat specifieke bestand" },
-  "no_patterns_added": { "message": "Nog geen patronen toegevoegd" },
-  "open_in_new_tab": { "message": "Openen in nieuw tabblad" },
-  "open_in_incognito": { "message": "Openen in incognitomodus" },
-  "copy_url": { "message": "Kopieer URL" },
-  "copy_title": { "message": "Kopieer titel" },
-  "delete_from_history": { "message": "Verwijder uit geschiedenis" },
-  "new_subfolder": { "message": "Nieuwe submap" },
-  "rename_folder": { "message": "Map hernoemen" },
-  "delete_folder": { "message": "Map verwijderen" },
-  "cancel": { "message": "Annuleren" },
-  "delete": { "message": "Verwijderen" },
-  "choose_a_time_range": { "message": "Kies een tijdsbereik om te verwijderen. Dit verwijdert items zowel uit deze extensie als uit de native Chrome-geschiedenis." },
-  "last_1_hour": { "message": "Laatste 1 uur" },
-  "last_24_hours": { "message": "Laatste 24 uur" },
-  "last_7_days": { "message": "Laatste 7 dagen" },
-  "last_30_days": { "message": "Laatste 30 dagen (maand)" },
-  "last_5_months": { "message": "Laatste 5 maanden" },
-  "clear_cookies_local_storage": { "message": "Wis cookies & lokale opslag" },
-  "clear_cache": { "message": "Cache wissen" }
+  "today": {
+    "message": "Vandaag"
+  },
+  "storage": {
+    "message": "Opslag"
+  },
+  "total_visits": {
+    "message": "Totaal bezoeken"
+  },
+  "restore": {
+    "message": "Herstellen"
+  },
+  "most_visited_URLS": {
+    "message": "Meest bezochte URL's"
+  },
+  "all": {
+    "message": "Alles"
+  },
+  "auto_focus_search": {
+    "message": "Zoekveld automatisch focussen bij openen"
+  },
+  "auto_focus_search_desc": {
+    "message": "Automatisch focussen op het zoekveld wanneer de geschiedenis pagina opent"
+  },
+  "back": {
+    "message": "← Terug"
+  },
+  "background_tint": {
+    "message": "Achtergrondtint"
+  },
+  "browser_cache": {
+    "message": "Browsercache"
+  },
+  "delete_history_reset_password": {
+    "message": "Geschiedenis verwijderen & wachtwoord resetten"
+  },
+  "enable_bg_tint": {
+    "message": "Achtergrondtint inschakelen"
+  },
+  "enable_lock": {
+    "message": "Vergrendeling inschakelen"
+  },
+  "enter_password_to_continue": {
+    "message": "Voer uw wachtwoord in om verder te gaan"
+  },
+  "ext_locked": {
+    "message": "Extended History — Vergrendeld"
+  },
+  "favicon_resolver": {
+    "message": "Favicon resolver"
+  },
+  "favicon_resolver_desc": {
+    "message": "Hoe site-iconen worden opgehaald. \"Browsercache\" gebruikt Chrome's cache (sneller, privé). \"Google\" haalt iconen van Google's CDN (betere dekking)."
+  },
+  "for_password_reset": {
+    "message": "(voor wachtwoord reset)"
+  },
+  "forgot_password_reset": {
+    "message": "Wachtwoord vergeten / Reset"
+  },
+  "google_resolver": {
+    "message": "Google resolver"
+  },
+  "history_merge_interval": {
+    "message": "Geschiedenis samenvoeg interval"
+  },
+  "history_merge_interval_desc": {
+    "message": "Hoe vaak browsergeschiedenis naar lokale opslag wordt samengevoegd. 30 min is optimaal, maar kan hoger als de PC langer gebruikt wordt."
+  },
+  "lock_extension_page": {
+    "message": "Extensiepagina vergrendelen"
+  },
+  "lock_extension_page_desc": {
+    "message": "Vereis een wachtwoord om de geschiedenis pagina te bekijken en schakel zoek/tab functies in popup uit. Geschiedenis wordt NIET versleuteld."
+  },
+  "password": {
+    "message": "Wachtwoord"
+  },
+  "performance": {
+    "message": "Prestaties"
+  },
+  "popup": {
+    "message": "Popup"
+  },
+  "popup_height": {
+    "message": "Popup hoogte"
+  },
+  "popup_height_desc": {
+    "message": "Maximale hoogte van het popup lijstgebied (px)"
+  },
+  "refresh": {
+    "message": "↻ Vernieuwen"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ Waarschuwing: Reset van wachtwoord verwijdert ALLE opgeslagen geschiedenis permanent."
+  },
+  "search_bar": {
+    "message": "Zoekbalk"
+  },
+  "search_bar_desc": {
+    "message": "Toon de zoekbalk onderaan de popup"
+  },
+  "security_answer": {
+    "message": "Beveiligingsantwoord"
+  },
+  "security_question": {
+    "message": "Beveiligingsvraag"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Pagina vergrendeling instellen"
+  },
+  "tabs_bar": {
+    "message": "Tabbalk"
+  },
+  "tabs_bar_desc": {
+    "message": "Toon Recent History / Closed Tabs schakelaar"
+  },
+  "time_spent_tracking": {
+    "message": "Tijdsbesteding tracking"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Volg tijd per domein. Uitschakelen vermindert CPU gebruik."
+  },
+  "ui": {
+    "message": "UI"
+  },
+  "unlock": {
+    "message": "Ontgrendelen"
+  },
+  "ph_ignore_pattern": {
+    "message": "voorbeeld.com of trefwoord"
+  },
+  "opt_all_fields": {
+    "message": "Alle velden"
+  },
+  "opt_title": {
+    "message": "Titel"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Domein"
+  },
+  "block_all_example_7": {
+    "message": "Blokkeert alleen dat trefwoord"
+  },
+  "specific_word": {
+    "message": "Specifiek trefwoord"
+  },
+  "example_com_6": {
+    "message": "voorbeeld"
+  },
+  "browse": {
+    "message": "Bladeren"
+  },
+  "history": {
+    "message": "Geschiedenis"
+  },
+  "sessions": {
+    "message": "Sessies"
+  },
+  "devices": {
+    "message": "Apparaten"
+  },
+  "insights": {
+    "message": "Inzichten"
+  },
+  "activity": {
+    "message": "Activiteit"
+  },
+  "time_spent": {
+    "message": "Besteedde Tijd"
+  },
+  "library": {
+    "message": "Bibliotheek"
+  },
+  "bookmarks": {
+    "message": "Bladwijzers"
+  },
+  "system": {
+    "message": "Systeem"
+  },
+  "delete_history": {
+    "message": "Geschiedenis Verwijderen"
+  },
+  "ignore_list": {
+    "message": "Negeerlijst"
+  },
+  "settings": {
+    "message": "Instellingen"
+  },
+  "more": {
+    "message": "Meer"
+  },
+  "light": {
+    "message": "Licht"
+  },
+  "dark": {
+    "message": "Donker"
+  },
+  "all_time": {
+    "message": "Alle tijd"
+  },
+  "delete_results": {
+    "message": "Resultaten verwijderen"
+  },
+  "selected_lower": {
+    "message": "geselecteerd"
+  },
+  "select_all_visible": {
+    "message": "Selecteer alles zichtbaar"
+  },
+  "deselect_all": {
+    "message": "Alles deselecteren"
+  },
+  "delete_selected": {
+    "message": "Geselecteerde verwijderen"
+  },
+  "loading": {
+    "message": "Laden…"
+  },
+  "daily_visits_90": {
+    "message": "Dagelijkse bezoeken — 90 dagen"
+  },
+  "daily_visits_30": {
+    "message": "Dagelijkse bezoeken — 30 dagen"
+  },
+  "hours": {
+    "message": "uren"
+  },
+  "days": {
+    "message": "dagen"
+  },
+  "clear_time_data": {
+    "message": "Tijdgegevens wissen"
+  },
+  "daily_browsing_time": {
+    "message": "Dagelijkse browse-tijd"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Top-sites op tijd besteed"
+  },
+  "export": {
+    "message": "Exporteren"
+  },
+  "import": {
+    "message": "Importeren"
+  },
+  "history_retention": {
+    "message": "Geschiedenis Bewaren"
+  },
+  "keep_history_for": {
+    "message": "Bewaar geschiedenis voor"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Oudere items worden automatisch verwijderd"
+  },
+  "months": {
+    "message": "maanden"
+  },
+  "year": {
+    "message": "jaar"
+  },
+  "years": {
+    "message": "jaren"
+  },
+  "forever": {
+    "message": "Voor altijd"
+  },
+  "appearance": {
+    "message": "Uiterlijk"
+  },
+  "language": {
+    "message": "Taal"
+  },
+  "select_pref_language": {
+    "message": "Selecteer uw voorkeurstaal"
+  },
+  "font_family": {
+    "message": "Lettertype"
+  },
+  "font_size": {
+    "message": "Lettergrootte"
+  },
+  "base_ui_text_size": {
+    "message": "Basis UI-tekstgrootte"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Accentkleuren"
+  },
+  "primary": {
+    "message": "Primair"
+  },
+  "secondary": {
+    "message": "Secundair"
+  },
+  "data": {
+    "message": "Data"
+  },
+  "export_history": {
+    "message": "Geschiedenis exporteren"
+  },
+  "full_json_backup": {
+    "message": "Volledige JSON-backup van alle geschiedenis + tijdgegevens"
+  },
+  "export_json": {
+    "message": "JSON exporteren"
+  },
+  "import_history": {
+    "message": "Geschiedenis importeren"
+  },
+  "merge_entries_json": {
+    "message": "Items samenvoegen uit eerder geëxporteerd JSON-bestand"
+  },
+  "import_json": {
+    "message": "JSON importeren"
+  },
+  "sessions_to_keep": {
+    "message": "Sessies om te bewaren"
+  },
+  "how_many_past_sessions": {
+    "message": "Aantal opgeslagen vorige sessies (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Huidige sessie automatisch opslaan"
+  },
+  "save_open_tabs_to": {
+    "message": "Slaat geopende tabbladen op in extended-history-session.html in uw downloads map. Stel in op 0 om uit te schakelen."
+  },
+  "min": {
+    "message": "min"
+  },
+  "save_now": {
+    "message": "Nu opslaan"
+  },
+  "save_settings": {
+    "message": "Instellingen opslaan"
+  },
+  "danger_zone": {
+    "message": "Gevarenzone"
+  },
+  "reimport_chrome_history": {
+    "message": "Chrome geschiedenis opnieuw importeren"
+  },
+  "pull_all_chrome_history": {
+    "message": "Haal alle beschikbare Chrome-native geschiedenis opnieuw op (merges, geen duplicaten)"
+  },
+  "reimport": {
+    "message": "Opnieuw importeren"
+  },
+  "clear_all_history": {
+    "message": "Wis alle geschiedenis"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Verwijdert permanent alle opgeslagen geschiedenis. Kan niet ongedaan worden gemaakt."
+  },
+  "clear_all": {
+    "message": "Alles wissen"
+  },
+  "about": {
+    "message": "Over"
+  },
+  "created_by": {
+    "message": "Gemaakt door Bane Kondić, omdat hij de 90 dagen limiet in Chromium niet leuk vond. Deze extensie stuurt geen data en is volledig open source, code beschikbaar op het Github-profiel van de maker."
+  },
+  "github_profile": {
+    "message": "Github-profiel"
+  },
+  "feedback": {
+    "message": "Feedback"
+  },
+  "link_to_discord": {
+    "message": "Link naar Discord-server voor feedback (of laat gewoon een review achter in de Chrome Store)"
+  },
+  "discord_server": {
+    "message": "Discord-server"
+  },
+  "rate_extension": {
+    "message": "Beoordeel deze extensie"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Link naar Chrome Web Store extensiepagina"
+  },
+  "click_to_rate": {
+    "message": "Klik om te beoordelen"
+  },
+  "ignored_domains": {
+    "message": "Genegeerde domeinen"
+  },
+  "domains_added_will_not_be": {
+    "message": "Domeinen die hier zijn toegevoegd, worden niet opgeslagen in de geschiedenis. Bestaande items worden automatisch verwijderd."
+  },
+  "add_patern": {
+    "message": "Patroon toevoegen"
+  },
+  "pattern_guide": {
+    "message": "Patroonhandleiding"
+  },
+  "basic_domain": {
+    "message": "Basisdomein"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Blokkeert alles van example.com"
+  },
+  "all_subdomains": {
+    "message": "Alle subdomeinen"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Blokkeert blog.example.com, shop.example.com, enz."
+  },
+  "specific_subdomain": {
+    "message": "Specifiek subdomein"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Blokkeert alleen blog.example.com"
+  },
+  "specific_path": {
+    "message": "Specifiek pad"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "Blokkeert alleen URLs onder /private"
+  },
+  "specific_file": {
+    "message": "Specifiek bestand"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "Blokkeert alleen dat specifieke bestand"
+  },
+  "no_patterns_added": {
+    "message": "Nog geen patronen toegevoegd"
+  },
+  "open_in_new_tab": {
+    "message": "Openen in nieuw tabblad"
+  },
+  "open_in_incognito": {
+    "message": "Openen in incognitomodus"
+  },
+  "copy_url": {
+    "message": "Kopieer URL"
+  },
+  "copy_title": {
+    "message": "Kopieer titel"
+  },
+  "delete_from_history": {
+    "message": "Verwijder uit geschiedenis"
+  },
+  "new_subfolder": {
+    "message": "Nieuwe submap"
+  },
+  "rename_folder": {
+    "message": "Map hernoemen"
+  },
+  "delete_folder": {
+    "message": "Map verwijderen"
+  },
+  "cancel": {
+    "message": "Annuleren"
+  },
+  "delete": {
+    "message": "Verwijderen"
+  },
+  "choose_a_time_range": {
+    "message": "Kies een tijdsbereik om te verwijderen. Dit verwijdert items zowel uit deze extensie als uit de native Chrome-geschiedenis."
+  },
+  "last_1_hour": {
+    "message": "Laatste 1 uur"
+  },
+  "last_24_hours": {
+    "message": "Laatste 24 uur"
+  },
+  "last_7_days": {
+    "message": "Laatste 7 dagen"
+  },
+  "last_30_days": {
+    "message": "Laatste 30 dagen (maand)"
+  },
+  "last_5_months": {
+    "message": "Laatste 5 maanden"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Wis cookies & lokale opslag"
+  },
+  "clear_cache": {
+    "message": "Cache wissen"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Ontwikkelaarsmodus openen"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 Open tabbladen en inactieve tijd weergeven"
+  },
+  "cal_all_time": {
+    "message": "Alle tijd"
+  },
+  "prev_day": {
+    "message": "‹ Vorige dag"
+  },
+  "next_day": {
+    "message": "Volgende dag ›"
+  },
+  "previous_month": {
+    "message": "Vorige maand"
+  },
+  "next_month": {
+    "message": "Volgende maand"
+  },
+  "clear": {
+    "message": "Wissen"
+  },
+  "ui_rounded_corners": {
+    "message": "Afgeronde hoeken in de interface"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Rondt de hoeken van de zijbalk en het hoofdpaneel af (en behoudt de kleine ruimte eromheen). Schakel uit voor een scherpe, rand-tot-rand-indeling."
+  },
+  "ui_calendar_mode": {
+    "message": "Kalendermodus"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Vervangt de datum-/uurnavigatie op de Geschiedenis-pagina door een kalender in de rechterzijbalk — kies datums, maanden en jaren en spring direct naar elk uur."
+  },
+  "developer": {
+    "message": "Ontwikkelaar"
+  },
+  "dev_mode": {
+    "message": "Ontwikkelaarsmodus"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Ontwikkelaarsmodus"
+  },
+  "dev_mode_desc": {
+    "message": "Interne diagnostiek: live gegevens over inactiviteit van tabbladen voor automatisch opslaan en statistieken van achtergrondtimers. Alleen voor probleemoplossing."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Interne diagnostiek — achtergrondtimers en de live status van de inactiviteitsregistratie van tabbladen voor automatisch opslaan."
+  },
+  "close": {
+    "message": "Sluiten"
+  },
+  "hour": {
+    "message": "Uur"
+  },
+  "all_hours": {
+    "message": "Alle uren"
+  },
+  "ph_search_devices": {
+    "message": "Zoek apparaattabbladen op titel of URL…"
+  },
+  "add": {
+    "message": "Toevoegen"
+  },
+  "domain_exceptions": {
+    "message": "Domeinuitzonderingen"
+  },
+  "domain_exceptions_desc": {
+    "message": "Domeinen op deze lijst worden overgeslagen bij het verwijderen van geschiedenis: hun geschiedenisitems, cookies en sitegegevens blijven behouden. Subdomeinen zijn inbegrepen."
+  },
+  "no_exceptions_yet": {
+    "message": "Nog geen uitzonderingen"
+  },
+  "remove": {
+    "message": "Verwijderen"
+  },
+  "invalid_domain": {
+    "message": "Voer een geldig domein in, bijv. example.com"
+  },
+  "domain_already_added": {
+    "message": "Dat domein staat al in de lijst"
+  },
+  "dh_confirm_warn": {
+    "message": "Hiermee wordt de geschiedenis permanent verwijderd voor: $N1$. Klik nogmaals op Verwijderen om te bevestigen.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "Domeinen op je uitzonderingenlijst ($N1$) blijven behouden.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "Verwijderen…"
+  },
+  "deleted_history_entries": {
+    "message": "$N1$ geschiedenisitems verwijderd",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "cookies"
+  },
+  "word_cache": {
+    "message": "cache"
+  },
+  "confirm_restore_tabs": {
+    "message": "$N1$ tabbladen herstellen?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "$N1$ tabbladen hersteld in $N2$ vensters",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "$N1$ tabbladen hersteld in een nieuw venster",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "Patroon verwijderd"
+  },
+  "toast_enter_pattern": {
+    "message": "Voer een patroon in"
+  },
+  "toast_pattern_added": {
+    "message": "Patroon toegevoegd: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "Negeerlijst ingeschakeld"
+  },
+  "toast_ignore_disabled": {
+    "message": "Negeerlijst uitgeschakeld"
+  },
+  "toast_ts_hidden": {
+    "message": "Genegeerde domeinen zijn nu verborgen in Bestede tijd"
+  },
+  "toast_ts_shown": {
+    "message": "Genegeerde domeinen zijn niet langer verborgen in Bestede tijd"
+  },
+  "hide_from_time_spent": {
+    "message": "Verbergen in Bestede tijd"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Verbergt domeinen die overeenkomen met de onderstaande patronen in de weergave Bestede tijd — verwijdert geen bijgehouden tijdgegevens"
+  },
+  "url_pattern_guide": {
+    "message": "Gids voor URL-patronen"
+  },
+  "ignore_keywords_note": {
+    "message": "Woorden zonder punt worden behandeld als trefwoorden — ze komen overeen met elke URL of paginatitel die dat woord bevat."
+  },
+  "toast_cleaning": {
+    "message": "Genegeerde URL's uit geschiedenis verwijderen…"
+  },
+  "toast_removed_ignored": {
+    "message": "$N1$ genegeerde URL's uit geschiedenis verwijderd",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "Geen genegeerde URL's gevonden in geschiedenis"
+  },
+  "keyword_prefix": {
+    "message": "trefwoord: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "In cache (lokaal)"
+  },
+  "context_menu_on_pages": {
+    "message": "Rechtermuisknopmenu op websites"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Toont het item \"Extended History\" wanneer je met de rechtermuisknop op een webpagina klikt"
+  },
+  "no_sessions_yet": {
+    "message": "Nog geen sessies opgenomen"
+  },
+  "popup_as_sidebar": {
+    "message": "Als zijbalk gebruiken"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Opent Extended History in het zijpaneel van Chrome in plaats van een popup, zodat het de hele pagina kan beslaan"
+  },
+  "toolbar_icon": {
+    "message": "Werkbalkpictogram"
+  },
+  "toolbar_icon_desc": {
+    "message": "Kies het pictogram dat in de werkbalk van je browser wordt getoond"
+  },
+  "wallpaper_opacity": {
+    "message": "Dekking van achtergrond"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Vervaagt de achtergrondafbeelding zelf — los van de tint van het glaspaneel hieronder."
+  },
+  "yesterday": {
+    "message": "Gisteren"
+  },
+  "language_auto": {
+    "message": "Automatisch (browsertaal)"
+  },
+  "nav_icons": {
+    "message": "Navigatiepictogrammen"
+  },
+  "nav_icons_desc": {
+    "message": "Toont de pictogrammen naast de items in het zijbalkmenu. Schakel uit voor een menu met alleen tekst."
+  },
+  "match_ui_colors": {
+    "message": "Interfacekleuren aanpassen"
+  },
+  "match_ui_colors_desc": {
+    "message": "Geeft de geschiedenislijst dezelfde kleur als de rest van de interface (zijbalk, kalenderzijbalk en panelen) in plaats van een afwijkende tint."
+  },
+  "pop_store": {
+    "message": "Opslaan"
+  },
+  "pop_open": {
+    "message": "Openen"
+  },
+  "pop_prev_day": {
+    "message": "Vorige dag"
+  },
+  "pop_next_day": {
+    "message": "Volgende dag"
+  },
+  "pop_clear_search": {
+    "message": "Zoekopdracht wissen en terug naar vandaag"
+  },
+  "pop_recent_history": {
+    "message": "Recente geschiedenis"
+  },
+  "pop_closed_tabs": {
+    "message": "Gesloten tabbladen"
+  },
+  "pop_active_tabs": {
+    "message": "Actieve tabbladen"
+  },
+  "pop_unselect_all": {
+    "message": "Alles deselecteren"
+  },
+  "pop_select_all": {
+    "message": "Alles selecteren"
+  },
+  "pop_search_results": {
+    "message": "Zoekresultaten"
+  },
+  "pop_start_typing": {
+    "message": "Begin met typen om te zoeken..."
+  },
+  "pop_export_session_title": {
+    "message": "Klik met rechts om de laatste sessie te exporteren"
+  },
+  "pop_searching": {
+    "message": "Zoeken..."
+  },
+  "pop_search_error": {
+    "message": "Zoekfout"
+  },
+  "pop_no_results": {
+    "message": "Geen resultaten gevonden"
+  },
+  "pop_no_closed": {
+    "message": "Geen recent gesloten tabbladen"
+  },
+  "pop_no_storable": {
+    "message": "Geen opslaanbare tabbladen open"
+  },
+  "pop_ts_error": {
+    "message": "Fout bij laden van tabbladopslag"
+  },
+  "pop_no_stored": {
+    "message": "Geen opgeslagen tabbladen."
+  },
+  "pop_no_stored_hint": {
+    "message": "Klik met rechts op deze knop om open tabbladen op te slaan"
+  },
+  "pop_no_data": {
+    "message": "Nog geen gegevens"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "$N1$ opgeslagen tabblad(en) uit tabbladopslag verwijderen?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Deze pagina kan niet worden opgeslagen"
+  },
+  "pop_no_history_day": {
+    "message": "Geen geschiedenis voor deze dag"
+  },
+  "pop_no_history_today": {
+    "message": "Vandaag nog geen geschiedenis"
+  },
+  "pop_just_now": {
+    "message": "zojuist"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ min geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ u geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ d geleden",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }

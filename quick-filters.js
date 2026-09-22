@@ -107,21 +107,21 @@ function qfRenderPanel() {
 
   inner.innerHTML = `
     <div class="panel-scroll">
-      <div class="panel-heading">⚡ Quick Filters</div>
-      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
+      <div class="panel-heading">⚡ <span data-i18n-key="quick_filters">Quick Filters</span></div>
+      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px" data-i18n-key="quick_filter_desc">
         Save a named group of domains, keywords, or URLs (e.g. "Social Media" → facebook.com, instagram.com, pinterest.com).
         Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries.
       </p>
       <div class="ignore-add" style="flex-direction:column;align-items:stretch;gap:8px">
-        <input type="text" id="qfNameInput" placeholder="Filter name (e.g. Social Media)" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
+        <input type="text" id="qfNameInput" data-i18n-key="filter_name" placeholder="Filter name (e.g. Social Media)" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
         <textarea id="qfPatternsInput" placeholder="One domain, keyword, or URL per line — e.g.&#10;facebook.com&#10;instagram.com&#10;pinterest.com" rows="4" style="width:100%;resize:vertical;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;padding:8px 10px;font-family:inherit">${editing ? esc((editing.patterns || []).join('\n')) : ''}</textarea>
         <div style="display:flex;gap:8px">
           <button id="qfSaveBtn" class="action-btn" style="background:var(--accent);color:#fff">${editing ? 'Save changes' : 'Add Filter'}</button>
-          ${editing ? '<button id="qfCancelEditBtn" class="action-btn">Cancel</button>' : ''}
+          ${editing ? '<button id="qfCancelEditBtn" class="action-btn" data-i18n-key="cancel">Cancel</button>' : ''}
         </div>
       </div>
       <div id="qfList" class="ignore-list" style="margin-top:20px">
-        ${_qfList.length ? '' : '<div class="empty-msg">No quick filters yet</div>'}
+        ${_qfList.length ? '' : '<div class="empty-msg" data-i18n-key="no_qfilters">No quick filters yet</div>'}
       </div>
     </div>`;
 

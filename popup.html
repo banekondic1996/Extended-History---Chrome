@@ -144,18 +144,18 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 <div class="header">
   <img src="/icons/icon128.png" class="hico">
   <div class="htitle">Extended History</div>
-  <button class="store-btn" id="storeBtn">Store</button>
-  <button class="open-btn" id="openBtn">Open</button>
+  <button class="store-btn" id="storeBtn" data-i18n-key="pop_store">Store</button>
+  <button class="open-btn" id="openBtn" data-i18n-key="pop_open">Open</button>
 </div>
 <!-- Sidebar-mode only: prev/next day nav + date label on the left, Store/Open
      (relocated from the header, which is hidden in sidebar mode) on the right.
      Only ever shown while on the Recent History sub-view — see popup.js. -->
 <div class="sidebar-daynav" id="sidebarDayNav" style="display:none">
   <div class="sdn-left">
-    <button class="sdn-arrow" id="sdnPrev" title="Previous day">‹</button>
-    <button class="sdn-arrow" id="sdnNext" title="Next day">›</button>
+    <button class="sdn-arrow" id="sdnPrev" title="Previous day" data-i18n-title="pop_prev_day">‹</button>
+    <button class="sdn-arrow" id="sdnNext" title="Next day" data-i18n-title="pop_next_day">›</button>
     <button class="sdn-datelabel" id="sdnDateLabel">Today</button>
-    <button class="sdn-clear" id="sdnClear" title="Clear search &amp; reset to today">✕</button>
+    <button class="sdn-clear" id="sdnClear" title="Clear search &amp; reset to today" data-i18n-title="pop_clear_search">✕</button>
   </div>
   <div class="sdn-right" id="sdnRight"></div>
 </div>
@@ -174,35 +174,36 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
 </div>
 <div class="tabs" id="tabsRow">
-  <button class="tab active" data-tab="history" id="historyTab">Recent History</button>
-  <button class="tab" data-tab="tabs">Closed Tabs</button>
-  <button class="tab" data-tab="tabstorage">Tab Storage</button>
+  <button class="tab active" data-tab="history" id="historyTab" data-i18n-key="pop_recent_history">Recent History</button>
+  <button class="tab" data-tab="tabs" data-i18n-key="pop_closed_tabs">Closed Tabs</button>
+  <button class="tab" data-tab="tabstorage" data-i18n-key="tab_storage">Tab Storage</button>
 </div>
 <div class="sel-mode-row hidden" id="selModeRow">
-  <button class="sel-mode-btn" id="selUnselectBtn">Unselect All</button>
-  <button class="sel-mode-btn del" id="selDelBtn">Delete</button>
+  <button class="sel-mode-btn" id="selUnselectBtn" data-i18n-key="pop_unselect_all">Unselect All</button>
+  <button class="sel-mode-btn del" id="selDelBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="sel-mode-row hidden" id="tsModeRow">
-  <button class="sel-mode-btn" id="tsUnselectBtn">Unselect All</button>
-  <button class="sel-mode-btn" id="tsUnstoreBtn">Restore</button>
+  <button class="sel-mode-btn" id="tsUnselectBtn" data-i18n-key="pop_unselect_all">Unselect All</button>
+  <button class="sel-mode-btn" id="tsUnstoreBtn" data-i18n-key="restore">Restore</button>
+  <button class="sel-mode-btn del" id="tsDeleteBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="sel-mode-row hidden" id="srchModeRow">
-  <button class="sel-mode-btn" id="srchSelAllBtn">Select All</button>
-  <button class="sel-mode-btn del" id="srchDelBtn">Delete</button>
+  <button class="sel-mode-btn" id="srchSelAllBtn" data-i18n-key="pop_select_all">Select All</button>
+  <button class="sel-mode-btn del" id="srchDelBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="content-wrapper">
   <div class="content" id="mainContent">
     <div class="tab-panel active" id="panel-history">
-      <div class="ts-view active" id="h-recent"><div id="recent"><div class="loading">Loading…</div></div></div>
-      <div class="ts-view" id="h-mostvisited"><div id="mvPopup"><div class="loading">Loading…</div></div></div>
+      <div class="ts-view active" id="h-recent"><div id="recent"><div class="loading" data-i18n-key="pop_start_typing">Loading…</div></div></div>
+      <div class="ts-view" id="h-mostvisited"><div id="mvPopup"><div class="loading" data-i18n-key="loading">Loading…</div></div></div>
     </div>
     <div class="tab-panel" id="panel-tabs">
-      <div id="recentTabs"><div class="loading">Loading…</div></div>
+      <div id="recentTabs"><div class="loading" data-i18n-key="loading">Loading…</div></div>
     </div>
      <div class="tab-panel" id="panel-tabstorage">
       <!-- Stored tabs view (default, left click) -->
       <div class="ts-view active" id="ts-stored">
-        <div id="tabStoragePopup"><div class="loading">Loading…</div></div>
+        <div id="tabStoragePopup"><div class="loading" data-i18n-key="loading">Loading…</div></div>
       </div>
       <!-- Quick-store view (right click) -->
       <div class="ts-view" id="ts-quickstore">
@@ -212,7 +213,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
   <div class="search-overlay" id="searchOverlay">
     <div class="search-header">
-      <span class="search-title">Search Results</span>
+      <span class="search-title" data-i18n-key="pop_search_results">Search Results</span>
     </div>
     <div class="search-list" id="searchResults">
       <div class="loading">Start typing to search...</div>
@@ -220,15 +221,17 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
 </div>
 <div class="footer">
-  <button class="flink" data-panel="activity">Activity</button>
-  <button class="flink" data-panel="bookmarks">Bookmarks</button>
-  <button class="flink" data-panel="sessions" title="Right-click to export latest session">Sessions</button>
-  <button class="flink" data-panel="settings">Settings</button>
+  <button class="flink" data-panel="activity" data-i18n-key="activity">Activity</button>
+  <button class="flink" data-panel="bookmarks" data-i18n-key="bookmarks">Bookmarks</button>
+  <button class="flink" data-panel="sessions" title="Right-click to export latest session" data-i18n-title="pop_export_session_title" data-i18n-key="sessions">Sessions</button>
+  <button class="flink" data-panel="settings" data-i18n-key="settings">Settings</button>
 </div>
 <div class="search-bar">
   <input type="text" class="search-input" id="searchInput" placeholder="Search all history...">
   <button class="search-clear" id="searchClear">✕</button>
 </div>
+<script src="i18n-core.js"></script>
 <script src="popup.js"></script>
+<script src="ui-translate.js"></script>
 </body>
 </html>

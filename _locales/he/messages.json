@@ -1,40 +1,148 @@
 {
-  "ext_name": { "message": "היסטוריה מורחבת" },
-
-  "current_session": { "message": "סשן נוכחי" },
-  "active": { "message": "פעיל" },
-  "all_fields": { "message": "כל השדות" },
-  "title": { "message": "כותרת" },
-  "url": { "message": "כתובת URL" },
-  "domain": { "message": "דומיין" },
-  "ph_search_history": { "message": "חפש בהיסטוריה…" },
-  "ph_search_bookmarks": { "message": "חפש בסימניות…" },
-  
-  "most_visited": {"message": "הנצפים ביותר"},
-  "tabs": {"message": "כרטיסיות"},
-  "since": {"message": "מאז"},
-  "most_visited_URLS_all_time": {"message": "כתובות ה-URL הנצפות ביותר — כל הזמן"},
-  "urls": {"message": "כתובות URL"},
-  "domains": {"message": "דומיינים"},
-  "enable_ignore": {"message": "הפעל רשימת התעלמות"},
-  "filter_urls": {"message": "סנן כתובות URL לפי התבניות למטה"},
-  "popup_show_url": {
-  "message": "כתובות URL"
+  "ext_name": {
+    "message": "היסטוריה מורחבת"
   },
-  "wallpaper_mode": { "message": "🖼 מצב רקע" },
-  "wallpaper_mode_desc": { "message": "הגדר תמונת רקע מותאמת. מאפשר אפקט זכוכית חלבית." },
-  "wallpaper_mode_custom_image": { "message": "📁 תמונה מותאמת" },
-  "wallpaper_random_unsplash": { "message": "🎲 אקראי מ-Unsplash" },
-  "wallpaper_drop_image": { "message": "גרור תמונה או <strong>לחץ לבחירה</strong>" },
-  "wallpaper_fetch": { "message": "מביא תמונה אקראית באיכות גבוהה" },
-  "wallpaper_randomize": { "message": "🎲 אקראי" },
-  "wallpaper_auto_randomize": { "message": "אקראי בכל פתיחה" },
-  "wallpaper_current": { "message": "רקע נוכחי:" },
-  "overlay_opacity": { "message": "שקיפות שכבה" },
-  "overlay_control_desc": { "message": "שולט בשכבה כהה או בהירה." },
-  "wallpaper_blur": { "message": "טשטוש רקע" },
-  "wallpaper_remove": { "message": "✕ הסר רקע" },
-  
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 הסר סימנייה"
+  },
+  "quick_filters": {
+    "message": "מסננים מהירים"
+  },
+  "quick_filter_desc": {
+    "message": "שמור קבוצה בעלת שם של דומיינים, מילות מפתח או כתובות URL (למשל \"רשתות חברתיות\" → facebook.com, instagram.com, pinterest.com). בחר אותה מהרשימה הנפתחת ליד תיבת החיפוש בדף ההיסטוריה כדי לסנן באופן מיידי רק את הרשומות האלה."
+  },
+  "filter_name": {
+    "message": "שם המסנן (למשל רשתות חברתיות)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "דומיין, מילת מפתח או כתובת URL אחת בכל שורה — למשל\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "שמור שינויים"
+  },
+  "add_filter": {
+    "message": "הוסף מסנן"
+  },
+  "no_qfilters": {
+    "message": "אין עדיין מסננים מהירים"
+  },
+  "scroll_sensitivity": {
+    "message": "רגישות הגלילה"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "כמה תאריכים הגלילה מזיזה בכל פעולה"
+  },
+  "scroll_date": {
+    "message": "גלילת תאריכים באמצעות גלגלת העכבר"
+  },
+  "scroll_date_desc": {
+    "message": "מאפשר לגלגלת עכבר רגילה (שגוללת רק אנכית) להזיז את סרגל התאריכים לצדדים — שימושי במחשב שולחני, שבו הגלגלת אינה יכולה לגלול אופקית בעצמה."
+  },
+  "ignore_list_access": {
+    "message": "🔒 גישה לרשימת ההתעלמות"
+  },
+  "ignore_list_enter_password": {
+    "message": "הזן את סיסמת האב שלך כדי לצפות ברשימת ההתעלמות."
+  },
+  "reset": {
+    "message": "איפוס"
+  },
+  "ok": {
+    "message": "אישור"
+  },
+  "current_session": {
+    "message": "סשן נוכחי"
+  },
+  "active": {
+    "message": "פעיל"
+  },
+  "all_fields": {
+    "message": "כל השדות"
+  },
+  "title": {
+    "message": "כותרת"
+  },
+  "url": {
+    "message": "כתובת URL"
+  },
+  "domain": {
+    "message": "דומיין"
+  },
+  "ph_search_history": {
+    "message": "חפש בהיסטוריה…"
+  },
+  "ph_search_bookmarks": {
+    "message": "חפש בסימניות…"
+  },
+  "most_visited": {
+    "message": "הנצפים ביותר"
+  },
+  "tabs": {
+    "message": "כרטיסיות"
+  },
+  "since": {
+    "message": "מאז"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "כתובות ה-URL הנצפות ביותר — כל הזמן"
+  },
+  "urls": {
+    "message": "כתובות URL"
+  },
+  "domains": {
+    "message": "דומיינים"
+  },
+  "enable_ignore": {
+    "message": "הפעל רשימת התעלמות"
+  },
+  "filter_urls": {
+    "message": "סנן כתובות URL לפי התבניות למטה"
+  },
+  "popup_show_url": {
+    "message": "כתובות URL"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 מצב רקע"
+  },
+  "wallpaper_mode_desc": {
+    "message": "הגדר תמונת רקע מותאמת. מאפשר אפקט זכוכית חלבית."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 תמונה מותאמת"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 אקראי מ-Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "גרור תמונה או <strong>לחץ לבחירה</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "מביא תמונה אקראית באיכות גבוהה"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 אקראי"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "אקראי בכל פתיחה"
+  },
+  "wallpaper_current": {
+    "message": "רקע נוכחי:"
+  },
+  "overlay_opacity": {
+    "message": "שקיפות שכבה"
+  },
+  "overlay_control_desc": {
+    "message": "שולט בשכבה כהה או בהירה."
+  },
+  "wallpaper_blur": {
+    "message": "טשטוש רקע"
+  },
+  "wallpaper_remove": {
+    "message": "✕ הסר רקע"
+  },
   "popup_show_url_desc": {
     "message": "הצג את כתובת ה-URL של הדף מתחת לכותרת ברשימת הפופאפ"
   },
@@ -59,176 +167,879 @@
   "apply_migrate": {
     "message": "החל והעבר"
   },
-
-  "reading_mode": {"message": "מצב קריאה"},
-  "tab_storage": {"message": "אחסון כרטיסיות"},
-  "load_exported_history_read": {"message": "טען קובץ היסטוריה מיוצא (.json) כדי לעיין בו בלי לייבא אותו.הממשק פועל בדיוק כמו לשונית ההיסטוריה — פילטרים לפי תאריך, חיפוש ועוד."},
-  "choose_file": {"message": "בחר קובץ…"},
-  "choose_file_hint": {"message": "או גרור ושחרר קובץ .json כאן"},
-  "leave_reading_mode": {"message": "✕ יציאה ממצב קריאה"},
-  "reading": {"message": "קורא:"},
-  "all":{"message":"הכול"},
-  "auto_focus_search":{"message":"מיקוד אוטומטי בחיפוש בעת פתיחה"},
-  "auto_focus_search_desc":{"message":"ממקד אוטומטית את שדה החיפוש כאשר דף ההיסטוריה נפתח"},
-  "back":{"message":"← חזרה"},
-  "background_tint":{"message":"גוון רקע"},
-  "browser_cache":{"message":"מטמון הדפדפן"},
-  "delete_history_reset_password":{"message":"מחק היסטוריה ואפס סיסמה"},
-  "enable_bg_tint":{"message":"הפעל גוון רקע"},
-  "enable_lock":{"message":"הפעל נעילה"},
-  "enter_password_to_continue":{"message":"הזן את הסיסמה כדי להמשיך"},
-  "ext_locked":{"message":"Extended History — נעול"},
-  "favicon_resolver":{"message":"פתרון favicon"},
-  "favicon_resolver_desc":{"message":"איך סמלי האתר נטענים. \"מטמון הדפדפן\" משתמש במטמון של Chrome. \"Google\" משתמש ב-CDN של Google."},
-  "for_password_reset":{"message":"(לאיפוס סיסמה)"},
-  "forgot_password_reset":{"message":"שכחתי סיסמה / איפוס"},
-  "google_resolver":{"message":"פתרון Google"},
-  "history_merge_interval":{"message":"מרווח מיזוג היסטוריה"},
-  "history_merge_interval_desc":{"message":"כל כמה זמן היסטוריית הדפדפן מתמזגת לאחסון המקומי."},
-  "lock_extension_page":{"message":"נעילת דף ההרחבה"},
-  "lock_extension_page_desc":{"message":"דורש סיסמה כדי לצפות בדף ההיסטוריה. ההיסטוריה אינה מוצפנת."},
-  "password":{"message":"סיסמה"},
-  "performance":{"message":"ביצועים"},
-  "popup":{"message":"חלון קופץ"},
-  "popup_height":{"message":"גובה החלון הקופץ"},
-  "popup_height_desc":{"message":"גובה מקסימלי לאזור הרשימה בחלון הקופץ (px)"},
-  "refresh":{"message":"↻ רענן"},
-  "reset_password_warning":{"message":"⚠️ אזהרה: איפוס סיסמה ימחק לצמיתות את כל ההיסטוריה השמורה."},
-  "search_bar":{"message":"סרגל חיפוש"},
-  "search_bar_desc":{"message":"הצג את סרגל החיפוש בתחתית החלון הקופץ"},
-  "security_answer":{"message":"תשובת אבטחה"},
-  "security_question":{"message":"שאלת אבטחה"},
-  "set_up_page_lock":{"message":"🔐 הגדרת נעילת דף"},
-  "tabs_bar":{"message":"סרגל כרטיסיות"},
-  "tabs_bar_desc":{"message":"הצג מתג בין היסטוריה אחרונה לכרטיסיות סגורות"},
-  "time_spent_tracking":{"message":"מעקב זמן שימוש"},
-  "time_spent_tracking_desc":{"message":"עקוב אחר זמן שימוש לכל דומיין. השבתה תפחית שימוש במעבד."},
-  "ui":{"message":"ממשק"},
-  "unlock":{"message":"בטל נעילה"},
-  "ph_ignore_pattern":{"message":"example.com או מילת מפתח"},
-  "opt_all_fields":{"message":"כל השדות"},
-  "opt_title":{"message":"כותרת"},
-  "opt_url":{"message":"URL"},
-  "opt_domain":{"message":"דומיין"},
-  "block_all_example_7":{"message":"חוסם רק את מילת המפתח"},
-  "specific_word":{"message":"מילת מפתח ספציפית"},
-  "example_com_6":{"message":"דוגמה"},
-
-  "browse": { "message": "עיון" },
-  "history": { "message": "היסטוריה" },
-  "sessions": { "message": "סשנים" },
-  "devices": { "message": "מכשירים" },
-  "insights": { "message": "תובנות" },
-  "activity": { "message": "פעילות" },
-  "time_spent": { "message": "זמן שהוצא" },
-  "library": { "message": "ספרייה" },
-  "bookmarks": { "message": "סימניות" },
-  "system": { "message": "מערכת" },
-  "delete_history": { "message": "מחק היסטוריה" },
-  "ignore_list": { "message": "רשימת התעלמות" },
-  "settings": { "message": "הגדרות" },
-  "more": { "message": "עוד" },
-  "light": { "message": "בהיר" },
-  "dark": { "message": "כהה" },
-  "all_time": { "message": "כל הזמן" },
-  "delete_results": { "message": "מחק תוצאות" },
-  "selected_lower": { "message": "נבחר" },
-  "select_all_visible": { "message": "בחר הכל הנראה" },
-  "deselect_all": { "message": "בטל בחירה של כולם" },
-  "delete_selected": { "message": "מחק את הנבחרים" },
-  "loading": { "message": "טוען…" },
-  "daily_visits_90": { "message": "ביקורים יומיים — 90 ימים" },
-  "daily_visits_30": { "message": "ביקורים יומיים — 30 ימים" },
-  "hours": { "message": "שעות" },
-  "days": { "message": "ימים" },
-  "clear_time_data": { "message": "נקה נתוני זמן" },
-  "daily_browsing_time": { "message": "זמן גלישה יומי" },
-  "top_sites_by_time_spent": { "message": "האתרים המובילים לפי זמן שהוצא" },
-  "export": { "message": "ייצא" },
-  "import": { "message": "ייבא" },
-  "history_retention": { "message": "שמירת היסטוריה" },
-  "keep_history_for": { "message": "שמור היסטוריה ל" },
-  "older_enteries_are_pruned": { "message": "רשומות ישנות נמחקות אוטומטית" },
-  "months": { "message": "חודשים" },
-  "year": { "message": "שנה" },
-  "years": { "message": "שנים" },
-  "forever": { "message": "לנצח" },
-  "appearance": { "message": "מראה" },
-  "language": { "message": "שפה" },
-  "select_pref_language": { "message": "בחר את השפה המועדפת עליך" },
-  "font_family": { "message": "סוג גופן" },
-  "font_size": { "message": "גודל גופן" },
-  "base_ui_text_size": { "message": "גודל טקסט בסיסי בממשק" },
-  "pixels": { "message": "פיקסלים" },
-  "accent_colors": { "message": "צבעי הדגשה" },
-  "primary": { "message": "ראשי" },
-  "secondary": { "message": "משני" },
-  "data": { "message": "נתונים" },
-  "export_history": { "message": "ייצא היסטוריה" },
-  "full_json_backup": { "message": "גיבוי JSON מלא של כל ההיסטוריה + נתוני זמן" },
-  "export_json": { "message": "ייצא JSON" },
-  "import_history": { "message": "ייבא היסטוריה" },
-  "merge_entries_json": { "message": "מיזוג רשומות מקובץ JSON מיובא קודם" },
-  "import_json": { "message": "ייבא JSON" },
-  "sessions_to_keep": { "message": "סשנים לשמירה" },
-  "how_many_past_sessions": { "message": "כמה סשנים קודמים נשמרים (1–20)" },
-  "auto_save_session": { "message": "שמור סשן נוכחי אוטומטית" },
-  "save_open_tabs_to": { "message": "שומר את הלשוניות הפתוחות ב-extended-history-session.html בתיקיית ההורדות שלך. הגדר ל-0 כדי לבטל." },
-  "min": { "message": "דקה" },
-  "save_now": { "message": "שמור עכשיו" },
-  "save_settings": { "message": "שמור הגדרות" },
-  "danger_zone": { "message": "אזור סכנה" },
-  "reimport_chrome_history": { "message": "ייבוא מחדש של היסטוריית כרום" },
-  "pull_all_chrome_history": { "message": "משוך שוב את כל ההיסטוריה המקומית של כרום (ממזג, ללא כפילויות)" },
-  "reimport": { "message": "ייבא מחדש" },
-  "clear_all_history": { "message": "נקה את כל ההיסטוריה" },
-  "permanently_delete_all_stored": { "message": "מוחק לצמיתות את כל ההיסטוריה השמורה. לא ניתן לבטל." },
-  "clear_all": { "message": "נקה הכל" },
-  "about": { "message": "אודות" },
-  "created_by": { "message": "נוצר על ידי Bane Kondić, כי הוא לא אהב את מגבלת 90 הימים בכרום. תוסף זה אינו שולח נתונים והוא קוד פתוח לחלוטין, הקוד זמין בפרופיל GitHub של היוצר." },
-  "github_profile": { "message": "פרופיל Github" },
-  "feedback": { "message": "משוב" },
-  "link_to_discord": { "message": "קישור לשרת דיסקורד לקבלת משוב (או פשוט השאר ביקורת בחנות כרום)" },
-  "discord_server": { "message": "שרת דיסקורד" },
-  "rate_extension": { "message": "דרג את התוסף" },
-  "link_to_chrome_webstore": { "message": "קישור לדף התוסף בחנות כרום" },
-  "click_to_rate": { "message": "לחץ לדרוג" },
-  "ignored_domains": { "message": "דומיינים שמורים" },
-  "domains_added_will_not_be": { "message": "דומיינים שנוספו כאן לא יישמרו בהיסטוריה. רשומות קיימות יוסרו אוטומטית." },
-  "add_patern": { "message": "הוסף דפוס" },
-  "pattern_guide": { "message": "מדריך דפוס" },
-  "basic_domain": { "message": "דומיין בסיסי" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "חוסם את כל example.com" },
-  "all_subdomains": { "message": "כל תת-הדומיינים" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "חוסם blog.example.com, shop.example.com וכו'" },
-  "specific_subdomain": { "message": "תת-דומיין ספציפי" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "חוסם רק blog.example.com" },
-  "specific_path": { "message": "נתיב ספציפי" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "חוסם רק כתובות תחת /private" },
-  "specific_file": { "message": "קובץ ספציפי" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "חוסם רק קובץ זה" },
-  "no_patterns_added": { "message": "לא נוספו דפוסים עדיין" },
-  "open_in_new_tab": { "message": "פתח בכרטיסייה חדשה" },
-  "open_in_incognito": { "message": "פתח בחלון סתר" },
-  "copy_url": { "message": "העתק URL" },
-  "copy_title": { "message": "העתק כותרת" },
-  "delete_from_history": { "message": "מחק מההיסטוריה" },
-  "new_subfolder": { "message": "תיקיית משנה חדשה" },
-  "rename_folder": { "message": "שנה שם תיקייה" },
-  "delete_folder": { "message": "מחק תיקייה" },
-  "cancel": { "message": "ביטול" },
-  "delete": { "message": "מחק" },
-  "choose_a_time_range": { "message": "בחר טווח זמן למחיקה. זה יסיר פריטים גם מהתוסף וגם מההיסטוריה של כרום." },
-  "last_1_hour": { "message": "שעה אחרונה" },
-  "last_24_hours": { "message": "24 השעות האחרונות" },
-  "last_7_days": { "message": "7 הימים האחרונים" },
-  "last_30_days": { "message": "30 הימים האחרונים (חודש)" },
-  "last_5_months": { "message": "5 החודשים האחרונים" },
-  "clear_cookies_local_storage": { "message": "נקה קובצי Cookie & אחסון מקומי" },
-  "clear_cache": { "message": "נקה מטמון" }
+  "reading_mode": {
+    "message": "מצב קריאה"
+  },
+  "tab_storage": {
+    "message": "אחסון כרטיסיות"
+  },
+  "load_exported_history_read": {
+    "message": "טען קובץ היסטוריה מיוצא (.json) כדי לעיין בו בלי לייבא אותו.הממשק פועל בדיוק כמו לשונית ההיסטוריה — פילטרים לפי תאריך, חיפוש ועוד."
+  },
+  "choose_file": {
+    "message": "בחר קובץ…"
+  },
+  "choose_file_hint": {
+    "message": "או גרור ושחרר קובץ .json כאן"
+  },
+  "leave_reading_mode": {
+    "message": "✕ יציאה ממצב קריאה"
+  },
+  "reading": {
+    "message": "קורא:"
+  },
+  "all": {
+    "message": "הכול"
+  },
+  "auto_focus_search": {
+    "message": "מיקוד אוטומטי בחיפוש בעת פתיחה"
+  },
+  "auto_focus_search_desc": {
+    "message": "ממקד אוטומטית את שדה החיפוש כאשר דף ההיסטוריה נפתח"
+  },
+  "back": {
+    "message": "← חזרה"
+  },
+  "background_tint": {
+    "message": "גוון רקע"
+  },
+  "browser_cache": {
+    "message": "מטמון הדפדפן"
+  },
+  "delete_history_reset_password": {
+    "message": "מחק היסטוריה ואפס סיסמה"
+  },
+  "enable_bg_tint": {
+    "message": "הפעל גוון רקע"
+  },
+  "enable_lock": {
+    "message": "הפעל נעילה"
+  },
+  "enter_password_to_continue": {
+    "message": "הזן את הסיסמה כדי להמשיך"
+  },
+  "ext_locked": {
+    "message": "Extended History — נעול"
+  },
+  "favicon_resolver": {
+    "message": "פתרון favicon"
+  },
+  "favicon_resolver_desc": {
+    "message": "איך סמלי האתר נטענים. \"מטמון הדפדפן\" משתמש במטמון של Chrome. \"Google\" משתמש ב-CDN של Google."
+  },
+  "for_password_reset": {
+    "message": "(לאיפוס סיסמה)"
+  },
+  "forgot_password_reset": {
+    "message": "שכחתי סיסמה / איפוס"
+  },
+  "google_resolver": {
+    "message": "פתרון Google"
+  },
+  "history_merge_interval": {
+    "message": "מרווח מיזוג היסטוריה"
+  },
+  "history_merge_interval_desc": {
+    "message": "כל כמה זמן היסטוריית הדפדפן מתמזגת לאחסון המקומי."
+  },
+  "lock_extension_page": {
+    "message": "נעילת דף ההרחבה"
+  },
+  "lock_extension_page_desc": {
+    "message": "דורש סיסמה כדי לצפות בדף ההיסטוריה. ההיסטוריה אינה מוצפנת."
+  },
+  "password": {
+    "message": "סיסמה"
+  },
+  "performance": {
+    "message": "ביצועים"
+  },
+  "popup": {
+    "message": "חלון קופץ"
+  },
+  "popup_height": {
+    "message": "גובה החלון הקופץ"
+  },
+  "popup_height_desc": {
+    "message": "גובה מקסימלי לאזור הרשימה בחלון הקופץ (px)"
+  },
+  "refresh": {
+    "message": "↻ רענן"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ אזהרה: איפוס סיסמה ימחק לצמיתות את כל ההיסטוריה השמורה."
+  },
+  "search_bar": {
+    "message": "סרגל חיפוש"
+  },
+  "search_bar_desc": {
+    "message": "הצג את סרגל החיפוש בתחתית החלון הקופץ"
+  },
+  "security_answer": {
+    "message": "תשובת אבטחה"
+  },
+  "security_question": {
+    "message": "שאלת אבטחה"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 הגדרת נעילת דף"
+  },
+  "tabs_bar": {
+    "message": "סרגל כרטיסיות"
+  },
+  "tabs_bar_desc": {
+    "message": "הצג מתג בין היסטוריה אחרונה לכרטיסיות סגורות"
+  },
+  "time_spent_tracking": {
+    "message": "מעקב זמן שימוש"
+  },
+  "time_spent_tracking_desc": {
+    "message": "עקוב אחר זמן שימוש לכל דומיין. השבתה תפחית שימוש במעבד."
+  },
+  "ui": {
+    "message": "ממשק"
+  },
+  "unlock": {
+    "message": "בטל נעילה"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com או מילת מפתח"
+  },
+  "opt_all_fields": {
+    "message": "כל השדות"
+  },
+  "opt_title": {
+    "message": "כותרת"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "דומיין"
+  },
+  "block_all_example_7": {
+    "message": "חוסם רק את מילת המפתח"
+  },
+  "specific_word": {
+    "message": "מילת מפתח ספציפית"
+  },
+  "example_com_6": {
+    "message": "דוגמה"
+  },
+  "browse": {
+    "message": "עיון"
+  },
+  "history": {
+    "message": "היסטוריה"
+  },
+  "sessions": {
+    "message": "סשנים"
+  },
+  "devices": {
+    "message": "מכשירים"
+  },
+  "insights": {
+    "message": "תובנות"
+  },
+  "activity": {
+    "message": "פעילות"
+  },
+  "time_spent": {
+    "message": "זמן שהוצא"
+  },
+  "library": {
+    "message": "ספרייה"
+  },
+  "bookmarks": {
+    "message": "סימניות"
+  },
+  "system": {
+    "message": "מערכת"
+  },
+  "delete_history": {
+    "message": "מחק היסטוריה"
+  },
+  "ignore_list": {
+    "message": "רשימת התעלמות"
+  },
+  "settings": {
+    "message": "הגדרות"
+  },
+  "more": {
+    "message": "עוד"
+  },
+  "light": {
+    "message": "בהיר"
+  },
+  "dark": {
+    "message": "כהה"
+  },
+  "all_time": {
+    "message": "כל הזמן"
+  },
+  "delete_results": {
+    "message": "מחק תוצאות"
+  },
+  "selected_lower": {
+    "message": "נבחר"
+  },
+  "select_all_visible": {
+    "message": "בחר הכל הנראה"
+  },
+  "deselect_all": {
+    "message": "בטל בחירה של כולם"
+  },
+  "delete_selected": {
+    "message": "מחק את הנבחרים"
+  },
+  "loading": {
+    "message": "טוען…"
+  },
+  "daily_visits_90": {
+    "message": "ביקורים יומיים — 90 ימים"
+  },
+  "daily_visits_30": {
+    "message": "ביקורים יומיים — 30 ימים"
+  },
+  "hours": {
+    "message": "שעות"
+  },
+  "days": {
+    "message": "ימים"
+  },
+  "clear_time_data": {
+    "message": "נקה נתוני זמן"
+  },
+  "daily_browsing_time": {
+    "message": "זמן גלישה יומי"
+  },
+  "top_sites_by_time_spent": {
+    "message": "האתרים המובילים לפי זמן שהוצא"
+  },
+  "export": {
+    "message": "ייצא"
+  },
+  "import": {
+    "message": "ייבא"
+  },
+  "history_retention": {
+    "message": "שמירת היסטוריה"
+  },
+  "keep_history_for": {
+    "message": "שמור היסטוריה ל"
+  },
+  "older_enteries_are_pruned": {
+    "message": "רשומות ישנות נמחקות אוטומטית"
+  },
+  "months": {
+    "message": "חודשים"
+  },
+  "year": {
+    "message": "שנה"
+  },
+  "years": {
+    "message": "שנים"
+  },
+  "forever": {
+    "message": "לנצח"
+  },
+  "appearance": {
+    "message": "מראה"
+  },
+  "language": {
+    "message": "שפה"
+  },
+  "select_pref_language": {
+    "message": "בחר את השפה המועדפת עליך"
+  },
+  "font_family": {
+    "message": "סוג גופן"
+  },
+  "font_size": {
+    "message": "גודל גופן"
+  },
+  "base_ui_text_size": {
+    "message": "גודל טקסט בסיסי בממשק"
+  },
+  "pixels": {
+    "message": "פיקסלים"
+  },
+  "accent_colors": {
+    "message": "צבעי הדגשה"
+  },
+  "primary": {
+    "message": "ראשי"
+  },
+  "secondary": {
+    "message": "משני"
+  },
+  "data": {
+    "message": "נתונים"
+  },
+  "export_history": {
+    "message": "ייצא היסטוריה"
+  },
+  "full_json_backup": {
+    "message": "גיבוי JSON מלא של כל ההיסטוריה + נתוני זמן"
+  },
+  "export_json": {
+    "message": "ייצא JSON"
+  },
+  "import_history": {
+    "message": "ייבא היסטוריה"
+  },
+  "merge_entries_json": {
+    "message": "מיזוג רשומות מקובץ JSON מיובא קודם"
+  },
+  "import_json": {
+    "message": "ייבא JSON"
+  },
+  "sessions_to_keep": {
+    "message": "סשנים לשמירה"
+  },
+  "how_many_past_sessions": {
+    "message": "כמה סשנים קודמים נשמרים (1–20)"
+  },
+  "auto_save_session": {
+    "message": "שמור סשן נוכחי אוטומטית"
+  },
+  "save_open_tabs_to": {
+    "message": "שומר את הלשוניות הפתוחות ב-extended-history-session.html בתיקיית ההורדות שלך. הגדר ל-0 כדי לבטל."
+  },
+  "min": {
+    "message": "דקה"
+  },
+  "save_now": {
+    "message": "שמור עכשיו"
+  },
+  "save_settings": {
+    "message": "שמור הגדרות"
+  },
+  "danger_zone": {
+    "message": "אזור סכנה"
+  },
+  "reimport_chrome_history": {
+    "message": "ייבוא מחדש של היסטוריית כרום"
+  },
+  "pull_all_chrome_history": {
+    "message": "משוך שוב את כל ההיסטוריה המקומית של כרום (ממזג, ללא כפילויות)"
+  },
+  "reimport": {
+    "message": "ייבא מחדש"
+  },
+  "clear_all_history": {
+    "message": "נקה את כל ההיסטוריה"
+  },
+  "permanently_delete_all_stored": {
+    "message": "מוחק לצמיתות את כל ההיסטוריה השמורה. לא ניתן לבטל."
+  },
+  "clear_all": {
+    "message": "נקה הכל"
+  },
+  "about": {
+    "message": "אודות"
+  },
+  "created_by": {
+    "message": "נוצר על ידי Bane Kondić, כי הוא לא אהב את מגבלת 90 הימים בכרום. תוסף זה אינו שולח נתונים והוא קוד פתוח לחלוטין, הקוד זמין בפרופיל GitHub של היוצר."
+  },
+  "github_profile": {
+    "message": "פרופיל Github"
+  },
+  "feedback": {
+    "message": "משוב"
+  },
+  "link_to_discord": {
+    "message": "קישור לשרת דיסקורד לקבלת משוב (או פשוט השאר ביקורת בחנות כרום)"
+  },
+  "discord_server": {
+    "message": "שרת דיסקורד"
+  },
+  "rate_extension": {
+    "message": "דרג את התוסף"
+  },
+  "link_to_chrome_webstore": {
+    "message": "קישור לדף התוסף בחנות כרום"
+  },
+  "click_to_rate": {
+    "message": "לחץ לדרוג"
+  },
+  "ignored_domains": {
+    "message": "דומיינים שמורים"
+  },
+  "domains_added_will_not_be": {
+    "message": "דומיינים שנוספו כאן לא יישמרו בהיסטוריה. רשומות קיימות יוסרו אוטומטית."
+  },
+  "add_patern": {
+    "message": "הוסף דפוס"
+  },
+  "pattern_guide": {
+    "message": "מדריך דפוס"
+  },
+  "basic_domain": {
+    "message": "דומיין בסיסי"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "חוסם את כל example.com"
+  },
+  "all_subdomains": {
+    "message": "כל תת-הדומיינים"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "חוסם blog.example.com, shop.example.com וכו'"
+  },
+  "specific_subdomain": {
+    "message": "תת-דומיין ספציפי"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "חוסם רק blog.example.com"
+  },
+  "specific_path": {
+    "message": "נתיב ספציפי"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "חוסם רק כתובות תחת /private"
+  },
+  "specific_file": {
+    "message": "קובץ ספציפי"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "חוסם רק קובץ זה"
+  },
+  "no_patterns_added": {
+    "message": "לא נוספו דפוסים עדיין"
+  },
+  "open_in_new_tab": {
+    "message": "פתח בכרטיסייה חדשה"
+  },
+  "open_in_incognito": {
+    "message": "פתח בחלון סתר"
+  },
+  "copy_url": {
+    "message": "העתק URL"
+  },
+  "copy_title": {
+    "message": "העתק כותרת"
+  },
+  "delete_from_history": {
+    "message": "מחק מההיסטוריה"
+  },
+  "new_subfolder": {
+    "message": "תיקיית משנה חדשה"
+  },
+  "rename_folder": {
+    "message": "שנה שם תיקייה"
+  },
+  "delete_folder": {
+    "message": "מחק תיקייה"
+  },
+  "cancel": {
+    "message": "ביטול"
+  },
+  "delete": {
+    "message": "מחק"
+  },
+  "choose_a_time_range": {
+    "message": "בחר טווח זמן למחיקה. זה יסיר פריטים גם מהתוסף וגם מההיסטוריה של כרום."
+  },
+  "last_1_hour": {
+    "message": "שעה אחרונה"
+  },
+  "last_24_hours": {
+    "message": "24 השעות האחרונות"
+  },
+  "last_7_days": {
+    "message": "7 הימים האחרונים"
+  },
+  "last_30_days": {
+    "message": "30 הימים האחרונים (חודש)"
+  },
+  "last_5_months": {
+    "message": "5 החודשים האחרונים"
+  },
+  "clear_cookies_local_storage": {
+    "message": "נקה קובצי Cookie & אחסון מקומי"
+  },
+  "clear_cache": {
+    "message": "נקה מטמון"
+  },
+  "open_dev_mode": {
+    "message": "🛠 פתח מצב מפתח"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 הצג לשוניות פתוחות וזמן חוסר פעילות"
+  },
+  "cal_all_time": {
+    "message": "כל הזמן"
+  },
+  "prev_day": {
+    "message": "‹ יום קודם"
+  },
+  "next_day": {
+    "message": "יום הבא ›"
+  },
+  "previous_month": {
+    "message": "החודש הקודם"
+  },
+  "next_month": {
+    "message": "החודש הבא"
+  },
+  "clear": {
+    "message": "נקה"
+  },
+  "ui_rounded_corners": {
+    "message": "פינות מעוגלות בממשק"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "מעגל את הפינות של סרגל הצד והלוח הראשי (ושומר על הרווח הקטן סביבם). כבו לקבלת פריסה בעלת פינות חדות, צמודה לקצוות."
+  },
+  "ui_calendar_mode": {
+    "message": "מצב לוח שנה"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "מחליף את ניווט התאריכים/שעות בדף ההיסטוריה בסרגל צד עם לוח שנה בצד ימין — בחרו תאריכים, חודשים ושנים, וקפצו ישירות לכל שעה."
+  },
+  "developer": {
+    "message": "מפתח"
+  },
+  "dev_mode": {
+    "message": "מצב מפתח"
+  },
+  "developer_mode_title": {
+    "message": "🛠 מצב מפתח"
+  },
+  "dev_mode_desc": {
+    "message": "אבחון פנימי: נתוני מעקב חוסר פעילות של לשוניות בזמן אמת המשמשים לאחסון אוטומטי, וסטטיסטיקות טיימרים ברקע. לפתרון בעיות בלבד."
+  },
+  "dev_mode_modal_sub": {
+    "message": "אבחון פנימי — טיימרים ברקע ומצב מעקב חוסר הפעילות של הלשוניות בזמן אמת המשמש לאחסון אוטומטי."
+  },
+  "close": {
+    "message": "סגור"
+  },
+  "hour": {
+    "message": "שעה"
+  },
+  "all_hours": {
+    "message": "כל השעות"
+  },
+  "ph_search_devices": {
+    "message": "חפש לשוניות מכשירים לפי כותרת או כתובת…"
+  },
+  "add": {
+    "message": "הוסף"
+  },
+  "domain_exceptions": {
+    "message": "חריגות דומיין"
+  },
+  "domain_exceptions_desc": {
+    "message": "דומיינים ברשימה זו מדולגים בעת מחיקת ההיסטוריה: רשומות ההיסטוריה, העוגיות ונתוני האתר שלהם נשמרים. תת-דומיינים כלולים."
+  },
+  "no_exceptions_yet": {
+    "message": "אין חריגות עדיין"
+  },
+  "remove": {
+    "message": "הסר"
+  },
+  "invalid_domain": {
+    "message": "הזינו דומיין תקין, למשל example.com"
+  },
+  "domain_already_added": {
+    "message": "הדומיין כבר ברשימה"
+  },
+  "dh_confirm_warn": {
+    "message": "פעולה זו תמחק לצמיתות את ההיסטוריה עבור: $N1$. לחצו שוב על מחק כדי לאשר.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "דומיינים ברשימת החריגות שלכם ($N1$) יישמרו.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "מוחק…"
+  },
+  "deleted_history_entries": {
+    "message": "נמחקו $N1$ רשומות היסטוריה",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "עוגיות"
+  },
+  "word_cache": {
+    "message": "מטמון"
+  },
+  "confirm_restore_tabs": {
+    "message": "לשחזר $N1$ לשוניות?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "שוחזרו $N1$ לשוניות ב-$N2$ חלונות",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "שוחזרו $N1$ לשוניות בחלון חדש",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "הדפוס הוסר"
+  },
+  "toast_enter_pattern": {
+    "message": "הזינו דפוס"
+  },
+  "toast_pattern_added": {
+    "message": "הדפוס נוסף: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "רשימת ההתעלמות הופעלה"
+  },
+  "toast_ignore_disabled": {
+    "message": "רשימת ההתעלמות כובתה"
+  },
+  "toast_ts_hidden": {
+    "message": "דומיינים שהתעלמו מהם מוסתרים כעת מ'זמן שהושקע'"
+  },
+  "toast_ts_shown": {
+    "message": "דומיינים שהתעלמו מהם אינם מוסתרים עוד מ'זמן שהושקע'"
+  },
+  "hide_from_time_spent": {
+    "message": "הסתר מ'זמן שהושקע'"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "מסתיר מתצוגת 'זמן שהושקע' דומיינים התואמים לדפוסים למטה — לא מוחק נתוני זמן שנמדדו"
+  },
+  "url_pattern_guide": {
+    "message": "מדריך דפוסי כתובת"
+  },
+  "ignore_keywords_note": {
+    "message": "מילים ללא נקודה נחשבות למילות מפתח — הן תואמות כל כתובת או כותרת עמוד שמכילה אותן."
+  },
+  "toast_cleaning": {
+    "message": "מנקה כתובות שהתעלמו מהן מההיסטוריה…"
+  },
+  "toast_removed_ignored": {
+    "message": "הוסרו $N1$ כתובות שהתעלמו מהן מההיסטוריה",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "לא נמצאו כתובות שהתעלמו מהן בהיסטוריה"
+  },
+  "keyword_prefix": {
+    "message": "מילת מפתח: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "במטמון (מקומי)"
+  },
+  "context_menu_on_pages": {
+    "message": "תפריט לחיצה ימנית באתרים"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "מציג את הפריט \"Extended History\" בלחיצה ימנית על דף אינטרנט"
+  },
+  "no_sessions_yet": {
+    "message": "עדיין לא נרשמו סשנים"
+  },
+  "popup_as_sidebar": {
+    "message": "שימוש כסרגל צד"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "פותח את Extended History בחלונית הצד של Chrome במקום בחלון קופץ, כך שיוכל לתפוס את כל הדף"
+  },
+  "toolbar_icon": {
+    "message": "סמל סרגל הכלים"
+  },
+  "toolbar_icon_desc": {
+    "message": "בחרו את הסמל המוצג בסרגל הכלים של הדפדפן"
+  },
+  "wallpaper_opacity": {
+    "message": "אטימות הרקע"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "מעמעם את תמונת הרקע עצמה — בנפרד מגוון לוח הזכוכית שלמטה."
+  },
+  "yesterday": {
+    "message": "אתמול"
+  },
+  "today": {
+    "message": "היום"
+  },
+  "language_auto": {
+    "message": "אוטומטי (שפת הדפדפן)"
+  },
+  "nav_icons": {
+    "message": "סמלי ניווט"
+  },
+  "nav_icons_desc": {
+    "message": "מציג את הסמלים לצד פריטי תפריט הניווט בסרגל הצד. כבו לקבלת תפריט טקסט בלבד."
+  },
+  "match_ui_colors": {
+    "message": "התאם לצבעי הממשק"
+  },
+  "match_ui_colors_desc": {
+    "message": "גורם לרשימת ההיסטוריה להיות באותו צבע כמו שאר הממשק (סרגל הצד, לוח השנה והלוחות) במקום גוון נפרד."
+  },
+  "pop_store": {
+    "message": "אחסן"
+  },
+  "pop_open": {
+    "message": "פתח"
+  },
+  "pop_prev_day": {
+    "message": "היום הקודם"
+  },
+  "pop_next_day": {
+    "message": "היום הבא"
+  },
+  "pop_clear_search": {
+    "message": "נקה חיפוש וחזור להיום"
+  },
+  "pop_recent_history": {
+    "message": "היסטוריה אחרונה"
+  },
+  "pop_closed_tabs": {
+    "message": "לשוניות שנסגרו"
+  },
+  "pop_active_tabs": {
+    "message": "לשוניות פעילות"
+  },
+  "pop_unselect_all": {
+    "message": "בטל בחירת הכול"
+  },
+  "pop_select_all": {
+    "message": "בחר הכול"
+  },
+  "pop_search_results": {
+    "message": "תוצאות חיפוש"
+  },
+  "pop_start_typing": {
+    "message": "התחילו להקליד כדי לחפש..."
+  },
+  "pop_export_session_title": {
+    "message": "לחיצה ימנית לייצוא הסשן האחרון"
+  },
+  "pop_searching": {
+    "message": "מחפש..."
+  },
+  "pop_search_error": {
+    "message": "שגיאת חיפוש"
+  },
+  "pop_no_results": {
+    "message": "לא נמצאו תוצאות"
+  },
+  "pop_no_closed": {
+    "message": "אין לשוניות שנסגרו לאחרונה"
+  },
+  "pop_no_storable": {
+    "message": "אין לשוניות פתוחות שניתן לאחסן"
+  },
+  "pop_ts_error": {
+    "message": "שגיאה בטעינת אחסון הלשוניות"
+  },
+  "pop_no_stored": {
+    "message": "אין לשוניות מאוחסנות."
+  },
+  "pop_no_stored_hint": {
+    "message": "לחצו לחיצה ימנית על כפתור זה כדי לאחסן לשוניות פתוחות"
+  },
+  "pop_no_data": {
+    "message": "אין נתונים עדיין"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "להסיר $N1$ לשוניות מאוחסנות מאחסון הלשוניות?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "לא ניתן לאחסן דף זה"
+  },
+  "pop_no_history_day": {
+    "message": "אין היסטוריה ליום זה"
+  },
+  "pop_no_history_today": {
+    "message": "אין עדיין היסטוריה היום"
+  },
+  "pop_just_now": {
+    "message": "עכשיו"
+  },
+  "pop_min_ago": {
+    "message": "לפני $N1$ ד׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "לפני $N1$ ש׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "לפני $N1$ י׳",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }

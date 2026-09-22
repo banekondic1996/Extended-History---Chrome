@@ -1,19 +1,87 @@
 {
-  "ext_name": { "message": "Расширенная история" },
-
-  "current_session": { "message": "Текущая сессия" },
-  "active": { "message": "Активно" },
-  "all_fields": { "message": "Все поля" },
-  "title": { "message": "Заголовок" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Домен" },
-  "ph_search_history": { "message": "Поиск в истории…" },
-  "ph_search_bookmarks": { "message": "Поиск в закладках…" },
+  "ext_name": {
+    "message": "Расширенная история"
+  },
+  "rename_bookmark": {
+  "message": "✏️ Переименовать закладку"
+},
+  "remove_bookmark": {
+    "message": "🗑 Удалить закладку"
+  },
+  "quick_filters": {
+    "message": "Быстрые фильтры"
+  },
+  "quick_filter_desc": {
+    "message": "Сохраните именованную группу доменов, ключевых слов или URL (например, «Социальные сети» → facebook.com, instagram.com, pinterest.com). Выберите её в раскрывающемся списке рядом с полем поиска на странице истории, чтобы мгновенно отфильтровать только эти записи."
+  },
+  "filter_name": {
+    "message": "Название фильтра (например, Социальные сети)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Один домен, ключевое слово или URL в каждой строке — например:\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Сохранить изменения"
+  },
+  "add_filter": {
+    "message": "Добавить фильтр"
+  },
+  "no_qfilters": {
+    "message": "Быстрых фильтров пока нет"
+  },
+  "scroll_sensitivity": {
+    "message": "Чувствительность прокрутки"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Сколько кнопок дней перемещается за один шаг прокрутки"
+  },
+  "scroll_date": {
+    "message": "Прокручивать даты колёсиком мыши"
+  },
+  "scroll_date_desc": {
+    "message": "Позволяет обычному колёсику мыши (которое прокручивает только по вертикали) перемещать панель дат в стороны — удобно на компьютере, где колёсико само по себе не поддерживает горизонтальную прокрутку."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Доступ к списку исключений"
+  },
+  "ignore_list_enter_password": {
+    "message": "Введите мастер-пароль, чтобы просмотреть список исключений."
+  },
+  "reset": {
+    "message": "Сбросить"
+  },
+  "ok": {
+    "message": "ОК"
+  },
+  "current_session": {
+    "message": "Текущая сессия"
+  },
+  "active": {
+    "message": "Активно"
+  },
+  "all_fields": {
+    "message": "Все поля"
+  },
+  "title": {
+    "message": "Заголовок"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Домен"
+  },
+  "ph_search_history": {
+    "message": "Поиск в истории…"
+  },
+  "ph_search_bookmarks": {
+    "message": "Поиск в закладках…"
+  },
   "popup_show_url_desc": {
-  "message": "Показывать URL страницы под заголовком во всплывающем списке"
+    "message": "Показывать URL страницы под заголовком во всплывающем списке"
   },
   "popup_show_url": {
-  "message": "URL-адреса"
+    "message": "URL-адреса"
   },
   "auto_store_idle_tabs": {
     "message": "Автоматически сохранять неактивные вкладки"
@@ -36,215 +104,978 @@
   "apply_migrate": {
     "message": "Применить и мигрировать"
   },
-
-  "most_visited": {"message": "Самые посещаемые"},
-  "tabs": {"message": "вкладки"},
-  "since": {"message": "с"},
-  "most_visited_URLS_all_time": {"message": "Самые посещаемые URL — за всё время"},
-  "urls": {"message": "URL"},
-  "domains": {"message": "Домены"},
-  "enable_ignore": {"message": "Включить список игнорирования"},
-  "filter_urls": {"message": "Фильтровать URL по шаблонам ниже"},
+  "most_visited": {
+    "message": "Самые посещаемые"
+  },
+  "tabs": {
+    "message": "вкладки"
+  },
+  "since": {
+    "message": "с"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "Самые посещаемые URL — за всё время"
+  },
+  "urls": {
+    "message": "URL"
+  },
+  "domains": {
+    "message": "Домены"
+  },
+  "enable_ignore": {
+    "message": "Включить список игнорирования"
+  },
+  "filter_urls": {
+    "message": "Фильтровать URL по шаблонам ниже"
+  },
   "confirm_delete_all_time": {
     "message": "⚠️ Подтвердите удаление результатов за всё время\n\nЭто удалит $COUNT$ совпадающих результатов из всей вашей истории.\n\nВы уверены?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "Удалить $COUNT$ совпадающих результатов?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "Удалено $COUNT$ элементов",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-  "wallpaper_mode": { "message": "🖼 Режим обоев" },
-  "wallpaper_mode_desc": { "message": "Установить пользовательское фоновое изображение. Включает эффект матового стекла." },
-  "wallpaper_mode_custom_image": { "message": "📁 Пользовательское изображение" },
-  "wallpaper_random_unsplash": { "message": "🎲 Случайно из Unsplash" },
-  "wallpaper_drop_image": { "message": "Перетащите изображение или <strong>нажмите для выбора</strong>" },
-  "wallpaper_fetch": { "message": "Загружает случайное фото высокого разрешения (меняется каждый раз)" },
-  "wallpaper_randomize": { "message": "🎲 Случайно" },
-  "wallpaper_auto_randomize": { "message": "Автоматически при каждом открытии" },
-  "wallpaper_current": { "message": "Текущие обои:" },
-  "overlay_opacity": { "message": "Прозрачность слоя" },
-  "overlay_control_desc": { "message": "Управляет тёмным или светлым слоем поверх фона." },
-  "wallpaper_blur": { "message": "Размытие фона" },
-  "wallpaper_remove": { "message": "✕ Удалить обои" },
-  "all":{"message":"Все"},
-  "auto_focus_search":{"message":"Автофокус поиска при открытии"},
-  "auto_focus_search_desc":{"message":"Автоматически фокусировать поле поиска при открытии страницы истории"},
-  "back":{"message":"← Назад"},
-  "background_tint":{"message":"Оттенок фона"},
-  "browser_cache":{"message":"Кэш браузера"},
-  "delete_history_reset_password":{"message":"Удалить историю и сбросить пароль"},
-  "enable_bg_tint":{"message":"Включить оттенок фона"},
-  "enable_lock":{"message":"Включить блокировку"},
-  "enter_password_to_continue":{"message":"Введите пароль для продолжения"},
-  "ext_locked":{"message":"Extended History — Заблокировано"},
-  "favicon_resolver":{"message":"Получение favicon"},
-  "favicon_resolver_desc":{"message":"Как загружаются иконки сайтов."},
-  "for_password_reset":{"message":"(для сброса пароля)"},
-  "forgot_password_reset":{"message":"Забыли пароль / Сброс"},
-  "google_resolver":{"message":"Google resolver"},
-  "history_merge_interval":{"message":"Интервал объединения истории"},
-  "history_merge_interval_desc":{"message":"Как часто история браузера объединяется с локальным хранилищем."},
-  "lock_extension_page":{"message":"Заблокировать страницу расширения"},
-  "lock_extension_page_desc":{"message":"Требуется пароль для просмотра страницы истории."},
-  "password":{"message":"Пароль"},
-  "performance":{"message":"Производительность"},
-  "popup":{"message":"Всплывающее окно"},
-  "popup_height":{"message":"Высота popup"},
-  "popup_height_desc":{"message":"Максимальная высота области списка (px)"},
-  "refresh":{"message":"↻ Обновить"},
-  "reset_password_warning":{"message":"⚠️ Сброс пароля навсегда удалит всю сохраненную историю."},
-  "search_bar":{"message":"Панель поиска"},
-  "search_bar_desc":{"message":"Показать панель поиска внизу popup"},
-  "security_answer":{"message":"Ответ безопасности"},
-  "security_question":{"message":"Контрольный вопрос"},
-  "set_up_page_lock":{"message":"🔐 Настроить блокировку страницы"},
-  "tabs_bar":{"message":"Панель вкладок"},
-  "tabs_bar_desc":{"message":"Показать переключатель Recent History / Closed Tabs"},
-  "time_spent_tracking":{"message":"Отслеживание времени"},
-  "time_spent_tracking_desc":{"message":"Отслеживать время по доменам."},
-  "ui":{"message":"Интерфейс"},
-  "unlock":{"message":"Разблокировать"},
-  "ph_ignore_pattern":{"message":"example.com или ключевое слово"},
-  "opt_all_fields":{"message":"Все поля"},
-  "opt_title":{"message":"Заголовок"},
-  "opt_url":{"message":"URL"},
-  "opt_domain":{"message":"Домен"},
-  "block_all_example_7":{"message":"Блокирует только это слово"},
-  "specific_word":{"message":"Конкретное слово"},
-  "example_com_6":{"message":"пример"},
-  "reading_mode": {"message": "Режим чтения"},
-  "tab_storage": {"message": "Хранилище вкладок"},
-  "load_exported_history_read": {"message": "Загрузите экспортированный файл истории (.json), чтобы просматривать его без импорта. Интерфейс работает точно так же, как вкладка История — фильтры дат, поиск и всё остальное."},
-  "choose_file": {"message": "Выбрать файл…"},
-  "choose_file_hint": {"message": "или перетащите .json файл сюда"},
-  "leave_reading_mode": {"message": "✕ Выйти из режима чтения"},
-  "reading": {"message": "Чтение:"},
-
-  "today": { "message": "Сегодня" },
-  "storage": { "message": "Хранилище" },
-  "total_visits": { "message": "Всего посещений" },
-  "restore": { "message": "Восстановить" },
-  "most_visited_URLS": { "message": "Самые посещаемые URL" },
-
-  "browse": { "message": "Просмотр" },
-  "history": { "message": "История" },
-  "sessions": { "message": "Сессии" },
-  "devices": { "message": "Устройства" },
-  "insights": { "message": "Аналитика" },
-  "activity": { "message": "Активность" },
-  "time_spent": { "message": "Потраченное время" },
-  "library": { "message": "Библиотека" },
-  "bookmarks": { "message": "Закладки" },
-  "system": { "message": "Система" },
-  "delete_history": { "message": "Удалить историю" },
-  "ignore_list": { "message": "Список игнорирования" },
-  "settings": { "message": "Настройки" },
-  "more": { "message": "Ещё" },
-  "light": { "message": "Светлая" },
-  "dark": { "message": "Тёмная" },
-  "all_time": { "message": "За всё время" },
-  "delete_results": { "message": "Удалить результаты" },
-  "selected_lower": { "message": "выбрано" },
-  "select_all_visible": { "message": "Выбрать всё видимое" },
-  "deselect_all": { "message": "Снять выбор со всех" },
-  "delete_selected": { "message": "Удалить выбранное" },
-  "loading": { "message": "Загрузка…" },
-  "daily_visits_90": { "message": "Ежедневные визиты — 90 дней" },
-  "daily_visits_30": { "message": "Ежедневные визиты — 30 дней" },
-  "hours": { "message": "часов" },
-  "days": { "message": "дней" },
-  "clear_time_data": { "message": "Очистить данные времени" },
-  "daily_browsing_time": { "message": "Ежедневное время просмотра" },
-  "top_sites_by_time_spent": { "message": "Топ сайтов по времени просмотра" },
-  "export": { "message": "Экспорт" },
-  "import": { "message": "Импорт" },
-  "history_retention": { "message": "Сохранение истории" },
-  "keep_history_for": { "message": "Сохранять историю на" },
-  "older_enteries_are_pruned": { "message": "Старые записи удаляются автоматически" },
-  "months": { "message": "месяцев" },
-  "year": { "message": "год" },
-  "years": { "message": "лет" },
-  "forever": { "message": "Навсегда" },
-  "appearance": { "message": "Внешний вид" },
-  "language": { "message": "Язык" },
-  "select_pref_language": { "message": "Выберите предпочтительный язык" },
-  "font_family": { "message": "Шрифт" },
-  "font_size": { "message": "Размер шрифта" },
-  "base_ui_text_size": { "message": "Базовый размер текста UI" },
-  "pixels": { "message": "пкс" },
-  "accent_colors": { "message": "Акцентные цвета" },
-  "primary": { "message": "Основной" },
-  "secondary": { "message": "Вторичный" },
-  "data": { "message": "Данные" },
-  "export_history": { "message": "Экспорт истории" },
-  "full_json_backup": { "message": "Полный JSON-резерв всех данных истории и времени" },
-  "export_json": { "message": "Экспорт JSON" },
-  "import_history": { "message": "Импорт истории" },
-  "merge_entries_json": { "message": "Объединить записи из ранее экспортированного JSON" },
-  "import_json": { "message": "Импорт JSON" },
-  "sessions_to_keep": { "message": "Сессии для сохранения" },
-  "how_many_past_sessions": { "message": "Сколько прошлых сессий хранить (1–20)" },
-  "auto_save_session": { "message": "Автосохранение текущей сессии" },
-  "save_open_tabs_to": { "message": "Сохраняет открытые вкладки в extended-history-session.html в вашей папке загрузок. Установите 0 для отключения." },
-  "min": { "message": "мин" },
-  "save_now": { "message": "Сохранить сейчас" },
-  "save_settings": { "message": "Сохранить настройки" },
-  "danger_zone": { "message": "Опасная зона" },
-  "reimport_chrome_history": { "message": "Повторный импорт истории Chrome" },
-  "pull_all_chrome_history": { "message": "Повторно получить всю доступную локальную историю Chrome (слияние, без дубликатов)" },
-  "reimport": { "message": "Повторный импорт" },
-  "clear_all_history": { "message": "Очистить всю историю" },
-  "permanently_delete_all_stored": { "message": "Навсегда удаляет всю сохранённую историю. Не может быть отменено." },
-  "clear_all": { "message": "Очистить всё" },
-  "about": { "message": "О программе" },
-  "created_by": { "message": "Создано Bane Kondić, так как ему не понравилось ограничение истории на 90 дней в Chromium. Это расширение не отправляет данные и полностью открытое, код доступен в профиле GitHub автора." },
-  "github_profile": { "message": "Профиль Github" },
-  "feedback": { "message": "Обратная связь" },
-  "link_to_discord": { "message": "Ссылка на сервер Discord для отзывов (или просто оставьте отзыв в Chrome Web Store)" },
-  "discord_server": { "message": "Сервер Discord" },
-  "rate_extension": { "message": "Оценить расширение" },
-  "link_to_chrome_webstore": { "message": "Ссылка на страницу расширения в Chrome Web Store" },
-  "click_to_rate": { "message": "Нажмите, чтобы оценить" },
-  "ignored_domains": { "message": "Игнорируемые домены" },
-  "domains_added_will_not_be": { "message": "Домены, добавленные здесь, не будут сохранены в истории. Существующие записи будут удалены автоматически." },
-  "add_patern": { "message": "Добавить шаблон" },
-  "pattern_guide": { "message": "Руководство по шаблонам" },
-  "basic_domain": { "message": "Базовый домен" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Блокирует весь example.com" },
-  "all_subdomains": { "message": "Все поддомены" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Блокирует blog.example.com, shop.example.com и т.д." },
-  "specific_subdomain": { "message": "Конкретный поддомен" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Блокирует только blog.example.com" },
-  "specific_path": { "message": "Конкретный путь" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "Блокирует только URL под /private" },
-  "specific_file": { "message": "Конкретный файл" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "Блокирует только этот файл" },
-  "no_patterns_added": { "message": "Паттерны ещё не добавлены" },
-  "open_in_new_tab": { "message": "Открыть в новой вкладке" },
-  "open_in_incognito": { "message": "Открыть в режиме инкогнито" },
-  "copy_url": { "message": "Копировать URL" },
-  "copy_title": { "message": "Копировать заголовок" },
-  "delete_from_history": { "message": "Удалить из истории" },
-  "new_subfolder": { "message": "Новая подпапка" },
-  "rename_folder": { "message": "Переименовать папку" },
-  "delete_folder": { "message": "Удалить папку" },
-  "cancel": { "message": "Отмена" },
-  "delete": { "message": "Удалить" },
-  "choose_a_time_range": { "message": "Выберите период для удаления. Это удалит элементы как из расширения, так и из нативной истории Chrome." },
-  "last_1_hour": { "message": "Последний час" },
-  "last_24_hours": { "message": "Последние 24 часа" },
-  "last_7_days": { "message": "Последние 7 дней" },
-  "last_30_days": { "message": "Последние 30 дней (месяц)" },
-  "last_5_months": { "message": "Последние 5 месяцев" },
-  "clear_cookies_local_storage": { "message": "Очистить cookies и локальное хранилище" },
-  "clear_cache": { "message": "Очистить кэш" }
+  "wallpaper_mode": {
+    "message": "🖼 Режим обоев"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Установить пользовательское фоновое изображение. Включает эффект матового стекла."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Пользовательское изображение"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Случайно из Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Перетащите изображение или <strong>нажмите для выбора</strong>"
+  },
+  "wallpaper_fetch": {
+    "message": "Загружает случайное фото высокого разрешения (меняется каждый раз)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Случайно"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Автоматически при каждом открытии"
+  },
+  "wallpaper_current": {
+    "message": "Текущие обои:"
+  },
+  "overlay_opacity": {
+    "message": "Прозрачность слоя"
+  },
+  "overlay_control_desc": {
+    "message": "Управляет тёмным или светлым слоем поверх фона."
+  },
+  "wallpaper_blur": {
+    "message": "Размытие фона"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Удалить обои"
+  },
+  "all": {
+    "message": "Все"
+  },
+  "auto_focus_search": {
+    "message": "Автофокус поиска при открытии"
+  },
+  "auto_focus_search_desc": {
+    "message": "Автоматически фокусировать поле поиска при открытии страницы истории"
+  },
+  "back": {
+    "message": "← Назад"
+  },
+  "background_tint": {
+    "message": "Оттенок фона"
+  },
+  "browser_cache": {
+    "message": "Кэш браузера"
+  },
+  "delete_history_reset_password": {
+    "message": "Удалить историю и сбросить пароль"
+  },
+  "enable_bg_tint": {
+    "message": "Включить оттенок фона"
+  },
+  "enable_lock": {
+    "message": "Включить блокировку"
+  },
+  "enter_password_to_continue": {
+    "message": "Введите пароль для продолжения"
+  },
+  "ext_locked": {
+    "message": "Extended History — Заблокировано"
+  },
+  "favicon_resolver": {
+    "message": "Получение favicon"
+  },
+  "favicon_resolver_desc": {
+    "message": "Как загружаются иконки сайтов."
+  },
+  "for_password_reset": {
+    "message": "(для сброса пароля)"
+  },
+  "forgot_password_reset": {
+    "message": "Забыли пароль / Сброс"
+  },
+  "google_resolver": {
+    "message": "Google resolver"
+  },
+  "history_merge_interval": {
+    "message": "Интервал объединения истории"
+  },
+  "history_merge_interval_desc": {
+    "message": "Как часто история браузера объединяется с локальным хранилищем."
+  },
+  "lock_extension_page": {
+    "message": "Заблокировать страницу расширения"
+  },
+  "lock_extension_page_desc": {
+    "message": "Требуется пароль для просмотра страницы истории."
+  },
+  "password": {
+    "message": "Пароль"
+  },
+  "performance": {
+    "message": "Производительность"
+  },
+  "popup": {
+    "message": "Всплывающее окно"
+  },
+  "popup_height": {
+    "message": "Высота popup"
+  },
+  "popup_height_desc": {
+    "message": "Максимальная высота области списка (px)"
+  },
+  "refresh": {
+    "message": "↻ Обновить"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ Сброс пароля навсегда удалит всю сохраненную историю."
+  },
+  "search_bar": {
+    "message": "Панель поиска"
+  },
+  "search_bar_desc": {
+    "message": "Показать панель поиска внизу popup"
+  },
+  "security_answer": {
+    "message": "Ответ безопасности"
+  },
+  "security_question": {
+    "message": "Контрольный вопрос"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 Настроить блокировку страницы"
+  },
+  "tabs_bar": {
+    "message": "Панель вкладок"
+  },
+  "tabs_bar_desc": {
+    "message": "Показать переключатель Recent History / Closed Tabs"
+  },
+  "time_spent_tracking": {
+    "message": "Отслеживание времени"
+  },
+  "time_spent_tracking_desc": {
+    "message": "Отслеживать время по доменам."
+  },
+  "ui": {
+    "message": "Интерфейс"
+  },
+  "unlock": {
+    "message": "Разблокировать"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com или ключевое слово"
+  },
+  "opt_all_fields": {
+    "message": "Все поля"
+  },
+  "opt_title": {
+    "message": "Заголовок"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "Домен"
+  },
+  "block_all_example_7": {
+    "message": "Блокирует только это слово"
+  },
+  "specific_word": {
+    "message": "Конкретное слово"
+  },
+  "example_com_6": {
+    "message": "пример"
+  },
+  "reading_mode": {
+    "message": "Режим чтения"
+  },
+  "tab_storage": {
+    "message": "Хранилище вкладок"
+  },
+  "load_exported_history_read": {
+    "message": "Загрузите экспортированный файл истории (.json), чтобы просматривать его без импорта. Интерфейс работает точно так же, как вкладка История — фильтры дат, поиск и всё остальное."
+  },
+  "choose_file": {
+    "message": "Выбрать файл…"
+  },
+  "choose_file_hint": {
+    "message": "или перетащите .json файл сюда"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Выйти из режима чтения"
+  },
+  "reading": {
+    "message": "Чтение:"
+  },
+  "today": {
+    "message": "Сегодня"
+  },
+  "storage": {
+    "message": "Хранилище"
+  },
+  "total_visits": {
+    "message": "Всего посещений"
+  },
+  "restore": {
+    "message": "Восстановить"
+  },
+  "most_visited_URLS": {
+    "message": "Самые посещаемые URL"
+  },
+  "browse": {
+    "message": "Просмотр"
+  },
+  "history": {
+    "message": "История"
+  },
+  "sessions": {
+    "message": "Сессии"
+  },
+  "devices": {
+    "message": "Устройства"
+  },
+  "insights": {
+    "message": "Аналитика"
+  },
+  "activity": {
+    "message": "Активность"
+  },
+  "time_spent": {
+    "message": "Потраченное время"
+  },
+  "library": {
+    "message": "Библиотека"
+  },
+  "bookmarks": {
+    "message": "Закладки"
+  },
+  "system": {
+    "message": "Система"
+  },
+  "delete_history": {
+    "message": "Удалить историю"
+  },
+  "ignore_list": {
+    "message": "Список игнорирования"
+  },
+  "settings": {
+    "message": "Настройки"
+  },
+  "more": {
+    "message": "Ещё"
+  },
+  "light": {
+    "message": "Светлая"
+  },
+  "dark": {
+    "message": "Тёмная"
+  },
+  "all_time": {
+    "message": "За всё время"
+  },
+  "delete_results": {
+    "message": "Удалить результаты"
+  },
+  "selected_lower": {
+    "message": "выбрано"
+  },
+  "select_all_visible": {
+    "message": "Выбрать всё видимое"
+  },
+  "deselect_all": {
+    "message": "Снять выбор со всех"
+  },
+  "delete_selected": {
+    "message": "Удалить выбранное"
+  },
+  "loading": {
+    "message": "Загрузка…"
+  },
+  "daily_visits_90": {
+    "message": "Ежедневные визиты — 90 дней"
+  },
+  "daily_visits_30": {
+    "message": "Ежедневные визиты — 30 дней"
+  },
+  "hours": {
+    "message": "часов"
+  },
+  "days": {
+    "message": "дней"
+  },
+  "clear_time_data": {
+    "message": "Очистить данные времени"
+  },
+  "daily_browsing_time": {
+    "message": "Ежедневное время просмотра"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Топ сайтов по времени просмотра"
+  },
+  "export": {
+    "message": "Экспорт"
+  },
+  "import": {
+    "message": "Импорт"
+  },
+  "history_retention": {
+    "message": "Сохранение истории"
+  },
+  "keep_history_for": {
+    "message": "Сохранять историю на"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Старые записи удаляются автоматически"
+  },
+  "months": {
+    "message": "месяцев"
+  },
+  "year": {
+    "message": "год"
+  },
+  "years": {
+    "message": "лет"
+  },
+  "forever": {
+    "message": "Навсегда"
+  },
+  "appearance": {
+    "message": "Внешний вид"
+  },
+  "language": {
+    "message": "Язык"
+  },
+  "select_pref_language": {
+    "message": "Выберите предпочтительный язык"
+  },
+  "font_family": {
+    "message": "Шрифт"
+  },
+  "font_size": {
+    "message": "Размер шрифта"
+  },
+  "base_ui_text_size": {
+    "message": "Базовый размер текста UI"
+  },
+  "pixels": {
+    "message": "пкс"
+  },
+  "accent_colors": {
+    "message": "Акцентные цвета"
+  },
+  "primary": {
+    "message": "Основной"
+  },
+  "secondary": {
+    "message": "Вторичный"
+  },
+  "data": {
+    "message": "Данные"
+  },
+  "export_history": {
+    "message": "Экспорт истории"
+  },
+  "full_json_backup": {
+    "message": "Полный JSON-резерв всех данных истории и времени"
+  },
+  "export_json": {
+    "message": "Экспорт JSON"
+  },
+  "import_history": {
+    "message": "Импорт истории"
+  },
+  "merge_entries_json": {
+    "message": "Объединить записи из ранее экспортированного JSON"
+  },
+  "import_json": {
+    "message": "Импорт JSON"
+  },
+  "sessions_to_keep": {
+    "message": "Сессии для сохранения"
+  },
+  "how_many_past_sessions": {
+    "message": "Сколько прошлых сессий хранить (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Автосохранение текущей сессии"
+  },
+  "save_open_tabs_to": {
+    "message": "Сохраняет открытые вкладки в extended-history-session.html в вашей папке загрузок. Установите 0 для отключения."
+  },
+  "min": {
+    "message": "мин"
+  },
+  "save_now": {
+    "message": "Сохранить сейчас"
+  },
+  "save_settings": {
+    "message": "Сохранить настройки"
+  },
+  "danger_zone": {
+    "message": "Опасная зона"
+  },
+  "reimport_chrome_history": {
+    "message": "Повторный импорт истории Chrome"
+  },
+  "pull_all_chrome_history": {
+    "message": "Повторно получить всю доступную локальную историю Chrome (слияние, без дубликатов)"
+  },
+  "reimport": {
+    "message": "Повторный импорт"
+  },
+  "clear_all_history": {
+    "message": "Очистить всю историю"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Навсегда удаляет всю сохранённую историю. Не может быть отменено."
+  },
+  "clear_all": {
+    "message": "Очистить всё"
+  },
+  "about": {
+    "message": "О программе"
+  },
+  "created_by": {
+    "message": "Создано Bane Kondić, так как ему не понравилось ограничение истории на 90 дней в Chromium. Это расширение не отправляет данные и полностью открытое, код доступен в профиле GitHub автора."
+  },
+  "github_profile": {
+    "message": "Профиль Github"
+  },
+  "feedback": {
+    "message": "Обратная связь"
+  },
+  "link_to_discord": {
+    "message": "Ссылка на сервер Discord для отзывов (или просто оставьте отзыв в Chrome Web Store)"
+  },
+  "discord_server": {
+    "message": "Сервер Discord"
+  },
+  "rate_extension": {
+    "message": "Оценить расширение"
+  },
+  "link_to_chrome_webstore": {
+    "message": "Ссылка на страницу расширения в Chrome Web Store"
+  },
+  "click_to_rate": {
+    "message": "Нажмите, чтобы оценить"
+  },
+  "ignored_domains": {
+    "message": "Игнорируемые домены"
+  },
+  "domains_added_will_not_be": {
+    "message": "Домены, добавленные здесь, не будут сохранены в истории. Существующие записи будут удалены автоматически."
+  },
+  "add_patern": {
+    "message": "Добавить шаблон"
+  },
+  "pattern_guide": {
+    "message": "Руководство по шаблонам"
+  },
+  "basic_domain": {
+    "message": "Базовый домен"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Блокирует весь example.com"
+  },
+  "all_subdomains": {
+    "message": "Все поддомены"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Блокирует blog.example.com, shop.example.com и т.д."
+  },
+  "specific_subdomain": {
+    "message": "Конкретный поддомен"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Блокирует только blog.example.com"
+  },
+  "specific_path": {
+    "message": "Конкретный путь"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "Блокирует только URL под /private"
+  },
+  "specific_file": {
+    "message": "Конкретный файл"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "Блокирует только этот файл"
+  },
+  "no_patterns_added": {
+    "message": "Паттерны ещё не добавлены"
+  },
+  "open_in_new_tab": {
+    "message": "Открыть в новой вкладке"
+  },
+  "open_in_incognito": {
+    "message": "Открыть в режиме инкогнито"
+  },
+  "copy_url": {
+    "message": "Копировать URL"
+  },
+  "copy_title": {
+    "message": "Копировать заголовок"
+  },
+  "delete_from_history": {
+    "message": "Удалить из истории"
+  },
+  "new_subfolder": {
+    "message": "Новая подпапка"
+  },
+  "rename_folder": {
+    "message": "Переименовать папку"
+  },
+  "delete_folder": {
+    "message": "Удалить папку"
+  },
+  "cancel": {
+    "message": "Отмена"
+  },
+  "delete": {
+    "message": "Удалить"
+  },
+  "choose_a_time_range": {
+    "message": "Выберите период для удаления. Это удалит элементы как из расширения, так и из нативной истории Chrome."
+  },
+  "last_1_hour": {
+    "message": "Последний час"
+  },
+  "last_24_hours": {
+    "message": "Последние 24 часа"
+  },
+  "last_7_days": {
+    "message": "Последние 7 дней"
+  },
+  "last_30_days": {
+    "message": "Последние 30 дней (месяц)"
+  },
+  "last_5_months": {
+    "message": "Последние 5 месяцев"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Очистить cookies и локальное хранилище"
+  },
+  "clear_cache": {
+    "message": "Очистить кэш"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Открыть режим разработчика"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 Список открытых вкладок и время простоя"
+  },
+  "cal_all_time": {
+    "message": "Всё время"
+  },
+  "prev_day": {
+    "message": "‹ Пред. день"
+  },
+  "next_day": {
+    "message": "След. день ›"
+  },
+  "previous_month": {
+    "message": "Предыдущий месяц"
+  },
+  "next_month": {
+    "message": "Следующий месяц"
+  },
+  "clear": {
+    "message": "Очистить"
+  },
+  "ui_rounded_corners": {
+    "message": "Скруглённые углы интерфейса"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Скругляет углы боковой панели и главной области (и сохраняет небольшой отступ вокруг них). Отключите для прямоугольного макета вплотную к краям."
+  },
+  "ui_calendar_mode": {
+    "message": "Режим календаря"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Заменяет навигацию по датам и часам на странице «История» боковой панелью с календарём справа — выбирайте даты, месяцы и годы и переходите к любому часу."
+  },
+  "developer": {
+    "message": "Разработчик"
+  },
+  "dev_mode": {
+    "message": "Режим разработчика"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Режим разработчика"
+  },
+  "dev_mode_desc": {
+    "message": "Внутренняя диагностика: данные отслеживания простоя вкладок в реальном времени для автосохранения и статистика фоновых таймеров. Только для отладки."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Внутренняя диагностика — фоновые таймеры и текущее состояние отслеживания простоя вкладок для автосохранения."
+  },
+  "close": {
+    "message": "Закрыть"
+  },
+  "hour": {
+    "message": "Час"
+  },
+  "all_hours": {
+    "message": "Все часы"
+  },
+  "ph_search_devices": {
+    "message": "Поиск вкладок устройств по названию или URL…"
+  },
+  "add": {
+    "message": "Добавить"
+  },
+  "domain_exceptions": {
+    "message": "Исключения доменов"
+  },
+  "domain_exceptions_desc": {
+    "message": "Домены из этого списка пропускаются при удалении истории: их записи истории, файлы cookie и данные сайтов сохраняются. Поддомены включены."
+  },
+  "no_exceptions_yet": {
+    "message": "Исключений пока нет"
+  },
+  "remove": {
+    "message": "Удалить"
+  },
+  "invalid_domain": {
+    "message": "Введите допустимый домен, например example.com"
+  },
+  "domain_already_added": {
+    "message": "Этот домен уже в списке"
+  },
+  "dh_confirm_warn": {
+    "message": "Это навсегда удалит историю за период: $N1$. Нажмите «Удалить» ещё раз для подтверждения.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "Домены из вашего списка исключений ($N1$) будут сохранены.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "Удаление…"
+  },
+  "deleted_history_entries": {
+    "message": "Удалено записей истории: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "cookie"
+  },
+  "word_cache": {
+    "message": "кэш"
+  },
+  "confirm_restore_tabs": {
+    "message": "Восстановить вкладок: $N1$?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "Восстановлено вкладок: $N1$ (окон: $N2$)",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "Восстановлено вкладок: $N1$ (в новом окне)",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "Шаблон удалён"
+  },
+  "toast_enter_pattern": {
+    "message": "Введите шаблон"
+  },
+  "toast_pattern_added": {
+    "message": "Шаблон добавлен: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "Список игнорирования включён"
+  },
+  "toast_ignore_disabled": {
+    "message": "Список игнорирования отключён"
+  },
+  "toast_ts_hidden": {
+    "message": "Игнорируемые домены теперь скрыты из «Затраченного времени»"
+  },
+  "toast_ts_shown": {
+    "message": "Игнорируемые домены больше не скрыты из «Затраченного времени»"
+  },
+  "hide_from_time_spent": {
+    "message": "Скрыть из «Затраченного времени»"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Скрывает домены, соответствующие шаблонам ниже, в разделе «Затраченное время» — данные о времени не удаляются"
+  },
+  "url_pattern_guide": {
+    "message": "Справка по шаблонам URL"
+  },
+  "ignore_keywords_note": {
+    "message": "Слова без точки считаются ключевыми словами — они совпадают с любым URL или заголовком страницы, содержащим это слово."
+  },
+  "toast_cleaning": {
+    "message": "Очистка игнорируемых URL из истории…"
+  },
+  "toast_removed_ignored": {
+    "message": "Удалено игнорируемых URL из истории: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "Игнорируемые URL в истории не найдены"
+  },
+  "keyword_prefix": {
+    "message": "ключевое слово: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "В кэше (локально)"
+  },
+  "context_menu_on_pages": {
+    "message": "Контекстное меню на сайтах"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Показывать пункт «Extended History» при щелчке правой кнопкой мыши на веб-странице"
+  },
+  "no_sessions_yet": {
+    "message": "Сессий пока нет"
+  },
+  "popup_as_sidebar": {
+    "message": "Использовать как боковую панель"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Открывает Extended History в боковой панели Chrome вместо всплывающего окна, чтобы он занимал всю страницу"
+  },
+  "toolbar_icon": {
+    "message": "Значок на панели инструментов"
+  },
+  "toolbar_icon_desc": {
+    "message": "Выберите значок, отображаемый на панели инструментов браузера"
+  },
+  "wallpaper_opacity": {
+    "message": "Непрозрачность обоев"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Ослабляет само фоновое изображение — отдельно от оттенка стеклянной панели ниже."
+  },
+  "yesterday": {
+    "message": "Вчера"
+  },
+  "language_auto": {
+    "message": "Автоматически (язык браузера)"
+  },
+  "nav_icons": {
+    "message": "Значки навигации"
+  },
+  "nav_icons_desc": {
+    "message": "Показывает значки рядом с пунктами меню боковой панели. Отключите, чтобы оставить только текст."
+  },
+  "match_ui_colors": {
+    "message": "Цвета как у интерфейса"
+  },
+  "match_ui_colors_desc": {
+    "message": "Окрашивает список истории в тот же цвет, что и остальной интерфейс (боковая панель, календарь и панели), вместо отдельного оттенка."
+  },
+  "pop_store": {
+    "message": "Сохранить"
+  },
+  "pop_open": {
+    "message": "Открыть"
+  },
+  "pop_prev_day": {
+    "message": "Предыдущий день"
+  },
+  "pop_next_day": {
+    "message": "Следующий день"
+  },
+  "pop_clear_search": {
+    "message": "Очистить поиск и вернуться к сегодняшнему дню"
+  },
+  "pop_recent_history": {
+    "message": "Недавняя история"
+  },
+  "pop_closed_tabs": {
+    "message": "Закрытые вкладки"
+  },
+  "pop_active_tabs": {
+    "message": "Активные вкладки"
+  },
+  "pop_unselect_all": {
+    "message": "Снять выделение"
+  },
+  "pop_select_all": {
+    "message": "Выбрать все"
+  },
+  "pop_search_results": {
+    "message": "Результаты поиска"
+  },
+  "pop_start_typing": {
+    "message": "Начните вводить для поиска..."
+  },
+  "pop_export_session_title": {
+    "message": "Щёлкните правой кнопкой, чтобы экспортировать последнюю сессию"
+  },
+  "pop_searching": {
+    "message": "Поиск..."
+  },
+  "pop_search_error": {
+    "message": "Ошибка поиска"
+  },
+  "pop_no_results": {
+    "message": "Ничего не найдено"
+  },
+  "pop_no_closed": {
+    "message": "Нет недавно закрытых вкладок"
+  },
+  "pop_no_storable": {
+    "message": "Нет открытых вкладок, которые можно сохранить"
+  },
+  "pop_ts_error": {
+    "message": "Ошибка загрузки хранилища вкладок"
+  },
+  "pop_no_stored": {
+    "message": "Нет сохранённых вкладок."
+  },
+  "pop_no_stored_hint": {
+    "message": "Щёлкните эту кнопку правой кнопкой мыши, чтобы сохранить открытые вкладки"
+  },
+  "pop_no_data": {
+    "message": "Данных пока нет"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Удалить сохранённые вкладки ($N1$) из хранилища?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Эту страницу нельзя сохранить"
+  },
+  "pop_no_history_day": {
+    "message": "Нет истории за этот день"
+  },
+  "pop_no_history_today": {
+    "message": "Сегодня истории пока нет"
+  },
+  "pop_just_now": {
+    "message": "только что"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ мин назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$ ч назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ дн. назад",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }
