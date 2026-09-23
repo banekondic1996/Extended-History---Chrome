@@ -26,7 +26,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
  (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Store page even if page didn't load completely
 -Import history within certain time range
--Reduce RAM usage when in bookmarks and overall
+-Change favicon when site if site is in ignore list
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
