@@ -1483,11 +1483,11 @@ async function loadSessions() {
 
       const tabCount = document.createElement('span');
       tabCount.className   = 'sess-tab-count';
-      tabCount.textContent = `${tabsArr.length} tabs`;
+      tabCount.textContent = `${tabsArr.length+' '+tr('tabs','tabs')}`;
 
       const exportBtn = document.createElement('button');
       exportBtn.className   = 'tb-btn';
-      exportBtn.textContent = '⬇ Export';
+      exportBtn.textContent = tr('export','Export');
       exportBtn.setAttribute('data-i18n-key', 'export');
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px';
       exportBtn.addEventListener('click', ev => {
@@ -1579,7 +1579,7 @@ async function loadSessions() {
       const dur  = fmtDuration(sess.end - sess.start);
       const date = new Date(sess.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
       el.appendChild(buildSessionCard(
-        { main: date, sub: `${dur} · ${sess.tabCount} unique tabs` },
+        { main: date, sub: `${dur} · ${sess.tabCount+' '+tr('unique_tabs','unique tabs')}` },
         null, sess.tabs
       ));
     });
@@ -1633,7 +1633,7 @@ async function loadTabStorage() {
   try {
     const { entries } = await send('GET_TAB_STORAGE');
     if (!entries || !entries.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
       return;
     }
     el.innerHTML = '';
@@ -1644,7 +1644,7 @@ async function loadTabStorage() {
     countEl.textContent = `${entries.length} stored tab${entries.length !== 1 ? 's' : ''}`;
     const clearBtn = document.createElement('button');
     clearBtn.className = 'tb-btn';
-    clearBtn.textContent = '🗑 Clear all';
+    clearBtn.textContent = '🗑 '+tr('clear_all','Clear all');
     clearBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)';
     clearBtn.addEventListener('click', async () => {
       if (!confirm(`Clear all ${entries.length} stored tabs?`)) return;
@@ -1654,7 +1654,7 @@ async function loadTabStorage() {
     });
     const restoreAllBtn = document.createElement('button');
     restoreAllBtn.className = 'tb-btn';
-    restoreAllBtn.textContent = '↺ Restore all';
+    restoreAllBtn.textContent = '↺ '+tr('restore_all','Restore all');
     restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
     restoreAllBtn.addEventListener('click', async () => {
       if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
@@ -1699,7 +1699,7 @@ async function loadTabStorage() {
         ev.stopPropagation();
         row.remove();
         if (!list.querySelector('.ts-row')) {
-          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
         } else {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
@@ -1713,7 +1713,7 @@ async function loadTabStorage() {
         chrome.tabs.create({ url: entry.url, active: false });
         row.remove();
         if (!list.querySelector('.ts-row')) {
-          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
         } else {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
@@ -1739,11 +1739,11 @@ async function loadTabStorage() {
 // ══ DEVICES ═════════════════════════════════════════════════════════════════
 async function loadDevices() {
   const el = document.getElementById('devicesContent');
-  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>Loading…</div>';
+  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('loading','Loading')+'…</div>';
   try {
     const { devices } = await send('GET_DEVICES');
     if (!devices?.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>No synced devices found.<br><small style="color:var(--text3)">Sign in to Chrome and enable Sync.</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('no_synced_devices','No synced devices found.')+'<br><small style="color:var(--text3)">'+tr('chrome_sync_hint','Sign in to Chrome and enable Sync.')+'</small></div>';
       return;
     }
 
@@ -1801,7 +1801,7 @@ async function loadDevices() {
       // ── Export button ──
       const exportBtn = document.createElement('button');
       exportBtn.className = 'tb-btn';
-      exportBtn.textContent = '⬇ Export';
+      exportBtn.textContent = '⬇ '+tr('export','Export');
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:6px';
       exportBtn.addEventListener('click', ev => {
         ev.stopPropagation();
@@ -2064,7 +2064,7 @@ async function loadBookmarks() {
   const treePane = document.getElementById('bmTreePane');
   const listPane = document.getElementById('bookmarksContent');
   if (treePane) treePane.innerHTML = '<div class="state-msg" style="padding:20px"><span class="state-msg-icon" style="font-size:20px">⏳</span></div>';
-  listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
+  listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>'+tr('loading','Loading')+'…</div>';
   _bmFavCache.clear(); // favicon resolver setting may have changed since last visit
   if (!loadBookmarks._setup) {
     loadBookmarks._setup = true;
@@ -3072,22 +3072,28 @@ document.getElementById('exportBmBtn').addEventListener('click', async () => {
 });
 
 function buildNetscapeHtml(tree) {
-  function walk(nodes, depth) {
+  // Top-level folders are tagged with their root type so import can put them back
+  // into the bookmarks bar / other bookmarks / mobile bookmarks whatever the UI language.
+  const rootType = n => n.folderType || ({ '1': 'bookmarks-bar', '2': 'other', '3': 'mobile' })[n.id] || '';
+  function walk(nodes, depth, atRoot) {
     let s = '';
+    const pad = '    '.repeat(depth);
     for (const n of nodes) {
       if (n.url) {
-        s += `${'    '.repeat(depth)}<DT><A HREF="${esc(n.url)}" ADD_DATE="${Math.floor((n.dateAdded||Date.now())/1000)}">${esc(n.title||n.url)}</A>\n`;
+        s += `${pad}<DT><A HREF="${esc(n.url)}" ADD_DATE="${Math.floor((n.dateAdded||Date.now())/1000)}">${esc(n.title||n.url)}</A>\n`;
       } else if (n.children) {
-        if (!n.title && depth === 0) { s += walk(n.children, depth); continue; }
-        s += `${'    '.repeat(depth)}<DT><H3>${esc(n.title||'')}</H3>\n`;
-        s += `${'    '.repeat(depth)}<DL><p>\n`;
-        s += walk(n.children, depth + 1);
-        s += `${'    '.repeat(depth)}</DL><p>\n`;
+        const rt = atRoot ? rootType(n) : '';
+        const attrs = rt ? ` DATA-EH-ROOT="${rt}"` + (rt === 'bookmarks-bar' ? ' PERSONAL_TOOLBAR_FOLDER="true"' : '') : '';
+        s += `${pad}<DT><H3${attrs}>${esc(n.title||'')}</H3>\n`;
+        s += `${pad}<DL><p>\n`;
+        s += walk(n.children, depth + 1, false);
+        s += `${pad}</DL><p>\n`;
       }
     }
     return s;
   }
-  return `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- Exported by Extended History -->\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n${walk(tree, 1)}</DL><p>`;
+  const top = (tree[0] && !tree[0].url && !tree[0].title && tree[0].children) ? tree[0].children : tree;
+  return `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- Exported by Extended History -->\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n${walk(top, 1, true)}</DL><p>`;
 }
 
 // Bookmark import
@@ -3100,24 +3106,45 @@ document.getElementById('importBmFile').addEventListener('change', async (ev) =>
   if (!file) return;
   try {
     const text = await file.text();
-    const bookmarks = parseNetscapeBookmarks(text);
-    if (!bookmarks.length) { toast('No bookmarks found in file', 'err'); return; }
-    const r = await send('IMPORT_BOOKMARKS', { bookmarks });
+    const tree = parseNetscapeBookmarks(text);
+    if (!tree.length) { toast('No bookmarks found in file', 'err'); return; }
+    const r = await send('IMPORT_BOOKMARKS', { tree });
     toast(`Imported ${fmtNum(r.imported)} bookmarks`, 'ok');
     loadBookmarks();
     ev.target.value = '';
   } catch (err) { toast(err.message, 'err'); }
 });
 
+// Parses a Netscape bookmark file into a tree: { title, url } / { title, children, rootType? }
 function parseNetscapeBookmarks(html) {
-  const parser = new DOMParser();
-  const doc    = parser.parseFromString(html, 'text/html');
-  const links  = doc.querySelectorAll('a');
-  const result = [];
-  links.forEach(a => {
-    if (a.href) result.push({ title: a.textContent.trim(), url: a.href });
-  });
-  return result;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  function parseDL(dl) {
+    const out = [];
+    const kids = Array.from(dl.children);
+    for (let i = 0; i < kids.length; i++) {
+      const el = kids[i];
+      if (el.tagName === 'DT') {
+        const h3 = el.querySelector(':scope > h3');
+        const a  = el.querySelector(':scope > a');
+        if (h3) {
+          let sub = el.querySelector(':scope > dl');
+          if (!sub && kids[i + 1] && kids[i + 1].tagName === 'DL') { sub = kids[i + 1]; i++; }
+          const node = { title: h3.textContent.trim(), children: sub ? parseDL(sub) : [] };
+          const eh = (h3.getAttribute('data-eh-root') || '').toLowerCase();
+          if (eh) node.rootType = eh;
+          else if (h3.hasAttribute('personal_toolbar_folder')) node.rootType = 'bookmarks-bar';
+          out.push(node);
+        } else if (a && a.getAttribute('href')) {
+          out.push({ title: a.textContent.trim(), url: a.getAttribute('href') });
+        }
+      } else if (el.tagName === 'DL') {
+        out.push(...parseDL(el));
+      }
+    }
+    return out;
+  }
+  const top = doc.querySelector('dl');
+  return top ? parseDL(top) : [];
 }
 
 // ══ SETTINGS ════════════════════════════════════════════════════════════════
@@ -4216,20 +4243,20 @@ async function handleIgnoreListAccess() {
   function setMode(m) {
     mode = m;
     if (m === 'setup') {
-      title.textContent = '🔒 Set Up Ignore List';
-      desc.textContent  = 'No password is set yet. Create a master password to protect your ignore list.';
+      title.textContent = tr('ignore_list_setup','🔒 Set Up Ignore List');
+      desc.textContent  = tr('ignore_list_setup_desc','No password is set yet. Create a master password to protect your ignore list.');
       resetBtn.style.display = 'none';
-      okBtn.textContent = 'Create Password';
+      okBtn.textContent =  tr('create_password','Create Password');
     } else if (m === 'unlock') {
-      title.textContent = '🔒 Ignore List Access';
-      desc.textContent  = 'Enter your master password to view the ignore list.';
+      title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
+      desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
-      okBtn.textContent = 'OK';
+      okBtn.textContent = tr('ok','OK');
     } else if (m === 'reset-new') {
-      title.textContent = '🔑 Reset Ignore List';
-      desc.textContent  = 'Ignore list has been cleared. Enter a new master password to continue.';
+      title.textContent = tr('reset_ignore_list','🔑 Reset Ignore List');
+      desc.textContent  = tr('reset_ignore_list_desc','Ignore list has been cleared. Enter a new master password to continue.');
       resetBtn.style.display = 'none';
-      okBtn.textContent = 'Set New Password';
+      okBtn.textContent = tr('set_new_password','Set New Password');
     }
     input.value = '';
     errEl.style.display = 'none';
@@ -4249,7 +4276,7 @@ async function handleIgnoreListAccess() {
 
   async function onOk() {
     const pw = input.value.trim();
-    if (!pw) { errEl.textContent = 'Please enter a password.'; errEl.style.display = ''; return; }
+    if (!pw) { errEl.textContent = tr('please_enter_password','Please enter a password.'); errEl.style.display = ''; return; }
 
     if (mode === 'setup' || mode === 'reset-new') {
       // Set new password

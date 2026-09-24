@@ -65,7 +65,7 @@ function qfRenderDropdown() {
   const sel = document.getElementById('quickFilterSelect');
   if (!sel) return;
   const prev = _qfActiveId;
-  sel.innerHTML = '<option value="">Quick Filters: None</option>';
+  sel.innerHTML = '<option value="">'+tr('quick_filters_none','Quick Filters: None')+'</option>';
   for (const f of _qfList) {
     const opt = document.createElement('option');
     opt.value = f.id;
@@ -107,17 +107,17 @@ function qfRenderPanel() {
 
   inner.innerHTML = `
     <div class="panel-scroll">
-      <div class="panel-heading">⚡ <span data-i18n-key="quick_filters">Quick Filters</span></div>
+      <div class="panel-heading">⚡ <span data-i18n-key="quick_filters">`+tr('quick_filters','Quick Filters')+`</span></div>
       <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px" data-i18n-key="quick_filter_desc">
-        Save a named group of domains, keywords, or URLs (e.g. "Social Media" → facebook.com, instagram.com, pinterest.com).
-        Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries.
+       `+tr('quick_filter_desc',`Save a named group of domains, keywords, or URLs (e.g. "Social Media" → facebook.com, instagram.com, pinterest.com).
+        Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries.`)+`
       </p>
       <div class="ignore-add" style="flex-direction:column;align-items:stretch;gap:8px">
-        <input type="text" id="qfNameInput" data-i18n-key="filter_name" placeholder="Filter name (e.g. Social Media)" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
-        <textarea id="qfPatternsInput" placeholder="One domain, keyword, or URL per line — e.g.&#10;facebook.com&#10;instagram.com&#10;pinterest.com" rows="4" style="width:100%;resize:vertical;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;padding:8px 10px;font-family:inherit">${editing ? esc((editing.patterns || []).join('\n')) : ''}</textarea>
+        <input type="text" id="qfNameInput" data-i18n-key="filter_name" placeholder="`+tr('filter_name','Filter name (e.g. Social Media)')+`" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
+        <textarea id="qfPatternsInput" placeholder="`+tr('quick_filter_patterns_placeholder','One domain, keyword, or URL per line — e.g.&#10;facebook.com&#10;instagram.com&#10;pinterest.com')+`" rows="4" style="width:100%;resize:vertical;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;padding:8px 10px;font-family:inherit">${editing ? esc((editing.patterns || []).join('\n')) : ''}</textarea>
         <div style="display:flex;gap:8px">
-          <button id="qfSaveBtn" class="action-btn" style="background:var(--accent);color:#fff">${editing ? 'Save changes' : 'Add Filter'}</button>
-          ${editing ? '<button id="qfCancelEditBtn" class="action-btn" data-i18n-key="cancel">Cancel</button>' : ''}
+          <button id="qfSaveBtn" class="action-btn" style="background:var(--accent);color:#fff">${editing ? tr('save_changes','Save changes') : tr('add_filter','Add Filter')}</button>
+          ${editing ? '<button id="qfCancelEditBtn" class="action-btn" data-i18n-key="cancel">'+tr('cancel','Cancel')+'</button>' : ''}
         </div>
       </div>
       <div id="qfList" class="ignore-list" style="margin-top:20px">
@@ -148,13 +148,13 @@ function qfRenderPanel() {
 
     const editBtn = document.createElement('button');
     editBtn.className = 'ignore-remove-btn';
-    editBtn.textContent = 'Edit';
+    editBtn.textContent = tr('edit','Edit');
     editBtn.style.marginRight = '6px';
     editBtn.onclick = () => { _qfEditingId = f.id; qfRenderPanel(); };
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'ignore-remove-btn';
-    removeBtn.textContent = 'Remove';
+    removeBtn.textContent = tr('remove','Remove');
     removeBtn.onclick = async () => {
       if (!confirm(`Remove quick filter "${f.name}"?`)) return;
       try {

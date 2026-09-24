@@ -142,8 +142,7 @@ a { color: inherit; text-decoration: none; }
   position: relative;
 }
 .nav-item .ni-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-.nav-item:hover { background: 
- color-mix(in srgb, var(--accent) 15%, transparent) !important; color: var(--text); }
+.nav-item:hover { background: var(--surf2); color: var(--text); }
 .nav-item.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);

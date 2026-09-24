@@ -2,6 +2,95 @@
   "ext_name": {
     "message": "扩展历史"
   },
+  "unique_tabs": {
+    "message": "唯一标签页"
+  },
+    "restore_all": {
+    "message": "全部恢复"
+  },
+    "edit": {
+    "message": "编辑"
+  },
+    "no_stored_tabs": {"message": "尚未存储任何标签页。"},
+  "store_tab_hint": {"message": "右键点击任意页面 → Extended History → 存储此标签页"},
+  "no_synced_devices": {"message": "未找到已同步的设备。"},
+  "chrome_sync_hint": {"message": "登录 Chrome 并启用同步功能。"},
+  "run_now": {"message": "立即运行"},
+  "select": {"message": "选择"},
+   "please_enter_password": {"message": "请输入密码。"},
+  "master_password": {"message": "主密码"},
+  "ignore_list_setup": {
+    "message": "🔒 设置忽略列表"
+  },
+  "ignore_list_setup_desc": {
+    "message": "尚未设置密码。创建主密码以保护你的忽略列表。"
+  },
+  "ignore_list_access_desc": {
+    "message": "输入主密码以查看忽略列表。"
+  },
+  "reset_ignore_list": {
+    "message": "🔑 重置忽略列表"
+  },
+  "reset_ignore_list_desc": {
+    "message": "忽略列表已清空。输入新的主密码以继续。"
+  },
+  "set_new_password": {
+    "message": "设置新密码"
+  },
+   "quick_filters_none": {
+    "message": "快速筛选：无"
+  },
+  "auto_hide_sidebar": {
+    "message": "鼠标离开时自动隐藏侧边栏"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "当光标离开侧边栏后自动将其关闭，类似于弹出窗口自动消失的方式。关闭此选项可让侧边栏保持打开状态，直到你手动将其关闭。"
+  },
+  "auto_export_interval": {
+    "message": "自动导出间隔"
+  },
+  "auto_export_interval_desc": {
+    "message": "每 N 个月自动将最早的历史记录导出为 .json 文件并删除。无论设置什么间隔，最近 3 个月的历史记录始终会保留。设置为 0 可禁用此功能。"
+  },
+  "high_contrast_mode": {
+    "message": "高对比度模式"
+  },
+  "high_contrast_mode_desc": {
+    "message": "在通常使用次要/第三级（较暗）文本颜色的地方使用主要文本颜色，以提高可读性"
+  },
+  "create_password": {
+    "message": "创建密码"
+  },
+  "lock_warning_title": {
+    "message": "锁定历史记录？"
+  },
+  "lock_warning_body": {
+    "message": "锁定后，扩展程序中的所有历史记录都会被加密。浏览器本身中的所有历史记录都会被删除，而扩展程序自己的副本会以加密形式保留。请务必先导出历史记录进行备份，以防发生断电等情况。锁定后，你可以输入密码解锁，扩展程序中的历史记录会恢复，但浏览器原生的历史记录不会恢复。这意味着地址栏中的部分自动补全建议将会缺失，只会显示访问次数最多的网址和域名。如果忘记密码，历史记录将无法恢复。"
+  },
+  "lock_logout_everywhere": {
+    "message": "退出所有位置的登录状态（同时清除 Cookie 和网站数据）"
+  },
+  "lock_hide_bookmarks": {
+    "message": "隐藏书签（解锁前会从浏览器中移除）"
+  },
+  "lock_password": {
+    "message": "密码"
+  },
+  "lock_confirm_password": {
+    "message": "确认密码"
+  },
+  "lock_btn": {
+    "message": "锁定"
+  },
+  "lock_password_short": {
+    "message": "密码至少需要 4 个字符"
+  },
+  "lock_password_mismatch": {
+    "message": "两次输入的密码不一致"
+  },
+  "lock_locking": {
+    "message": "正在加密…"
+  },
   "rename_bookmark": {
   "message": "✏️ 重命名书签"
 },

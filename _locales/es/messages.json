@@ -2,9 +2,98 @@
   "ext_name": {
     "message": "Historial Extendido"
   },
+  "restore_all": {
+    "message": "Restaurar todo"
+  },
+   "edit": {
+    "message": "Editar"
+  },
+    "unique_tabs": {
+    "message": "Pestañas únicas"
+  },
+    "no_stored_tabs": {"message": "Aún no hay pestañas guardadas."},
+  "store_tab_hint": {"message": "Haz clic derecho en cualquier página → Extended History → Guardar esta pestaña"},
+  "no_synced_devices": {"message": "No se encontraron dispositivos sincronizados."},
+  "chrome_sync_hint": {"message": "Inicia sesión en Chrome y activa la sincronización."},
+  "run_now": {"message": "Ejecutar ahora"},
+  "select": {"message": "Seleccionar"},
+  "please_enter_password": {"message": "Introduce una contraseña."},
+  "master_password": {"message": "Contraseña maestra"},
+  "ignore_list_setup": {
+    "message": "🔒 Configurar lista de exclusión"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Aún no se ha establecido ninguna contraseña. Crea una contraseña maestra para proteger tu lista de exclusión."
+  },
+  "ignore_list_access_desc": {
+    "message": "Introduce tu contraseña maestra para ver la lista de exclusión."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Restablecer lista de exclusión"
+  },
+  "reset_ignore_list_desc": {
+    "message": "La lista de exclusión se ha borrado. Introduce una nueva contraseña maestra para continuar."
+  },
+  "set_new_password": {
+    "message": "Establecer nueva contraseña"
+  },
+  "quick_filters_none": {
+    "message": "Filtros rápidos: ninguno"
+  },
+  "auto_hide_sidebar": {
+    "message": "Ocultar automáticamente la barra lateral al salir con el ratón"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Cierra automáticamente la barra lateral cuando el cursor salga de ella, de forma similar a cómo se cierra una ventana emergente. Desactívalo para mantenerla abierta hasta que la cierres manualmente."
+  },
+   "auto_export_interval": {
+    "message": "Intervalo de exportación automática"
+  },
+  "auto_export_interval_desc": {
+    "message": "Exporta y elimina automáticamente el historial más antiguo como archivo .json cada N meses. Los 3 meses más recientes siempre se conservan, independientemente del intervalo establecido. Establece 0 para desactivarlo."
+  },
+  "high_contrast_mode": {
+    "message": "Modo de alto contraste"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Usa el color de texto principal en todos los lugares donde normalmente se usaría un color de texto secundario/terciario (más tenue), para mejorar la legibilidad"
+  },
+  "create_password": {
+    "message": "Crear contraseña"
+  },
   "rename_bookmark": {
   "message": "✏️ Cambiar nombre del marcador"
 },
+ "lock_warning_title": {
+    "message": "¿Bloquear el historial?"
+  },
+  "lock_warning_body": {
+    "message": "Al bloquear se cifrará todo el historial dentro de la extensión. Todo el historial del navegador se eliminará, mientras que la copia propia de la extensión se conservará cifrada. Asegúrate de hacer una copia de seguridad exportando primero tu historial, por si se produce un corte de energía. Después de bloquearlo, podrás desbloquearlo introduciendo tu contraseña y el historial dentro de la extensión se restaurará, pero no el historial nativo del navegador. Esto significa que faltarán algunas sugerencias de autocompletado en la barra de direcciones; solo aparecerán las URL y los dominios más visitados. Si olvidas la contraseña, el historial no podrá recuperarse."
+  },
+  "lock_logout_everywhere": {
+    "message": "Cerrar sesión en todas partes (también borrar cookies y datos de sitios)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Ocultar marcadores (se eliminarán del navegador hasta que desbloquees)"
+  },
+  "lock_password": {
+    "message": "Contraseña"
+  },
+  "lock_confirm_password": {
+    "message": "Confirmar contraseña"
+  },
+  "lock_btn": {
+    "message": "Bloquear"
+  },
+  "lock_password_short": {
+    "message": "La contraseña debe tener al menos 4 caracteres"
+  },
+  "lock_password_mismatch": {
+    "message": "Las contraseñas no coinciden"
+  },
+  "lock_locking": {
+    "message": "Cifrando…"
+  },
  "remove_bookmark": {
     "message": "🗑 Eliminar marcador"
   },

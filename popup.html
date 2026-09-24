@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" overflow-x-hidden>
 <head>
 <meta charset="utf-8"/>
 <title>Extended History</title>
 <style>
+html{
+  overflow-x: hidden;
+}
 :root { --accent:#3b9eff; }
 [data-theme="dark"]  { --bg:#131318; --s1:#18181f; --s2:#1f1f28; --border:rgba(255,255,255,0.08); --text:#f0eee8; --text2:#a09eb0; --text3:#5a5870; }
 [data-theme="light"] { --bg:#ffffff; --s1:#f5f5f7; --s2:#eeeef2; --border:rgba(0,0,0,0.08); --text:#111118; --text2:#555568; --text3:#aaaabc; }
@@ -87,7 +90,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .ritem.sel-checked .ritem-check { background:var(--accent); border-color:var(--accent); color:#fff; }
 .ritem.sel-mode { cursor:default; user-select:none; }
 .ritem.sel-checked { background:rgba(59,158,255,0.08); }
-.content-wrapper { position:relative; }
+.content-wrapper { position:relative; contain: content; }
 .content { max-height:320px; overflow-y:auto; scrollbar-width:auto; scrollbar-color:var(--s2) transparent; }
 .content::-webkit-scrollbar { width:10px; }
 .content::-webkit-scrollbar-track { background:transparent; }
@@ -231,6 +234,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   <button class="search-clear" id="searchClear">✕</button>
 </div>
 <script src="i18n-core.js"></script>
+<script src="lock.js"></script>
 <script src="popup.js"></script>
 <script src="ui-translate.js"></script>
 </body>

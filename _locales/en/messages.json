@@ -2,17 +2,106 @@
   "ext_name": {
     "message": "Extended History"
   },
+  "restore_all": {
+    "message": "Restore all"
+  },
+    "unique_tabs": {
+    "message": "Unique tabs"
+  },
+    "no_stored_tabs": {"message": "No stored tabs yet."},
+  "store_tab_hint": {"message": "Right-click any page → Extended History → Store this tab"},
+  "no_synced_devices": {"message": "No synced devices found."},
+  "chrome_sync_hint": {"message": "Sign in to Chrome and enable Sync."},
+  "run_now": {"message": "Run now"},
+  "edit": {
+    "message": "Edit"
+  },
+    "please_enter_password": {
+    "message": "Please enter a password."
+  },
+  "master_password": {
+    "message": "Master password"
+  },
+  "ignore_list_setup": {
+    "message": "🔒 Set Up Ignore List"
+  },
+  "ignore_list_setup_desc": {
+    "message": "No password is set yet. Create a master password to protect your ignore list."
+  },
+  "ignore_list_access_desc": {
+    "message": "Enter your master password to view the ignore list."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Reset Ignore List"
+  },
+  "reset_ignore_list_desc": {
+    "message": "Ignore list has been cleared. Enter a new master password to continue."
+  },
+  "set_new_password": {
+    "message": "Set New Password"
+  },
+  "auto_hide_sidebar": {
+    "message": "Auto-hide sidebar on mouse leave"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Close the sidebar automatically once your cursor leaves it, similar to how a popup dismisses itself. Turn off to keep it open until you close it manually."
+  },
+   "auto_export_interval": {
+    "message": "Auto export interval"
+  },
+  "auto_export_interval_desc": {
+    "message": "Automatically export & delete the oldest history as a .json file every N months. The most recent 3 months are always kept, no matter what interval you set. Set to 0 to disable."
+  },
+  "high_contrast_mode": {
+    "message": "High contrast mode"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Uses the primary text color everywhere secondary/tertiary (dimmer) text color would normally be used, for better readability"
+  },
+  "create_password": {
+    "message": "Create password"
+  },
   "rename_bookmark": {
   "message": "✏️ Rename bookmark"
 },
+ "lock_warning_title": {
+    "message": "Lock history?"
+  },
+  "lock_warning_body": {
+    "message": "Locking will encrypt all history inside the extension. All history inside the browser itself will be deleted, the extension's own copy is kept, encrypted. Make sure you back up your history by exporting it first, just in case of a power failure. After locking you can unlock by entering your password and history inside extension will be returned, but not browser native one. Meaning there will be missing autocomplete suggestions in address bar, only most visited urls and domains will show up. If you forget the password, the history cannot be recovered."
+  },
+  "lock_logout_everywhere": {
+    "message": "Logout everywhere (also clear cookies and site data)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Hide bookmarks (removed from the browser until you unlock)"
+  },
+  "lock_password": {
+    "message": "Password"
+  },
+  "lock_confirm_password": {
+    "message": "Confirm password"
+  },
+  "lock_btn": {
+    "message": "Lock"
+  },
+  "lock_password_short": {
+    "message": "Password must be at least 4 characters"
+  },
+  "lock_password_mismatch": {
+    "message": "Passwords do not match"
+  },
+  "lock_locking": {
+    "message": "Encrypting…"
+  },
   "remove_bookmark": {
     "message": "🗑 Remove bookmark"
   },
    "select": {
     "message": "Select"
   },
-  "quick_filters": {
-    "message": "Quick Filters"
+  "quick_filters_none": {
+    "message": "Quick Filters: None"
   },
   "quick_filter_desc": {
     "message": "Save a named group of domains, keywords, or URLs (e.g. \"Social Media\" → facebook.com, instagram.com, pinterest.com). Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries."
@@ -26,9 +115,9 @@
   "save_changes": {
     "message": "Save changes"
   },
-  "add_filter": {
-    "message": "Add Filter"
-  },
+    "add_filter": {
+      "message": "Add Filter"
+    },
   "no_qfilters": {
     "message": "No quick filters yet"
   },
