@@ -796,7 +796,7 @@ function buildCalHourGrid() {
   if (!grid) return;
   grid.innerHTML = '';
   const allBtn = document.createElement('button');
-  allBtn.className = 'cal-hour-cell all-hours active';
+  allBtn.className = 'cal-hour-cell all-hours active tb-btn';
   allBtn.textContent = tr('all_hours', 'All hours');
   allBtn.dataset.h = 'all';
   allBtn.addEventListener('click', () => setFilterHour(null));
@@ -804,7 +804,7 @@ function buildCalHourGrid() {
   for (let h = 0; h < 24; h++) {
     const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
     const b = document.createElement('button');
-    b.className = 'cal-hour-cell';
+    b.className = 'cal-hour-cell tb-btn';
     b.textContent = lbl;
     b.dataset.h = h;
     b.addEventListener('click', () => setFilterHour(h));
@@ -1483,11 +1483,11 @@ async function loadSessions() {
 
       const tabCount = document.createElement('span');
       tabCount.className   = 'sess-tab-count';
-      tabCount.textContent = `${tabsArr.length} tabs`;
+      tabCount.textContent = `${tabsArr.length+' '+tr('tabs','tabs')}`;
 
       const exportBtn = document.createElement('button');
       exportBtn.className   = 'tb-btn';
-      exportBtn.textContent = '⬇ Export';
+      exportBtn.textContent = tr('export','Export');
       exportBtn.setAttribute('data-i18n-key', 'export');
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:4px';
       exportBtn.addEventListener('click', ev => {
@@ -1579,7 +1579,7 @@ async function loadSessions() {
       const dur  = fmtDuration(sess.end - sess.start);
       const date = new Date(sess.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
       el.appendChild(buildSessionCard(
-        { main: date, sub: `${dur} · ${sess.tabCount} unique tabs` },
+        { main: date, sub: `${dur} · ${sess.tabCount+' '+tr('unique_tabs','unique tabs')}` },
         null, sess.tabs
       ));
     });
@@ -1633,7 +1633,7 @@ async function loadTabStorage() {
   try {
     const { entries } = await send('GET_TAB_STORAGE');
     if (!entries || !entries.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
       return;
     }
     el.innerHTML = '';
@@ -1644,7 +1644,7 @@ async function loadTabStorage() {
     countEl.textContent = `${entries.length} stored tab${entries.length !== 1 ? 's' : ''}`;
     const clearBtn = document.createElement('button');
     clearBtn.className = 'tb-btn';
-    clearBtn.textContent = '🗑 Clear all';
+    clearBtn.textContent = '🗑 '+tr('clear_all','Clear all');
     clearBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)';
     clearBtn.addEventListener('click', async () => {
       if (!confirm(`Clear all ${entries.length} stored tabs?`)) return;
@@ -1654,7 +1654,7 @@ async function loadTabStorage() {
     });
     const restoreAllBtn = document.createElement('button');
     restoreAllBtn.className = 'tb-btn';
-    restoreAllBtn.textContent = '↺ Restore all';
+    restoreAllBtn.textContent = '↺ '+tr('restore_all','Restore all');
     restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
     restoreAllBtn.addEventListener('click', async () => {
       if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
@@ -1699,7 +1699,7 @@ async function loadTabStorage() {
         ev.stopPropagation();
         row.remove();
         if (!list.querySelector('.ts-row')) {
-          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
         } else {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
@@ -1713,7 +1713,7 @@ async function loadTabStorage() {
         chrome.tabs.create({ url: entry.url, active: false });
         row.remove();
         if (!list.querySelector('.ts-row')) {
-          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>No stored tabs yet.<br><small style="color:var(--text3)">Right-click any page → Extended History → Store this tab</small></div>';
+          el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📑</span>'+tr('no_stored_tabs','No stored tabs yet.')+'<br><small style="color:var(--text3)">'+tr('store_tab_hint','Right-click any page → Extended History → Store this tab</small></div>');
         } else {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
@@ -1739,11 +1739,11 @@ async function loadTabStorage() {
 // ══ DEVICES ═════════════════════════════════════════════════════════════════
 async function loadDevices() {
   const el = document.getElementById('devicesContent');
-  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>Loading…</div>';
+  el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('loading','Loading')+'…</div>';
   try {
     const { devices } = await send('GET_DEVICES');
     if (!devices?.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>No synced devices found.<br><small style="color:var(--text3)">Sign in to Chrome and enable Sync.</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('no_synced_devices','No synced devices found.')+'<br><small style="color:var(--text3)">'+tr('chrome_sync_hint','Sign in to Chrome and enable Sync.')+'</small></div>';
       return;
     }
 
@@ -1801,7 +1801,7 @@ async function loadDevices() {
       // ── Export button ──
       const exportBtn = document.createElement('button');
       exportBtn.className = 'tb-btn';
-      exportBtn.textContent = '⬇ Export';
+      exportBtn.textContent = '⬇ '+tr('export','Export');
       exportBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;margin-right:6px';
       exportBtn.addEventListener('click', ev => {
         ev.stopPropagation();
@@ -2064,7 +2064,7 @@ async function loadBookmarks() {
   const treePane = document.getElementById('bmTreePane');
   const listPane = document.getElementById('bookmarksContent');
   if (treePane) treePane.innerHTML = '<div class="state-msg" style="padding:20px"><span class="state-msg-icon" style="font-size:20px">⏳</span></div>';
-  listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>Loading…</div>';
+  listPane.innerHTML = '<div class="state-msg"><span class="state-msg-icon">🔖</span>'+tr('loading','Loading')+'…</div>';
   _bmFavCache.clear(); // favicon resolver setting may have changed since last visit
   if (!loadBookmarks._setup) {
     loadBookmarks._setup = true;
@@ -2175,6 +2175,14 @@ let _bmSelMode = false;           // bookmark multiselect active?
 let _bmSelected = new Set();      // selected bookmark ids
 let _bmFolderDragId = null;       // folder node id being dragged in tree
 let _bmIsSearch = false;          // true when showing search results (show folder label), false = show date
+
+// In-list reorder state — dragging a bookmark up/down within the currently
+// viewed folder, dropping it between two other bookmarks. Set/cleared via
+// window._bmReorderSetDrag/_bmReorderClearDrag, called from the dragstart/
+// dragend handlers in _bmSetupList below.
+let _bmReorderDragId    = null;   // id of the bookmark being reordered, or null if this drag isn't eligible
+let _bmReorderTargetRow = null;   // row currently showing the insertion-line indicator
+let _bmReorderBefore    = true;   // true = indicator/insert above the target row, false = below
 
 // ── Tree drag-and-drop ───────────────────────────────────────────────────────
 // Wired ONCE on the (persistent) pane. renderBmTree() replaces the rows on every
@@ -2747,6 +2755,101 @@ function _bmSetupList() {
 }
 _bmSetupList();
 
+// ── In-list reordering ───────────────────────────────────────────────────────
+// Only meaningful when viewing a single folder's own contents in their real
+// sibling order: "All Bookmarks" flattens every folder into one list, and
+// search results are ranked by match, so neither has a single per-folder
+// order to write back to via chrome.bookmarks.move.
+function _bmReorderEligible() {
+  return !!_bmActiveNode && !_bmIsSearch;
+}
+
+// Called from _bmSetupList's dragstart/dragend above.
+window._bmReorderSetDrag = function (id) {
+  _bmReorderDragId = _bmReorderEligible() ? id : null;
+};
+window._bmReorderClearDrag = function () {
+  _bmReorderDragId = null;
+  _bmClearReorderHighlight();
+};
+
+function _bmClearReorderHighlight() {
+  if (_bmReorderTargetRow) {
+    _bmReorderTargetRow.classList.remove('bm-reorder-above', 'bm-reorder-below');
+    _bmReorderTargetRow = null;
+  }
+}
+
+function _bmSetupReorderDnD() {
+  const pane = document.getElementById('bookmarksContent');
+  if (!pane) return;
+
+  pane.addEventListener('dragover', ev => {
+    if (!_bmReorderDragId) return;
+    const row = ev.target.closest && ev.target.closest('.bm-item');
+    if (!row || row.dataset.bmId === _bmReorderDragId) { _bmClearReorderHighlight(); return; }
+    ev.preventDefault(); // allow drop
+    ev.dataTransfer.dropEffect = 'move';
+    // Which side of the hovered row to insert on is based on drag direction,
+    // not cursor position within the row: hovering any row that started
+    // below the dragged item inserts after it, any row that started above
+    // inserts before it. (Splitting each row into a top/bottom drop zone by
+    // cursor Y seems more precise, but it means the cursor has to cross a
+    // row's exact midpoint to register a move — dragging down by one row's
+    // height only reaches the top half of the next row, which computes back
+    // to the item's own original slot, so a single-row drag down silently
+    // does nothing. Direction-based zones give one row of travel = one slot
+    // of movement in both directions, with no dead zone.)
+    const targetNode = _bmNodeMap.get(row.dataset.bmId);
+    const dragNode    = _bmNodeMap.get(_bmReorderDragId);
+    const before = !(targetNode && dragNode && targetNode.index > dragNode.index);
+    if (row !== _bmReorderTargetRow || before !== _bmReorderBefore) {
+      _bmClearReorderHighlight();
+      row.classList.add(before ? 'bm-reorder-above' : 'bm-reorder-below');
+      _bmReorderTargetRow = row;
+      _bmReorderBefore    = before;
+    }
+  });
+
+  pane.addEventListener('dragleave', ev => {
+    if (!_bmReorderTargetRow) return;
+    if (!pane.contains(ev.relatedTarget)) _bmClearReorderHighlight();
+  });
+
+  pane.addEventListener('drop', async ev => {
+    if (!_bmReorderDragId) return;
+    const dragId = _bmReorderDragId;
+    const before = _bmReorderBefore;
+    const row    = ev.target.closest && ev.target.closest('.bm-item');
+    _bmReorderDragId = null;
+    _bmClearReorderHighlight();
+    if (!row || row.dataset.bmId === dragId) return;
+    ev.preventDefault();
+
+    const targetNode = _bmNodeMap.get(row.dataset.bmId);
+    const dragNode    = _bmNodeMap.get(dragId);
+    if (!targetNode || !dragNode || targetNode.parentId !== dragNode.parentId) return;
+
+    // Desired final position, computed directly against the real sibling
+    // list (bookmarks AND subfolders — Chrome indexes both together, even
+    // though subfolders never show up as rows in this list) with the
+    // dragged item removed. This is the actual ground truth for where the
+    // item should end up; background.js's MOVE_BOOKMARK handler verifies
+    // the real result against it and self-corrects if needed, rather than
+    // us trying to pre-guess Chrome's internal index adjustment here.
+    const parent  = _bmNodeMap.get(targetNode.parentId);
+    const others  = (parent?.children || []).filter(n => n.id !== dragId);
+    const targetPos = others.findIndex(n => n.id === targetNode.id);
+    if (targetPos === -1) return;
+    const index = targetPos + (before ? 0 : 1);
+
+    const r = await send('MOVE_BOOKMARK', { id: dragId, parentId: targetNode.parentId, index });
+    if (r?.error) { toast(r.error, 'err'); return; }
+    await reloadBookmarksKeepState(false); // false = keep scroll position
+  });
+}
+_bmSetupReorderDnD();
+
 // Render the right bookmark list for a folder node (null = show all)
 function renderBmItems(folderNode) {
   _bmIsSearch = false;
@@ -2969,22 +3072,28 @@ document.getElementById('exportBmBtn').addEventListener('click', async () => {
 });
 
 function buildNetscapeHtml(tree) {
-  function walk(nodes, depth) {
+  // Top-level folders are tagged with their root type so import can put them back
+  // into the bookmarks bar / other bookmarks / mobile bookmarks whatever the UI language.
+  const rootType = n => n.folderType || ({ '1': 'bookmarks-bar', '2': 'other', '3': 'mobile' })[n.id] || '';
+  function walk(nodes, depth, atRoot) {
     let s = '';
+    const pad = '    '.repeat(depth);
     for (const n of nodes) {
       if (n.url) {
-        s += `${'    '.repeat(depth)}<DT><A HREF="${esc(n.url)}" ADD_DATE="${Math.floor((n.dateAdded||Date.now())/1000)}">${esc(n.title||n.url)}</A>\n`;
+        s += `${pad}<DT><A HREF="${esc(n.url)}" ADD_DATE="${Math.floor((n.dateAdded||Date.now())/1000)}">${esc(n.title||n.url)}</A>\n`;
       } else if (n.children) {
-        if (!n.title && depth === 0) { s += walk(n.children, depth); continue; }
-        s += `${'    '.repeat(depth)}<DT><H3>${esc(n.title||'')}</H3>\n`;
-        s += `${'    '.repeat(depth)}<DL><p>\n`;
-        s += walk(n.children, depth + 1);
-        s += `${'    '.repeat(depth)}</DL><p>\n`;
+        const rt = atRoot ? rootType(n) : '';
+        const attrs = rt ? ` DATA-EH-ROOT="${rt}"` + (rt === 'bookmarks-bar' ? ' PERSONAL_TOOLBAR_FOLDER="true"' : '') : '';
+        s += `${pad}<DT><H3${attrs}>${esc(n.title||'')}</H3>\n`;
+        s += `${pad}<DL><p>\n`;
+        s += walk(n.children, depth + 1, false);
+        s += `${pad}</DL><p>\n`;
       }
     }
     return s;
   }
-  return `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- Exported by Extended History -->\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n${walk(tree, 1)}</DL><p>`;
+  const top = (tree[0] && !tree[0].url && !tree[0].title && tree[0].children) ? tree[0].children : tree;
+  return `<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- Exported by Extended History -->\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n${walk(top, 1, true)}</DL><p>`;
 }
 
 // Bookmark import
@@ -2997,24 +3106,45 @@ document.getElementById('importBmFile').addEventListener('change', async (ev) =>
   if (!file) return;
   try {
     const text = await file.text();
-    const bookmarks = parseNetscapeBookmarks(text);
-    if (!bookmarks.length) { toast('No bookmarks found in file', 'err'); return; }
-    const r = await send('IMPORT_BOOKMARKS', { bookmarks });
+    const tree = parseNetscapeBookmarks(text);
+    if (!tree.length) { toast('No bookmarks found in file', 'err'); return; }
+    const r = await send('IMPORT_BOOKMARKS', { tree });
     toast(`Imported ${fmtNum(r.imported)} bookmarks`, 'ok');
     loadBookmarks();
     ev.target.value = '';
   } catch (err) { toast(err.message, 'err'); }
 });
 
+// Parses a Netscape bookmark file into a tree: { title, url } / { title, children, rootType? }
 function parseNetscapeBookmarks(html) {
-  const parser = new DOMParser();
-  const doc    = parser.parseFromString(html, 'text/html');
-  const links  = doc.querySelectorAll('a');
-  const result = [];
-  links.forEach(a => {
-    if (a.href) result.push({ title: a.textContent.trim(), url: a.href });
-  });
-  return result;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  function parseDL(dl) {
+    const out = [];
+    const kids = Array.from(dl.children);
+    for (let i = 0; i < kids.length; i++) {
+      const el = kids[i];
+      if (el.tagName === 'DT') {
+        const h3 = el.querySelector(':scope > h3');
+        const a  = el.querySelector(':scope > a');
+        if (h3) {
+          let sub = el.querySelector(':scope > dl');
+          if (!sub && kids[i + 1] && kids[i + 1].tagName === 'DL') { sub = kids[i + 1]; i++; }
+          const node = { title: h3.textContent.trim(), children: sub ? parseDL(sub) : [] };
+          const eh = (h3.getAttribute('data-eh-root') || '').toLowerCase();
+          if (eh) node.rootType = eh;
+          else if (h3.hasAttribute('personal_toolbar_folder')) node.rootType = 'bookmarks-bar';
+          out.push(node);
+        } else if (a && a.getAttribute('href')) {
+          out.push({ title: a.textContent.trim(), url: a.getAttribute('href') });
+        }
+      } else if (el.tagName === 'DL') {
+        out.push(...parseDL(el));
+      }
+    }
+    return out;
+  }
+  const top = doc.querySelector('dl');
+  return top ? parseDL(top) : [];
 }
 
 // ══ SETTINGS ════════════════════════════════════════════════════════════════
@@ -4113,20 +4243,20 @@ async function handleIgnoreListAccess() {
   function setMode(m) {
     mode = m;
     if (m === 'setup') {
-      title.textContent = '🔒 Set Up Ignore List';
-      desc.textContent  = 'No password is set yet. Create a master password to protect your ignore list.';
+      title.textContent = tr('ignore_list_setup','🔒 Set Up Ignore List');
+      desc.textContent  = tr('ignore_list_setup_desc','No password is set yet. Create a master password to protect your ignore list.');
       resetBtn.style.display = 'none';
-      okBtn.textContent = 'Create Password';
+      okBtn.textContent =  tr('create_password','Create Password');
     } else if (m === 'unlock') {
-      title.textContent = '🔒 Ignore List Access';
-      desc.textContent  = 'Enter your master password to view the ignore list.';
+      title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
+      desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
-      okBtn.textContent = 'OK';
+      okBtn.textContent = tr('ok','OK');
     } else if (m === 'reset-new') {
-      title.textContent = '🔑 Reset Ignore List';
-      desc.textContent  = 'Ignore list has been cleared. Enter a new master password to continue.';
+      title.textContent = tr('reset_ignore_list','🔑 Reset Ignore List');
+      desc.textContent  = tr('reset_ignore_list_desc','Ignore list has been cleared. Enter a new master password to continue.');
       resetBtn.style.display = 'none';
-      okBtn.textContent = 'Set New Password';
+      okBtn.textContent = tr('set_new_password','Set New Password');
     }
     input.value = '';
     errEl.style.display = 'none';
@@ -4146,7 +4276,7 @@ async function handleIgnoreListAccess() {
 
   async function onOk() {
     const pw = input.value.trim();
-    if (!pw) { errEl.textContent = 'Please enter a password.'; errEl.style.display = ''; return; }
+    if (!pw) { errEl.textContent = tr('please_enter_password','Please enter a password.'); errEl.style.display = ''; return; }
 
     if (mode === 'setup' || mode === 'reset-new') {
       // Set new password
@@ -4747,9 +4877,9 @@ function applyWallpaper(wp) {
 
   root.classList.add('wallpaper-mode');
 
-  const overlayOpacity   = (wp.overlayOpacity ?? 60) / 100;
-  const blurAmount       = wp.blurAmount ?? 8;
-  const wallpaperOpacity = (wp.wallpaperOpacity ?? 100) / 100;
+  const overlayOpacity   = (wp.overlayOpacity ?? 40) / 100;
+  const blurAmount       = wp.blurAmount ?? 10;
+  const wallpaperOpacity = (wp.wallpaperOpacity ?? 60) / 100;
   const isDark            = (root.getAttribute('data-theme') || 'dark') === 'dark';
 
   // Glass tint for the frosted panels — black in dark mode, white in light
@@ -5036,20 +5166,20 @@ function setupWallpaperListeners() {
 
   if (!toggle) return;
 
-  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, wallpaperOpacity: 100, source: 'custom' };
+  let _wpState = { enabled: false, dataUrl: null, overlayOpacity: 50, blurAmount: 8, wallpaperOpacity: 60, source: 'custom' };
 
   // Load existing wallpaper state into UI
   chrome.storage.local.get(WP_STORAGE_KEY, r => {
     const wp = r[WP_STORAGE_KEY];
     if (wp) {
-      _wpState = { ..._wpState, ...wp, overlayOpacity: Math.max(40, wp.overlayOpacity ?? 60) };
+      _wpState = { ..._wpState, ...wp, overlayOpacity: Math.max(40, wp.overlayOpacity ?? 40) };
       toggle.checked = wp.enabled || false;
       overlaySlider.value = _wpState.overlayOpacity;
       overlayVal.textContent = _wpState.overlayOpacity + '%';
       blurSlider.value = wp.blurAmount ?? 8;
       blurVal.textContent = (wp.blurAmount ?? 8) + 'px';
-      if (imgOpacitySlider) imgOpacitySlider.value = wp.wallpaperOpacity ?? 100;
-      if (imgOpacityVal)    imgOpacityVal.textContent = (wp.wallpaperOpacity ?? 100) + '%';
+      if (imgOpacitySlider) imgOpacitySlider.value = wp.wallpaperOpacity ?? 60;
+      if (imgOpacityVal)    imgOpacityVal.textContent = (wp.wallpaperOpacity ?? 60) + '%';
       if (wp.dataUrl) {
         previewWrap.style.display = 'block';
         currentPreview.src = wp.dataUrl;
@@ -5194,12 +5324,12 @@ function setupWallpaperListeners() {
   // Clear
   clearBtn?.addEventListener('click', async () => {
     if (!confirm('Remove the current wallpaper?')) return;
-    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 60, blurAmount: 8, wallpaperOpacity: 100, source: 'custom' };
+    _wpState = { enabled: false, dataUrl: null, overlayOpacity: 40, blurAmount: 10, wallpaperOpacity: 60, source: 'custom' };
     toggle.checked = false;
     previewWrap.style.display    = 'none';
     document.getElementById('wpDropLabel').innerHTML = 'Drop image here or <strong>click to browse</strong>';
-    if (imgOpacitySlider) imgOpacitySlider.value = 100;
-    if (imgOpacityVal)    imgOpacityVal.textContent = '100%';
+    if (imgOpacitySlider) imgOpacitySlider.value = 60;
+    if (imgOpacityVal)    imgOpacityVal.textContent = '60%';
     applyWallpaper(_wpState);
     await saveWallpaper(_wpState);
     toast('Wallpaper removed', 'ok');

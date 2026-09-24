@@ -44,7 +44,7 @@ const DEFAULT_SETTINGS = {
   sidebarAutoHide: true,     // Close the sidebar automatically when the mouse leaves it
   roundedCorners: true,      // UI rounded corners on the sidebar/main panels (default on)
   navIcons: true,            // Show the icons in the sidebar navigation (off = text only)
-  matchUiColors: false,      // History list uses the same colour as the rest of the UI instead of its own shade
+  matchUiColors: true,       // History list uses the same colour as the rest of the UI instead of its own shade
   calendarMode: false,       // Replace date/hour pill nav with a right-side calendar sidebar
   hideIgnoredInTimeSpent: false, // Hide (not delete) ignore-list-matched domains from the Time Spent view
   autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
@@ -175,7 +175,8 @@ function hostMatchesPattern(urlHost, patternHost, allowSubdomains = true) {
 
 async function getIgnoreList() {
   const r = await chrome.storage.local.get(IGNORE_LIST_KEY);
-  const list = r[IGNORE_LIST_KEY] || [];
+  // While locked this key holds an encrypted envelope (an object), not an array
+  const list = Array.isArray(r[IGNORE_LIST_KEY]) ? r[IGNORE_LIST_KEY] : [];
   return list
     .map(normalizeIgnorePattern)
     .filter(Boolean);
@@ -484,10 +485,14 @@ async function _liveHistoryEntries(searchParams) {
 
     const ignoreEnabled = await isIgnoreListEnabled();
     const ignoreList = ignoreEnabled ? await getIgnoreList() : [];
+    const seed = await getSeedWindow();
 
     const entries = [];
     for (const item of items) {
       if (!item.url || !isTrackable(item.url)) continue;
+      // Skip visits we synthesised ourselves when unlocking (see unlockHistory)
+      if (seed && item.lastVisitTime >= seed.start && (seed.end == null || item.lastVisitTime <= seed.end)
+          && seed.urls.has(normalizeUrl(item.url))) continue;
       if (ignoreList.some(p => matchesIgnorePattern(item.url, p, item.title))) continue;
       entries.push({
         id: `live_${item.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1047,7 +1052,7 @@ function debouncedSaveSession() {
 // ── Tab Storage helpers ──────────────────────────────────────────────────────
 async function getTabStorage() {
   const r = await chrome.storage.local.get(TAB_STORAGE_KEY);
-  return r[TAB_STORAGE_KEY] || [];
+  return Array.isArray(r[TAB_STORAGE_KEY]) ? r[TAB_STORAGE_KEY] : [];   // envelope object while locked
 }
 async function removeTabStorageEntry(id) {
   const stored = await getTabStorage();
@@ -1121,6 +1126,7 @@ chrome.tabs.onUpdated.addListener((tabId, info) => {
 
 async function runAutoStore() {
   if (!_autoStoreEnabled) return;
+  if (await isLocked()) return;
   const thresholdMs = _autoStoreHours * 3600000;
   const now = Date.now();
 
@@ -1208,7 +1214,7 @@ async function runAutoStore() {
 
 async function getSessions() {
   const r = await chrome.storage.local.get(SESSIONS_KEY);
-  return r[SESSIONS_KEY] || [];
+  return Array.isArray(r[SESSIONS_KEY]) ? r[SESSIONS_KEY] : [];         // envelope object while locked
 }
 async function getMaxSessions() {
   const r = await chrome.storage.local.get('eh_max_sessions');
@@ -1221,6 +1227,7 @@ async function saveSessions(list) {
   await chrome.storage.local.set({ [SESSIONS_KEY]: list });
 }
 async function beginSession() {
+  if (await isLocked()) return;   // else a restart while locked writes open-tab URLs to eh_cur_session in plaintext
   sessionId    = `s_${Date.now()}`;
   sessionTabs  = {};
   sessionStart = Date.now();
@@ -1334,8 +1341,8 @@ chrome.tabs.onRemoved.addListener(async tabId => {
 
 async function ensureContextMenus() {
   const settings = await getSettings();
-  if (settings.contextMenuEnabled === false) {
-    // User disabled the right-click menu on web pages — just clear it out.
+  if (settings.contextMenuEnabled === false || await isLocked()) {
+    // Right-click menu disabled by the user, or the extension is locked — just clear it out.
     chrome.contextMenus.removeAll();
     return;
   }
@@ -1457,6 +1464,286 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   } catch(e) { console.error('[EH] backfill',e); }
 });
 
+// ══ LOCK / UNLOCK ════════════════════════════════════════════════════════════
+// "Lock" first merges today's native history into the extension's history, then
+// encrypts history entries, sessions, stored tabs, the ignore list and quick
+// filters (and nothing else) with the same AES-GCM + PBKDF2 scheme as encrypted
+// exports, stores the ciphertext in chrome.storage.local, wipes the plaintext
+// copies and deletes Chrome's native history (optionally cookies/site data too). While locked, getAll() returns [] and every
+// write path is a no-op, and handle() rejects everything except the messages in
+// LOCK_ALLOWED_TYPES. "Unlock" decrypts, restores the data, then re-seeds native
+// history with the most visited URLs/domains.
+const LOCK_STATE_KEY  = 'eh_locked';        // true while locked
+const LOCK_BLOB_KEY   = 'eh_locked_blob';   // { __eh_encrypted, salt, iv, ct, lockedAt, totalEntries }
+const SEED_WINDOW_KEY = 'eh_seed_window';   // URLs we re-added to native history on unlock
+const RESTORED_AT_KEY = 'eh_restored_at';   // time of the last unlock; only used so the Today views can show pre-lock visits (see restoredEntriesSince)
+// How much native history to re-create on unlock (chrome.history.addUrl is one
+// call per URL and can only stamp "now", so keep this modest for huge histories).
+const RESTORE_TOP_URLS    = 250;
+const RESTORE_TOP_DOMAINS = 250;
+const RESTORE_BATCH_SIZE  = 25;
+const LOCK_ALLOWED_TYPES  = new Set(['GET_LOCK_STATUS', 'UNLOCK_HISTORY', 'GET_SETTINGS', 'GET_CLEANUP_STATUS']);
+
+let _lockedCache = null;
+let _lockBusy    = false;
+async function isLocked() {
+  if (_lockedCache === null) {
+    const r = await chrome.storage.local.get(LOCK_STATE_KEY);
+    _lockedCache = r[LOCK_STATE_KEY] === true;
+  }
+  return _lockedCache;
+}
+
+function _lkB64(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192));
+  return btoa(s);
+}
+function _lkU8(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+async function _lkKey(password, salt, usage) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, [usage]);
+}
+async function _lkEncrypt(plaintext, password) {   // same output shape as ehEncrypt() in history.js
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await _lkKey(password, salt, 'encrypt');
+  const ct   = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
+  return { salt: _lkB64(salt), iv: _lkB64(iv), ct: _lkB64(ct) };
+}
+async function _lkDecrypt({ salt, iv, ct }, password) {
+  const key   = await _lkKey(password, _lkU8(salt), 'decrypt');
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _lkU8(iv) }, key, _lkU8(ct));
+  return new TextDecoder().decode(plain);
+}
+
+// Visits we re-create in native history on unlock all carry "now" as their visit
+// time. Remember them so the Today view / periodic flush don't mistake them for
+// real browsing and copy them into the extension's history as fresh visits.
+let _seedWin;   // undefined = not loaded yet, null = none
+async function getSeedWindow() {
+  if (_seedWin !== undefined) return _seedWin;
+  const w = (await chrome.storage.local.get(SEED_WINDOW_KEY))[SEED_WINDOW_KEY];
+  _seedWin = w ? { start: w.start, end: w.end, urls: new Set(w.urls || []) } : null;
+  return _seedWin;
+}
+async function setSeedWindow(w) {
+  _seedWin = w ? { start: w.start, end: w.end, urls: new Set(w.urls) } : null;
+  await chrome.storage.local.set({ [SEED_WINDOW_KEY]: w ? { start: w.start, end: w.end, urls: [...w.urls] } : null });
+}
+
+// After an unlock, Chrome's own history no longer contains the visits from before the
+// lock (it was deleted), but "Today" / rolling-24h views read only from Chrome's live
+// history. Add back the stored entries newer than sinceMs and older than the unlock time.
+async function restoredEntriesSince(sinceMs, liveEntries) {
+  const floor = (await chrome.storage.local.get(RESTORED_AT_KEY))[RESTORED_AT_KEY] || 0;
+  if (!floor) return [];
+  const seen = new Set(liveEntries.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
+  return (await getAll()).filter(e => e.visitTime >= sinceMs && e.visitTime < floor
+                                   && !seen.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
+}
+
+function pickRestoreUrls(entries) {
+  const urlCounts = new Map(), domCounts = new Map();
+  for (const e of entries) {
+    if (!e.url || !isTrackable(e.url)) continue;
+    urlCounts.set(e.url, (urlCounts.get(e.url) || 0) + 1);
+    const d = e.domain || domainOf(e.url);
+    if (d) domCounts.set(d, (domCounts.get(d) || 0) + 1);
+  }
+  const top = (m, n) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(x => x[0]);
+  const out = new Map();   // normalized url → url to add (dedupes "https://x.com" vs "https://x.com/")
+  for (const u of top(urlCounts, RESTORE_TOP_URLS)) out.set(normalizeUrl(u), u);
+  for (const d of top(domCounts, RESTORE_TOP_DOMAINS)) { const u = `https://${d}/`; if (!out.has(normalizeUrl(u))) out.set(normalizeUrl(u), u); }
+  return out;
+}
+function addUrlSafe(url) {
+  return new Promise(resolve => {
+    try { chrome.history.addUrl({ url }, () => { void chrome.runtime.lastError; resolve(); }); }
+    catch { resolve(); }
+  });
+}
+
+// ── Bookmarks: snapshot / delete / recreate (folder structure preserved) ─────────
+// Nodes are stored as { title, url } or { title, children: [...] }.
+const BM_ROOT_IDS = { 'bookmarks-bar': '1', 'other': '2', 'mobile': '3' };
+async function bmRoots() { const [root] = await chrome.bookmarks.getTree(); return root.children || []; }
+function bmRootByType(roots, type) {
+  return roots.find(r => r.folderType === type) || roots.find(r => r.id === BM_ROOT_IDS[type]);
+}
+async function snapshotBookmarks() {
+  const strip = n => n.url ? { title: n.title, url: n.url }
+                           : { title: n.title, children: (n.children || []).filter(c => !c.unmodifiable).map(strip) };
+  return (await bmRoots()).filter(r => !r.unmodifiable && r.folderType !== 'managed').map((r, i) => ({
+    index: i, id: r.id, folderType: r.folderType || '', title: r.title,
+    children: (r.children || []).filter(c => !c.unmodifiable).map(strip),
+  }));
+}
+async function deleteAllBookmarks() {
+  const ids = [];
+  for (const r of await bmRoots()) {
+    if (r.unmodifiable || r.folderType === 'managed') continue;
+    for (const c of (r.children || [])) if (!c.unmodifiable) ids.push(c.id);
+  }
+  for (let i = 0; i < ids.length; i += 25) {
+    await Promise.all(ids.slice(i, i + 25).map(id => chrome.bookmarks.removeTree(id).catch(() => {})));
+  }
+}
+// Creates nodes under parentId in order; sub-folders are filled concurrently. Returns # of bookmarks created.
+async function createBookmarkNodes(parentId, nodes) {
+  let count = 0; const subs = [];
+  for (const n of (nodes || [])) {
+    try {
+      if (n.url) { await chrome.bookmarks.create({ parentId, title: n.title || n.url, url: n.url }); count++; }
+      else if (Array.isArray(n.children)) { const f = await chrome.bookmarks.create({ parentId, title: n.title || '' }); subs.push([f.id, n.children]); }
+    } catch {}
+  }
+  const counts = await Promise.all(subs.map(([id, ch]) => createBookmarkNodes(id, ch)));
+  return count + counts.reduce((a, b) => a + b, 0);
+}
+async function restoreBookmarkRoots(saved) {
+  const roots = await bmRoots(); let count = 0;
+  for (const s of saved) {
+    const target = (s.folderType && roots.find(r => r.folderType === s.folderType)) || roots.find(r => r.id === s.id) || roots[s.index];
+    if (target) count += await createBookmarkNodes(target.id, s.children);
+  }
+  return count;
+}
+// Imports a parsed Netscape-HTML tree. Top-level folders flagged (or named) as a root merge into that root;
+// everything else goes to "Other bookmarks", as the old flat import did.
+async function importBookmarkTree(tree) {
+  const roots = await bmRoots();
+  const other = bmRootByType(roots, 'other') || roots[0];
+  const flat = [];
+  for (const n of tree) (n.children && !n.title && !n.rootType) ? flat.push(...n.children) : flat.push(n);   // old exports wrap everything in an untitled folder
+  let count = 0; const loose = [];
+  for (const n of flat) {
+    const target = n.children && ((n.rootType && bmRootByType(roots, n.rootType)) ||
+                                  roots.find(r => r.title && r.title === n.title && !r.unmodifiable));
+    if (target) count += await createBookmarkNodes(target.id, n.children); else loose.push(n);
+  }
+  return count + await createBookmarkNodes(other.id, loose);
+}
+
+async function lockHistory(password, clearSiteData, hideBookmarks) {
+  if (typeof password !== 'string' || password.length < 4) throw new Error('Password must be at least 4 characters');
+  if (_lockBusy) throw new Error('Lock already in progress');
+  if (await isLocked()) throw new Error('Already locked');
+  _lockBusy = true;
+  let flagSet = false;
+  try {
+    // 1. Merge first: pull today's native history into the extension's own history so
+    //    nothing browsed since the last periodic flush is lost when native history is wiped.
+    //    If this throws, we abort here and nothing has been deleted.
+    await flushTodayToHistory();
+    try { await finishSession(); } catch {}          // so the current session is part of the snapshot
+
+    // 2. Snapshot exactly what gets encrypted: history, sessions, stored tabs, ignore list, quick filters.
+    const entries  = await getAll(true);
+    const sessions = await getSessions();
+    const st = await chrome.storage.local.get([TAB_STORAGE_KEY, IGNORE_LIST_KEY, QUICK_FILTERS_KEY]);
+    const payload  = JSON.stringify({
+      exportedAt: new Date().toISOString(), totalEntries: entries.length, entries, sessions,
+      bookmarks:    hideBookmarks ? await snapshotBookmarks() : undefined,
+      tabStorage:   st[TAB_STORAGE_KEY]   || [],
+      ignoreList:   st[IGNORE_LIST_KEY]   || [],
+      quickFilters: st[QUICK_FILTERS_KEY] || [],
+    });
+
+    const enc = await _lkEncrypt(payload, password);
+    await chrome.storage.local.set({ [LOCK_BLOB_KEY]: { __eh_encrypted: true, ...enc, lockedAt: Date.now(), totalEntries: entries.length } });
+
+    // Read the ciphertext back and decrypt it BEFORE deleting anything.
+    const back  = (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY];
+    const check = await _lkDecrypt(back, password);
+    if (check.length !== payload.length) throw new Error('Encrypted copy failed verification — nothing was deleted');
+
+    // The four small datasets are ALSO encrypted in place, under their own storage keys, so
+    // nothing readable is left there. The blob above still holds a copy of each, and unlock
+    // restores from the blob, so a stray write to one of these keys while locked can't lose data.
+    const inPlace = {};
+    for (const [key, val] of [[SESSIONS_KEY, sessions], [TAB_STORAGE_KEY, st[TAB_STORAGE_KEY] || []],
+                              [IGNORE_LIST_KEY, st[IGNORE_LIST_KEY] || []], [QUICK_FILTERS_KEY, st[QUICK_FILTERS_KEY] || []]]) {
+      inPlace[key] = { __eh_encrypted: true, ...(await _lkEncrypt(JSON.stringify(val), password)) };
+    }
+
+    // ── Point of no return ──
+    await chrome.storage.local.set({ [LOCK_STATE_KEY]: true });
+    flagSet = true; _lockedCache = true;
+    await chrome.storage.local.set(inPlace);     // overwrites the plaintext values with ciphertext
+    try { chrome.contextMenus.removeAll(); } catch {}    // no right-click menu while locked
+
+    _entriesCache = null;
+    sessionId = null; sessionTabs = {}; sessionStart = null;
+    try { if (await _useIdb()) await EhIdb.clear(); } catch (e) { console.error('[EH] lock: idb clear', e); }
+    await chrome.storage.local.remove([HISTORY_KEY, TODAY_HISTORY_KEY, CURRENT_SESSION_KEY, 'eh_cur_session', SEED_WINDOW_KEY]);
+    _seedWin = null;
+    try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] lock: history.deleteAll', e); }
+    if (hideBookmarks) {
+      try { await deleteAllBookmarks(); } catch (e) { console.error('[EH] lock: deleting bookmarks', e); }
+    }
+    if (clearSiteData) {
+      // "Logout everywhere": cookies + site data for regular websites (default originTypes,
+      // so this never touches the extension's own storage/IndexedDB).
+      try {
+        await chrome.browsingData.remove({ since: 0 }, {
+          cookies: true, localStorage: true, indexedDB: true, cacheStorage: true,
+          serviceWorkers: true, webSQL: true, fileSystems: true,
+        });
+      } catch (e) { console.error('[EH] lock: browsingData.remove', e); }
+    }
+    return { success: true, locked: entries.length };
+  } catch (err) {
+    if (!flagSet) await chrome.storage.local.remove(LOCK_BLOB_KEY).catch(() => {});
+    throw err;
+  } finally { _lockBusy = false; }
+}
+
+async function unlockHistory(password) {
+  if (_lockBusy) throw new Error('Busy — try again in a moment');
+  if (!(await isLocked())) return { success: true, alreadyUnlocked: true };
+  _lockBusy = true;
+  try {
+    const blob = (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY];
+    if (!blob) throw new Error('No locked data found');
+    let data;
+    try { data = JSON.parse(await _lkDecrypt(blob, String(password || ''))); }
+    catch { throw new Error('Wrong password'); }
+
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+    await setAll(entries, true);
+    const restore = {};
+    restore[SESSIONS_KEY] = Array.isArray(data.sessions) ? data.sessions : [];
+    if (Array.isArray(data.tabStorage))   restore[TAB_STORAGE_KEY]   = data.tabStorage;
+    if (Array.isArray(data.ignoreList))   restore[IGNORE_LIST_KEY]   = data.ignoreList;
+    if (Array.isArray(data.quickFilters)) restore[QUICK_FILTERS_KEY] = data.quickFilters;
+    if (data.timeData) restore[TIME_KEY] = data.timeData;      // only present in blobs made by an earlier build
+    restore[RESTORED_AT_KEY] = Date.now();
+    await chrome.storage.local.set(restore);
+    if (Array.isArray(data.bookmarks)) await restoreBookmarkRoots(data.bookmarks);   // "Hide bookmarks" was ticked when locking
+
+    // Delete native history again: whatever Chrome recorded while locked is simply dropped
+    // (nothing is merged on unlock), then re-create the top URLs/domains in batches.
+    try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] unlock: history.deleteAll', e); }
+    const seed = pickRestoreUrls(entries);
+    await setSeedWindow({ start: Date.now() - 1000, end: null, urls: [...seed.keys()] });
+    const list = [...seed.values()];
+    for (let i = 0; i < list.length; i += RESTORE_BATCH_SIZE) {
+      await Promise.all(list.slice(i, i + RESTORE_BATCH_SIZE).map(addUrlSafe));
+    }
+    await setSeedWindow({ start: _seedWin.start, end: Date.now() + 1000, urls: [...seed.keys()] });
+
+    // Now unlock the UI. The ciphertext is removed only after everything is restored.
+    await chrome.storage.local.set({ [LOCK_STATE_KEY]: false });
+    _lockedCache = false;
+    await chrome.storage.local.remove(LOCK_BLOB_KEY);
+    await ensureContextMenus();
+
+    try { await beginSession(); } catch {}
+    return { success: true, restored: entries.length, seeded: list.length };
+  } finally { _lockBusy = false; }
+}
+
 // ── History storage — switches between localStorage and IndexedDB ─────────────
 async function _useIdb() {
   const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
@@ -1514,14 +1801,16 @@ function withTimeout(promise, ms, label) {
 
 let _entriesCache = null;
 
-async function getAll() {
+async function getAll(force) {
+  if (!force && await isLocked()) return [];      // locked: the extension has no history to show
   if (_entriesCache) return _entriesCache;
   if (await _useIdb()) { _entriesCache = await EhIdb.getAll(); return _entriesCache; }
   const r = await chrome.storage.local.get(HISTORY_KEY);
   _entriesCache = r[HISTORY_KEY] || [];
   return _entriesCache;
 }
-async function setAll(entries) {
+async function setAll(entries, force) {
+  if (!force && await isLocked()) return;         // locked: never write plaintext history
   _entriesCache = entries; // update the in-memory copy immediately, before the (slower) persisted write
   if (await _useIdb()) return EhIdb.setAll(entries);
   await chrome.storage.local.set({ [HISTORY_KEY]: entries });
@@ -1729,7 +2018,15 @@ async function deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted) {
 chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
 
 async function handle(msg) {
+  if (!LOCK_ALLOWED_TYPES.has(msg.type) && await isLocked()) return { error: 'locked', locked: true };
   switch(msg.type) {
+    case 'GET_LOCK_STATUS': {
+      const locked = await isLocked();
+      const blob = locked ? (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY] : null;
+      return { locked, lockedAt: blob?.lockedAt || null, totalEntries: blob?.totalEntries ?? null };
+    }
+    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true);
+    case 'UNLOCK_HISTORY': return await unlockHistory(msg.password);
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
 
@@ -1745,7 +2042,9 @@ async function handle(msg) {
       ]);
       // Only keep past days from local storage — today comes from Chrome API
       const pastEntries = allStored.filter(e => e.visitTime < todayMs);
-      let entries = [...todayEntries, ...pastEntries];
+      // ...plus today's visits from before the last unlock, which Chrome no longer has
+      const restoredToday = await restoredEntriesSince(todayMs, todayEntries);
+      let entries = [...todayEntries, ...restoredToday, ...pastEntries];
 
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
       if (endDate)   entries=entries.filter(e=>e.visitTime<=endDate);
@@ -1915,7 +2214,9 @@ async function handle(msg) {
       // Calendar-day (midnight → now) live fetch. Not currently used for the
       // "Today" view anywhere (see GET_RECENT_HISTORY below) — kept available
       // for anything that specifically wants a calendar-day cutoff.
-      const liveEntries = await getTodayFromChromeApi();
+      const liveEntries0 = await getTodayFromChromeApi();
+      const t0s = new Date(); t0s.setHours(0, 0, 0, 0);
+      const liveEntries = [...liveEntries0, ...await restoredEntriesSince(t0s.getTime(), liveEntries0)];
       if (liveEntries.length) return { entries: liveEntries };
       const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
@@ -1924,7 +2225,8 @@ async function handle(msg) {
       // "Today" in both the popup and the sidebar: plain chrome.history.search()
       // with no startTime, i.e. the browser's own rolling ~24h window,
       // rather than a calendar-day cutoff.
-      const liveEntries = await getRecentFromChromeApi();
+      const liveEntries0 = await getRecentFromChromeApi();
+      const liveEntries = [...liveEntries0, ...await restoredEntriesSince(Date.now() - 86400000, liveEntries0)];
       if (liveEntries.length) return { entries: liveEntries };
       const r = await chrome.storage.local.get(TODAY_HISTORY_KEY);
       return { entries: r[TODAY_HISTORY_KEY] || [] };
@@ -2264,8 +2566,28 @@ async function handle(msg) {
     case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
     case 'MOVE_BOOKMARK': {
       try {
-        await chrome.bookmarks.move(msg.id, { parentId: msg.parentId });
-        return { success: true };
+        // index is only passed for in-list reordering (dragging a bookmark
+        // between two others in its current folder) — omitted for plain
+        // folder-to-folder moves, which drop the bookmark at the end.
+        const wantIndex = (msg.index !== undefined && msg.index !== null) ? msg.index : undefined;
+        const dest = { parentId: msg.parentId };
+        if (wantIndex !== undefined) dest.index = wantIndex;
+        let moved = await chrome.bookmarks.move(msg.id, dest);
+        // Chrome has a long-standing quirk where asking to move a bookmark
+        // forward within its own folder can silently land it short of the
+        // requested index (the exact behaviour has shifted across Chrome
+        // versions and is still debated upstream). Rather than hard-code an
+        // adjustment and hope it matches the installed Chrome version,
+        // check where the bookmark actually ended up and nudge it again if
+        // it's not where we asked — self-correcting instead of guessing.
+        let guard = 0;
+        while (wantIndex !== undefined && moved.parentId === msg.parentId &&
+               moved.index !== wantIndex && guard < 3) {
+          const nudge = wantIndex + (wantIndex - moved.index);
+          moved = await chrome.bookmarks.move(msg.id, { parentId: msg.parentId, index: nudge });
+          guard++;
+        }
+        return { success: true, index: moved.index };
       } catch(e) { return { error: e.message }; }
     }
     case 'DELETE_BOOKMARK': {
@@ -2288,6 +2610,7 @@ async function handle(msg) {
       } catch(e) { return { error: e.message }; }
     }
     case 'IMPORT_BOOKMARKS': {
+      if (Array.isArray(msg.tree)) return { success: true, imported: await importBookmarkTree(msg.tree) };
       const {bookmarks}=msg; let imported=0;
       for(const bm of (bookmarks||[])) if(bm.url){try{await chrome.bookmarks.create({title:bm.title||bm.url,url:bm.url});imported++;}catch{}}
       return {success:true,imported};

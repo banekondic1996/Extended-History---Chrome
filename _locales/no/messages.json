@@ -2,6 +2,95 @@
   "ext_name": {
     "message": "Utvidet Historikk"
   },
+  "unique_tabs": {
+    "message": "Unike faner"
+  },
+   "restore_all": {
+    "message": "Gjenopprett alle"
+  },
+    "edit": {
+    "message": "Rediger"
+  },
+    "no_stored_tabs": {"message": "Ingen lagrede faner ennå."},
+  "store_tab_hint": {"message": "Høyreklikk på en side → Extended History → Lagre denne fanen"},
+  "no_synced_devices": {"message": "Ingen synkroniserte enheter funnet."},
+  "chrome_sync_hint": {"message": "Logg inn i Chrome og aktiver synkronisering."},
+  "run_now": {"message": "Kjør nå"},
+  "select": {"message": "Velg"},
+  "please_enter_password": {"message": "Skriv inn et passord."},
+  "master_password": {"message": "Hovedpassord"},
+  "ignore_list_setup": {
+    "message": "🔒 Konfigurer ignoreringsliste"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Det er ikke angitt noe passord ennå. Opprett et hovedpassord for å beskytte ignoreringslisten."
+  },
+  "ignore_list_access_desc": {
+    "message": "Skriv inn hovedpassordet ditt for å vise ignoreringslisten."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Tilbakestill ignoreringsliste"
+  },
+  "reset_ignore_list_desc": {
+    "message": "Ignoreringslisten er tømt. Skriv inn et nytt hovedpassord for å fortsette."
+  },
+  "set_new_password": {
+    "message": "Angi nytt passord"
+  },
+  "quick_filters_none": {
+    "message": "Hurtigfiltre: ingen"
+  },
+  "auto_hide_sidebar": {
+    "message": "Skjul sidepanelet automatisk når musen forlater det"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Lukk sidepanelet automatisk når markøren forlater det, på samme måte som en popup lukkes automatisk. Slå av for å holde det åpent til du lukker det manuelt."
+  },
+   "auto_export_interval": {
+    "message": "Intervall for automatisk eksport"
+  },
+  "auto_export_interval_desc": {
+    "message": "Eksporter og slett automatisk den eldste historikken som en .json-fil hver N. måned. De siste 3 månedene beholdes alltid, uansett hvilket intervall du angir. Sett til 0 for å deaktivere."
+  },
+  "high_contrast_mode": {
+    "message": "Modus for høy kontrast"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Bruker den primære tekstfargen overalt der sekundær/tertiær (dempet) tekstfarge normalt brukes, for bedre lesbarhet"
+  },
+  "create_password": {
+    "message": "Opprett passord"
+  },
+  "lock_warning_title": {
+    "message": "Lås historikken?"
+  },
+  "lock_warning_body": {
+    "message": "Når du låser, blir all historikk i utvidelsen kryptert. All historikk i selve nettleseren blir slettet, mens utvidelsens egen kopi beholdes kryptert. Sørg for å sikkerhetskopiere historikken ved å eksportere den først, i tilfelle strømbrudd. Etter låsing kan du låse opp ved å skrive inn passordet ditt, og historikken i utvidelsen blir gjenopprettet, men ikke nettleserens opprinnelige historikk. Det betyr at enkelte forslag for autofullføring i adressefeltet mangler; bare de mest besøkte URL-ene og domenene vises. Hvis du glemmer passordet, kan historikken ikke gjenopprettes."
+  },
+  "lock_logout_everywhere": {
+    "message": "Logg ut overalt (slett også informasjonskapsler og nettstedsdata)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Skjul bokmerker (fjernes fra nettleseren til du låser opp)"
+  },
+  "lock_password": {
+    "message": "Passord"
+  },
+  "lock_confirm_password": {
+    "message": "Bekreft passord"
+  },
+  "lock_btn": {
+    "message": "Lås"
+  },
+  "lock_password_short": {
+    "message": "Passordet må inneholde minst 4 tegn"
+  },
+  "lock_password_mismatch": {
+    "message": "Passordene samsvarer ikke"
+  },
+  "lock_locking": {
+    "message": "Krypterer…"
+  },
   "rename_bookmark": {
   "message": "✏️ Gi bokmerket nytt navn"
 },

@@ -2,6 +2,95 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+   "restore_all": {
+    "message": "Alles herstellen"
+  },
+  "unique_tabs": {
+    "message": "Unieke tabbladen"
+  },
+    "quick_filters_none": {
+    "message": "Snelle filters: geen"
+  },
+    "no_stored_tabs": {"message": "Nog geen opgeslagen tabbladen."},
+  "store_tab_hint": {"message": "Klik met de rechtermuisknop op een pagina → Extended History → Dit tabblad opslaan"},
+  "no_synced_devices": {"message": "Geen gesynchroniseerde apparaten gevonden."},
+  "chrome_sync_hint": {"message": "Log in bij Chrome en schakel synchronisatie in."},
+  "run_now": {"message": "Nu uitvoeren"},
+  "select": {"message": "Selecteren"},
+    "edit": {
+    "message": "Bewerken"
+  },
+    "please_enter_password": {"message": "Voer een wachtwoord in."},
+  "master_password": {"message": "Hoofdwachtwoord"},
+  "ignore_list_setup": {
+    "message": "🔒 Uitsluitingslijst instellen"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Er is nog geen wachtwoord ingesteld. Maak een hoofdwachtwoord aan om je uitsluitingslijst te beschermen."
+  },
+  "ignore_list_access_desc": {
+    "message": "Voer je hoofdwachtwoord in om de uitsluitingslijst te bekijken."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Uitsluitingslijst resetten"
+  },
+  "reset_ignore_list_desc": {
+    "message": "De uitsluitingslijst is gewist. Voer een nieuw hoofdwachtwoord in om door te gaan."
+  },
+  "set_new_password": {
+    "message": "Nieuw wachtwoord instellen"
+  },
+  "auto_hide_sidebar": {
+    "message": "Zijbalk automatisch verbergen bij verlaten met de muis"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Sluit de zijbalk automatisch zodra je cursor deze verlaat, vergelijkbaar met hoe een pop-up zichzelf sluit. Schakel dit uit om de zijbalk open te houden totdat je hem handmatig sluit."
+  },
+   "auto_export_interval": {
+    "message": "Interval voor automatisch exporteren"
+  },
+  "auto_export_interval_desc": {
+    "message": "Exporteer en verwijder de oudste geschiedenis automatisch als .json-bestand elke N maanden. De meest recente 3 maanden worden altijd bewaard, ongeacht het ingestelde interval. Stel 0 in om dit uit te schakelen."
+  },
+  "high_contrast_mode": {
+    "message": "Modus voor hoog contrast"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Gebruikt de primaire tekstkleur overal waar normaal een secundaire/tertiaire (lichtere) tekstkleur wordt gebruikt, voor betere leesbaarheid"
+  },
+  "create_password": {
+    "message": "Wachtwoord maken"
+  },
+  "lock_warning_title": {
+    "message": "Geschiedenis vergrendelen?"
+  },
+  "lock_warning_body": {
+    "message": "Door te vergrendelen wordt alle geschiedenis in de extensie versleuteld. Alle geschiedenis in de browser zelf wordt verwijderd, terwijl de eigen kopie van de extensie versleuteld wordt bewaard. Zorg ervoor dat je eerst een back-up van je geschiedenis maakt door deze te exporteren, voor het geval van een stroomstoring. Na het vergrendelen kun je ontgrendelen door je wachtwoord in te voeren en wordt de geschiedenis in de extensie teruggezet, maar niet de oorspronkelijke browsergeschiedenis. Dit betekent dat sommige automatische aanvullingen in de adresbalk ontbreken; alleen de meest bezochte URL's en domeinen worden weergegeven. Als je het wachtwoord vergeet, kan de geschiedenis niet worden hersteld."
+  },
+  "lock_logout_everywhere": {
+    "message": "Overal uitloggen (ook cookies en sitegegevens wissen)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Bladwijzers verbergen (worden uit de browser verwijderd totdat je ontgrendelt)"
+  },
+  "lock_password": {
+    "message": "Wachtwoord"
+  },
+  "lock_confirm_password": {
+    "message": "Wachtwoord bevestigen"
+  },
+  "lock_btn": {
+    "message": "Vergrendelen"
+  },
+  "lock_password_short": {
+    "message": "Het wachtwoord moet minimaal 4 tekens bevatten"
+  },
+  "lock_password_mismatch": {
+    "message": "Wachtwoorden komen niet overeen"
+  },
+  "lock_locking": {
+    "message": "Versleutelen…"
+  },
   "rename_bookmark": {
   "message": "✏️ Bladwijzer hernoemen"
 },

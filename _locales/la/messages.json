@@ -2,8 +2,99 @@
   "ext_name": {
     "message": "Historia Extensa"
   },
+    "edit": {
+    "message": "Emenda"
+  },
+  "restore_all": {
+    "message": "Omnia restitue"
+  },
+   "total_visits": {"message": "Visitationes totales"},
+  "storage": {"message": "Repositio"},
+    "unique_tabs": {
+    "message": "Schedae unicae"
+  },
+    "no_stored_tabs": {"message": "Nondum ulla schedae servatae sunt."},
+  "store_tab_hint": {"message": "In quavis pagina dextrorsum preme → Extended History → Hanc schedam serva"},
+  "no_synced_devices": {"message": "Nulla instrumenta synchronizata inventa sunt."},
+  "chrome_sync_hint": {"message": "In Chrome ini et Synchronizationem activa."},
+  "run_now": {"message": "Nunc exsequi"},
+  "select": {"message": "Selige"},
+  "please_enter_password": {"message": "Tesseram insere."},
+  "master_password": {"message": "Tessera magistra"},
+  "ignore_list_setup": {
+    "message": "🔒 Indicem ignorandorum constitue"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Nondum ulla tessera constituta est. Tesseram magistram crea ad indicem ignorandorum tuendum."
+  },
+  "ignore_list_access_desc": {
+    "message": "Tesseram magistram tuam insere ut indicem ignorandorum videas."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Indicem ignorandorum repone"
+  },
+  "reset_ignore_list_desc": {
+    "message": "Index ignorandorum deletus est. Novam tesseram magistram insere ut pergas."
+  },
+  "set_new_password": {
+    "message": "Novam tesseram constitue"
+  },
+    "quick_filters_none": {
+    "message": "Filtra celeria: nulla"
+  },
+  "auto_hide_sidebar": {
+    "message": "Laterale sponte cela cum musca exit"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Laterale sponte claude cum cursor extra ipsum exit, simili modo quo fenestra pop-up sponte se claudit. Destrue ut apertum maneat donec illud manu claudas."
+  },
+  "auto_export_interval": {
+    "message": "Intervallum exportationis automaticae"
+  },
+  "auto_export_interval_desc": {
+    "message": "Historiam vetustissimam automatice exporta et dele ut fasciculum .json singulis N mensibus. Tres menses recentissimi semper servantur, quocumque intervallo statueris. Pone 0 ut disabletur."
+  },
+  "high_contrast_mode": {
+    "message": "Modus magni discriminis"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Colore textus principali utitur ubique ubi color textus secundarius/tertiarius (obscurior) adhiberi solet, ad meliorem legibilitatem"
+  },
+  "create_password": {
+    "message": "Tesseram crea"
+  },
   "quick_filters": {
     "message": "Filtra celeria"
+  },
+    "lock_warning_title": {
+    "message": "Historiam obstruere?"
+  },
+  "lock_warning_body": {
+    "message": "Obstructio omnem historiam intra extensionem encryptabit. Omnis historia intra ipsum navigatrum delebita erit, exemplum autem proprium extensionis encryptum servabitur. Fac ut historiam tuam prius exportando serves, ne quid ob interruptionem electricitatis amittatur. Post obstructionem historiam tuam tessera intrata reserare poteris, et historia intra extensionem restituetur, sed non historia nativa navigatoris. Id significat nonnulla suggestiones completionis automaticae in vecte inscriptionis defuturas esse; tantum URL et dominia saepissime visitata apparebunt. Si tesseram oblivisceris, historia recuperari non poterit."
+  },
+  "lock_logout_everywhere": {
+    "message": "Ex omnibus locis exi (etiam crustula et data situs dele)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Signacula cela (a navigatro removebuntur donec reseres)"
+  },
+  "lock_password": {
+    "message": "Tessera"
+  },
+  "lock_confirm_password": {
+    "message": "Tesseram confirma"
+  },
+  "lock_btn": {
+    "message": "Obstrue"
+  },
+  "lock_password_short": {
+    "message": "Tessera quattuor saltem characteres habere debet"
+  },
+  "lock_password_mismatch": {
+    "message": "Tesserae non congruunt"
+  },
+  "lock_locking": {
+    "message": "Encryptio…"
   },
   "rename_bookmark": {
   "message": "✏️ बुकमार्क का नाम बदलें"

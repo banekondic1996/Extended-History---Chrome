@@ -2,9 +2,98 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
+   "restore_all": {
+    "message": "Tout restaurer"
+  },
+  "edit": {
+    "message": "Modifier"
+  },
+    "unique_tabs": {
+    "message": "Onglets uniques"
+  },
+   "no_stored_tabs": {"message": "Aucun onglet enregistré pour le moment."},
+  "store_tab_hint": {"message": "Faites un clic droit sur une page → Extended History → Enregistrer cet onglet"},
+  "no_synced_devices": {"message": "Aucun appareil synchronisé trouvé."},
+  "chrome_sync_hint": {"message": "Connectez-vous à Chrome et activez la synchronisation."},
+  "run_now": {"message": "Exécuter maintenant"},
+  "select": {"message": "Sélectionner"},
+  "please_enter_password": {"message": "Veuillez saisir un mot de passe."},
+  "master_password": {"message": "Mot de passe principal"},
+  "ignore_list_setup": {
+    "message": "🔒 Configurer la liste d’exclusion"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Aucun mot de passe n’est encore défini. Créez un mot de passe principal pour protéger votre liste d’exclusion."
+  },
+  "ignore_list_access_desc": {
+    "message": "Saisissez votre mot de passe principal pour afficher la liste d’exclusion."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Réinitialiser la liste d’exclusion"
+  },
+  "reset_ignore_list_desc": {
+    "message": "La liste d’exclusion a été effacée. Saisissez un nouveau mot de passe principal pour continuer."
+  },
+  "set_new_password": {
+    "message": "Définir un nouveau mot de passe"
+  },
+  "quick_filters_none": {
+    "message": "Filtres rapides : aucun"
+  },
+  "auto_hide_sidebar": {
+    "message": "Masquer automatiquement la barre latérale lorsque la souris la quitte"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Ferme automatiquement la barre latérale lorsque le curseur la quitte, comme une fenêtre contextuelle qui se ferme automatiquement. Désactivez cette option pour la garder ouverte jusqu’à sa fermeture manuelle."
+  },
+    "auto_export_interval": {
+    "message": "Intervalle d’exportation automatique"
+  },
+  "auto_export_interval_desc": {
+    "message": "Exporte et supprime automatiquement l’historique le plus ancien dans un fichier .json tous les N mois. Les 3 derniers mois sont toujours conservés, quel que soit l’intervalle choisi. Définissez 0 pour désactiver."
+  },
+  "high_contrast_mode": {
+    "message": "Mode contraste élevé"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Utilise la couleur de texte principale partout où une couleur de texte secondaire/tertiaire (plus claire) serait normalement utilisée, pour améliorer la lisibilité"
+  },
+  "create_password": {
+    "message": "Créer un mot de passe"
+  },
   "rename_bookmark": {
   "message": "✏️ Renommer le favori"
 },
+  "lock_warning_title": {
+    "message": "Verrouiller l’historique ?"
+  },
+  "lock_warning_body": {
+    "message": "Le verrouillage chiffrera tout l’historique dans l’extension. Tout l’historique du navigateur lui-même sera supprimé, tandis que la copie de l’extension sera conservée sous forme chiffrée. Pensez à sauvegarder votre historique en l’exportant avant de continuer, au cas où une coupure de courant surviendrait. Après le verrouillage, vous pourrez déverrouiller l’historique en saisissant votre mot de passe et l’historique de l’extension sera restauré, mais pas celui du navigateur. Cela signifie que certaines suggestions de saisie automatique dans la barre d’adresse seront absentes ; seuls les URL et domaines les plus visités apparaîtront. Si vous oubliez le mot de passe, l’historique ne pourra pas être récupéré."
+  },
+  "lock_logout_everywhere": {
+    "message": "Se déconnecter partout (effacer également les cookies et les données des sites)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Masquer les favoris (ils seront supprimés du navigateur jusqu’au déverrouillage)"
+  },
+  "lock_password": {
+    "message": "Mot de passe"
+  },
+  "lock_confirm_password": {
+    "message": "Confirmer le mot de passe"
+  },
+  "lock_btn": {
+    "message": "Verrouiller"
+  },
+  "lock_password_short": {
+    "message": "Le mot de passe doit comporter au moins 4 caractères"
+  },
+  "lock_password_mismatch": {
+    "message": "Les mots de passe ne correspondent pas"
+  },
+  "lock_locking": {
+    "message": "Chiffrement…"
+  },
 "remove_bookmark": {
     "message": "🗑 Supprimer le favori"
   },

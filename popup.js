@@ -149,7 +149,7 @@ chrome.storage.local.get('eh_settings', r => {
 });
 function _applyPopupWallpaper(wp, theme) {
     const isDark = theme === 'dark';
-    const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
+    const overlayOpacity = (wp.overlayOpacity ?? 50) / 100;
     const blurAmount     = wp.blurAmount ?? 8;
     const overlayColor   = isDark
         ? `rgba(0,0,0,${overlayOpacity})`
