@@ -17,13 +17,11 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 -Encrypt history exports
 -Read exported history, without import, even encrypted ones
 -Find history using quick filters
+-Lock history
 </pre>
 **To do (ordered by importance):**
 <pre>
 -Fix browser cache based favicon resolver
--Fix translations (i need help with this, i can't translate dynamic parts)
--Add whole history encryption and UI locking
- (abandoned, as locking UI requires deleting history at least at each browser startup, which removes auto suggest for address bar)
 -Store page even if page didn't load completely
 -Import history within certain time range
 -Change favicon when site if site is in ignore list
