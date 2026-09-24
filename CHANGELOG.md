@@ -126,6 +126,11 @@ Fixed/changed in version 4.1.8:
 -Changes to default settings
 -CSS fixes
 
+Fixed/changed in version 4.1.9:
+-Most of translations are fixed
+-Added history locking option
+-Popup CSS bug fixed
+  
 </pre>
 
 
