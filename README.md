@@ -21,7 +21,9 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do (ordered by importance):**
 <pre>
--Fix browser cache based favicon resolver
+-Popup/sidebar deleting in progress modal is missing
+-Locking doesn't delete unencrypted data, just appends to localstorage (Important TO FIX)
+-Fix browser cache based favicon resolver, by saving small favicons as base64 in localstorage
 -Store page even if page didn't load completely
 -Import history within certain time range
 -Change favicon when site if site is in ignore list
