@@ -126,12 +126,18 @@ Fixed/changed in version 4.1.8:
 -Changes to default settings
 -CSS fixes
 
-Fixed/changed in version 4.1.9:
+Fixed/changed in version 4.1.9 (in Store):
 -Most of translations are fixed
 -Added history locking option
 -Popup CSS bug fixed
 -Exporting bookmarks now also saves bookmarks folders structure 
-  
+
+Fixed/changed in version 4.2.0:
+-CSS style fixes
+-Added option to view time spent for any date
+-Added filter option for popup/sidebar
+-Added option to keep saving history while UI is locked
+-Added option to search extensions history inside address bar, by pressing q then space or tab (omnibox)
 </pre>
 
 
