@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Extended History | Unlimited history retention",
+  "name": "Extended History",
   "version": "4.2.0",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
