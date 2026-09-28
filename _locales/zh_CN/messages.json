@@ -2,6 +2,16 @@
   "ext_name": {
     "message": "扩展历史"
   },
+  "jump_to_date": {"message": "跳转到日期"},
+  "more_from_domain": {"message": "查看更多此域名内容"},
+  "ignore_domain": {"message": "忽略域名"},
+  "quick_filter_button": {"message": "快速筛选按钮"},
+  "quick_filter_button_desc": {"message": "在弹出窗口中显示筛选按钮，位于“存储”左侧，并提供快速筛选器下拉菜单。选择一个筛选器后，弹出窗口中的最近历史记录和搜索结果将仅限于这些域名/关键词/URL；搜索仍可正常在筛选结果中进行。每次重新打开弹出窗口时都会重置为无筛选。"},
+  "fade_in_list_on_date_change": {"message": "切换日期时淡入列表"},
+  "fade_in_list_on_date_change_desc": {"message": "切换日期时 — 无论通过日期按钮栏、日历还是“使用时间”的日期箭头 — 历史记录列表都会在加载时淡入，而不是立即显示。"},
+  "keep_saving_history_while_locked": {
+    "message": "锁定时继续保存历史记录（解锁后会重新合并回历史记录，而不是删除）"
+  },
   "unique_tabs": {
     "message": "唯一标签页"
   },

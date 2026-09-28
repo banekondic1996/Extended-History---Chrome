@@ -1475,6 +1475,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 // history with the most visited URLs/domains.
 const LOCK_STATE_KEY  = 'eh_locked';        // true while locked
 const LOCK_BLOB_KEY   = 'eh_locked_blob';   // { __eh_encrypted, salt, iv, ct, lockedAt, totalEntries }
+const LOCK_KEEP_SAVING_KEY = 'eh_lock_keep_saving'; // true if "Keep saving history while locked" was ticked
 const SEED_WINDOW_KEY = 'eh_seed_window';   // URLs we re-added to native history on unlock
 const RESTORED_AT_KEY = 'eh_restored_at';   // time of the last unlock; only used so the Today views can show pre-lock visits (see restoredEntriesSince)
 // How much native history to re-create on unlock (chrome.history.addUrl is one
@@ -1486,12 +1487,26 @@ const LOCK_ALLOWED_TYPES  = new Set(['GET_LOCK_STATUS', 'UNLOCK_HISTORY', 'GET_S
 
 let _lockedCache = null;
 let _lockBusy    = false;
+let _keepSavingCache = null;
 async function isLocked() {
   if (_lockedCache === null) {
     const r = await chrome.storage.local.get(LOCK_STATE_KEY);
     _lockedCache = r[LOCK_STATE_KEY] === true;
   }
   return _lockedCache;
+}
+// "Keep saving history while locked" — opt-in, unchecked by default. Doesn't change
+// any write-gating (native chrome.history keeps recording regardless of this flag —
+// the browser does that on its own and no extension can stop it); what it changes is
+// unlockHistory()'s behavior: with it on, whatever chrome.history accumulated between
+// lockedAt and now is pulled in and merged into the restored history instead of being
+// thrown away. The UI itself stays fully hidden while locked either way.
+async function lockKeepSaving() {
+  if (_keepSavingCache === null) {
+    const r = await chrome.storage.local.get(LOCK_KEEP_SAVING_KEY);
+    _keepSavingCache = r[LOCK_KEEP_SAVING_KEY] === true;
+  }
+  return _keepSavingCache;
 }
 
 function _lkB64(buf) {
@@ -1625,7 +1640,7 @@ async function importBookmarkTree(tree) {
   return count + await createBookmarkNodes(other.id, loose);
 }
 
-async function lockHistory(password, clearSiteData, hideBookmarks) {
+async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving) {
   if (typeof password !== 'string' || password.length < 4) throw new Error('Password must be at least 4 characters');
   if (_lockBusy) throw new Error('Lock already in progress');
   if (await isLocked()) throw new Error('Already locked');
@@ -1638,16 +1653,20 @@ async function lockHistory(password, clearSiteData, hideBookmarks) {
     await flushTodayToHistory();
     try { await finishSession(); } catch {}          // so the current session is part of the snapshot
 
-    // 2. Snapshot exactly what gets encrypted: history, sessions, stored tabs, ignore list, quick filters.
+    // 2. Snapshot exactly what gets encrypted: history, sessions, stored tabs, ignore list,
+    //    quick filters, and time-tracking data (eh_time — per-domain browsing time is just as
+    //    revealing as the history entries themselves, so it has to be swept too, not left as
+    //    the one plaintext dataset sitting next to everything else that's encrypted).
     const entries  = await getAll(true);
     const sessions = await getSessions();
-    const st = await chrome.storage.local.get([TAB_STORAGE_KEY, IGNORE_LIST_KEY, QUICK_FILTERS_KEY]);
+    const st = await chrome.storage.local.get([TAB_STORAGE_KEY, IGNORE_LIST_KEY, QUICK_FILTERS_KEY, TIME_KEY]);
     const payload  = JSON.stringify({
       exportedAt: new Date().toISOString(), totalEntries: entries.length, entries, sessions,
       bookmarks:    hideBookmarks ? await snapshotBookmarks() : undefined,
       tabStorage:   st[TAB_STORAGE_KEY]   || [],
       ignoreList:   st[IGNORE_LIST_KEY]   || [],
       quickFilters: st[QUICK_FILTERS_KEY] || [],
+      timeData:     st[TIME_KEY]          || {},
     });
 
     const enc = await _lkEncrypt(payload, password);
@@ -1658,18 +1677,19 @@ async function lockHistory(password, clearSiteData, hideBookmarks) {
     const check = await _lkDecrypt(back, password);
     if (check.length !== payload.length) throw new Error('Encrypted copy failed verification — nothing was deleted');
 
-    // The four small datasets are ALSO encrypted in place, under their own storage keys, so
+    // The five small datasets are ALSO encrypted in place, under their own storage keys, so
     // nothing readable is left there. The blob above still holds a copy of each, and unlock
     // restores from the blob, so a stray write to one of these keys while locked can't lose data.
     const inPlace = {};
     for (const [key, val] of [[SESSIONS_KEY, sessions], [TAB_STORAGE_KEY, st[TAB_STORAGE_KEY] || []],
-                              [IGNORE_LIST_KEY, st[IGNORE_LIST_KEY] || []], [QUICK_FILTERS_KEY, st[QUICK_FILTERS_KEY] || []]]) {
+                              [IGNORE_LIST_KEY, st[IGNORE_LIST_KEY] || []], [QUICK_FILTERS_KEY, st[QUICK_FILTERS_KEY] || []],
+                              [TIME_KEY, st[TIME_KEY] || {}]]) {
       inPlace[key] = { __eh_encrypted: true, ...(await _lkEncrypt(JSON.stringify(val), password)) };
     }
 
     // ── Point of no return ──
-    await chrome.storage.local.set({ [LOCK_STATE_KEY]: true });
-    flagSet = true; _lockedCache = true;
+    await chrome.storage.local.set({ [LOCK_STATE_KEY]: true, [LOCK_KEEP_SAVING_KEY]: !!keepSaving });
+    flagSet = true; _lockedCache = true; _keepSavingCache = !!keepSaving;
     await chrome.storage.local.set(inPlace);     // overwrites the plaintext values with ciphertext
     try { chrome.contextMenus.removeAll(); } catch {}    // no right-click menu while locked
 
@@ -1710,21 +1730,43 @@ async function unlockHistory(password) {
     try { data = JSON.parse(await _lkDecrypt(blob, String(password || ''))); }
     catch { throw new Error('Wrong password'); }
 
-    const entries = Array.isArray(data.entries) ? data.entries : [];
+    let entries = Array.isArray(data.entries) ? data.entries : [];
+    const keepSaving = await lockKeepSaving();
+    let mergedCount = 0;
+    if (keepSaving && blob.lockedAt) {
+      // Chrome keeps recording native history the whole time locked no matter what —
+      // no extension setting can stop that. With "Keep saving" on, pull in whatever
+      // accumulated since lock time and merge it into the restored set instead of
+      // throwing it away (the plain deleteAll() below, when this option is off).
+      // Bounded to visits after lockedAt, so there's no overlap with the pre-lock
+      // `entries` above — a plain concat is enough, no dedup needed.
+      try {
+        const since = await _liveHistoryEntries({ startTime: blob.lockedAt });
+        if (since.length) { entries = entries.concat(since); mergedCount = since.length; }
+      } catch (e) { console.error('[EH] unlock: merging locked-period history', e); }
+    }
     await setAll(entries, true);
     const restore = {};
     restore[SESSIONS_KEY] = Array.isArray(data.sessions) ? data.sessions : [];
     if (Array.isArray(data.tabStorage))   restore[TAB_STORAGE_KEY]   = data.tabStorage;
     if (Array.isArray(data.ignoreList))   restore[IGNORE_LIST_KEY]   = data.ignoreList;
     if (Array.isArray(data.quickFilters)) restore[QUICK_FILTERS_KEY] = data.quickFilters;
-    if (data.timeData) restore[TIME_KEY] = data.timeData;      // only present in blobs made by an earlier build
+    // Always restore eh_time explicitly (rather than only when present) so that unlocking a
+    // blob locked before eh_time was swept in doesn't leave its in-place ciphertext behind —
+    // falls back to {} for those older blobs instead of leaving unreadable garbage under the key.
+    restore[TIME_KEY] = (data.timeData && typeof data.timeData === 'object') ? data.timeData : {};
     restore[RESTORED_AT_KEY] = Date.now();
     await chrome.storage.local.set(restore);
     if (Array.isArray(data.bookmarks)) await restoreBookmarkRoots(data.bookmarks);   // "Hide bookmarks" was ticked when locking
 
-    // Delete native history again: whatever Chrome recorded while locked is simply dropped
-    // (nothing is merged on unlock), then re-create the top URLs/domains in batches.
-    try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] unlock: history.deleteAll', e); }
+    // Without "Keep saving": wipe whatever Chrome recorded while locked (nothing is
+    // merged), then re-create the top URLs/domains in batches. With it on, the
+    // locked-period browsing is already sitting in chrome.history and already merged
+    // into `entries` above — don't delete it, just layer the pre-lock URLs back in
+    // alongside it.
+    if (!keepSaving) {
+      try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] unlock: history.deleteAll', e); }
+    }
     const seed = pickRestoreUrls(entries);
     await setSeedWindow({ start: Date.now() - 1000, end: null, urls: [...seed.keys()] });
     const list = [...seed.values()];
@@ -1736,11 +1778,12 @@ async function unlockHistory(password) {
     // Now unlock the UI. The ciphertext is removed only after everything is restored.
     await chrome.storage.local.set({ [LOCK_STATE_KEY]: false });
     _lockedCache = false;
-    await chrome.storage.local.remove(LOCK_BLOB_KEY);
+    _keepSavingCache = null;
+    await chrome.storage.local.remove([LOCK_BLOB_KEY, LOCK_KEEP_SAVING_KEY]);
     await ensureContextMenus();
 
     try { await beginSession(); } catch {}
-    return { success: true, restored: entries.length, seeded: list.length };
+    return { success: true, restored: entries.length, seeded: list.length, merged: mergedCount };
   } finally { _lockBusy = false; }
 }
 
@@ -2014,6 +2057,125 @@ async function deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted) {
   if (endTime > cursor) await chrome.history.deleteRange({ startTime: cursor, endTime });
 }
 
+// ── Omnibox ("q" keyword) ──────────────────────────────────────────────────
+// Type "q" then Tab (or Space) in Chrome's address bar to search this
+// extension's full history (not just Chrome's native, capped-90-days one)
+// and jump straight to a result with the arrow keys + Enter.
+function _omniXmlEscape(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function _omniEscapeRegex(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function _omniPathOf(url) {
+  try { return new URL(url).pathname.toLowerCase(); }
+  catch { return String(url || '').split(/[?#]/)[0].toLowerCase(); }
+}
+
+async function getOmniboxMatches(query, limit = 8) {
+  if (await isLocked()) return [];
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const primary = words[0];
+  const wordStartRe = new RegExp('(^|[^a-z0-9])' + _omniEscapeRegex(primary));
+
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const [todayEntries, allStored] = await Promise.all([
+    getTodayFromChromeApi(),
+    getAll(),
+  ]);
+  const pastEntries = allStored.filter(e => e.visitTime < todayStart.getTime());
+  const entries = [...todayEntries, ...pastEntries];
+  entries.sort((a, b) => b.visitTime - a.visitTime); // recency tiebreaker within a rank
+
+  // "Most visited" exception for the title-dedup step below — top 20 URLs by total
+  // visit count in this same merged set (needs more than one visit to count).
+  const visitCounts = new Map();
+  for (const e of entries) {
+    if (!e.url) continue;
+    visitCounts.set(e.url, (visitCounts.get(e.url) || 0) + 1);
+  }
+  const mostVisited = new Set(
+    [...visitCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).filter(([, c]) => c > 1).map(([u]) => u)
+  );
+
+  const seen = new Set();       // dedupe by URL — keep only the most recent visit of each
+  const seenTitles = new Set(); // dedupe by title too — two suggestions shouldn't read the same
+  const ranked = [];
+  for (const e of entries) {
+    if (!e.url || seen.has(e.url)) continue;
+    const domain = (e.domain || '').toLowerCase();
+    const title  = (e.title || '').toLowerCase();
+    const path   = _omniPathOf(e.url); // query string/hash intentionally excluded
+    const hay = domain + ' ' + title + ' ' + path;
+    if (!words.every(w => hay.includes(w))) continue;
+
+    let rank;
+    if (domain.startsWith(primary)) rank = 0;
+    else if (wordStartRe.test(title)) rank = 1;
+    else if (domain.includes(primary)) rank = 2;
+    else if (wordStartRe.test(path)) rank = 3;
+    else if (title.includes(primary)) rank = 4;
+    else continue; // domain/path-only mid-word match — too noisy, skip it
+
+    // Distinct titles, same as distinct URLs — unless this URL is one of your most
+    // visited, in which case it's still worth surfacing even if its title repeats
+    // one already in the list (e.g. several tabs/visits all titled "Inbox").
+    const titleKey = title.trim();
+    if (titleKey && seenTitles.has(titleKey) && !mostVisited.has(e.url)) continue;
+
+    seen.add(e.url);
+    if (titleKey) seenTitles.add(titleKey);
+    ranked.push({ e, rank });
+    // Cap how many candidates we rank — entries are already recency-sorted, so a
+    // few dozen is enough to guarantee limit's worth of well-ranked results without
+    // scanning an entire multi-hundred-thousand-entry history on every keystroke.
+    if (ranked.length >= limit * 8) break;
+  }
+  ranked.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    if (a.rank === 0 || a.rank === 2) {
+      const ca = visitCounts.get(a.e.url) || 0, cb = visitCounts.get(b.e.url) || 0;
+      if (ca !== cb) return cb - ca;
+    }
+    return 0; 
+  });
+  return ranked.slice(0, limit).map(r => r.e);
+}
+
+if (chrome.omnibox) {
+  chrome.omnibox.setDefaultSuggestion({
+    description: 'Search Extended History for %s'
+  });
+
+  chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+    const query = text.trim();
+    if (!query) { suggest([]); return; }
+    getOmniboxMatches(query, 8).then(matches => {
+      suggest(matches.map(e => ({
+        content: e.url,
+        description: _omniXmlEscape(e.title || e.url) + ' <url>' + _omniXmlEscape(e.url) + '</url>'
+      })));
+    }).catch(() => suggest([]));
+  });
+
+  chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
+    let url = text.trim();
+    // The user picked one of our suggestions — its `content` is already the
+    // literal URL to open.
+    if (!/^https?:\/\//i.test(url)) {
+      // Free-typed text with no suggestion selected: jump to the best match
+      // if we have one, otherwise fall back to the extension's own search
+      // page so the query isn't just silently dropped.
+      const matches = await getOmniboxMatches(url, 1).catch(() => []);
+      url = matches[0] ? matches[0].url : chrome.runtime.getURL('history.html') + '?q=' + encodeURIComponent(url);
+    }
+    if (disposition === 'newForegroundTab') chrome.tabs.create({ url });
+    else if (disposition === 'newBackgroundTab') chrome.tabs.create({ url, active: false });
+    else chrome.tabs.update({ url });
+  });
+}
+
 // ── Message API ──────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
 
@@ -2025,7 +2187,7 @@ async function handle(msg) {
       const blob = locked ? (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY] : null;
       return { locked, lockedAt: blob?.lockedAt || null, totalEntries: blob?.totalEntries ?? null };
     }
-    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true);
+    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true, msg.keepSaving === true);
     case 'UNLOCK_HISTORY': return await unlockHistory(msg.password);
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
@@ -2179,9 +2341,16 @@ async function handle(msg) {
       return {totalEntries:entries.length,storageMB:(used/1048576).toFixed(1),oldestEntry:oldest,dailyActivity:daily};
     }
     case 'GET_TIME_DATA': {
-      const {days=30}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
-      const now=Date.now(); const dateSet=new Set();
-      for(let i=0;i<days;i++) dateSet.add(new Date(now-i*86400000).toLocaleDateString('en-CA'));
+      const {days=30, date}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
+      const dateSet=new Set();
+      if (date) {
+        // Explicit single calendar day (YYYY-MM-DD) — the Today/date-arrow view in the
+        // Time Spent panel asks for exactly one day at a time instead of a rolling window.
+        dateSet.add(date);
+      } else {
+        const now=Date.now();
+        for(let i=0;i<days;i++) dateSet.add(new Date(now-i*86400000).toLocaleDateString('en-CA'));
+      }
 
       // "Hide ignored domains from Time Spent" — display-only filter, never
       // touches the underlying eh_time storage. A domain is excluded here

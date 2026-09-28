@@ -2,6 +2,16 @@
   "ext_name": {
     "message": "Historial Extendido"
   },
+  "jump_to_date": {"message": "Ir a la fecha"},
+  "more_from_domain": {"message": "Más de este dominio"},
+  "ignore_domain": {"message": "Ignorar dominio"},  
+  "quick_filter_button": {"message": "Botón de filtro rápido"},
+  "quick_filter_button_desc": {"message": "Muestra un botón de filtro en la ventana emergente, a la izquierda de Guardar, con un menú desplegable de tus filtros rápidos. Al elegir uno, el Historial reciente y la búsqueda de la ventana emergente se limitan a esos dominios/palabras clave/URL; la búsqueda sigue funcionando normalmente sobre el filtro. Se restablece a ningún filtro cada vez que se vuelve a abrir la ventana emergente."},
+  "fade_in_list_on_date_change": {"message": "Aparecer gradualmente al cambiar de fecha"},
+  "fade_in_list_on_date_change_desc": {"message": "Al cambiar de fecha — mediante la barra de pestañas, el calendario o las flechas de fecha de Tiempo empleado — el historial aparece gradualmente mientras se carga en lugar de mostrarse de inmediato."},
+  "keep_saving_history_while_locked": {
+    "message": "Seguir guardando el historial mientras está bloqueado (se vuelve a integrar al desbloquear, en lugar de eliminarse)"
+  },
   "restore_all": {
     "message": "Restaurar todo"
   },

@@ -72,6 +72,22 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .open-btn { padding:5px 11px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.75rem; font-weight:600; cursor:pointer; }
 .store-btn { padding:5px 11px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.1s; }
 .store-btn:hover { border-color:var(--accent); color:var(--accent); }
+/* Quick Filters ("F") button + dropdown, next to Store */
+.qf-wrap { position:relative; }
+.qf-btn { min-width:26px; padding:5px 9px; display:inline-flex; align-items:center; justify-content:center; }
+.qf-btn svg { display:block; }
+.qf-btn.qf-active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.qf-dropdown { display:none; position:fixed; width:220px; max-height:260px; overflow-y:auto; background:var(--s1); border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,0.4); z-index:99999; padding:4px; }
+.qf-dropdown.open { display:block; }
+.qf-item { display:flex; align-items:center; gap:6px; padding:7px 9px; border-radius:6px; font-size:0.76rem; color:var(--text); cursor:pointer; }
+.qf-item span:last-child { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.qf-item:hover { background:var(--s2); }
+.qf-item.qf-item-active { color:var(--accent); font-weight:600; }
+.qf-item-check { width:12px; flex-shrink:0; font-size:0.7rem; color:var(--accent); }
+.qf-divider { height:1px; background:var(--border); margin:4px 2px; }
+.qf-empty { padding:10px 9px; font-size:0.72rem; color:var(--text3); text-align:center; line-height:1.4; }
+.qf-manage-link { display:block; text-align:center; padding:7px 9px; margin-top:2px; border-radius:6px; font-size:0.72rem; color:var(--text2); cursor:pointer; }
+.qf-manage-link:hover { background:var(--s2); color:var(--accent); }
 .tabs { display:flex; gap:4px; padding:8px 14px; background:var(--bg); border-bottom:1px solid var(--border); transition:opacity 0.2s, transform 0.2s; }
 .tabs.hidden { opacity:0; transform:scaleY(0); height:0; overflow:hidden; padding:0; border:none; }
 .tab { flex:1; padding:6px 4px; background:transparent; border:none; border-radius:6px; color:var(--text2); font-size:0.7rem; font-weight:500; cursor:pointer; transition:color 0.15s; text-align:center; }
@@ -147,6 +163,10 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 <div class="header">
   <img src="/icons/icon128.png" class="hico">
   <div class="htitle">Extended History</div>
+  <div class="qf-wrap" id="qfWrap" style="display:none">
+    <button class="store-btn qf-btn" id="qfBtn" title="Quick Filters" data-i18n-title="quick_filters"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg></button>
+    <div class="qf-dropdown" id="qfDropdown"></div>
+  </div>
   <button class="store-btn" id="storeBtn" data-i18n-key="pop_store">Store</button>
   <button class="open-btn" id="openBtn" data-i18n-key="pop_open">Open</button>
 </div>
@@ -235,6 +255,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 </div>
 <script src="i18n-core.js"></script>
 <script src="lock.js"></script>
+<script src="quick-filters.js"></script>
 <script src="popup.js"></script>
 <script src="ui-translate.js"></script>
 </body>

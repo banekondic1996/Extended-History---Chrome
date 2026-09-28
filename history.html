@@ -15,7 +15,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.1.9</div>
+      <div class="logo-sub">v4.2.0</div>
     </div>
   </div>
 
@@ -241,7 +241,11 @@
       <div class="panel-heading" data-i18n-key="time_spent">Time Spent</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <div class="time-filter-row" id="timeFilters" style="margin-bottom:0">
-          <button class="tf-btn" data-days="1" >24 <span data-i18n-key="hours">hours</span></button>
+          <button class="tf-arrow" id="tsPrevDay" title="Previous day" aria-label="Previous day">‹</button>
+          <button class="tf-arrow" id="tsNextDay" title="Next day" aria-label="Next day">›</button>
+          <span class="tf-date" id="tsDateLabel"></span>
+          <button class="tf-btn" data-days="1" data-i18n-key="today">Today</button>
+          <button class="tf-btn" data-days="7">7 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn active" data-days="15">15 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn" data-days="30">30 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn" data-days="90">90 <span data-i18n-key="days">days</span></button>
@@ -249,7 +253,7 @@
         <button class="tb-btn danger" id="clearTimeBtn" title="Clear all time-spent data (does not affect history)">🗑 <span data-i18n-key="clear_time_data">Clear time data</span></button>
       </div>
 
-      <div class="chart-card">
+      <div class="chart-card" id="dailyChartCard">
         <div class="cc-header"><span class="cc-title" data-i18n-key="daily_browsing_time">Daily browsing time</span></div>
         <div style="position:relative">
           <svg class="chart-svg" id="timeSvg" height="130"></svg>
@@ -675,6 +679,18 @@
               </label>
             </div>
           </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="quick_filter_button">Quick filter button</div>
+              <div class="s-row-desc" data-i18n-key="quick_filter_button_desc">Show an filter button in the popup, left of Store, with a dropdown of your Quick Filters. Picking one narrows the popup's Recent History and Search to just those domains/keywords/URLs — search still works normally on top of it. Resets to no filter each time the popup is reopened.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="popupQuickFiltersToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
           <div class="s-row" id="popupHeightRow">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="popup_height">Popup height</div>
@@ -699,8 +715,8 @@
           </div>
           <div class="s-row" style="border-bottom:none" id="sidebarAutoHideRow">
             <div class="s-row-info">
-              <div class="s-row-lbl">Auto-hide sidebar on mouse leave</div>
-              <div class="s-row-desc">Close the sidebar automatically once your cursor leaves it, similar to how a popup dismisses itself. Turn off to keep it open until you close it manually.</div>
+              <div class="s-row-lbl" data-i18n-key="auto_hide_sidebar">Auto-hide sidebar on mouse leave</div>
+              <div class="s-row-desc" data-i18n-key="auto_hide_sidebar_desc">Close the sidebar automatically once your cursor leaves it, similar to how a popup dismisses itself. Turn off to keep it open until you close it manually.</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
@@ -793,6 +809,18 @@
             <div class="s-ctrl">
               <label class="toggle-switch">
                 <input type="checkbox" id="calendarModeToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="fade_in_list_on_date_change">Fade in list on date change</div>
+              <div class="s-row-desc" data-i18n-key="fade_in_list_on_date_change_desc">When switching dates — pill bar, calendar, or the Time Spent date arrows — the history list fades in as it loads instead of just appearing instantly.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="fadeInListToggle">
                 <span class="toggle-slider"></span>
               </label>
             </div>
@@ -1005,7 +1033,10 @@
   <div class="ctx-item" id="ctx-open-tab">↗ <span data-i18n-key="open_in_new_tab">Open in new tab</span></div>
   <div class="ctx-item" id="ctx-open-incognito">🕵 <span data-i18n-key="open_in_incognito">Open in incognito</span></div>
    <div class="ctx-sep" id="ctx-jump-sep"></div>
-  <div class="ctx-item" id="ctx-jump-to-date">📅 Jump to date</div>
+  <div class="ctx-item" id="ctx-jump-to-date">📅 <span data-i18n-key="jump_to_date">Jump to date</span></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-more-domain">🔎 <span data-i18n-key="more_from_domain">More from domain</span></div>
+  <div class="ctx-item" id="ctx-ignore-domain">🚫 <span data-i18n-key="ignore_domain">Ignore domain</span></div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>

@@ -2,8 +2,18 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
+   "jump_to_date": {"message": "Aller à la date"},
+  "more_from_domain": {"message": "Plus de ce domaine"},
+  "ignore_domain": {"message": "Ignorer le domaine"},
    "restore_all": {
     "message": "Tout restaurer"
+  },
+  "quick_filter_button": {"message": "Bouton de filtre rapide"},
+  "quick_filter_button_desc": {"message": "Affiche un bouton de filtre dans la fenêtre contextuelle, à gauche de Enregistrer, avec une liste déroulante de vos filtres rapides. En choisir un limite l’historique récent et la recherche de la fenêtre contextuelle à ces domaines/mots-clés/URL ; la recherche continue de fonctionner normalement sur le filtre. Le filtre est réinitialisé à chaque réouverture de la fenêtre contextuelle."},
+  "fade_in_list_on_date_change": {"message": "Faire apparaître progressivement la liste lors d’un changement de date"},
+  "fade_in_list_on_date_change_desc": {"message": "Lorsque vous changez de date — avec la barre de pastilles, le calendrier ou les flèches de date de Temps passé — la liste de l’historique apparaît progressivement pendant son chargement au lieu d’apparaître instantanément."},
+  "keep_saving_history_while_locked": {
+    "message": "Continuer à enregistrer l’historique lorsqu’il est verrouillé (réintégré lors du déverrouillage au lieu d’être supprimé)"
   },
   "edit": {
     "message": "Modifier"

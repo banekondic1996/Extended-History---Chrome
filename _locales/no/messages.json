@@ -5,6 +5,16 @@
   "unique_tabs": {
     "message": "Unike faner"
   },
+  "jump_to_date": {"message": "Gå til dato"},
+  "more_from_domain": {"message": "Mer fra dette domenet"},
+  "ignore_domain": {"message": "Ignorer domenet"},
+  "quick_filter_button": {"message": "Hurtigfilterknapp"},
+  "quick_filter_button_desc": {"message": "Vis en filterknapp i popupen, til venstre for Lagre, med en rullegardinliste over hurtigfiltrene dine. Når du velger et filter, begrenses popupens Nylige historikk og søk til disse domenene/søkeordene/URL-ene — søk fungerer fortsatt normalt oppå filteret. Tilbakestilles til ingen filter hver gang popupen åpnes på nytt."},
+  "fade_in_list_on_date_change": {"message": "Ton inn listen ved endring av dato"},
+  "fade_in_list_on_date_change_desc": {"message": "Når du bytter dato — via knappelinjen, kalenderen eller datopilene for Tidsbruk — tones historikklisten inn mens den lastes, i stedet for å vises umiddelbart."},
+  "keep_saving_history_while_locked": {
+    "message": "Fortsett å lagre historikk mens den er låst (slås sammen igjen når du låser opp, i stedet for å bli slettet)"
+  },
    "restore_all": {
     "message": "Gjenopprett alle"
   },

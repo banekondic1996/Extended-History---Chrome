@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Extended History | Unlimited history retention",
-  "version": "4.1.9",
+  "version": "4.2.0",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "permissions": [
@@ -28,6 +28,9 @@
   },
   "chrome_url_overrides": {
     "history": "history.html"
+  },
+  "omnibox": {
+    "keyword": "q"
   },
   "side_panel": {
     "default_path": "popup.html?sidebar=1"

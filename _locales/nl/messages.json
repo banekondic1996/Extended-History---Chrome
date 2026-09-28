@@ -2,6 +2,16 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+  "jump_to_date": {"message": "Ga naar datum"},
+  "more_from_domain": {"message": "Meer van dit domein"},
+  "ignore_domain": {"message": "Domein negeren"},
+  "quick_filter_button": {"message": "Knop voor snel filteren"},
+  "quick_filter_button_desc": {"message": "Toon een filterknop in de pop-up, links van Opslaan, met een vervolgkeuzemenu van je snelle filters. Als je er een kiest, worden de recente geschiedenis en zoekresultaten in de pop-up beperkt tot die domeinen/trefwoorden/URL's — zoeken blijft er normaal bovenop werken. Wordt elke keer dat de pop-up opnieuw wordt geopend teruggezet naar geen filter."},
+  "fade_in_list_on_date_change": {"message": "Lijst geleidelijk laten verschijnen bij wijziging van datum"},
+  "fade_in_list_on_date_change_desc": {"message": "Bij het wisselen van datum — via de knoppenbalk, kalender of de datumknoppen van Tijd besteed — verschijnt de geschiedenis geleidelijk tijdens het laden in plaats van direct."},
+  "keep_saving_history_while_locked": {
+    "message": "Geschiedenis blijven opslaan terwijl deze vergrendeld is (bij ontgrendelen weer toegevoegd in plaats van verwijderd)"
+  },
    "restore_all": {
     "message": "Alles herstellen"
   },

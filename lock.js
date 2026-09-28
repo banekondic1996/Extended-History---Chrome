@@ -120,6 +120,7 @@
       '<div class="eh-lk-text left" id="ehLkWarn"></div>' +
       '<label class="eh-lk-check"><input type="checkbox" id="ehLkLogout"><span id="ehLkLogoutTxt"></span></label>' +
       '<label class="eh-lk-check"><input type="checkbox" id="ehLkHideBm"><span id="ehLkHideBmTxt"></span></label>' +
+      '<label class="eh-lk-check"><input type="checkbox" id="ehLkKeepSaving"><span id="ehLkKeepSavingTxt"></span></label>' +
       '<input type="password" class="eh-lk-input" id="ehLkPw1" autocomplete="new-password">' +
       '<input type="password" class="eh-lk-input" id="ehLkPw2" autocomplete="new-password">' +
       '<div class="eh-lk-err" id="ehLkErr"></div>' +
@@ -135,7 +136,9 @@
         'If you forget the password, the history cannot be recovered. ');
     $('#ehLkLogoutTxt').textContent = T('lock_logout_everywhere', 'Logout everywhere (also clear cookies and site data)');
     $('#ehLkHideBmTxt').textContent = T('lock_hide_bookmarks', 'Hide bookmarks (removed from the browser until you unlock)');
-    var logout = $('#ehLkLogout'), hideBm = $('#ehLkHideBm');
+    $('#ehLkKeepSavingTxt').textContent = T('keep_saving_history_while_locked',
+      'Keep saving history while locked (merged back in when you unlock, instead of deleted)');
+    var logout = $('#ehLkLogout'), hideBm = $('#ehLkHideBm'), keepSaving = $('#ehLkKeepSaving');
     var pw1 = $('#ehLkPw1'), pw2 = $('#ehLkPw2'), err = $('#ehLkErr'), ok = $('#ehLkOk'), cancel = $('#ehLkCancel');
     pw1.placeholder = T('lock_password', 'Password');
     pw2.placeholder = T('lock_confirm_password', 'Confirm password');
@@ -150,14 +153,14 @@
       if (busy) return;
       if (pw1.value.length < 4) { err.textContent = T('lock_password_short', 'Password must be at least 4 characters'); return; }
       if (pw1.value !== pw2.value) { err.textContent = T('lock_password_mismatch', 'Passwords do not match'); return; }
-      busy = true; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = true;
+      busy = true; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = keepSaving.disabled = true;
       ok.textContent = T('lock_locking', 'Encrypting…');
       err.textContent = '';
       try {
-        await bg('LOCK_HISTORY', { password: pw1.value, clearSiteData: logout.checked, hideBookmarks: hideBm.checked });
+        await bg('LOCK_HISTORY', { password: pw1.value, clearSiteData: logout.checked, hideBookmarks: hideBm.checked, keepSaving: keepSaving.checked });
         location.reload();
       } catch (e) {
-        busy = false; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = false;
+        busy = false; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = keepSaving.disabled = false;
         ok.textContent = '🔒 ' + T('lock_btn', 'Lock');
         err.textContent = e.message;
       }

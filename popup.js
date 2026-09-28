@@ -145,8 +145,24 @@ chrome.storage.local.get('eh_settings', r => {
     if (s.faviconResolver) _popupFavMode = s.faviconResolver;
     _sidebarAutoHideEnabled = s.sidebarAutoHide !== false;
 
+    // Quick Filters ("F") button — off by default, opt-in per Settings > Popup
+    const qfEnabled = s.popupQuickFilters === true;
+    const qfWrap = document.getElementById('qfWrap');
+    if (qfWrap) qfWrap.style.display = qfEnabled ? '' : 'none';
+    try { localStorage.setItem('eh_popup_qf', qfEnabled ? '1' : '0'); } catch (e) {}
+
     _resolveSettingsReady();
 });
+// Best-effort pre-paint guess from the last-known setting (mirrored to
+// localStorage by history.js's Settings save) so the button doesn't pop in
+// a beat after the popup opens — the async read above still runs and is the
+// source of truth, this just avoids the flash on the common case.
+try {
+    if (localStorage.getItem('eh_popup_qf') === '1') {
+        const qfWrap = document.getElementById('qfWrap');
+        if (qfWrap) qfWrap.style.display = '';
+    }
+} catch (e) {}
 function _applyPopupWallpaper(wp, theme) {
     const isDark = theme === 'dark';
     const overlayOpacity = (wp.overlayOpacity ?? 50) / 100;
@@ -261,6 +277,145 @@ document.getElementById('storeBtn').addEventListener('click', () => {
             });
         });
     });
+});
+
+// ── Quick Filters ("F") button ────────────────────────────────────────────────
+// Shows a dropdown of the named filters managed on the main history page
+// (Settings > Popup > "Quick filter button" turns this on). Picking one
+// narrows whatever's currently shown — Recent History and/or Search results —
+// client-side, the same "view only" way the main page's own quick-filter
+// dropdown works (see quick-filters.js's applyQuickFilterEntries). Search
+// still works normally on top of it. Nothing here is persisted: closing the
+// popup drops `_qfActiveId` back to '' (no filter) the next time it opens.
+function qfPopupFilter(entries) {
+    return (typeof applyQuickFilterEntries === 'function') ? applyQuickFilterEntries(entries) : entries;
+}
+
+function qfPopupRefreshBtn() {
+    const btn = document.getElementById('qfBtn');
+    if (!btn) return;
+    const list = (typeof _qfList !== 'undefined') ? _qfList : [];
+    const active = (typeof _qfActiveId !== 'undefined') ? _qfActiveId : '';
+    const activeFilter = active ? list.find(f => f.id === active) : null;
+    btn.classList.toggle('qf-active', !!activeFilter);
+    const label = tr('quick_filters', 'Quick Filters');
+    btn.title = activeFilter ? `${label}: ${activeFilter.name}` : label;
+}
+
+function qfPopupRenderDropdown() {
+    const dd = document.getElementById('qfDropdown');
+    if (!dd) return;
+    const list = (typeof _qfList !== 'undefined') ? _qfList : [];
+    const active = (typeof _qfActiveId !== 'undefined') ? _qfActiveId : '';
+
+    dd.innerHTML = '';
+
+    const noneItem = document.createElement('div');
+    noneItem.className = 'qf-item' + (!active ? ' qf-item-active' : '');
+    const noneCheck = document.createElement('span');
+    noneCheck.className = 'qf-item-check';
+    noneCheck.textContent = !active ? '✓' : '';
+    const noneLabel = document.createElement('span');
+    noneLabel.textContent = tr('quick_filters_none_short', 'None (no filter)');
+    noneItem.appendChild(noneCheck);
+    noneItem.appendChild(noneLabel);
+    noneItem.addEventListener('click', () => qfPopupSelect(''));
+    dd.appendChild(noneItem);
+
+    if (list.length) {
+        const divider = document.createElement('div');
+        divider.className = 'qf-divider';
+        dd.appendChild(divider);
+        for (const f of list) {
+            const item = document.createElement('div');
+            item.className = 'qf-item' + (active === f.id ? ' qf-item-active' : '');
+            const check = document.createElement('span');
+            check.className = 'qf-item-check';
+            check.textContent = active === f.id ? '✓' : '';
+            const label = document.createElement('span');
+            label.textContent = f.name;
+            item.appendChild(check);
+            item.appendChild(label);
+            item.addEventListener('click', () => qfPopupSelect(f.id));
+            dd.appendChild(item);
+        }
+    } else {
+        const empty = document.createElement('div');
+        empty.className = 'qf-empty';
+        empty.textContent = tr('no_qfilters', 'No quick filters yet');
+        dd.appendChild(empty);
+    }
+
+    const manage = document.createElement('div');
+    manage.className = 'qf-manage-link';
+    manage.textContent = '⚙ ' + tr('quick_filters', 'Quick Filters');
+    manage.addEventListener('click', () => {
+        qfPopupCloseDropdown();
+        chrome.tabs.create({ url: 'history.html#quickfilters' });
+        if (document.body.classList.contains('sidebar-mode')) window.close();
+    });
+    dd.appendChild(manage);
+}
+
+function qfPopupOpenDropdown() {
+    const dd = document.getElementById('qfDropdown');
+    if (!dd) return;
+    // Portal it out to <body>, position:fixed, so it's never subject to the header's
+    // own stacking/overflow (which is what was letting tabsRow paint over it, and
+    // clipping/cutting off long filter names past the popup's right edge) — it now
+    // paints above literally everything else and is positioned in JS below instead.
+    if (dd.parentNode !== document.body) document.body.appendChild(dd);
+    const afterLoad = () => { qfPopupRenderDropdown(); qfPopupRefreshBtn(); dd.classList.add('open'); qfPopupPositionDropdown(); };
+    if (typeof qfLoadList === 'function') qfLoadList().then(afterLoad).catch(afterLoad);
+    else afterLoad();
+}
+function qfPopupPositionDropdown() {
+    const btn = document.getElementById('qfBtn');
+    const dd  = document.getElementById('qfDropdown');
+    if (!btn || !dd) return;
+    const margin = 6;
+    const r = btn.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    const width = dd.offsetWidth || 220;
+    // Right-align to the button (it usually sits close to the popup's right edge) and
+    // grow leftward, then clamp both edges so it can never run off the (fixed-size) window.
+    let left = r.right - width;
+    left = Math.max(margin, Math.min(left, vw - width - margin));
+    let top = r.bottom + margin;
+    dd.style.left = left + 'px';
+    dd.style.top = top + 'px';
+    dd.style.maxHeight = Math.max(120, vh - top - margin) + 'px';
+}
+function qfPopupCloseDropdown() {
+    document.getElementById('qfDropdown')?.classList.remove('open');
+}
+function qfPopupSelect(id) {
+    _qfActiveId = id; // shared with quick-filters.js's applyQuickFilterEntries()
+    qfPopupRefreshBtn();
+    qfPopupCloseDropdown();
+    // Re-run whatever's currently visible with the new filter applied
+    refreshRecentHistoryView(false);
+    const q = document.getElementById('searchInput')?.value.trim();
+    if (q) performSearch(q);
+}
+
+document.getElementById('qfBtn')?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const dd = document.getElementById('qfDropdown');
+    if (dd && dd.classList.contains('open')) qfPopupCloseDropdown();
+    else qfPopupOpenDropdown();
+});
+document.addEventListener('click', (ev) => {
+    const wrap = document.getElementById('qfWrap');
+    const dd = document.getElementById('qfDropdown');
+    // dd lives outside qfWrap once portaled to <body> — check both so clicks inside
+    // the dropdown itself don't immediately close it.
+    if (wrap && !wrap.contains(ev.target) && !(dd && dd.contains(ev.target))) qfPopupCloseDropdown();
+});
+window.addEventListener('resize', () => {
+    const dd = document.getElementById('qfDropdown');
+    if (dd && dd.classList.contains('open')) qfPopupPositionDropdown();
 });
 
 // ── Tab switcher ──────────────────────────────────────────────────────────────
@@ -397,7 +552,7 @@ function performSearch(query) {
             return;
         }
 
-        const matches = response.entries || [];
+        const matches = qfPopupFilter(response.entries || []);
         _srchEntries = matches;
 
         if (!matches.length) {
@@ -502,12 +657,12 @@ function loadTodayHistory(preserveScroll) {
         if (chrome.runtime.lastError || !r) {
             // Fallback: read directly from storage (handles SW not running yet)
             chrome.storage.local.get('eh_today_history', s => {
-                const fallback = (s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
+                const fallback = qfPopupFilter((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime)).slice(0, 1000);
                 onSettingsReady(() => renderTodayHistory(fallback, preserveScroll));
             });
             return;
         }
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
+        const entries = qfPopupFilter((r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime)).slice(0, 1000);
         onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
 }
@@ -1432,7 +1587,7 @@ function loadHistoryForSidebarDate(preserveScroll) {
         startDate: start.getTime(), endDate: end.getTime(), limit: 1000
     }, r => {
         if (chrome.runtime.lastError || !r) return;
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime);
+        const entries = qfPopupFilter((r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime));
         onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
 }
@@ -1571,10 +1726,13 @@ function sdnRenderCalendar() {
 }
 
 if (document.body.classList.contains('sidebar-mode')) {
-    // Relocate Store/Open from the (now-hidden) header into the day-nav row
+    // Relocate Store/Open (and the Quick Filters button, if enabled) from the
+    // (now-hidden) header into the day-nav row
     const sdnRight = document.getElementById('sdnRight');
+    const qfWrap   = document.getElementById('qfWrap');
     const storeBtn = document.getElementById('storeBtn');
     const openBtn  = document.getElementById('openBtn');
+    if (sdnRight && qfWrap)   sdnRight.appendChild(qfWrap);
     if (sdnRight && storeBtn) sdnRight.appendChild(storeBtn);
     if (sdnRight && openBtn)  sdnRight.appendChild(openBtn);
 

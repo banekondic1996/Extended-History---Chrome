@@ -2,8 +2,18 @@
   "ext_name": {
     "message": "Historia Extensa"
   },
+  "jump_to_date": {"message": "Ad diem salire"},
+  "more_from_domain": {"message": "Plura ex dominio"},
+  "ignore_domain": {"message": "Dominum ignora"},
     "edit": {
     "message": "Emenda"
+  },
+  "quick_filter_button": {"message": "Bulla colationis celeris"},
+  "quick_filter_button_desc": {"message": "Bulla colationis in fenestra pop-up, ad sinistram Serva, cum indice descensivo colationum celerium tuarum ostende. Unam eligere Historiam recentem et inquisitionem fenestrae pop-up ad sola illa dominia/verba clavium/URL restringit — inquisitio tamen super eam normaliter operatur. Quotiens fenestra pop-up reaperitur, ad nullam colationem reponitur."},
+  "fade_in_list_on_date_change": {"message": "Indicem paulatim ostende cum dies mutatur"},
+  "fade_in_list_on_date_change_desc": {"message": "Cum diem mutas — per taeniam pilularum, calendarium, aut sagittas dierum Temporis adhibiti — index historiae dum oneratur paulatim apparet, potius quam statim appareat."},
+  "keep_saving_history_while_locked": {
+    "message": "Historiam servare perge dum clausa est (cum reseraveris, rursus adiungitur potius quam deleatur)"
   },
   "restore_all": {
     "message": "Omnia restitue"

@@ -2,6 +2,30 @@
   "ext_name": {
     "message": "Extended History"
   },
+    "jump_to_date": {
+    "message": "Jump to date"
+  },
+  "more_from_domain": {
+    "message": "More from domain"
+  },
+  "ignore_domain": {
+    "message": "Ignore domain"
+  },
+   "quick_filter_button": {
+    "message": "Quick filter button"
+  },
+  "quick_filter_button_desc": {
+    "message": "Show a filter button in the popup, left of Store, with a dropdown of your Quick Filters. Picking one narrows the popup's Recent History and Search to just those domains/keywords/URLs — search still works normally on top of it. Resets to no filter each time the popup is reopened."
+  },
+  "fade_in_list_on_date_change": {
+    "message": "Fade in list on date change"
+  },
+  "fade_in_list_on_date_change_desc": {
+    "message": "When switching dates — pill bar, calendar, or the Time Spent date arrows — the history list fades in as it loads instead of just appearing instantly."
+  },
+   "keep_saving_history_while_locked": {
+    "message": "Keep saving history while locked (merged back in when you unlock, instead of deleted)"
+  },
   "restore_all": {
     "message": "Restore all"
   },

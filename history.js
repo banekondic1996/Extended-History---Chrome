@@ -176,6 +176,15 @@ function buildVirtualList() {
   vsRendered = [];
   _vsLoading = false;
 
+  if (_fadeInListEnabled) {
+    // Force a reflow between removing and re-adding the class so the animation
+    // reliably replays even if the list was already mid- or post-animation from
+    // the previous date switch.
+    area.classList.remove('eh-list-fadein');
+    void area.offsetWidth;
+    area.classList.add('eh-list-fadein');
+  }
+
   if (!allResults.length) {
     area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
     return;
@@ -388,6 +397,8 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 // sensitivity setting (1–6) controlling how many days that jumps per click.
 let _datePillsWheelEnabled = false;
 let _datePillsWheelSensitivity = 1;
+// Settings > Appearance > "Fade in list on date change"
+let _fadeInListEnabled = false;
 function applyDatePillsWheelScroll(enabled, sensitivity) {
   _datePillsWheelEnabled = enabled;
   if (sensitivity != null) _datePillsWheelSensitivity = Math.max(1, Math.min(6, sensitivity));
@@ -1273,24 +1284,63 @@ function drawBarChart(daily) {
 // ══ TIME SPENT ══════════════════════════════════════════════════════════════
 let curTimeDays = 15;
 
-async function loadTimeSpent(days) {
+// ── Time Spent: date-arrow / "Today" single-day state ──────────────────────────
+// null = not yet touched this session — falls back to today wherever it's read.
+let tsSelectedDate = null;
+function tsToday() { return new Date().toLocaleDateString('en-CA'); }
+function tsUpdateDateLabel() {
+  const el = document.getElementById('tsDateLabel');
+  if (!el) return;
+  const d = new Date((tsSelectedDate || tsToday()) + 'T12:00:00');
+  el.textContent = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function tsStepDate(delta) {
+  const d = new Date((tsSelectedDate || tsToday()) + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  loadTimeSpent(1, d.toLocaleDateString('en-CA'));
+}
+document.getElementById('tsPrevDay')?.addEventListener('click', () => tsStepDate(-1));
+document.getElementById('tsNextDay')?.addEventListener('click', () => tsStepDate(1));
+tsUpdateDateLabel();
+
+async function loadTimeSpent(days, dateOverride) {
   curTimeDays = days;
+  if (days === 1) {
+    // "Today" pill and the date arrows both funnel through here with an explicit
+    // date: the pill always passes today's date (so pressing it resets the view
+    // even if you'd arrowed off to some other day), the arrows pass the
+    // stepped-to date. Falls back to today only if neither ever ran yet.
+    tsSelectedDate = dateOverride || tsSelectedDate || tsToday();
+  } else {
+    // Leaving single-day mode for a rolling range — clear it so the arrows start
+    // fresh from today next time, instead of resuming from a stale, possibly
+    // long-forgotten date.
+    tsSelectedDate = null;
+  }
   document.querySelectorAll('.tf-btn').forEach(b =>
   b.classList.toggle('active', parseInt(b.dataset.days) === days));
+  tsUpdateDateLabel();
+  // "Daily browsing time" is a multi-day trend chart — meaningless for a single day,
+  // so hide it in Today/date-arrow mode and only show "Top sites by time spent".
+  const dailyCard = document.getElementById('dailyChartCard');
+  if (dailyCard) dailyCard.style.display = (days === 1) ? 'none' : '';
   try {
     await send('FLUSH_TIME');
-    const r = await send('GET_TIME_DATA', { days });
-    drawTimeChart(r.dailyMap, days);
+    const r = await send('GET_TIME_DATA', days === 1 ? { days: 1, date: tsSelectedDate } : { days });
+    if (days !== 1) drawTimeChart(r.dailyMap, days);
     renderHbars(r.topSites);
     drawPie(r.topSites);
   } catch (err) { console.error(err); }
 }
 
 document.getElementById('timeFilters').addEventListener('click', ev => {
-  if (ev.target.classList.contains('tf-btn')) loadTimeSpent(parseInt(ev.target.dataset.days));
+  const btn = ev.target.closest('.tf-btn');
+  if (!btn) return;
+  const days = parseInt(btn.dataset.days);
+  loadTimeSpent(days, days === 1 ? tsToday() : undefined);
 });
 
-function drawTimeChart(dailyMap, days) {
+function drawTimeChart(dailyMap, days, anchorDate) {
   const svg  = document.getElementById('timeSvg');
   const tip  = document.getElementById('timeTip');
   const wrap = svg.parentElement;
@@ -1299,7 +1349,9 @@ function drawTimeChart(dailyMap, days) {
   const p    = { t: 12, r: 12, b: 4, l: 46 };
   const iW   = W - p.l - p.r, iH = H - p.t - p.b;
 
-  const now   = Date.now();
+  // In single-day ("Today"/date-arrow) mode, anchor on the selected date rather
+  // than "now", so the one point shown lines up with dailyMap's actual key.
+  const now   = anchorDate ? new Date(anchorDate + 'T12:00:00').getTime() : Date.now();
   const dates = [];
   for (let i = days - 1; i >= 0; i--) dates.push(new Date(now - i * 86400000).toLocaleDateString('en-CA'));
 
@@ -3269,6 +3321,8 @@ function populateSettings(s) {
     const row = document.getElementById('popupHeightRow');
     if (row) row.style.opacity = s.popupAsSidebar === true ? '0.4' : '';
   }
+  const popupQuickFiltersToggle = document.getElementById('popupQuickFiltersToggle');
+  if (popupQuickFiltersToggle) popupQuickFiltersToggle.checked = s.popupQuickFilters === true;
   const sidebarAutoHideToggle = document.getElementById('sidebarAutoHideToggle');
   if (sidebarAutoHideToggle) sidebarAutoHideToggle.checked = s.sidebarAutoHide !== false;
 
@@ -3287,6 +3341,9 @@ function populateSettings(s) {
   if (matchUiColorsTgl) matchUiColorsTgl.checked = s.matchUiColors === true;
   const calendarModeTgl = document.getElementById('calendarModeToggle');
   if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
+  const fadeInListTgl = document.getElementById('fadeInListToggle');
+  if (fadeInListTgl) fadeInListTgl.checked = s.fadeInListOnDateChange === true;
+  _fadeInListEnabled = s.fadeInListOnDateChange === true;
   const contextMenuTgl = document.getElementById('contextMenuToggle');
   if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
 
@@ -3453,6 +3510,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const popupAsSidebar  = document.getElementById('popupSidebarToggle')?.checked === true;
+  const popupQuickFilters = document.getElementById('popupQuickFiltersToggle')?.checked === true;
   const sidebarAutoHide = document.getElementById('sidebarAutoHideToggle')?.checked !== false;
   const faviconResolver = document.getElementById('faviconResolverSel')?.value || 'google';
   const searchAutoFocus = document.getElementById('searchAutoFocusToggle')?.checked !== false;
@@ -3461,6 +3519,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const navIcons = document.getElementById('navIconsToggle')?.checked !== false;
   const matchUiColors = document.getElementById('matchUiColorsToggle')?.checked === true;
   const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
+  const fadeInListOnDateChange = document.getElementById('fadeInListToggle')?.checked === true;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
   const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
   const datePillsWheelSensitivity = Math.max(1, Math.min(6, parseInt(document.getElementById('datePillsWheelSensInput')?.value || '1') || 1));
@@ -3485,6 +3544,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         popupShowUrl,
         popupHeight,
         popupAsSidebar,
+        popupQuickFilters,
         sidebarAutoHide,
         faviconResolver,
         searchAutoFocus,
@@ -3495,6 +3555,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         navIcons,
         matchUiColors,
         calendarMode,
+        fadeInListOnDateChange,
         datePillsWheelSensitivity,
         toolbarIcon,
         autoExportIntervalMonths,
@@ -3508,6 +3569,11 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     applyIconVariant(_curSettings.toolbarIcon || 'default');
     applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
     applyHighContrastMode(_curSettings.highContrastMode === true);
+    // Mirror to localStorage (shared across this extension's pages) so the
+    // popup's pre-paint inline script can size itself correctly on its very
+    // first paint next time it's opened, instead of resizing (and flashing)
+    // once its own async chrome.storage.local read comes back.
+    try { localStorage.setItem('eh_popup_qf', popupQuickFilters ? '1' : '0'); } catch (e) {}
     // Save max sessions separately
     if (maxSess >= 1 && maxSess <= 20) await send('SET_MAX_SESSIONS', { value: maxSess });
     // Save auto-save interval
@@ -3717,7 +3783,7 @@ function showCtxMenu(x, y, entry, source) {
   if (bmRename)     bmRename.style.display     = hasBmId ? '' : 'none';
   if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
-  const mw = 210, mh = 240;
+  const mw = 210, mh = 300;
   menu.style.left = Math.min(x, window.innerWidth  - mw - 6) + 'px';
   menu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
 }
@@ -3746,6 +3812,32 @@ document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
     if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
     activateDatePill(dateKey);
   }
+});
+document.getElementById('ctx-more-domain').addEventListener('click', () => {
+  const domain = tryDomain(_ctxEntry?.url || '');
+  hideCtxMenu();
+  if (!domain) return;
+  // Search the whole history (all dates) by domain, from the History panel
+  switchPanel('history');
+  const modeSel = document.getElementById('searchMode');
+  if (modeSel) modeSel.value = 'domain';
+  const si = document.getElementById('searchInput');
+  if (si) { si.value = domain; document.getElementById('searchClearBtn')?.classList.add('visible'); }
+  activateDatePill('all');
+});
+document.getElementById('ctx-ignore-domain').addEventListener('click', async () => {
+  const domain = tryDomain(_ctxEntry?.url || '');
+  const source = _ctxSource;
+  hideCtxMenu();
+  if (!domain) return;
+  if (!confirm(`Add "${domain}" to the ignore list? Existing history from it will be removed.`)) return;
+  try {
+    const r = await send('ADD_IGNORE_PATTERN', { pattern: domain });
+    if (r && r.success === false) { toast(r.error || 'Could not add', 'err'); return; }
+    toast(`Ignoring ${domain}`, 'ok');
+    // Background purges matching history asynchronously — refresh shortly after
+    if (source === 'history') setTimeout(() => doSearch(), 900);
+  } catch (err) { toast(err.message, 'err'); }
 });
 document.getElementById('ctx-copy-url').addEventListener('click', () => {
   if (_ctxEntry?.url) navigator.clipboard.writeText(_ctxEntry.url).then(() => toast('URL copied', 'ok')); hideCtxMenu();
@@ -4813,6 +4905,8 @@ function setupPopupSettingsListeners() {
   if (navIconsToggle) navIconsToggle.addEventListener('change', () => applyNavIcons(navIconsToggle.checked));
   const matchUiColorsToggle = document.getElementById('matchUiColorsToggle');
   if (matchUiColorsToggle) matchUiColorsToggle.addEventListener('change', () => applyMatchUiColors(matchUiColorsToggle.checked));
+  const fadeInListToggle = document.getElementById('fadeInListToggle');
+  if (fadeInListToggle) fadeInListToggle.addEventListener('change', () => { _fadeInListEnabled = fadeInListToggle.checked; });
 
   const calendarModeToggle = document.getElementById('calendarModeToggle');
   if (calendarModeToggle) {
@@ -4960,6 +5054,7 @@ function applyWallpaper(wp) {
     html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
     html.wallpaper-mode .list-area .day-label {
       background: transparent !important;
+      text-shadow: 0px 0px 9px var(--day);
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
@@ -5422,9 +5517,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => { document.getElementById('searchInput')?.focus(); }, 120);
   }
 
+  // Landed here from the "q" omnibox keyword with no direct history match —
+  // pre-fill and run the search instead of dropping the query on the floor.
+  const omniQuery = new URLSearchParams(location.search).get('q');
+  if (omniQuery) {
+    const si = document.getElementById('searchInput');
+    if (si) { si.value = omniQuery; doSearch(); }
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+
   // Hash routing — only switch away from history if explicitly requested; clear hash so refresh = history
   const hash = location.hash.slice(1);
-  if (hash && hash !== 'history' && ['sessions','readingmode','tabstorage','devices','activity','timespent','mostvisited','bookmarks','ignorelist','settings','about'].includes(hash)) {
+  if (hash && hash !== 'history' && ['sessions','readingmode','tabstorage','devices','activity','timespent','mostvisited','bookmarks','ignorelist','quickfilters','settings','about'].includes(hash)) {
     switchPanel(hash);
   }
   history.replaceState(null, '', location.pathname);
