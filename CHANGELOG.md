@@ -133,11 +133,14 @@ Fixed/changed in version 4.1.9 (in Store):
 -Exporting bookmarks now also saves bookmarks folders structure 
 
 Fixed/changed in version 4.2.0:
--CSS style fixes
+-CSS style fixes (date label, text colors, etc.)
+-Fixed missing translations
 -Added option to view time spent for any date
--Added filter option for popup/sidebar
+-Added optional filter option for popup/sidebar
 -Added option to keep saving history while UI is locked
 -Added option to search extensions history inside address bar, by pressing q then space or tab (omnibox)
+-Added "More from Domain" and "Ignore domain" in context menu for history items
+-Updated and expanded the tutorial.html
 </pre>
 
 
