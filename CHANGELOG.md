@@ -141,6 +141,21 @@ Fixed/changed in version 4.2.0:
 -Added option to search extensions history inside address bar, by pressing q then space or tab (omnibox)
 -Added "More from Domain" and "Ignore domain" in context menu for history items
 -Updated and expanded the tutorial.html
+
+Fixed/changed in version 4.2.1:
+-Major architectural change, database uses now WASM based SQlite to read large history faster.
+  date pills now lazy load to save ram when history is big.
+-Fixed history deleting bug, that was only deleting counting from current date and not last entry date
+-Date pill arrows now switch between dates
+-Right clicking date pill arrows or next/prev date buttons now skips to oldest or newest date
+-Reading mode is now using only calendar mode for faster history browsing
+-Locking UI now works for larger history too, but without encryption if it's too big
+-Added option to import .tsv files from History Trends Unlimited
+-Changed Auto export behavior to not delete history on auto export (was bad choice to make it like that)
+-Added option to auto export and upload to WebDAV server
+-Hidden "History storage engine" option, as it's no longer needed, default is SQlite WASM if history is big it auto switches
+-Auto fade animation when switching dates now enabled by default for better experience
+-Added import/export/delete progress notification bubbles
 </pre>
 
 
