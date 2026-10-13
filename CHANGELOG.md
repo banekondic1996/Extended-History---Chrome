@@ -159,6 +159,8 @@ Fixed/changed in version 4.2.1:
 -Fixed missing translation (still not complete)
 -Auto fade animation when switching dates now enabled by default for better experience
 -Added import/export/delete progress notification bubbles
+-Added average visits by hour of day in Activity tab
+-Added average time per weekday (all time) in Time Spent tab
 </pre>
 
 
