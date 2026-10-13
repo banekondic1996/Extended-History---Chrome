@@ -38,7 +38,7 @@ const DEFAULT_SETTINGS = {
   timeTrackingEnabled: true, // Whether to track time spent per domain
   autoStoreEnabled: false,   // Auto-store tabs idle for too long
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
-  toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red
+  toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red|orange|blue|purple
   contextMenuEnabled: true,  // Whether right-click context menu shows on web pages
   fadeInListOnDateChange: true, // Fade the list in when switching dates (on by default)
   datePillsWheelScroll: false, // Let a vertical mouse wheel scroll the horizontal date-pill bar
@@ -73,6 +73,9 @@ const TOOLBAR_ICON_FILES = {
   gold:    '/icons/icon_gold.png',
   pink:    '/icons/icon_pink.png',
   red:     '/icons/icon_red.png',
+  purple:     '/icons/icon_purple.png',
+  orange:     '/icons/icon_orange.png',
+  blue:     '/icons/icon_darkblue.png',
 };
 function applyToolbarIcon(variant) {
   const file = TOOLBAR_ICON_FILES[variant] || TOOLBAR_ICON_FILES.default;

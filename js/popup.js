@@ -62,6 +62,9 @@ const ICON_VARIANT_FILES = {
     gold:    '/icons/icon_gold.png',
     pink:    '/icons/icon_pink.png',
     red:     '/icons/icon_red.png',
+    purple:     '/icons/icon_purple.png',
+    orange:     '/icons/icon_orange.png',
+    blue:     '/icons/icon_darkblue.png',
 };
 function applyIconVariant(variant) {
     const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
