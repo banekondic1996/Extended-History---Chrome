@@ -691,7 +691,7 @@ function applyRoundedCorners(enabled) {
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS = [tr('sun','Sun'),tr('mon','Mon'),tr('tue','Tue'),tr('wed','Wed'),tr('thu','Thu'),tr('fri','Fri'),tr('sat','Sat')];
 
 // Lets a normal mouse wheel (vertical-only deltaY) scroll the horizontally
 // scrolling date-pill bar — off by default since trackpads already scroll it
@@ -847,6 +847,7 @@ function buildDateNav(retentionDays) {
     if (pill && scroll.contains(pill)) activateDatePill(pill.dataset.date);
   });
   const allPillBtn = document.getElementById('dnAllPill');
+  allPillBtn.textContent=tr('all','All');
   if (allPillBtn) allPillBtn.addEventListener('click', () => activateDatePill('all'));
   let _raf = 0;
   wrap.addEventListener('scroll', () => { if (_raf) return; _raf = requestAnimationFrame(() => { _raf = 0; vpEnsure(false); }); }, { passive: true });
@@ -873,7 +874,7 @@ function buildDateNav(retentionDays) {
       _scrollStopTimer = setTimeout(() => {
         _isScrolling = false;
         // Restore the original label — "All" (use i18n if available)
-        allPill.textContent = _ehMsg('all') || 'All';
+        allPill.textContent = tr('all','All');
       }, 600);
     }, { passive: true });
   })();
@@ -963,7 +964,7 @@ function buildHourNav() {
     return b;
   }
 
-  addPill('All', null).classList.add('active');
+  addPill(tr('all','All'), null).classList.add('active');
   for (let h = 0; h < 24; h++) {
     const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
     addPill(lbl, h);
@@ -2967,7 +2968,7 @@ function _updateBmSelBar() {
   const count   = document.getElementById('bmSelCount');
   if (bar)     bar.style.display     = _bmSelMode ? 'flex' : 'none';
   if (toolbar) toolbar.style.display = _bmSelMode ? 'none' : 'flex';
-  if (count) count.textContent = `${_bmSelected.size} selected`;
+  if (count) count.textContent = `${_bmSelected.size} `+ tr('selected','selected');
   const pane = document.getElementById('bookmarksContent');
   if (pane) pane.classList.toggle('bm-sel-mode', _bmSelMode);
 }
@@ -4396,7 +4397,7 @@ async function ehRunImport(file, allowRetentionPrompt) {
       onProgress: (read, size, n) => setBtn(`⬆ ${Math.min(100, Math.floor(read / (size || 1) * 100))}% · ${fmtNum(n)}`),
     });
     if (!jobId || !total) {
-      toast('No entries found in file', 'err');
+      toast(tr('no_entries_file','No entries found in file'), 'err');
       if (btn) { btn.innerHTML = btnHtml; btn.disabled = false; }
       return;
     }
@@ -4442,7 +4443,7 @@ async function ehRunImport(file, allowRetentionPrompt) {
   if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
   if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
   if (st.invalid) notes.push(`${fmtNum(st.invalid)} invalid`);
-  toastLong(`Import finished — ${fmtNum(r.imported)} new entries added` + (notes.length ? ` (skipped: ${notes.join(', ')})` : ''), 'ok');
+  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)}`+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
   invalidateHistCache();
   doSearch();
 
@@ -4459,14 +4460,14 @@ async function ehRunImport(file, allowRetentionPrompt) {
         const rd = document.getElementById('retDays'); if (rd) rd.value = needed;
         syncRetChips(needed);
         buildDateNav(needed);
-      } catch (err) { toast(err.message || 'Could not update retention', 'err'); }
+      } catch (err) { toast(err.message || tr('cant_update_ret','Could not update retention'), 'err'); }
     } else {
       try {
         toastProgress(tr('import_pruning', 'Removing entries older than the retention window…'), null);
         const resp = await new Promise((res, rej) => chrome.runtime.sendMessage({ target: 'eh-sql', op: 'deleteBelow', args: { t: realCutoff } },
           x => { if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else res(x); }));
         if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'database did not answer');
-      } catch (err) { toast(err.message || 'Could not remove old entries', 'err'); }
+      } catch (err) { toast(err.message || tr('cant_remove_old','Could not remove old entries'), 'err'); }
       finally { toastProgressHide(); }
     }
     invalidateHistCache();
@@ -4488,14 +4489,14 @@ async function ehRunImport(file, allowRetentionPrompt) {
         syncRetChips(needed);
         buildDateNav(needed);
         await ehRunImport(file, false);
-      } catch (err) { toast(err.message || 'Could not update retention', 'err'); }
+      } catch (err) { toast(err.message || tr('cant_update_retention','Could not update retention'), 'err'); }
     }
   }
 }
 
 document.getElementById('reBackfillBtn')?.addEventListener('click', async () => {
-  if (!confirm('Re-import all available Chrome native history? New entries will be merged in.')) return;
-  toast('Importing from Chrome history…');
+  if (!confirm(tr('re_import_all','Re-import all available Chrome native history? New entries will be merged in.'))) return;
+  toast(tr('importing_from_chrome','Importing from Chrome history…'));
   try {
     const r = await send('RE_BACKFILL');
     if (r?.error) { toast(r.error, 'err'); return; }
@@ -4506,19 +4507,19 @@ document.getElementById('reBackfillBtn')?.addEventListener('click', async () => 
 });
 
 document.getElementById('clearAllBtn').addEventListener('click', async () => {
-  if (!confirm('Delete ALL history permanently? Cannot be undone.')) return;
+  if (!confirm(tr('delete_all_confirm','Delete ALL history permanently? Cannot be undone.'))) return;
   try {
     await sendLong('CLEAR_ALL');
     allResults = []; invalidateHistCache(); exitSelMode(); buildVirtualList();
-    toast('All history cleared', 'ok');
+    toast(tr('all_cleared','All history cleared'), 'ok');
   } catch (err) { toast(err.message, 'err'); }
 });
 
 document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
-  if (!confirm('Clear all time-spent data? This will not affect history. Cannot be undone.')) return;
+  if (!confirm(tr('clear_time_data','Clear all time-spent data? This will not affect history. Cannot be undone.'))) return;
   try {
     await send('CLEAR_TIME_DATA');
-    toast('Time data cleared', 'ok');
+    toast(tr('time_data_cleared','Time data cleared'), 'ok');
     loadTimeSpent(curTimeDays || 15);
   } catch (err) { toast(err.message, 'err'); }
 });
@@ -5347,16 +5348,22 @@ async function handleIgnoreListAccess() {
       desc.textContent  = tr('ignore_list_setup_desc','No password is set yet. Create a master password to protect your ignore list.');
       resetBtn.style.display = 'none';
       okBtn.textContent =  tr('create_password','Create Password');
+      cancelBtn.textContent = tr('cancel','Cancel');
+      input.placeholder=  tr('master_password','Master Password');
     } else if (m === 'unlock') {
       title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
       desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
       okBtn.textContent = tr('ok','OK');
+      cancelBtn.textContent = tr('cancel','Cancel');
+      input.placeholder=  tr('master_password','Master Password');
     } else if (m === 'reset-new') {
       title.textContent = tr('reset_ignore_list','🔑 Reset Ignore List');
       desc.textContent  = tr('reset_ignore_list_desc','Ignore list has been cleared. Enter a new master password to continue.');
       resetBtn.style.display = 'none';
       okBtn.textContent = tr('set_new_password','Set New Password');
+      cancelBtn.textContent = tr('cancel','Cancel');
+      input.placeholder=  tr('master_password','Master Password');
     }
     input.value = '';
     errEl.style.display = 'none';
@@ -5401,7 +5408,7 @@ async function handleIgnoreListAccess() {
   }
 
   async function onReset() {
-    if (!confirm('This will clear your entire ignore list and remove the password. Continue?')) return;
+    if (!confirm(tr('confirm_clear_ignore_list','This will clear your entire ignore list and remove the password. Continue?'))) return;
     // Clear ignore list and password
     await chrome.storage.local.remove([IGNORE_PW_KEY, 'eh_ignore_list']);
     await send('SET_IGNORE_LIST', { list: [] }).catch(() => {});
