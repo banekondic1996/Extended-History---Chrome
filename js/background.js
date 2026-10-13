@@ -82,7 +82,42 @@ function applyToolbarIcon(variant) {
   try {
     chrome.action.setIcon({ path: file });
   } catch (e) { console.warn('[EH] setIcon failed:', e); }
+  //refreshActiveTabIcons();   // tabs on ignored sites keep the "filtered" icon
 }
+
+// // ── "Filtered" toolbar icon DISABLED ──────────────────────────────────────────────────
+// // While the current tab is on a site that the Ignore List would skip (domain,
+// // URL-path or kw: keyword pattern, same matcher as history saving), the toolbar
+// // shows icon_filtered.png instead of the chosen icon variant. Set per tab, so
+// // switching tabs / windows always shows the right icon.
+// const FILTERED_ICON_FILE = '/icons/icon_filtered.png';
+
+// async function updateIconForTab(tab) {
+//   try {
+//     if (!tab || tab.id == null || tab.id < 0) return;
+//     const url = tab.url || tab.pendingUrl || '';
+//     const ignored = !!url && isTrackable(url) && await shouldIgnoreUrl(url, tab.title);   // false when the ignore list is switched off
+//     const variant = (await getSettings()).toolbarIcon;
+//     const path = ignored ? FILTERED_ICON_FILE : (TOOLBAR_ICON_FILES[variant] || TOOLBAR_ICON_FILES.default);
+//     await chrome.action.setIcon({ tabId: tab.id, path });
+//   } catch (_) { /* tab closed meanwhile */ }
+// }
+// async function refreshActiveTabIcons() {
+//   try {
+//     for (const t of await chrome.tabs.query({ active: true })) await updateIconForTab(t);
+//   } catch (_) {}
+// }
+// chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+//   try { await updateIconForTab(await chrome.tabs.get(tabId)); } catch (_) {}
+// });
+// chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+//   if (info.url || info.title || info.status) updateIconForTab(tab);   // navigation (also resets per-tab icons) or title change (kw: patterns match titles)
+// });
+// // Ignore list edited / toggled, or icon variant changed (also fires on unlock)
+// chrome.storage.onChanged.addListener((ch, area) => {
+//   if (area === 'local' && (ch[IGNORE_LIST_KEY] || ch[SETTINGS_KEY])) refreshActiveTabIcons();
+// });
+// refreshActiveTabIcons();   // service worker (re)started
 
 // ── Popup / Side panel mode ──────────────────────────────────────────────────
 // Chrome equivalent of Firefox's browserAction+sidebarAction pairing. When

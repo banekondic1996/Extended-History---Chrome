@@ -2,6 +2,19 @@
   "ext_name": {
     "message": "Extended History"
   },
+  "jan": {"message": "Jan"},
+  "feb": {"message": "Feb"},
+  "mar": {"message": "Mar"},
+  "apr": {"message": "Apr"},
+  "may": {"message": "May"},
+  "jun": {"message": "Jun"},
+  "jul": {"message": "Jul"},
+  "aug": {"message": "Aug"},
+  "sep": {"message": "Sep"},
+  "oct": {"message": "Oct"},
+  "nov": {"message": "Nov"},
+  "dec": {"message": "Dec"},
+  "no_history_found": {"message": "No history found"},
   "lock_big_warning": {"message": "Your history is too big to encrypt"},
   "lock_big_limit": {"message": "limit"},
   "lock_big_warning2": {"message": "Nothing will be encrypted (to keep locking fast), but the interface will still be locked."},
@@ -751,6 +764,8 @@
   "sessions_to_keep": {
     "message": "Sessions to keep"
   },
+  "disabled": {"message": "Disabled"},
+  "dh_now": {"message": "Now"},
   "how_many_past_sessions": {
     "message": "How many past sessions are stored (1–20)"
   },

@@ -134,7 +134,7 @@ async function rebuildFts() {
            SELECT url, ifnull(title,''), ifnull(domain,''), visit_time, seq FROM entries WHERE ` + cond, bind });
       if (edge == null) break;
       lo = edge;
-      progress = { phase: 'indexing', done: Math.min(99, Math.round(100 * (lo - lo0) / span)), total: 100, pctOnly: true, step: tr('building_search_index','Building search index…') };
+      progress = { phase: 'indexing', done: Math.min(99, Math.round(100 * (lo - lo0) / span)), total: 100, pctOnly: true, step: 'Building search index…' };
       await breathe(_t0);
     }
   }
@@ -185,7 +185,7 @@ async function ftsDeferEnd() {
   const hi = db.selectValue('SELECT MAX(rowid) FROM fts_pending') || 0;
   const W = 20000;
   let done = 0;
-  progress = { phase: 'indexing', done: 0, total: 100, pctOnly: true, step: tr('building_search_index','Building search index…') };
+  progress = { phase: 'indexing', done: 0, total: 100, pctOnly: true, step: 'Building search index…' };
   await tick();
   for (let lo = 0; lo < hi; lo += W) {
     const t0 = performance.now();
@@ -196,7 +196,7 @@ async function ftsDeferEnd() {
       db.exec({ sql: 'DELETE FROM fts_pending WHERE rowid>? AND rowid<=?', bind: [lo, lo + W] });
     });
     done = Math.min(99, Math.round(100 * (lo + W) / hi));
-    progress = { phase: 'indexing', done, total: 100, pctOnly: true, step: tr('building_search_index','Building search index…') };
+    progress = { phase: 'indexing', done, total: 100, pctOnly: true, step: 'Building search index…' };
     await breathe(t0);
   }
   db.exec('DROP TABLE fts_pending');
@@ -271,7 +271,7 @@ async function mergeStage() {
       db.exec({ sql: 'DELETE FROM stage WHERE ' + cond, bind });
     });
     const next = db.selectValue('SELECT MIN(visit_time) FROM stage');
-    progress = { phase: 'indexing', done: next == null ? 100 : Math.min(99, Math.round(100 * (next - lo0) / span)), total: 100, pctOnly: true, step: tr('merging_imported','Merging imported history…') };
+    progress = { phase: 'indexing', done: next == null ? 100 : Math.min(99, Math.round(100 * (next - lo0) / span)), total: 100, pctOnly: true, step: 'Merging imported history…' };
     if (next == null) break;
     await breathe(_t0);
   }
@@ -291,7 +291,7 @@ async function bulkEnd() {
     const incFts = hadStage && ftsWasOk && hasTable('entries_fts');
     if (incFts) ftsDeferBegin();
     removed += await mergeStage();
-    progress = { phase: 'indexing', done: 0, total: 0, step: tr('building_search_index','Building search index…') };
+    progress = { phase: 'indexing', done: 0, total: 0, step: 'Building indexes…' };
     await tick();
     removed += finalizeIndexes(hadStage);       // staged rows were already de-duplicated by mergeStage()
     if (incFts) await ftsDeferEnd(); else await rebuildFts();
@@ -550,7 +550,7 @@ function startRepair() {
   return gate;
 }
 async function repairDb() {
-  progress = { phase: 'repair', done: 0, total: 100, pctOnly: true, step: tr('reparing_database','Repairing the history database…') };
+  progress = { phase: 'repair', done: 0, total: 100, pctOnly: true, step: 'Repairing the history database…' };
   await tick();
   try { db.exec('DROP TABLE IF EXISTS stage'); } catch (_) {}
   // Always rebuild by copying (never one giant CREATE INDEX / full-table statement: those cannot be interrupted, cannot report
@@ -598,7 +598,7 @@ async function copyRepair() {
   for (let lo = Math.floor(lo0); lo <= hi0; lo += STEP) {
     failed = Math.max(0, failed - 300);
     await span(lo, Math.min(lo + STEP, hi0 + 1));
-    progress = { phase: 'repair', done: Math.min(49, Math.round(50 * (lo - lo0) / total)), total: 100, pctOnly: true, step: tr('rescuing','Rescuing readable history…') };
+    progress = { phase: 'repair', done: Math.min(49, Math.round(50 * (lo - lo0) / total)), total: 100, pctOnly: true, step: 'Rescuing readable history…' };
   }
   rdb.close();
   // 2. fresh database file with indexes + search index in place, filled window by window in time order
@@ -616,13 +616,13 @@ async function copyRepair() {
       db.exec('BEGIN');
       try { db.exec({ sql: `INSERT OR IGNORE INTO entries(${cols}) SELECT ${cols} FROM rep.entries WHERE visit_time>=? AND visit_time<? ORDER BY visit_time, seq`, bind: [lo, Math.min(lo + STEP, hi0 + 1)] }); db.exec('COMMIT'); }
       catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} throw e; }
-      progress = { phase: 'repair', done: 50 + Math.min(49, Math.round(50 * (lo - lo0) / total)), total: 100, pctOnly: true, step: tr('rebuilding_database','Rebuilding the database…') };
+      progress = { phase: 'repair', done: 50 + Math.min(49, Math.round(50 * (lo - lo0) / total)), total: 100, pctOnly: true, step: 'Rebuilding the database…' };
       await breathe(t0);
     }
   } finally { try { db.exec('DETACH DATABASE rep'); } catch (_) {} }
   setFtsFlag(true);
   for (const n of pool.getFileNames()) if (n === R || n.startsWith(R + '-')) pool.unlink(n);
-  progress = { phase: 'repair', done: 99, total: 100, pctOnly: true, step: tr('freeing_disk_space','Freeing disk space…') };
+  progress = { phase: 'repair', done: 99, total: 100, pctOnly: true, step: 'Freeing disk space…' };
   await shrink();
 }
 

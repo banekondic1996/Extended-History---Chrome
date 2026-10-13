@@ -2,6 +2,19 @@
   "ext_name": {
     "message": "Historial Extendido"
   },
+  "jan": {"message": "Ene"},
+  "feb": {"message": "Feb"},
+  "mar": {"message": "Mar"},
+  "apr": {"message": "Abr"},
+  "may": {"message": "May"},
+  "jun": {"message": "Jun"},
+  "jul": {"message": "Jul"},
+  "aug": {"message": "Ago"},
+  "sep": {"message": "Sep"},
+  "oct": {"message": "Oct"},
+  "nov": {"message": "Nov"},
+  "dec": {"message": "Dic"},
+   "no_history_found": {"message": "No se encontró historial"},
   "lock_big_warning": {"message": "Tu historial es demasiado grande para cifrarlo"},
   "lock_big_limit": {"message": "límite"},
   "lock_big_warning2": {"message": "No se cifrará nada (para que el bloqueo sea rápido), pero la interfaz seguirá bloqueada."},
@@ -1219,6 +1232,7 @@
   "pop_ts_error": {
     "message": "Error al cargar el almacén de pestañas"
   },
+  "disabled": {"message": "Desactivado"},
   "pop_no_stored": {
     "message": "No hay pestañas guardadas."
   },
@@ -1236,6 +1250,7 @@
       }
     }
   },
+  "dh_now": {"message": "Ahora"},
   "pop_cant_store": {
     "message": "No se puede guardar esta página"
   },

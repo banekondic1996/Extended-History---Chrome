@@ -431,7 +431,7 @@ function buildVirtualList() {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span data-i18n-key="no_history_found">No history found</span></div>`;
     return;
   }
 
@@ -692,6 +692,10 @@ function applyRoundedCorners(enabled) {
 
 // ── Date nav ────────────────────────────────────────────────────────────────
 const DAYS = [tr('sun','Sun'),tr('mon','Mon'),tr('tue','Tue'),tr('wed','Wed'),tr('thu','Thu'),tr('fri','Fri'),tr('sat','Sat')];
+// Short month names from the extension's own translations (keys jan..dec), so the date pills follow the Language menu.
+const MONTHS_SHORT = [tr('jan','Jan'),tr('feb','Feb'),tr('mar','Mar'),tr('apr','Apr'),tr('may','May'),tr('jun','Jun'),tr('jul','Jul'),tr('aug','Aug'),tr('sep','Sep'),tr('oct','Oct'),tr('nov','Nov'),tr('dec','Dec')];
+// Same interface as Intl.DateTimeFormat#format, used for the .dn-pill-label ("Oct 13")
+const PILL_DATE_FMT = { format: d => MONTHS_SHORT[d.getMonth()] + ' ' + d.getDate() };
 
 // Lets a normal mouse wheel (vertical-only deltaY) scroll the horizontally
 // scrolling date-pill bar — off by default since trackpads already scroll it
@@ -835,7 +839,7 @@ function buildDateNav(retentionDays) {
   const pillCount = (Number.isFinite(retentionDays) && retentionDays > 0) ? retentionDays + 1 : 366;
 
   const prevActive = _vp ? _vp.active : null;
-  _vp = { N: pillCount, W: 62, gap: 5, w0: 56, w1: 84, s: 0, e: 0, t0: new Date(), fmt: new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }), active: prevActive, needMeasure: false };
+  _vp = { N: pillCount, W: 62, gap: 5, w0: 56, w1: 84, s: 0, e: 0, t0: new Date(), fmt: PILL_DATE_FMT, active: prevActive, needMeasure: false };
   scroll.textContent = '';
   vpMeasure();
   vpRender(0, 100);
@@ -1454,7 +1458,7 @@ function removeEntryFromView(id) {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span data-i18n-key="no_history_found">No history found</span></div>`;
   }
 }
 
@@ -5357,6 +5361,7 @@ async function handleIgnoreListAccess() {
       title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
       desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
+      resetBtn.textContent = tr('reset','Reset');
       okBtn.textContent = tr('ok','OK');
       cancelBtn.textContent = tr('cancel','Cancel');
       input.placeholder=  tr('master_password','Master Password');
@@ -6627,7 +6632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (warn) {
         const tt = rangeToTimes(_dhSelectedRange);
         const when = (tt && tt[0] > 0)
-          ? ` (${new Date(tt[0]).toLocaleString()} → ${tr('dh_now', 'now')}; ${_dhAnchorFound ? tr('dh_from_newest', 'counted from your newest entry, {0}', new Date(_dhAnchor).toLocaleString()) : tr('dh_from_now', 'newest entry unknown — counted from now')})`
+          ? ` (${new Date(tt[0]).toLocaleString()} → ${tr('dh_now', 'now')}; ${_dhAnchorFound ? tr('dh_from_newest','counted from your newest entry, {0}').replace('{0}', new Date(_dhAnchor).toLocaleString()) : tr('dh_from_now', 'newest entry unknown — counted from now')})`
           : '';
         let msg = tr('dh_confirm_warn', 'This will permanently delete history for: {0}. Click Delete again to confirm.', label + when);
         if (_dhExceptions.length) msg += ' ' + tr('dh_confirm_exceptions', 'Domains on your exceptions list ({0}) will be kept.', _dhExceptions.length);
