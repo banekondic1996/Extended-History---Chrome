@@ -2,6 +2,17 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+  "delete_start_empty": {"message": "Verwijderen en met een lege database beginnen"},
+  "entries_were_saved": {"message": "items zijn opgeslagen in je downloads. Controleer of het bestand is opgeslagen. Wil je de beschadigde database nu verwijderen? Je kunt het bestand daarna importeren."},
+  "history_damaged": {"message": "De geschiedenisdatabase is beschadigd"},
+  "explain_damage": {"message": "Dit kan gebeuren als de browser werd gesloten of onvoldoende geheugen had tijdens een grote schrijfactie. Herstel kan enkele minuten duren. Je kunt ook eerst de leesbare gegevens exporteren naar een .json-bestand, de database verwijderen en dat bestand opnieuw importeren."},
+  "try_repair": {"message": "Proberen te herstellen"},
+  "export_then_delete": {"message": "Leesbare gegevens exporteren (.json) en daarna verwijderen"},
+  "exporting": {"message": "Exporteren..."},
+  "entries": {"message": "items"},
+  "saved": {"message": "Opgeslagen "},
+  "no_readable_entries": {"message": "Er zijn geen leesbare items gevonden."},
+  "confirm_history_drop": {"message": "Hiermee wordt de opgeslagen geschiedenisdatabase permanent verwijderd (de geschiedenis van je browser zelf blijft onaangetast). Doorgaan?"},
   "preparing_database": {"message": "Geschiedenisdatabase voorbereiden…"},
   "can_take_long": {"message": " seconden — grote databases kunnen enkele minuten duren"},
   "stuck_delete": {"message": "Vastgelopen? Verwijder de database en begin met een lege database"},

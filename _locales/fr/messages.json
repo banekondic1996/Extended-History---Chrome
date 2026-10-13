@@ -2,6 +2,17 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
+  "delete_start_empty": {"message": "La supprimer et repartir de zéro"},
+  "entries_were_saved": {"message": "entrées ont été enregistrées dans vos téléchargements. Vérifiez que le fichier a bien été enregistré, puis supprimer la base de données endommagée maintenant ? Vous pourrez ensuite importer le fichier."},
+  "history_damaged": {"message": "La base de données de l’historique est endommagée"},
+  "explain_damage": {"message": "Cela peut se produire si le navigateur a été fermé ou a manqué de mémoire pendant une écriture importante. La réparation peut prendre quelques minutes. Vous pouvez aussi exporter d’abord les données lisibles dans un fichier .json, supprimer la base de données, puis réimporter ce fichier."},
+  "try_repair": {"message": "Tenter de réparer"},
+  "export_then_delete": {"message": "Exporter les données lisibles (.json), puis supprimer"},
+  "exporting": {"message": "Exportation..."},
+  "entries": {"message": "entrées"},
+  "saved": {"message": "Enregistré "},
+  "no_readable_entries": {"message": "Aucune entrée lisible n’a été trouvée."},
+  "confirm_history_drop": {"message": "Cela supprimera définitivement la base de données de l’historique stocké (l’historique propre à votre navigateur ne sera pas affecté). Continuer ?"},
   "preparing_database": {"message": "Préparation de la base de données de l’historique…"},
   "can_take_long": {"message": " secondes — les grandes bases de données peuvent prendre plusieurs minutes"},
   "stuck_delete": {"message": "Bloqué ? Supprimez la base de données et repartez de zéro"},

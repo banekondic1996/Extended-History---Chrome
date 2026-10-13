@@ -5,6 +5,17 @@
     "jump_to_date": {
     "message": "Jump to date"
   },
+  "delete_start_empty": {"message": "Delete it and start empty"},
+  "entries_were_saved": {"message": "entries were saved to your downloads. Check that the file was saved, then delete the damaged database now? You can import the file afterwards."},
+  "history_damaged": {"message": "The history database is damaged"},
+  "explain_damage": {"message": "This can happen when the browser was closed or ran out of memory in the middle of a big write. Repair can take a few minutes. You can also export what is readable to a .json file first, delete the database and import that file again."},
+  "try_repair": {"message": "Try to repair"},
+  "export_then_delete": {"message": "Export what can be read (.json), then delete"},
+  "exporting": {"message": "Exporting..."},
+  "entries": {"message": "entries"},
+  "saved": {"message": "Saved "},
+  "no_readable_entries": {"message": "No readable entries were found."},
+  "confirm_history_drop": {"message": "This permanently deletes the stored history database (your browser's own history is not touched). Continue?"},
   "preparing_database": {"message": "Preparing the history database…"},
   "can_take_long": {"message": " seconds — large databases can take several minutes"},
   "stuck_delete": {"message": "Stuck? Delete the database and start empty"},

@@ -2,6 +2,17 @@
   "ext_name": {
     "message": "扩展历史"
   },
+  "delete_start_empty": {"message": "删除数据库并从空数据库重新开始"},
+  "entries_were_saved": {"message": "条记录已保存到你的下载文件夹。请确认文件已保存，然后立即删除损坏的数据库吗？之后你可以重新导入该文件。"},
+  "history_damaged": {"message": "历史记录数据库已损坏"},
+  "explain_damage": {"message": "如果浏览器在进行大量写入时关闭或内存不足，就可能发生这种情况。修复可能需要几分钟。你也可以先将可读取的数据导出为 .json 文件，删除数据库，然后重新导入该文件。"},
+  "try_repair": {"message": "尝试修复"},
+  "export_then_delete": {"message": "导出可读取的数据（.json），然后删除"},
+  "exporting": {"message": "正在导出..."},
+  "entries": {"message": "条记录"},
+  "saved": {"message": "已保存 "},
+  "no_readable_entries": {"message": "未找到可读取的记录。"},
+  "confirm_history_drop": {"message": "这将永久删除已存储的历史记录数据库（不会影响浏览器自身的历史记录）。是否继续？"},
   "preparing_database": {"message": "正在准备历史记录数据库…"},
   "can_take_long": {"message": " 秒 — 大型数据库可能需要几分钟"},
   "stuck_delete": {"message": "卡住了？删除数据库并从空数据库重新开始"},

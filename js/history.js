@@ -35,7 +35,7 @@ function ehShowMigration() {
   if (_ehMigOverlay) return;
   const o = document.createElement('div');
   o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(8,8,12,.88);color:#f0eee8;font-family:system-ui,sans-serif;text-align:center;padding:24px';
-  o.innerHTML = '<div style="max-width:420px"><div style="font-size:18px;font-weight:600;margin-bottom:8px" id="ehMigTitle">Moving your history to SQLite…</div>' +
+  o.innerHTML = '<div style="max-width:420px"><div style="font-size:18px;font-weight:600;margin-bottom:8px" id="ehMigTitle" data-i18n-key="moving_to_sqlite">Moving your history to SQLite…</div>' +
     '<div id="ehMigNote" style="opacity:.75;font-size:13px;line-height:1.5;margin-bottom:14px;display:none"></div>' +
     '<style>#ehMigBar{height:100%;width:3%;background:#3b9eff;transition:width .4s}#ehMigBar.indet{width:35%!important;animation:ehMigSlide 1.2s ease-in-out infinite;transition:none}@keyframes ehMigSlide{0%{margin-left:-35%}100%{margin-left:100%}}</style>' +
     '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden"><div id="ehMigBar"></div></div>' +
@@ -58,20 +58,20 @@ function ehShowMigration() {
       if (!isCorrupt) delete txt.dataset.corrupt;
       if (!isCorrupt) txt.textContent = r.total ? (r.pctOnly ? `${pct}% · ${secs} s` : `${pct}% · ${Number(r.done).toLocaleString()} / ${Number(r.total).toLocaleString()}`) : (secs ? secs + ' s' : '');
       const note = document.getElementById('ehMigNote');
-      if (note) { note.style.display = r.upgrade ? 'none' : ''; if (!r.upgrade) note.textContent = 'Your history is big, so it is being moved to a faster database. This happens once; the page reloads when it is done.'; }
+      if (note) { note.style.display = r.upgrade ? 'none' : ''; if (!r.upgrade) note.textContent = tr('history_too_big','Your history is big, so it is being moved to a faster database. This happens once; the page reloads when it is done.'); }
       if (!r.upgrade) {
-        const mig = { preparing: 'Preparing…', reading: 'Reading your history…', starting: 'Starting the database…', copying: 'Moving your history to SQLite…', verifying: 'Checking the copy…', finishing: 'Finishing up…' };
-        ttl.textContent = mig[r.phase] || 'Moving your history to SQLite…';
+        const mig = { preparing: tr('preparing','Preparing…'), reading: tr('reading_history','Reading your history…'), starting: tr('starting_database','Starting the database…'), copying: tr('moving_to_sqlite','Moving your history to SQLite…'), verifying: tr('checking_copy','Checking the copy…'), finishing: tr('finishing_up','Finishing up…') };
+        ttl.textContent = mig[r.phase] || tr('moving_to_sqlite','Moving your history to SQLite…');
       }
       if (r.upgrade && r.phase === 'corrupt') {
-        ttl.textContent = 'The history database is damaged';
-        if (!txt.dataset.corrupt) { txt.dataset.corrupt = '1'; txt.textContent = 'This can happen when the browser was closed or ran out of memory in the middle of a big write. Repair can take a few minutes. You can also export what is readable to a .json file first, delete the database and import that file again.'; }
+        ttl.textContent = tr('history_damaged','The history database is damaged');
+        if (!txt.dataset.corrupt) { txt.dataset.corrupt = '1'; txt.textContent = tr('explain_damage','This can happen when the browser was closed or ran out of memory in the middle of a big write. Repair can take a few minutes. You can also export what is readable to a .json file first, delete the database and import that file again.'); }
         bar.style.display = 'none';
         if (!document.getElementById('ehMigFix')) {
           const box = document.createElement('div'); box.id = 'ehMigFix'; box.style.cssText = 'margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap';
           const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;cursor:pointer'; b.onclick = fn; box.appendChild(b); return b; };
-          mk('Try to repair', () => { box.remove(); bar.style.display = ''; chrome.runtime.sendMessage({ target: 'eh-sql', op: 'repair' }, () => { void chrome.runtime.lastError; }); });
-          mk('Export what can be read (.json), then delete', async (ev) => {
+          mk(tr('try_repair','Try to repair'), () => { box.remove(); bar.style.display = ''; chrome.runtime.sendMessage({ target: 'eh-sql', op: 'repair' }, () => { void chrome.runtime.lastError; }); });
+          mk(tr('export_then_delete','Export what can be read (.json), then delete'), async (ev) => {
             const btn = ev.currentTarget; btn.disabled = true;
             try {
               const rs = (a) => new Promise((res, rej) => chrome.runtime.sendMessage({ target: 'eh-sql', op: 'rescueChunk', args: a }, x => { if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else if (!x || !x.ok) rej(new Error((x && x.error) || 'no answer')); else res(x.result); }));
@@ -84,24 +84,24 @@ function ehShowMigration() {
                   parts.push((first ? '' : ',') + s); first = false; n += r.rows.length; pending += s.length;
                   if (pending > 16e6) { parts = [new Blob(parts)]; pending = 0; }   // let the browser keep it on disk, not in memory
                 }
-                txt.textContent = `Exporting… ${Math.round(100 * (lo - lo0) / (hi0 - lo0))}% · ${n.toLocaleString()} entries`;
+                txt.textContent = tr('exporting','Exporting...')+` ${Math.round(100 * (lo - lo0) / (hi0 - lo0))}% · ${n.toLocaleString()}`+ tr('entries','entries');
                 await new Promise(r2 => setTimeout(r2, 0));
               }
               parts.push('],"totalEntries":' + n + '}');
-              if (!n) { alert('No readable entries were found.'); btn.disabled = false; return; }
+              if (!n) { alert(tr('no_readable_entries','No readable entries were found.')); btn.disabled = false; return; }
               const url = URL.createObjectURL(new Blob(parts, { type: 'application/json' }));
               const a = Object.assign(document.createElement('a'), { href: url, download: 'extended-history_rescued_' + new Date().toISOString().slice(0, 10) + '.json' });
               document.body.appendChild(a); a.click();
               setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 600000);
-              txt.textContent = `Saved ${n.toLocaleString()} entries.`;
+              txt.textContent = tr('saved','Saved ')+`${n.toLocaleString()}`+ tr('entries','entries');
               await new Promise(r2 => setTimeout(r2, 1500));
-              if (!confirm(`${n.toLocaleString()} entries were saved to your downloads. Check that the file was saved, then delete the damaged database now? You can import the file afterwards.`)) { btn.disabled = false; return; }
+              if (!confirm(`${n.toLocaleString()}`+ tr('entries_were_saved','entries were saved to your downloads. Check that the file was saved, then delete the damaged database now? You can import the file afterwards.'))) { btn.disabled = false; return; }
               const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
               if (x.error) alert(x.error); else location.reload();
             } catch (e) { alert('Export failed: ' + (e.message || e)); btn.disabled = false; }
           });
-          mk('Delete it and start empty', async () => {
-            if (!confirm('This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?')) return;
+          mk(tr('delete_start_empty','Delete it and start empty'), async () => {
+            if (!confirm(tr('this_deletes_history','This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?'))) return;
             const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
             if (x.error) alert(x.error); else location.reload();
           });
@@ -110,18 +110,18 @@ function ehShowMigration() {
         setTimeout(tick, 1500); return;
       }
       if (r.upgrade) {
-        const names = { init: 'Starting the database…', upgrade: 'Upgrading the history database…', indexing: 'Building indexes…', repair: 'Repairing the history database…' };
-        ttl.textContent = names[r.phase] || 'Preparing the history database…';
+        const names = { init: tr('starting_database','Starting the database…'), upgrade: tr('upgrading_database','Upgrading the history database…'), indexing: tr('building_indexes','Building indexes…'), repair: tr('repairing_database','Repairing the history database…') };
+        ttl.textContent = names[r.phase] || tr('preparing_database','Preparing the history database…');
         if (r.pctOnly && r.step) ttl.textContent = r.step;
         if (!r.total) txt.textContent = secs + ' s';
         if (secs > (r.phase === 'indexing' ? 420 : 180) && !r.pctOnly && !document.getElementById('ehMigReset')) {
           const b = document.createElement('button');
           b.id = 'ehMigReset';
-          b.textContent = 'Stuck? Delete the database and start empty';
+          b.textContent = tr('stuck_delete','Stuck? Delete the database and start empty');
           b.style.cssText = 'margin-top:16px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;cursor:pointer';
           b.onclick = async () => {
-            if (!confirm('This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?')) return;
-            b.disabled = true; b.textContent = 'Deleting…';
+            if (!confirm(tr('confirm_history_drop','This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?'))) return;
+            b.disabled = true; b.textContent = tr('deleting','Deleting…');
             const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
             if (x.error) { b.textContent = x.error; b.disabled = false; } else location.reload();
           };

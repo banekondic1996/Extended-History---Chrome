@@ -5,6 +5,17 @@
   "unique_tabs": {
     "message": "Unike faner"
   },
+    "delete_start_empty": {"message": "Slett den og start med en tom database"},
+  "entries_were_saved": {"message": "oppføringer ble lagret i nedlastingene dine. Kontroller at filen ble lagret, og slett deretter den skadede databasen nå? Du kan importere filen etterpå."},
+  "history_damaged": {"message": "Historikkdatabasen er skadet"},
+  "explain_damage": {"message": "Dette kan skje hvis nettleseren ble lukket eller gikk tom for minne midt i en stor skriveoperasjon. Reparasjon kan ta noen minutter. Du kan også eksportere det som kan leses til en .json-fil først, slette databasen og importere filen på nytt."},
+  "try_repair": {"message": "Prøv å reparere"},
+  "export_then_delete": {"message": "Eksporter det som kan leses (.json), og slett deretter"},
+  "exporting": {"message": "Eksporterer..."},
+  "entries": {"message": "oppføringer"},
+  "saved": {"message": "Lagret "},
+  "no_readable_entries": {"message": "Fant ingen lesbare oppføringer."},
+  "confirm_history_drop": {"message": "Dette sletter den lagrede historikkdatabasen permanent (nettleserens egen historikk blir ikke berørt). Vil du fortsette?"},
   "preparing_database": {"message": "Forbereder historikkdatabasen…"},
   "can_take_long": {"message": " sekunder — store databaser kan ta flere minutter"},
   "stuck_delete": {"message": "Står det fast? Slett databasen og start med en tom"},

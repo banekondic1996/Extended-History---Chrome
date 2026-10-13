@@ -2,6 +2,17 @@
   "ext_name": {
     "message": "Historial Extendido"
   },
+  "delete_start_empty": {"message": "Eliminarla y empezar de cero"},
+  "entries_were_saved": {"message": "entradas se guardaron en tus descargas. Comprueba que el archivo se haya guardado. ¿Eliminar ahora la base de datos dañada? Después podrás importar el archivo."},
+  "history_damaged": {"message": "La base de datos del historial está dañada"},
+  "explain_damage": {"message": "Esto puede ocurrir si el navegador se cerró o se quedó sin memoria durante una escritura grande. La reparación puede tardar unos minutos. También puedes exportar primero los datos legibles a un archivo .json, eliminar la base de datos e importar de nuevo ese archivo."},
+  "try_repair": {"message": "Intentar reparar"},
+  "export_then_delete": {"message": "Exportar los datos legibles (.json) y después eliminar"},
+  "exporting": {"message": "Exportando..."},
+  "entries": {"message": "entradas"},
+  "saved": {"message": "Guardado "},
+  "no_readable_entries": {"message": "No se encontraron entradas legibles."},
+  "confirm_history_drop": {"message": "Esto eliminará permanentemente la base de datos del historial almacenado (el historial propio del navegador no se verá afectado). ¿Continuar?"},
   "preparing_database": {"message": "Preparando la base de datos del historial…"},
   "can_take_long": {"message": " segundos — las bases de datos grandes pueden tardar varios minutos"},
   "stuck_delete": {"message": "¿Se ha quedado bloqueado? Elimina la base de datos y empieza de cero"},

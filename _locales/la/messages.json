@@ -8,6 +8,17 @@
     "edit": {
     "message": "Emenda"
   },
+  "delete_start_empty": {"message": "Dele et ab initio incipe"},
+  "entries_were_saved": {"message": "inscriptiones in receptaculum tuum receptae sunt. Confirma fasciculum servatum esse, deinde datorum basim corruptam nunc delere? Fasciculum postea importare potes."},
+  "history_damaged": {"message": "Datorum basis historiae corrupta est"},
+  "explain_damage": {"message": "Hoc fieri potest si navigator clausus est aut memoria defecit dum magna scriptio fiebat. Reparatio aliquot minuta capere potest. Potes etiam primum ea quae legi possunt in fasciculum .json exportare, datorum basim delere et fasciculum iterum importare."},
+  "try_repair": {"message": "Reparare conare"},
+  "export_then_delete": {"message": "Ea quae legi possunt exporta (.json), deinde dele"},
+  "exporting": {"message": "Exportatur..."},
+  "entries": {"message": "inscriptiones"},
+  "saved": {"message": "Servatum "},
+  "no_readable_entries": {"message": "Nullae inscriptiones legibiles inventae sunt."},
+  "confirm_history_drop": {"message": "Hoc datorum basim historiae servatae in perpetuum delet (historia propria navigatoris tui non afficitur). Pergere?"},
   "preparing_database": {"message": "Datorum basis historiae paratur…"},
   "can_take_long": {"message": " secunda — magnae datorum bases complura minuta requirere possunt"},
   "stuck_delete": {"message": "Haesit? Datorum basim dele et ab initio incipe"},
