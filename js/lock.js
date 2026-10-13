@@ -144,7 +144,17 @@
     pw2.placeholder = T('lock_confirm_password', 'Confirm password');
     cancel.textContent = T('cancel', 'Cancel');
     ok.textContent = '🔒 ' + T('lock_btn', 'Lock');
-    var busy = false;
+    var busy = false, bigHistory = false;
+    // Very big histories can't be encrypted (too large for one encrypted blob): warn up front.
+    bg('GET_LOCK_PLAN').then(function (plan) {
+      if (!plan || plan.encryptHistory) return;
+      bigHistory = true;
+      var w = document.createElement('div');
+      w.style.cssText = 'margin:8px 0;padding:8px 10px;border-radius:8px;background:rgba(255,170,0,.15);color:inherit;font-size:12.5px;line-height:1.4';
+      w.textContent = '⚠ ' + T('lock_big_warning', 'Your history is too big to encrypt') + ' (' + plan.sizeMB + ' MB, ' + T('lock_big_limit', 'limit') + ' ' + plan.limitMB + ' MB). ' +
+        T('lock_big_warning2', 'Nothing will be encrypted (to keep locking fast), but the interface will still be locked.');
+      err.parentNode.insertBefore(w, err);
+    }).catch(function () {});
     function close() { if (!busy) ov.remove(); }
     cancel.addEventListener('click', close);
     ov.addEventListener('mousedown', function (e) { if (e.target === ov) close(); });
@@ -154,10 +164,10 @@
       if (pw1.value.length < 4) { err.textContent = T('lock_password_short', 'Password must be at least 4 characters'); return; }
       if (pw1.value !== pw2.value) { err.textContent = T('lock_password_mismatch', 'Passwords do not match'); return; }
       busy = true; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = keepSaving.disabled = true;
-      ok.textContent = T('lock_locking', 'Encrypting…');
+      ok.textContent = bigHistory ? T('lock_locking_big', 'Locking…') : T('lock_locking', 'Encrypting…');
       err.textContent = '';
       try {
-        await bg('LOCK_HISTORY', { password: pw1.value, clearSiteData: logout.checked, hideBookmarks: hideBm.checked, keepSaving: keepSaving.checked });
+        await bg('LOCK_HISTORY', { password: pw1.value, clearSiteData: logout.checked, hideBookmarks: hideBm.checked, keepSaving: keepSaving.checked, acceptUnencrypted: bigHistory });
         location.reload();
       } catch (e) {
         busy = false; ok.disabled = cancel.disabled = pw1.disabled = pw2.disabled = logout.disabled = hideBm.disabled = keepSaving.disabled = false;

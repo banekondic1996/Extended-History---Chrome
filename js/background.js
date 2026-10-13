@@ -2,8 +2,9 @@
  * Extended History — background.js v3.3
  * Time tracking: purely event-driven per-tab, domain-bucketed by day.
  */
-importScripts('eh-idb.js');
+importScripts('database/eh-idb.js', 'database/eh-sql.js');
 const IDB_STORAGE_KEY = 'eh_use_idb';
+const SQL_STORAGE_KEY = 'eh_use_sqlite';
 const HISTORY_KEY  = 'eh_history';
 const TODAY_HISTORY_KEY = 'eh_today_history';  // Separate storage for today's history
 const TIME_KEY     = 'eh_time';
@@ -23,6 +24,7 @@ const FAV_CACHE_KEY                 = 'eh_fav_cache'; // domain → dataURL
 const MAX_SESSIONS_DEFAULT = 4;
 
 const DEFAULT_SETTINGS = {
+  popupQuickFilters: true,
   retentionDays: 365,
   maxEntries:    2000000,
   accentColor:   '#3b9eff',
@@ -38,6 +40,7 @@ const DEFAULT_SETTINGS = {
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
   toolbarIcon: 'default',    // Toolbar icon variant: default|bw|emerald|green|gold|pink|red
   contextMenuEnabled: true,  // Whether right-click context menu shows on web pages
+  fadeInListOnDateChange: true, // Fade the list in when switching dates (on by default)
   datePillsWheelScroll: false, // Let a vertical mouse wheel scroll the horizontal date-pill bar
   datePillsWheelSensitivity: 1, // Days moved per wheel "click" (1-6) when the above is enabled
   popupAsSidebar: false,     // Open Extended History in Chrome's side panel instead of the popup
@@ -47,14 +50,18 @@ const DEFAULT_SETTINGS = {
   matchUiColors: true,       // History list uses the same colour as the rest of the UI instead of its own shade
   calendarMode: false,       // Replace date/hour pill nav with a right-side calendar sidebar
   hideIgnoredInTimeSpent: false, // Hide (not delete) ignore-list-matched domains from the Time Spent view
-  autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), auto-exports+deletes the oldest
-                                // block of history once it's built up beyond the retained window.
-  autoExportLastRunAt: 0,      // timestamp of the last successful auto-export (informational)
+  autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), a .json export of everything new
+                                // since the previous export is downloaded every N months. Nothing is deleted.
+  autoExportMode: 'full',      // 'full' = all history every time, 'incremental' = only what's new since the last export
+  autoExportZip: false,        // wrap the exported .json in a .zip
+  autoExportDestination: 'local', // 'local', 'webdav', or 'both'
+  autoExportWebDavUrl: '',
+  autoExportWebDavUsername: '',
+  autoExportWebDavPassword: '',
+  autoExportLastRunAt: 0,      // timestamp of the last successful auto-export
+  autoSwitchSqlite: true,      // a history too big for Local Storage/IndexedDB moves itself to SQLite automatically
+  autoExportLastCoveredTo: 0,  // visitTime watermark: the next export only contains entries newer than this
 };
-
-// Auto-export always keeps this many months of the most recent history untouched,
-// no matter what interval the user picks.
-const AUTO_EXPORT_RETAIN_MONTHS = 3;
 const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
 
 // ── Toolbar icon variants ────────────────────────────────────────────────────
@@ -83,7 +90,7 @@ function applyToolbarIcon(variant) {
 // off so the toolbar icon behaves like a normal popup button again.
 function applyPopupMode(sidebarMode) {
   try {
-    chrome.action.setPopup({ popup: sidebarMode ? '' : 'popup.html' });
+    chrome.action.setPopup({ popup: sidebarMode ? '' : 'html/popup.html' });
   } catch (e) { console.warn('[EH] setPopup failed:', e); }
   try {
     if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
@@ -350,19 +357,16 @@ async function cleanIgnoredFromHistory() {
   const ignoreList = await getIgnoreList();
   if (!ignoreList.length) return { removed: 0 };
   
-  let entries = await getAll();
-  
-  // Filter out ignored entries
+  const sqlMode = await _useSql();
   const toKeep = [];
   const toDelete = [];
-  for (const e of entries) {
-    if (ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern, e.title))) {
-      toDelete.push(e);
-    } else {
-      toKeep.push(e);
-    }
+  const isIgnored = (e) => ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern, e.title));
+  if (sqlMode) {                                  // scan in slices, keep only the matches
+    await EhStore.forEachSlice(rows => { for (const e of rows) if (isIgnored(e)) toDelete.push(e); });
+  } else {
+    for (const e of await getAll()) { if (isIgnored(e)) toDelete.push(e); else toKeep.push(e); }
   }
-  
+
   if (!toDelete.length) return { removed: 0 };
 
   _ignoreCleanupActive = true;
@@ -371,7 +375,8 @@ async function cleanIgnoredFromHistory() {
   broadcastCleanupStatus();
 
   try {
-    await setAll(toKeep);
+    if (sqlMode) { await EhStore.removeIds(toDelete.map(e => e.id)); _entriesCache = null; }
+    else await setAll(toKeep);
     await updateTodayHistory();
 
     // Also remove from Chrome native history
@@ -497,12 +502,10 @@ async function _liveHistoryEntries(searchParams) {
       entries.push({
         id: `live_${item.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
         url: normalizeUrl(item.url),
-        rawUrl: item.url,
+        ...rawUrlField(normalizeUrl(item.url), item.url),
         title: item.title || '',
         visitTime: item.lastVisitTime || Date.now(),
         domain: domainOf(item.url),
-        tabId: null,
-        source: 'live',
       });
     }
     return entries;
@@ -566,43 +569,87 @@ async function setLastFlush(ts) {
   await chrome.storage.local.set({ [LAST_FLUSH_KEY]: ts });
 }
 
+// Keeps the stored history within retention + maxEntries (IndexedDB backend) using only the
+// visitTime index: finds the ids to drop without loading any entries, then deletes just those.
+async function pruneStoredIdb(cutoff, maxEntries) {
+  if (await _useSql()) {
+    // SQLite: only the retention window applies. The entry-count cap (maxEntries, 2 million by default) exists for the
+    // memory-bound backends — applying it here silently deleted the OLDEST part of any history above 2 million entries
+    // (and the COUNT(*) it needed scanned the whole database on every merge).
+    if (await EhStore.deleteBelow(cutoff)) { _entriesCache = null; _entriesLoading = null; }
+    return;
+  }
+  const total = await EhStore.count();
+  let threshold = cutoff;
+  if (total > maxEntries) {                      // over the cap: also drop the oldest beyond it
+    const t = await EhStore.visitTimeAtRank(total - maxEntries);
+    if (t !== null && t > threshold) threshold = t;
+  }
+  const ids = await EhStore.keysBelow(threshold);
+  if (!ids.length) return;
+  await EhStore.removeIds(ids);
+  if (_entriesCache) { const gone = new Set(ids); _entriesCache = _entriesCache.filter(e => !gone.has(e.id)); }
+}
+
 async function flushTodayToHistory() {
+  if (_migrating || _dbBusy) return;
   const settings = await getSettings();
   const now = Date.now();
   const cutoff = now - settings.retentionDays * 86400000;
 
   const todayEntries = await getTodayFromChromeApi();
-  if (!todayEntries.length) return;
+  if (!todayEntries.length) { await setLastFlush(now); return; }     // nothing to merge is still a completed check
 
-  let existing = await getAll();
-  const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
+  let minT = Infinity;
+  for (const e of todayEntries) if (e.visitTime < minT) minT = e.visitTime;
+  minT -= 10000;
 
-  let added = 0;
+  const useIdb = await _useIdb();
+  // Only stored entries from around the same time as today's visits can be duplicates of them.
+  // IndexedDB: read just that window from the index (the full history is not loaded).
+  const nearby = useIdb ? await getEntriesBetween(minT, now + 3600000) : null;
+  let existing = useIdb ? null : await getAll();
+
+  const existingSet = new Set();
+  for (const e of (useIdb ? nearby : existing)) {
+    if (e.visitTime >= minT) existingSet.add(`${e.url}|${Math.floor(e.visitTime / 5000)}`);
+  }
+
+  const fresh = [];
   for (const e of todayEntries) {
     const key = `${e.url}|${Math.floor(e.visitTime / 5000)}`;
     if (existingSet.has(key)) continue;
     existingSet.add(key);
-    existing.push({ ...e, id: `flush_${e.visitTime}_${Math.random().toString(36).slice(2, 6)}`, source: 'flush' });
-    added++;
+    fresh.push({ ...e, id: `flush_${e.visitTime}_${Math.random().toString(36).slice(2, 6)}` });
   }
+  if (!fresh.length) { await setLastFlush(now); return; }
 
-  if (!added) return;
-
-  // Apply retention/max cap then save
-  existing = existing.filter(e => e.visitTime >= cutoff);
-  if (existing.length > settings.maxEntries) existing = existing.slice(existing.length - settings.maxEntries);
-  existing.sort((a, b) => b.visitTime - a.visitTime);
-  await setAll(existing);
+  if (useIdb) {
+    if (await _useSql()) { await EhStore.insertIgnore(fresh); _entriesCache = null; }   // the database skips duplicates itself
+    else {
+      await EhStore.putMany(fresh);                                 // only the new rows are written
+      if (_entriesCache) for (const e of fresh) _entriesCache.push(e);   // keep a warm cache in step
+    }
+    await pruneStoredIdb(cutoff, settings.maxEntries);
+  } else {
+    // chrome.storage.local keeps the whole history in one value, so it has to be rewritten.
+    for (const e of fresh) existing.push(e);
+    existing = existing.filter(e => e.visitTime >= cutoff);
+    if (existing.length > settings.maxEntries) existing = existing.slice(existing.length - settings.maxEntries);
+    existing.sort((a, b) => b.visitTime - a.visitTime);
+    await setAll(existing);
+  }
   await setLastFlush(now);
-  //console.log(`[EH] Flushed ${added} new entries from today into history`);
+  //console.log(`[EH] Flushed ${fresh.length} new entries from today into history`);
 }
 
 // ── Auto history export ──────────────────────────────────────────────────────
-// If the user sets an interval (months), once history has accumulated beyond
-// (AUTO_EXPORT_RETAIN_MONTHS + interval) months old, the oldest block — every
-// entry older than AUTO_EXPORT_RETAIN_MONTHS — is exported as a .json download
-// and then removed from storage (extension storage + native Chrome history).
-// The most recent AUTO_EXPORT_RETAIN_MONTHS of history is never touched.
+// If the user sets an interval (months), a .json export is downloaded every N
+// months. Mode "full" exports all history each time; mode "incremental"
+// exports only what was recorded since the previous export (the very first
+// export contains everything). Optionally wrapped in a .zip. Export only —
+// NOTHING is ever deleted, neither from the extension's storage nor from
+// Chrome's native history.
 let _autoExportRunning = false;
 
 // Stack-safe replacement for Math.min(...arr) — spreading a huge history array
@@ -617,59 +664,319 @@ function oldestVisitTime(entries) {
   return oldest;
 }
 
+// Overlap between consecutive exports. Visits reach extension storage a little
+// after they happen (periodic flush), so the watermark is set slightly in the
+// past to make sure nothing slips between two exports. Duplicates across files
+// are harmless: Import merges and de-duplicates.
+const AUTO_EXPORT_OVERLAP_MS = 86400000;
+
+// ── Chunked export transfer ──────────────────────────────────────────────────
+// chrome.runtime / chrome.tabs messages are capped at 64 MiB, which a big history
+// easily exceeds. So exports are never sent as one message: they're built as a
+// list of ~4 MB string parts kept here, and the history page pulls them one at a
+// time (EXPORT_PULL) and assembles the file itself.
+const _exportJobs = new Map();
+
+// What goes into an export file. Everything else on a stored entry is internal:
+//  - id      : storage bookkeeping; Import generates fresh ones
+//  - rawUrl  : only kept when it differs from url (it's needed to also delete the
+//              exact native-history URL later); otherwise it's a pure duplicate
+//  - tabId / source : never read by anything
+function slimEntry(e) {
+  const o = { url: e.url, title: e.title || '', visitTime: e.visitTime, domain: e.domain };
+  if (e.rawUrl && e.rawUrl !== e.url) o.rawUrl = e.rawUrl;
+  return o;
+}
+// Same idea for stored entries: only add rawUrl when it carries information.
+const rawUrlField = (norm, raw) => (raw && raw !== norm ? { rawUrl: raw } : {});
+
+// ── Batched import ───────────────────────────────────────────────────────────
+// A big file can't be sent in one message (64 MiB cap), so the page sends it in
+// batches: IMPORT_BEGIN → IMPORT_BATCH × n → IMPORT_HISTORY {job} (finish).
+// The existing history + de-dupe set are built once, at BEGIN.
+const _importJobs = new Map();
+function importProcessBatch(job, list) {
+  const fresh = [];
+  for (const e of list) {
+    if (!e || !e.url || !isTrackable(e.url)) { job.stats.invalid++; continue; }
+    if (e.visitTime && e.visitTime < job.cutoff) {
+      job.stats.old++;
+      if (!job.stats.oldestOld || e.visitTime < job.stats.oldestOld) job.stats.oldestOld = e.visitTime;
+      continue;
+    }
+    const raw  = e.rawUrl || e.url;   // slim exports only carry rawUrl when it differs from url
+    const norm = normalizeUrl(raw);
+    const vt   = e.visitTime || Date.now();
+    if (job.existingSet) {                 // (SQLite jobs let the database skip duplicates instead)
+      const key = `${norm}|${Math.floor(vt / 5000)}`;
+      if (job.existingSet.has(key)) { job.stats.dup++; continue; }
+      job.existingSet.add(key);
+    }
+    fresh.push({ id: `imp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, url: norm, ...rawUrlField(norm, raw),
+                 title: e.title || '', visitTime: vt, domain: domainOf(raw) });
+  }
+  job.stats.imported += fresh.length;
+  return fresh;
+}
+
+function registerExportJob(parts) {
+  const id = 'x' + Date.now() + Math.random().toString(36).slice(2, 6);
+  _exportJobs.set(id, parts);
+  setTimeout(() => _exportJobs.delete(id), 30 * 60000);
+  return id;
+}
+// meta: object written before "entries"; tailJson: raw JSON fragment (starting with ',') written after it.
+// SQLite export: parts are produced lazily, one slice of the table at a time, as the page
+// pulls them — the whole export is never held in memory at once.
+async function* sqlExportParts(meta, tailJson, filter) {
+  const metaJson = JSON.stringify(meta);
+  let cur = metaJson.slice(0, -1) + (metaJson.length > 2 ? ',' : '') + '"entries":[';
+  let first = true, after = null;
+  for (;;) {
+    const rows = await EhSql.rpc('getSlice', { ...filter, after, limit: 20000 });
+    for (const r of rows) {
+      cur += (first ? '' : ',') + JSON.stringify(slimEntry(r));
+      first = false;
+      if (cur.length > 4e6) { yield cur; cur = ''; }
+    }
+    if (rows.length < 20000) break;
+    const last = rows[rows.length - 1];
+    after = [last.visitTime, last.seq];
+  }
+  yield cur + ']' + (tailJson || '') + '}';
+}
+function buildExportParts(meta, entries, tailJson) {
+  const parts = [];
+  const metaJson = JSON.stringify(meta);
+  let cur = metaJson.slice(0, -1) + (metaJson.length > 2 ? ',' : '') + '"entries":[';
+  let first = true;
+  for (let i = 0; i < entries.length; i++) {
+    cur += (first ? '' : ',') + JSON.stringify(entries[i]);
+    first = false;
+    if (cur.length > 4e6) { parts.push(cur); cur = ''; }
+  }
+  cur += ']' + (tailJson || '') + '}';
+  parts.push(cur);
+  return parts;
+}
+
+function broadcastAutoExportProgress(label, pct, error) {
+  try {
+    chrome.runtime.sendMessage({ type: 'AUTO_EXPORT_PROGRESS', label, pct, error: !!error }, () => { void chrome.runtime.lastError; });
+  } catch (_) {}
+}
+
+// Collects an export into a Blob. A 1 GB history can never be ONE JavaScript string (the engine's limit is far
+// lower), so the text is handed to Blob storage in batches — the browser keeps those off the JS heap — and the
+// request body is the Blob.
+async function materializeExportContent(content, onProgress, mime) {
+  const blobs = [];
+  let batch = [], batchLen = 0, n = 0;
+  const push = (str) => {
+    batch.push(str); batchLen += str.length;
+    if (batchLen > 32e6) { blobs.push(new Blob(batch)); batch = []; batchLen = 0; }
+  };
+  if (content && content.lazy) {
+    for await (const part of content.lazy) {
+      push(part); n++;
+      if (onProgress) onProgress(Math.min(55, 10 + n * 2));
+    }
+  } else if (Array.isArray(content)) {
+    for (let i = 0; i < content.length; i++) {
+      push(content[i]);
+      if (onProgress && (i % 8 === 0 || i === content.length - 1)) onProgress(10 + Math.round(45 * (i + 1) / content.length));
+    }
+  } else {
+    push(String(content || ''));
+    if (onProgress) onProgress(55);
+  }
+  if (batch.length) blobs.push(new Blob(batch));
+  return new Blob(blobs, { type: mime || 'application/json' });
+}
+
+function webDavTargetUrl(baseUrl, filename) {
+  const raw = String(baseUrl || '').trim();
+  if (!raw) throw new Error('WebDAV URL is empty');
+  const u = new URL(raw);
+  // The URL is a FOLDER (the file name is added here) — with or without the trailing slash. Only an address that
+  // clearly names a file (…/history.json) is used as it is. (Without this, "https://host/dav/history" was
+  // uploaded AS a file called "history", which servers answer with 409 / 405.)
+  const last = u.pathname.split('/').filter(Boolean).pop() || '';
+  const looksLikeFile = /\.[A-Za-z0-9]{1,5}$/.test(last) && !/\/$/.test(u.pathname);
+  if (!looksLikeFile) {
+    if (!/\/$/.test(u.pathname)) u.pathname += '/';
+    u.pathname += encodeURIComponent(filename);
+  }
+  return u.toString();
+}
+
+// "user:password" → Basic auth header, safe for non-Latin-1 characters (plain btoa() throws on those)
+function webDavAuthHeader(username, password) {
+  if (!username && !password) return null;
+  const bytes = new TextEncoder().encode(`${username || ''}:${password || ''}`);
+  let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+  return 'Basic ' + btoa(bin);
+}
+function webDavStatusText(status) {
+  switch (status) {
+    case 401: return 'Login failed (401) — check the username and password';
+    case 403: return 'Access denied (403) — this account may not be allowed to write here';
+    case 404: return 'Folder not found (404) — check the URL / create the folder first';
+    case 405: return 'The server does not accept uploads at this URL (405) — is it a WebDAV address?';
+    case 409: return 'The target folder does not exist (409) — create it on the server first';
+    case 413: return 'The server refused the file because it is too large (413)';
+    case 507: return 'The server is out of storage space (507)';
+    default:  return `The server answered with an error (${status})`;
+  }
+}
+async function fetchWithTimeout(url, opts, ms) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctl.signal }); }
+  finally { clearTimeout(t); }
+}
+
+// PUT that creates missing folders: servers answer 409 (or 404) when the target folder does not exist.
+// In that case MKCOL every folder of the URL path (parents first; "already exists" answers are fine) and retry once.
+async function webDavPut(target, headers, body, timeoutMs) {
+  const put = () => fetchWithTimeout(target, { method: 'PUT', headers, body }, timeoutMs);
+  let res = await put();
+  if (res.status !== 409 && res.status !== 404) return { res, created: false };
+  const u = new URL(target);
+  const dirs = u.pathname.split('/').filter(Boolean).slice(0, -1);        // folders only, not the file name
+  const auth = headers.Authorization ? { Authorization: headers.Authorization } : {};
+  let path = '', created = false;
+  const mkLog = [];
+  for (const seg of dirs) {
+    path += '/' + seg;
+    try {
+      const m = await fetchWithTimeout(u.origin + path + '/', { method: 'MKCOL', headers: auth }, 15000);
+      mkLog.push(m.status);
+      if (m.status === 201) created = true;
+      else if (m.status === 401) return { res: m, created };               // wrong login — report it
+      // 405 = already exists, 403/other on the upper levels = not ours to create; the final PUT decides
+    } catch (_) { /* network hiccup on one level — the retry below reports the real problem */ }
+  }
+  res = await put();
+  return { res, created, tried: u.pathname, mk: mkLog.join(',') };
+}
+
+// Settings → "Test upload": PUT a tiny file, then delete it again.
+async function testWebDav({ url, username, password }) {
+  const t0 = Date.now();
+  let target;
+  try { target = webDavTargetUrl(url, `eh-webdav-test-${Date.now()}.txt`); }
+  catch (e) { return { ok: false, message: 'The server URL is not valid' }; }
+  const headers = { 'Content-Type': 'text/plain', 'Overwrite': 'T' };
+  const auth = webDavAuthHeader(username, password);
+  if (auth) headers.Authorization = auth;
+  try {
+    const { res, created, tried, mk } = await webDavPut(target, headers, 'Extended History WebDAV test ' + new Date().toISOString(), 20000);
+    if (!res.ok) return { ok: false, message: webDavStatusText(res.status) + (tried ? ` [PUT ${tried}; folder creation answers: ${mk || 'none'}]` : '') };
+    let cleaned = true;
+    try { const d = await fetchWithTimeout(target, { method: 'DELETE', headers: auth ? { Authorization: auth } : {} }, 10000); cleaned = d.ok || d.status === 404; } catch (_) { cleaned = false; }
+    return { ok: true, ms: Date.now() - t0, message: 'Upload works' + (created ? ' — the folder did not exist and was created' : '') + (cleaned ? '' : ' (the test file could not be removed again — you can delete "eh-webdav-test-*.txt" yourself)') };
+  } catch (e) {
+    if (e && e.name === 'AbortError') return { ok: false, message: 'The server did not answer within 20 seconds' };
+    return { ok: false, message: 'Could not reach the server — check the address, your network, and that it allows this extension' };
+  }
+}
+
+async function uploadWebDavExport(content, filename, mime, settings) {
+  broadcastAutoExportProgress('Preparing WebDAV export…', 5);
+  try {
+    const body = await materializeExportContent(content, pct => broadcastAutoExportProgress('Preparing WebDAV export…', Math.min(60, pct)), mime);
+    const headers = { 'Content-Type': mime || 'application/json', 'Overwrite': 'T' };
+    const auth = webDavAuthHeader(settings.autoExportWebDavUsername, settings.autoExportWebDavPassword);
+    if (auth) headers.Authorization = auth;
+    const mb = body.size / 1048576;
+    // fetch() cannot report upload progress, so the upload stage is shown as an animated bar with the size
+    broadcastAutoExportProgress(`Uploading ${mb >= 1024 ? (mb / 1024).toFixed(2) + ' GB ' : (mb >= 0.1 ? mb.toFixed(1) + ' MB ' : '')}to WebDAV…`, null);
+    const { res } = await webDavPut(webDavTargetUrl(settings.autoExportWebDavUrl, filename), headers, body, 30 * 60000);
+    if (!res.ok) throw new Error(webDavStatusText(res.status));
+    broadcastAutoExportProgress('WebDAV upload complete', 100);
+    return true;
+  } catch (e) {
+    broadcastAutoExportProgress('WebDAV upload failed: ' + e.message, 100, true);
+    throw e;
+  }
+}
+
+const _swStartedAt = Date.now();
 async function checkAutoExport(force) {
   if (_autoExportRunning) return { skipped: true };
+  // Never start a (possibly huge) export while the browser is still starting up.
+  if (!force && Date.now() - _swStartedAt < 5 * 60000) return { skipped: true, reason: 'startup' };
   const settings = await getSettings();
   const interval = Number(settings.autoExportIntervalMonths) || 0;
   if (interval <= 0) return { skipped: true, reason: 'disabled' };
 
   _autoExportRunning = true;
   try {
-    const entries = await getAll();
-    if (!entries.length) return { skipped: true, reason: 'empty' };
+    const sqlMode = await _useSql();
+    const entries = sqlMode ? null : await getAll();
+    const nonEmpty = sqlMode ? await EhSql.rpc('hasRows') : entries.length > 0;     // not COUNT(*): that scans the whole database
+    if (!nonEmpty) return { skipped: true, reason: 'empty' };
 
-    const now = Date.now();
-    const oldest = oldestVisitTime(entries);
-    const retainMs  = AUTO_EXPORT_RETAIN_MONTHS * MS_PER_MONTH;
-    const triggerMs = retainMs + interval * MS_PER_MONTH;
+    const now       = Date.now();
+    const lastRunAt = Number(settings.autoExportLastRunAt) || 0;
+    const since     = Number(settings.autoExportLastCoveredTo) || 0;
 
-    if (!force && (now - oldest) < triggerMs) {
-      return { skipped: true, reason: 'not_due', ageMonths: (now - oldest) / MS_PER_MONTH };
+    // Due once `interval` months have passed since the last export — or, before
+    // the first export, once the oldest entry is `interval` months old.
+    if (!force) {
+      // Before the first export the clock starts when auto-export is first checked — NOT at the oldest entry, or importing an
+      // old history made a full export of everything "due" immediately (a multi-GB job that exhausted the browser's memory).
+      let baseline = lastRunAt || Number(settings.autoExportBaselineAt) || 0;
+      if (!baseline) { baseline = now; await saveSettings({ autoExportBaselineAt: now }); }
+      if ((now - baseline) < interval * MS_PER_MONTH) {
+        return { skipped: true, reason: 'not_due', nextDueAt: baseline + interval * MS_PER_MONTH };
+      }
     }
 
-    const cutoff = now - retainMs;
-    const toExport = entries.filter(e => e.visitTime < cutoff);
-    if (!toExport.length) return { skipped: true, reason: 'nothing_past_cutoff' };
+    const mode = settings.autoExportMode === 'incremental' ? 'incremental' : 'full';
+    const dest = ['local', 'webdav', 'both'].includes(settings.autoExportDestination) ? settings.autoExportDestination : 'local';
+    const useZip = settings.autoExportZip === true && dest !== 'webdav';
+    const exportFilter = mode === 'incremental' ? { lo: since, loOpen: true } : {};
+    const toExport = sqlMode ? null : (mode === 'incremental' ? entries.filter(e => e.visitTime > since) : entries);
+    const exportCount = sqlMode ? (await EhStore.page({ ...exportFilter, limit: 0 })).total : toExport.length;
+    if (!exportCount) return { skipped: true, reason: 'nothing_new' };
 
     const exportData = {
       exportedAt: new Date(now).toISOString(),
-      totalEntries: toExport.length,
+      totalEntries: exportCount,
       entries: toExport,
       auto: true,
+      autoExportMode: mode,
       autoExportIntervalMonths: interval,
     };
 
-    // Download via the same mechanism session auto-save uses — hands the JSON
-    // to an open (or briefly-opened) history.html tab, which saves it via a
-    // Blob + <a download> click. Avoids needing the "downloads" permission.
-    const json = JSON.stringify(exportData, null, 2);
-    const filename = `extended-history-auto_${new Date(now).toISOString().slice(0, 10)}.json`;
-    const downloaded = await downloadViaPage(json, filename, 'application/json');
-    if (!downloaded) return { skipped: true, reason: 'download_failed' };
+    // Download via the same mechanism session auto-save uses — an open (or
+    // briefly-opened) history.html tab pulls the data in chunks and saves it via
+    // a Blob + <a download> click. Avoids needing the "downloads" permission.
+    const { entries: _omit, ...meta } = exportData;
+    const makeJson = () => sqlMode
+      ? { lazy: sqlExportParts(meta, '', exportFilter) }          // SQLite: streamed slice by slice
+      : buildExportParts(meta, toExport.map(slimEntry));          // array of string parts, not one big string
+    const baseName = `extended-history-auto_${mode === 'incremental' ? 'incremental' : 'full'}_${new Date(now).toISOString().slice(0, 10)}`;
+    const filename = useZip ? `${baseName}.zip` : `${baseName}.json`;
+    let downloaded = false;
+    let uploaded = false;
+    if (dest === 'local' || dest === 'both') {
+      downloaded = useZip
+        ? await downloadViaPage(makeJson(), filename, 'application/zip', { zipEntryName: `${baseName}.json` })
+        : await downloadViaPage(makeJson(), filename, 'application/json');
+      if (!downloaded) return { skipped: true, reason: 'download_failed' };
+    }
+    if (dest === 'webdav' || dest === 'both') {
+      const webDavName = useZip ? filename.replace(/\.zip$/i, '.json') : filename;
+      try { await uploadWebDavExport(makeJson(), webDavName, 'application/json', settings); }
+      catch (e) { uploaded = false; return { skipped: true, reason: 'webdav_failed', error: e.message }; }
+      uploaded = true;
+    }
 
-    // Remove exported entries from the EXTENSION'S OWN storage only — keep
-    // only the retained window there. This must NEVER touch native Chrome
-    // history: (1) that's not what auto-export is for — native history is
-    // Chrome's own ~3-month rolling window and is left alone entirely; and
-    // (2) chrome.history.deleteUrl() removes ALL visits to a URL, not just
-    // the specific old one being archived, so calling it here would also
-    // wipe out any more recent (within-retention) visits to the same URL —
-    // exactly what was happening before this fix.
-    const idsToRemove = new Set(toExport.map(e => e.id));
-    await removeEntries(idsToRemove, new Set());
-
-    await saveSettings({ autoExportLastRunAt: now });
-    return { success: true, exported: toExport.length, filename };
+    await saveSettings({ autoExportLastRunAt: now, autoExportLastCoveredTo: now - AUTO_EXPORT_OVERLAP_MS });
+    return { success: true, exported: exportCount, filename, uploaded, downloaded };
   } finally {
     _autoExportRunning = false;
   }
@@ -735,8 +1042,8 @@ chrome.alarms.onAlarm.addListener(async alarm => {
 // session auto-save has always worked, and it means the extension never needs
 // the "downloads" permission at all. Used for both session auto-save and
 // history auto-export.
-async function downloadViaPage(content, filename, mime) {
-  const extPageUrl = chrome.runtime.getURL('history.html');
+async function downloadViaPage(content, filename, mime, opts) {
+  const extPageUrl = chrome.runtime.getURL('html/history.html');
 
   // Check if the history page is already open
   let tabId = null;
@@ -772,16 +1079,32 @@ async function downloadViaPage(content, filename, mime) {
   });
 
   let ok = true;
+  let jobId = null;
   try {
-    await chrome.tabs.sendMessage(tabId, {
+    const payload = {
       type: 'AUTO_SAVE_DOWNLOAD',
-      content,
       mime: mime || 'text/html',
       filename,
-    });
+      zipEntryName: opts && opts.zipEntryName ? opts.zipEntryName : undefined, // set → page zips the data first
+    };
+    if (content && content.lazy) {      // SQLite export: generated on demand as the page pulls
+      jobId = registerExportJob({ gen: content.lazy });
+      payload.pullId = jobId;
+    } else if (Array.isArray(content)) {       // big payload: the page pulls the parts itself
+      jobId = registerExportJob(content);
+      payload.pullId = jobId;
+      payload.pullCount = content.length;
+    } else {
+      payload.content = content;
+    }
+    // New-style pages answer once the file has been handed to the browser; old ones answer nothing.
+    const resp = await chrome.tabs.sendMessage(tabId, payload);
+    if (resp && resp.ok === false) { console.warn('[EH] downloadViaPage: page failed:', resp.error); ok = false; }
   } catch (e) {
     console.warn('[EH] downloadViaPage: send failed:', e.message);
     ok = false;
+  } finally {
+    if (jobId) _exportJobs.delete(jobId);
   }
 
   // Close the tab we opened (leave user's existing tab alone)
@@ -1432,7 +1755,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   await ensureContextMenus();
   await migrateStorage();
   if (reason === 'install') {
-    chrome.tabs.create({ url: chrome.runtime.getURL('tutorial.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('html/tutorial.html') });
   }
   const _s0 = await getSettings();
   _timeTrackingEnabled = _s0.timeTrackingEnabled !== false;
@@ -1449,15 +1772,19 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     const items   = await chrome.history.search({ text:'', startTime:0, maxResults:100000 });
     const entries = items.filter(i=>isTrackable(i.url)).map(i=>({
       id:`bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2,6)}`,
-      url:normalizeUrl(i.url), rawUrl:i.url, title:i.title||'',
-      visitTime:i.lastVisitTime||Date.now(), domain:domainOf(i.url), tabId:null, source:'backfill',
+      url:normalizeUrl(i.url), ...rawUrlField(normalizeUrl(i.url), i.url), title:i.title||'',
+      visitTime:i.lastVisitTime||Date.now(), domain:domainOf(i.url),
     }));
-    const existing    = await getAll();
-    const existingSet = new Set(existing.map(e=>`${e.url}|${Math.floor(e.visitTime/5000)}`));
-    const newOnes     = entries.filter(e=>!existingSet.has(`${e.url}|${Math.floor(e.visitTime/5000)}`));
-    if (newOnes.length) {
-      await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
-      await updateTodayHistory();
+    if (await _useSql()) {
+      if (await EhStore.insertIgnore(entries)) { _entriesCache = null; await updateTodayHistory(); }
+    } else {
+      const existing    = await getAll();
+      const existingSet = new Set(existing.map(e=>`${e.url}|${Math.floor(e.visitTime/5000)}`));
+      const newOnes     = entries.filter(e=>!existingSet.has(`${e.url}|${Math.floor(e.visitTime/5000)}`));
+      if (newOnes.length) {
+        await setAll([...existing,...newOnes].sort((a,b)=>b.visitTime-a.visitTime));
+        await updateTodayHistory();
+      }
     }
     await chrome.storage.local.set({ [BACKFILL_KEY]:true });
     //console.log(`[EH] Backfilled ${newOnes.length} entries`);
@@ -1483,7 +1810,7 @@ const RESTORED_AT_KEY = 'eh_restored_at';   // time of the last unlock; only use
 const RESTORE_TOP_URLS    = 250;
 const RESTORE_TOP_DOMAINS = 250;
 const RESTORE_BATCH_SIZE  = 25;
-const LOCK_ALLOWED_TYPES  = new Set(['GET_LOCK_STATUS', 'UNLOCK_HISTORY', 'GET_SETTINGS', 'GET_CLEANUP_STATUS']);
+const LOCK_ALLOWED_TYPES  = new Set(['GET_LOCK_STATUS', 'GET_LOCK_PLAN', 'GET_MIGRATION_STATUS', 'UNLOCK_HISTORY', 'GET_SETTINGS', 'GET_CLEANUP_STATUS']);
 
 let _lockedCache = null;
 let _lockBusy    = false;
@@ -1554,7 +1881,7 @@ async function restoredEntriesSince(sinceMs, liveEntries) {
   const floor = (await chrome.storage.local.get(RESTORED_AT_KEY))[RESTORED_AT_KEY] || 0;
   if (!floor) return [];
   const seen = new Set(liveEntries.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
-  return (await getAll()).filter(e => e.visitTime >= sinceMs && e.visitTime < floor
+  return (await getEntriesBetween(sinceMs, floor)).filter(e => e.visitTime < floor
                                    && !seen.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
 }
 
@@ -1640,28 +1967,74 @@ async function importBookmarkTree(tree) {
   return count + await createBookmarkNodes(other.id, loose);
 }
 
-async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving) {
+// Encrypting the history means holding all of it as ONE string (JS caps strings at ~512 MB →
+// "invalid string length") and running AES over it, so above this size the history itself is
+// left where it is — unencrypted — and only the UI is locked. Sessions, tabs, time data etc. are
+// still encrypted either way.
+const LOCK_ENCRYPT_LIMIT_MB = 250;
+async function lockPlan() {
+  const b = await _backend();
+  if (b === 'sqlite') {      // the database file's real size — no COUNT(*) over a huge table
+    let bytes = 0;
+    try { bytes = await withTimeout(EhStore.size(), 20000, 'size'); } catch (_) {}
+    const mb = bytes / 1048576;
+    return { entries: null, sizeMB: Math.round(mb), limitMB: LOCK_ENCRYPT_LIMIT_MB, encryptHistory: mb <= LOCK_ENCRYPT_LIMIT_MB };
+  }
+  const entries = b === 'local' ? ((await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY] || []).length : await EhStore.count();
+  const mb = b === 'local' ? (await chrome.storage.local.getBytesInUse(HISTORY_KEY)) / 1048576 : entries * 250 / 1048576;   // ≈250 bytes per entry as JSON
+  return { entries, sizeMB: Math.round(mb), limitMB: LOCK_ENCRYPT_LIMIT_MB, encryptHistory: mb <= LOCK_ENCRYPT_LIMIT_MB };
+}
+
+// Big history (above the limit): only the interface is locked. NOTHING else is read or encrypted — touching
+// sessions / tabs / time data is pointless next to a plaintext multi-hundred-MB database and made locking slow.
+// A tiny encrypted blob is still stored so the password can be verified on unlock.
+async function lockBigHistory(password, clearSiteData, hideBookmarks, keepSaving) {
+  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), historyKept: true, minimal: true, entries: [],
+    bookmarks: hideBookmarks ? await snapshotBookmarks() : undefined });
+  const enc = await _lkEncrypt(payload, password);
+  await chrome.storage.local.set({ [LOCK_BLOB_KEY]: { __eh_encrypted: true, ...enc, lockedAt: Date.now(), totalEntries: 0, historyKept: true } });
+  await chrome.storage.local.set({ [LOCK_STATE_KEY]: true, [LOCK_KEEP_SAVING_KEY]: !!keepSaving });
+  _lockedCache = true; _keepSavingCache = !!keepSaving;
+  try { chrome.contextMenus.removeAll(); } catch {}
+  _entriesCache = null; _entriesLoading = null;
+  sessionId = null; sessionTabs = {}; sessionStart = null;
+  await chrome.storage.local.remove([TODAY_HISTORY_KEY, CURRENT_SESSION_KEY, 'eh_cur_session', SEED_WINDOW_KEY]);
+  _seedWin = null;
+  try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] lock: history.deleteAll', e); }
+  if (hideBookmarks) { try { await deleteAllBookmarks(); } catch (e) { console.error('[EH] lock: deleting bookmarks', e); } }
+  if (clearSiteData) {
+    try { await chrome.browsingData.remove({ since: 0 }, { cookies: true, localStorage: true, indexedDB: true, cacheStorage: true, serviceWorkers: true, webSQL: true, fileSystems: true }); }
+    catch (e) { console.error('[EH] lock: browsingData.remove', e); }
+  }
+  return { success: true, locked: 0, historyEncrypted: false };
+}
+
+async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving, acceptUnencrypted) {
   if (typeof password !== 'string' || password.length < 4) throw new Error('Password must be at least 4 characters');
   if (_lockBusy) throw new Error('Lock already in progress');
   if (await isLocked()) throw new Error('Already locked');
   _lockBusy = true;
   let flagSet = false;
   try {
+    const plan = await lockPlan();
+    const big = !plan.encryptHistory;
+    if (big && !acceptUnencrypted) return { error: `History is too big to encrypt (${plan.sizeMB} MB, limit ${plan.limitMB} MB). It will stay unencrypted; only the interface is locked. Confirm to continue.`, needsConfirm: true, plan };
     // 1. Merge first: pull today's native history into the extension's own history so
     //    nothing browsed since the last periodic flush is lost when native history is wiped.
     //    If this throws, we abort here and nothing has been deleted.
     await flushTodayToHistory();
+    if (big) return await lockBigHistory(password, clearSiteData, hideBookmarks, keepSaving);
     try { await finishSession(); } catch {}          // so the current session is part of the snapshot
 
     // 2. Snapshot exactly what gets encrypted: history, sessions, stored tabs, ignore list,
     //    quick filters, and time-tracking data (eh_time — per-domain browsing time is just as
     //    revealing as the history entries themselves, so it has to be swept too, not left as
     //    the one plaintext dataset sitting next to everything else that's encrypted).
-    const entries  = await getAll(true);
+    const entries  = big ? [] : await getAll(true);
     const sessions = await getSessions();
     const st = await chrome.storage.local.get([TAB_STORAGE_KEY, IGNORE_LIST_KEY, QUICK_FILTERS_KEY, TIME_KEY]);
     const payload  = JSON.stringify({
-      exportedAt: new Date().toISOString(), totalEntries: entries.length, entries, sessions,
+      exportedAt: new Date().toISOString(), totalEntries: big ? plan.entries : entries.length, historyKept: big, entries, sessions,
       bookmarks:    hideBookmarks ? await snapshotBookmarks() : undefined,
       tabStorage:   st[TAB_STORAGE_KEY]   || [],
       ignoreList:   st[IGNORE_LIST_KEY]   || [],
@@ -1670,7 +2043,7 @@ async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving) {
     });
 
     const enc = await _lkEncrypt(payload, password);
-    await chrome.storage.local.set({ [LOCK_BLOB_KEY]: { __eh_encrypted: true, ...enc, lockedAt: Date.now(), totalEntries: entries.length } });
+    await chrome.storage.local.set({ [LOCK_BLOB_KEY]: { __eh_encrypted: true, ...enc, lockedAt: Date.now(), totalEntries: big ? plan.entries : entries.length, historyKept: big } });
 
     // Read the ciphertext back and decrypt it BEFORE deleting anything.
     const back  = (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY];
@@ -1693,10 +2066,10 @@ async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving) {
     await chrome.storage.local.set(inPlace);     // overwrites the plaintext values with ciphertext
     try { chrome.contextMenus.removeAll(); } catch {}    // no right-click menu while locked
 
-    _entriesCache = null;
+    _entriesCache = null; _entriesLoading = null;
     sessionId = null; sessionTabs = {}; sessionStart = null;
-    try { if (await _useIdb()) await EhIdb.clear(); } catch (e) { console.error('[EH] lock: idb clear', e); }
-    await chrome.storage.local.remove([HISTORY_KEY, TODAY_HISTORY_KEY, CURRENT_SESSION_KEY, 'eh_cur_session', SEED_WINDOW_KEY]);
+    if (!big) { try { if (await _useIdb()) await EhStore.clear(); } catch (e) { console.error('[EH] lock: idb clear', e); } }
+    await chrome.storage.local.remove([...(big ? [] : [HISTORY_KEY]), TODAY_HISTORY_KEY, CURRENT_SESSION_KEY, 'eh_cur_session', SEED_WINDOW_KEY]);
     _seedWin = null;
     try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] lock: history.deleteAll', e); }
     if (hideBookmarks) {
@@ -1712,7 +2085,7 @@ async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving) {
         });
       } catch (e) { console.error('[EH] lock: browsingData.remove', e); }
     }
-    return { success: true, locked: entries.length };
+    return { success: true, locked: big ? plan.entries : entries.length, historyEncrypted: !big };
   } catch (err) {
     if (!flagSet) await chrome.storage.local.remove(LOCK_BLOB_KEY).catch(() => {});
     throw err;
@@ -1730,6 +2103,7 @@ async function unlockHistory(password) {
     try { data = JSON.parse(await _lkDecrypt(blob, String(password || ''))); }
     catch { throw new Error('Wrong password'); }
 
+    const kept = data.historyKept === true || blob.historyKept === true;     // big history was never removed/encrypted
     let entries = Array.isArray(data.entries) ? data.entries : [];
     const keepSaving = await lockKeepSaving();
     let mergedCount = 0;
@@ -1745,16 +2119,19 @@ async function unlockHistory(password) {
         if (since.length) { entries = entries.concat(since); mergedCount = since.length; }
       } catch (e) { console.error('[EH] unlock: merging locked-period history', e); }
     }
-    await setAll(entries, true);
+    if (kept) { if (entries.length && await _useSql()) await EhStore.insertIgnore(entries); }
+    else await setAll(entries, true);
     const restore = {};
+    if (!data.minimal) {            // a "minimal" lock (big history) never touched these, so there is nothing to restore
     restore[SESSIONS_KEY] = Array.isArray(data.sessions) ? data.sessions : [];
     if (Array.isArray(data.tabStorage))   restore[TAB_STORAGE_KEY]   = data.tabStorage;
     if (Array.isArray(data.ignoreList))   restore[IGNORE_LIST_KEY]   = data.ignoreList;
     if (Array.isArray(data.quickFilters)) restore[QUICK_FILTERS_KEY] = data.quickFilters;
+    }
     // Always restore eh_time explicitly (rather than only when present) so that unlocking a
     // blob locked before eh_time was swept in doesn't leave its in-place ciphertext behind —
     // falls back to {} for those older blobs instead of leaving unreadable garbage under the key.
-    restore[TIME_KEY] = (data.timeData && typeof data.timeData === 'object') ? data.timeData : {};
+    if (!data.minimal) restore[TIME_KEY] = (data.timeData && typeof data.timeData === 'object') ? data.timeData : {};
     restore[RESTORED_AT_KEY] = Date.now();
     await chrome.storage.local.set(restore);
     if (Array.isArray(data.bookmarks)) await restoreBookmarkRoots(data.bookmarks);   // "Hide bookmarks" was ticked when locking
@@ -1767,7 +2144,14 @@ async function unlockHistory(password) {
     if (!keepSaving) {
       try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] unlock: history.deleteAll', e); }
     }
-    const seed = pickRestoreUrls(entries);
+    let seed;
+    if (kept) {          // history is still in the database: pick the most-visited from there
+      seed = new Map();
+      if (await _useSql()) {
+        for (const x of await EhStore.topBy({ column: 'url', limit: RESTORE_TOP_URLS })) if (x.identifier && isTrackable(x.identifier)) seed.set(normalizeUrl(x.identifier), x.identifier);
+        for (const x of await EhStore.topBy({ column: 'domain', limit: RESTORE_TOP_DOMAINS })) { const u = `https://${x.identifier}/`; if (!seed.has(normalizeUrl(u))) seed.set(normalizeUrl(u), u); }
+      }
+    } else seed = pickRestoreUrls(entries);
     await setSeedWindow({ start: Date.now() - 1000, end: null, urls: [...seed.keys()] });
     const list = [...seed.values()];
     for (let i = 0; i < list.length; i += RESTORE_BATCH_SIZE) {
@@ -1783,15 +2167,35 @@ async function unlockHistory(password) {
     await ensureContextMenus();
 
     try { await beginSession(); } catch {}
-    return { success: true, restored: entries.length, seeded: list.length, merged: mergedCount };
+    return { success: true, restored: kept ? (blob.totalEntries || 0) : entries.length, seeded: list.length, merged: mergedCount };
   } finally { _lockBusy = false; }
 }
 
 // ── History storage — switches between localStorage and IndexedDB ─────────────
-async function _useIdb() {
-  const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
-  return r[IDB_STORAGE_KEY] === true;
+// Three possible stores for the history:
+//   'sqlite' — SQLite (WASM) on disk, queried with SQL; nothing is held in JS memory (best for big histories)
+//   'idb'    — IndexedDB
+//   'local'  — one big array in chrome.storage.local
+let _backendKind = null;
+async function _backend() {
+  if (_backendKind) return _backendKind;
+  const r = await chrome.storage.local.get([IDB_STORAGE_KEY, SQL_STORAGE_KEY]);
+  _backendKind = r[SQL_STORAGE_KEY] === true ? 'sqlite' : (r[IDB_STORAGE_KEY] === true ? 'idb' : 'local');
+  return _backendKind;
 }
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && (ch[IDB_STORAGE_KEY] || ch[SQL_STORAGE_KEY])) _backendKind = null;
+});
+async function _useIdb() { return (await _backend()) !== 'local'; }    // "a database store" (IndexedDB or SQLite)
+async function _useSql() { return (await _backend()) === 'sqlite'; }
+// Same API on both database stores — calls go to whichever is active.
+const EhStore = new Proxy({}, {
+  get: (_t, name) => async (...args) => {
+    const store = (await _backend()) === 'sqlite' ? EhSql : EhIdb;
+    if (typeof store[name] !== 'function') throw new Error(`${name}() is not available on this storage backend`);
+    return store[name](...args);
+  },
+});
 // In-memory mirror of full history, kept warm for the life of the service worker.
 // This is the actual reason date-switching was slow: every SEARCH call used to
 // re-read + re-parse the entire history blob from chrome.storage/IndexedDB from
@@ -1844,18 +2248,45 @@ function withTimeout(promise, ms, label) {
 
 let _entriesCache = null;
 
+// Whole history in memory. Only the heavy analytics handlers need this; the main page
+// (SEARCH / GET_STATS / flush) is answered from IndexedDB indexes instead — see below.
+// Concurrent callers share ONE load: several requests arriving while the cache was cold
+// used to each load their own full copy of the history (multiples of GB).
+let _entriesLoading = null;
+let _cacheTimer = null, _lastLegacyPrune = 0;
+// Don't keep millions of entries resident after a heavy panel closes — drop the copy when idle.
+function _touchCache() { clearTimeout(_cacheTimer); _cacheTimer = setTimeout(() => { _entriesCache = null; }, 120000); }
 async function getAll(force) {
+  if (_migrating) return [];
   if (!force && await isLocked()) return [];      // locked: the extension has no history to show
-  if (_entriesCache) return _entriesCache;
-  if (await _useIdb()) { _entriesCache = await EhIdb.getAll(); return _entriesCache; }
-  const r = await chrome.storage.local.get(HISTORY_KEY);
-  _entriesCache = r[HISTORY_KEY] || [];
-  return _entriesCache;
+  if (_entriesCache) { _touchCache(); return _entriesCache; }
+  if (!_entriesLoading) {
+    _entriesLoading = (async () => {
+      try {
+        const loaded = (await _useIdb())
+          ? await EhStore.getAll()
+          : ((await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY] || []);
+        if (!_entriesCache) _entriesCache = loaded;    // an import/write may have set it meanwhile
+        _touchCache();
+        return _entriesCache;
+      } finally { _entriesLoading = null; }
+    })();
+  }
+  return _entriesLoading;
+}
+// True when history lives in IndexedDB and is NOT loaded in memory — then reads should go
+// to the indexes (cheap) rather than trigger a full load.
+async function coldIdb() { return !(await isLocked()) && ((await _useSql()) || (!_entriesCache && await _useIdb())); }
+// Stored entries with lo <= visitTime <= hi, from the cache if it's warm, else from the index.
+async function getEntriesBetween(lo, hi) {
+  if (lo > hi) return [];
+  if (await coldIdb()) { try { return await EhStore.getRange(lo, hi); } catch (e) { console.warn('[EH] index read failed, loading all:', e.message); } }
+  return (await getAll()).filter(e => e.visitTime >= lo && e.visitTime <= hi);
 }
 async function setAll(entries, force) {
   if (!force && await isLocked()) return;         // locked: never write plaintext history
   _entriesCache = entries; // update the in-memory copy immediately, before the (slower) persisted write
-  if (await _useIdb()) return EhIdb.setAll(entries);
+  if (await _useIdb()) return EhStore.setAll(entries);
   await chrome.storage.local.set({ [HISTORY_KEY]: entries });
 }
 
@@ -1867,19 +2298,40 @@ async function setAll(entries, force) {
 // can still be slow for very large histories on that backend; migrating to
 // IndexedDB in Settings avoids it entirely.
 async function removeEntries(idSet, urlSet) {
+  if (await _useSql()) {                         // find just the matching rows, delete just those
+    const found = await EhStore.findByIdsOrUrls(idSet, urlSet);
+    if (!found.length) return { removed: [] };
+    await EhStore.removeIds(found.map(e => e.id));
+    _entriesCache = null;
+    return { removed: found };
+  }
   const all = await getAll();
   const toRemove = all.filter(e => idSet.has(e.id) || urlSet.has(e.url));
   if (!toRemove.length) return { removed: [] };
 
   if (await _useIdb()) {
     const removeIdSet = new Set(toRemove.map(e => e.id));
-    await withTimeout(EhIdb.removeIds([...removeIdSet]), 10000, 'EhIdb.removeIds()');
+    await withTimeout(EhStore.removeIds([...removeIdSet]), 10000, 'EhStore.removeIds()');
     _entriesCache = all.filter(e => !removeIdSet.has(e.id));
   } else {
     const removeIdSet = new Set(toRemove.map(e => e.id));
     await withTimeout(setAll(all.filter(e => !removeIdSet.has(e.id))), 10000, 'setAll()');
   }
   return { removed: toRemove };
+}
+// Quick filters (named groups of domains / keywords / URL fragments) are applied here, in the background,
+// so they cover the WHOLE history — not just the page of results the history page happens to have loaded.
+function qfMakeMatcher(patterns) {
+  const ps = (Array.isArray(patterns) ? patterns : []).map(p => String(p || '').trim().toLowerCase()).filter(Boolean);
+  if (!ps.length) return null;
+  return (e) => {
+    const url = String(e.url || '').toLowerCase(), title = String(e.title || '').toLowerCase();
+    let domain = String(e.domain || '').toLowerCase();
+    if (!domain) { try { domain = new URL(e.url).hostname.replace(/^www\./, '').toLowerCase(); } catch (_) {} }
+    return ps.some(p => (p.includes('.') && !p.includes(' ') && !p.includes('/'))
+      ? (domain === p || domain.endsWith('.' + p))
+      : (url.includes(p) || title.includes(p)));
+  };
 }
 async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
 async function saveSettings(newSettings) {
@@ -1915,6 +2367,11 @@ async function backfillTitle(url, title, _isRetry = false) {
   if (!url || !title || !isTrackable(url)) return;
   if (title === 'New Tab' || title === 'Loading…' || title === 'Loading...') return;
   const norm = normalizeUrl(url);
+  if (await _useSql()) {
+    const found = await EhStore.updateTitle({ url: norm, title, sinceMs: Date.now() - 300000, onlyIfEmpty: false });
+    if (!found && !_isRetry) setTimeout(() => backfillTitle(url, title, true), 1500);   // entry not recorded yet — retry once
+    return;
+  }
   const entries = await getAll();
   const now = Date.now();
   let bestIdx = -1, bestTime = 0;
@@ -1949,6 +2406,7 @@ async function recordVisit(url, title, tabId) {
     if (title) {
       const cutoff5 = now - 5000;
       const norm = normalizeUrl(url);
+      if (await _useSql()) { await EhStore.updateTitle({ url: norm, title, sinceMs: cutoff5, onlyIfEmpty: true }); return; }
       const entries = await getAll();
       const idx = entries.findLastIndex(e => e.url === norm && e.visitTime >= cutoff5);
       if (idx !== -1 && !entries[idx].title) {
@@ -1961,11 +2419,18 @@ async function recordVisit(url, title, tabId) {
 
   // ── Legacy mode (syncInterval === 0): write every visit immediately ──────
   const cutoff   = now - settings.retentionDays * 86400000;
+  if (await _useSql()) {
+    const norm = normalizeUrl(url);
+    await EhStore.insertIgnore([{ id: `${now}_${Math.random().toString(36).slice(2, 6)}`, url: norm, ...rawUrlField(norm, url), title: title || '', visitTime: now, domain: domainOf(url) }]);
+    if (title) await EhStore.updateTitle({ url: norm, title, sinceMs: now - 5000, onlyIfEmpty: true });
+    if (now - _lastLegacyPrune > 600000) { _lastLegacyPrune = now; await pruneStoredIdb(cutoff, settings.maxEntries); }
+    return;
+  }
   let entries    = await getAll();
   const norm     = normalizeUrl(url);
   const dup      = entries.findIndex(e=>e.url===norm && (now-e.visitTime)<5000);
   if (dup !== -1) { if (title && !entries[dup].title) { entries[dup].title=title; await setAll(entries); } return; }
-  entries.push({ id:`${now}_${Math.random().toString(36).slice(2,6)}`, url:norm, rawUrl:url, title:title||'', visitTime:now, domain:domainOf(url), tabId:tabId||null });
+  entries.push({ id:`${now}_${Math.random().toString(36).slice(2,6)}`, url:norm, ...rawUrlField(norm, url), title:title||'', visitTime:now, domain:domainOf(url) });
   entries = entries.filter(e=>e.visitTime>=cutoff);
   if (entries.length>settings.maxEntries) entries=entries.slice(entries.length-settings.maxEntries);
   await setAll(entries);
@@ -2082,7 +2547,10 @@ async function getOmniboxMatches(query, limit = 8) {
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const [todayEntries, allStored] = await Promise.all([
     getTodayFromChromeApi(),
-    getAll(),
+    (async () => {                       // SQLite: only the newest rows that contain the first word, never the whole history
+      if (await _useSql()) return (await EhStore.page({ words: [primary], mode: 'all', hi: todayStart.getTime(), hiOpen: true, offset: 0, limit: 1500 })).entries;
+      return getAll();
+    })(),
   ]);
   const pastEntries = allStored.filter(e => e.visitTime < todayStart.getTime());
   const entries = [...todayEntries, ...pastEntries];
@@ -2168,7 +2636,7 @@ if (chrome.omnibox) {
       // if we have one, otherwise fall back to the extension's own search
       // page so the query isn't just silently dropped.
       const matches = await getOmniboxMatches(url, 1).catch(() => []);
-      url = matches[0] ? matches[0].url : chrome.runtime.getURL('history.html') + '?q=' + encodeURIComponent(url);
+      url = matches[0] ? matches[0].url : chrome.runtime.getURL('html/history.html') + '?q=' + encodeURIComponent(url);
     }
     if (disposition === 'newForegroundTab') chrome.tabs.create({ url });
     else if (disposition === 'newBackgroundTab') chrome.tabs.create({ url, active: false });
@@ -2177,9 +2645,19 @@ if (chrome.omnibox) {
 }
 
 // ── Message API ──────────────────────────────────────────────────────────────
-chrome.runtime.onMessage.addListener((msg,_s,respond)=>{ handle(msg).then(respond).catch(err=>respond({error:err.message})); return true; });
+chrome.runtime.onMessage.addListener((msg,_s,respond)=>{
+  if (msg && msg.target === 'eh-sql') return;      // addressed to the database (offscreen page), not to us
+  handle(msg).then(r => {
+    if (r && typeof r.error === 'string' && /being repaired/.test(r.error)) { _dbBusy = _dbBusy || { done: 0, total: 0 }; setTimeout(pollDbBusy, 500); return { error: 'Repairing the history database…', migrating: true }; }
+    return r;
+  }).then(respond).catch(err => respond({ error: /being repaired/.test(err.message) ? 'Repairing the history database…' : err.message, migrating: /being repaired/.test(err.message) })); return true;
+});
 
+const MIGRATION_ALLOWED = new Set(['GET_DB_PROGRESS', 'RESET_SQLITE_HARD', 'GET_MIGRATION_STATUS', 'GET_LOCK_STATUS', 'GET_SETTINGS', 'GET_CLEANUP_STATUS']);
 async function handle(msg) {
+  await autoMigrateCheck();
+  if (_dbBusy && !_migrating && !MIGRATION_ALLOWED.has(msg.type)) return { error: 'Upgrading the history database… ' + (_dbBusy.total ? Math.round(100 * _dbBusy.done / _dbBusy.total) + '%' : ''), migrating: true };
+  if (_migrating && !MIGRATION_ALLOWED.has(msg.type)) return { error: 'Moving your history to SQLite… ' + (_migrating.total ? Math.round(100 * _migrating.done / _migrating.total) + '%' : ''), migrating: true };
   if (!LOCK_ALLOWED_TYPES.has(msg.type) && await isLocked()) return { error: 'locked', locked: true };
   switch(msg.type) {
     case 'GET_LOCK_STATUS': {
@@ -2187,25 +2665,88 @@ async function handle(msg) {
       const blob = locked ? (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY] : null;
       return { locked, lockedAt: blob?.lockedAt || null, totalEntries: blob?.totalEntries ?? null };
     }
-    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true, msg.keepSaving === true);
+    case 'GET_LOCK_PLAN':  return await lockPlan();
+    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true, msg.keepSaving === true, msg.acceptUnencrypted === true);
     case 'UNLOCK_HISTORY': return await unlockHistory(msg.password);
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
+      const qfPatterns = Array.isArray(msg.qf) && msg.qf.length ? msg.qf : null;
+      const qfMatch = qfMakeMatcher(qfPatterns);
+
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const todayMs = todayStart.getTime();
+
+      const qWords = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
+      const qMatch = (e) => {
+        const hay = (mode==='title')  ? (e.title||'').toLowerCase()
+                  : (mode==='url')    ? e.url.toLowerCase()
+                  : (mode==='domain') ? (e.domain||'').toLowerCase()
+                  : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
+        return qWords.every(w => hay.includes(w));
+      };
+
+      // Past days come from local storage. When the whole history is NOT in memory, ask the
+      // IndexedDB indexes for just what this request needs instead of loading millions of rows.
+      if (await _useSql()) {
+        // SQLite all-time browsing/searching stays entirely in SQLite. Explicit
+        // date views that include today still merge the live Chrome day so the
+        // today page remains fresh between periodic flushes.
+        const includeLiveToday = !!(startDate || endDate) && (!endDate || endDate >= todayMs);
+        const hiReq = endDate || null;
+        const hiCap = includeLiveToday && (hiReq === null || hiReq >= todayMs) ? todayMs : hiReq;
+        const hiOpen = includeLiveToday && hiCap === todayMs;
+        let top = [];
+        if (includeLiveToday) {
+          const todayEntries = await getTodayFromChromeApi();
+          const restoredToday = await restoredEntriesSince(todayMs, todayEntries);
+          top = [...todayEntries, ...restoredToday]
+            .filter(e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate))
+            .filter(e => !qWords.length || qMatch(e))
+            .filter(e => !qfMatch || qfMatch(e))
+            .sort((a, b) => b.visitTime - a.visitTime);
+        }
+        const topPart = Math.max(0, Math.min(limit, top.length - offset));
+        const past = await EhStore.page({ lo: startDate || null, hi: hiCap, hiOpen, words: qWords, mode,
+                                          offset: Math.max(0, offset - top.length), limit: limit - topPart,
+                                          qf: qfPatterns, needTotal: !msg.noTotal, cid: msg.cid, token: msg.token });
+        if (past.cancelled) return { cancelled: true, total: 0, entries: [] };     // a newer keystroke superseded this search
+        return { total: past.total == null ? null : top.length + past.total, entries: [...top.slice(offset, offset + limit), ...past.entries] };
+      }
 
       // Split source: today live from Chrome API, past days from local storage.
       // This ensures today's entries are always current (no per-visit storage writes)
       // while older history is served from the fast local store.
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-      const todayMs = todayStart.getTime();
-
-      const [todayEntries, allStored] = await Promise.all([
-        getTodayFromChromeApi(),
-        getAll(),
-      ]);
-      // Only keep past days from local storage — today comes from Chrome API
-      const pastEntries = allStored.filter(e => e.visitTime < todayMs);
+      const todayEntries = await getTodayFromChromeApi();
       // ...plus today's visits from before the last unlock, which Chrome no longer has
       const restoredToday = await restoredEntriesSince(todayMs, todayEntries);
+
+      let pastEntries;
+      if (await coldIdb() && !qfMatch) {
+        const lo = startDate || 0;
+        const hi = Math.min(endDate || Infinity, todayMs);
+        const dayRange = startDate && ((endDate || Date.now()) - startDate) <= 400 * 86400000;
+        try {
+          if (lo >= todayMs) {
+            pastEntries = [];
+          } else if (dayRange) {                       // a day / week / month: one index range read
+            pastEntries = (await EhStore.getRange(lo, hi)).filter(e => e.visitTime < todayMs);
+          } else if (qWords.length) {                  // wide text search: stream through, keep only matches
+            pastEntries = await EhStore.filterAll(e => e.visitTime < todayMs && e.visitTime >= lo && e.visitTime <= hi && qMatch(e));
+          } else {                                     // wide, no query: just the requested page, newest first
+            const pastCount = await EhStore.countRange(lo, hi, hi >= todayMs);
+            const top = [...todayEntries, ...restoredToday]
+              .filter(e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate))
+              .sort((a, b) => b.visitTime - a.visitTime);
+            const from = Math.max(offset, top.length), to = Math.min(offset + limit, top.length + pastCount);
+            const page = to > from ? await EhStore.newest(lo, hi, hi >= todayMs, from - top.length, to - from) : [];
+            return { total: top.length + pastCount, entries: [...top.slice(offset, offset + limit), ...page] };
+          }
+        } catch (e) {
+          console.warn('[EH] SEARCH index read failed, loading all:', e.message);
+          pastEntries = null;
+        }
+      }
+      if (!pastEntries) pastEntries = (await getAll()).filter(e => e.visitTime < todayMs);
       let entries = [...todayEntries, ...restoredToday, ...pastEntries];
 
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
@@ -2220,6 +2761,7 @@ async function handle(msg) {
           return words.every(w => hay.includes(w));
         });
       }
+      if (qfMatch) entries = entries.filter(qfMatch);
       entries.sort((a,b)=>b.visitTime-a.visitTime);
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
     }
@@ -2271,10 +2813,32 @@ async function handle(msg) {
       }
 
       // 1. Remove matching entries from local storage
-      const allStored = await getAll();
-      const toDelete = allStored.filter(matchesFilter);
-      const toDeleteIds = new Set(toDelete.map(e => e.id));
-      await removeEntries(toDeleteIds, new Set());
+      let toDelete;
+      if (await _useSql()) {
+        if (!words.length && !startDate && !endDate) {          // "delete everything": drop the database file (frees the disk space) + native history
+          const n = await EhStore.count();
+          await EhStore.clear();
+          _entriesCache = null; _entriesLoading = null;
+          try { await chrome.history.deleteAll(); } catch {}
+          await updateTodayHistory();
+          return { success: true, deleted: n };
+        }
+        const urls = new Set();                                 // only the distinct URLs are remembered (for Chrome's own history)
+        await EhStore.forEachSlice(rows => { for (const e of rows) { urls.add(e.url); if (e.rawUrl) urls.add(e.rawUrl); } },
+                                   { words, mode, lo: startDate || null, hi: endDate || null });
+        const n = await EhStore.deleteWhere({ words, mode, lo: startDate || null, hi: endDate || null });
+        _entriesCache = null;
+        const todayLiveSql = (await getTodayFromChromeApi()).filter(matchesFilter);
+        for (const e of todayLiveSql) { urls.add(e.url); if (e.rawUrl) urls.add(e.rawUrl); }
+        const list = [...urls];
+        if (list.length <= 3000) await deleteUrlsBatched(list);
+        else deleteUrlsBatched(list).catch(() => {});           // thousands of URLs: let Chrome work through them in the background
+        return { success: true, deleted: n + todayLiveSql.length };
+      } else {
+        const allStored = await getAll();
+        toDelete = allStored.filter(matchesFilter);
+        await removeEntries(new Set(toDelete.map(e => e.id)), new Set());
+      }
 
       // 2. Also match today's live entries from Chrome API
       const todayLive = await getTodayFromChromeApi();
@@ -2295,14 +2859,26 @@ async function handle(msg) {
       const exceptions = await getDeleteExceptions();
       const isExcepted = makeExceptionMatcher(exceptions);
       // Delete from extension storage (entries on excepted domains are kept)
-      let entries = await getAll();
-      const before = entries.length;
-      entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || isExcepted(e.url));
-      await setAll(entries);
-      const deleted = before - entries.length;
+      let deleted;
+      if (await _useSql()) {
+        if (!exceptions.length) deleted = await EhStore.deleteRange(startTime, endTime);
+        else {
+          const ids = [];
+          await EhStore.forEachSlice(rows => { for (const e of rows) if (!isExcepted(e.url)) ids.push(e.id); }, { lo: startTime, hi: endTime });
+          deleted = await EhStore.removeIds(ids);
+        }
+        _entriesCache = null;
+      } else {
+        let entries = await getAll();
+        const before = entries.length;
+        entries = entries.filter(e => !(e.visitTime >= startTime && e.visitTime <= endTime) || isExcepted(e.url));
+        await setAll(entries);
+        deleted = before - entries.length;
+      }
       // Delete from Chrome native history
       try {
         if (exceptions.length) await deleteNativeHistoryRangeExcept(startTime, endTime, isExcepted);
+        else if (startTime <= 0) await chrome.history.deleteAll();            // whole history: far faster than a range delete
         else await chrome.history.deleteRange({ startTime, endTime });
       } catch {}
       // Optionally clear cookies and cache
@@ -2327,17 +2903,36 @@ async function handle(msg) {
     }
     case 'CLEAR_ALL': {
       await setAll([]);
+      await dropLegacyCopies();
       try { await chrome.history.deleteAll(); } catch {}
       // Update today's history
       await updateTodayHistory();
       return { success: true };
     }
     case 'GET_STATS': {
+      if (await coldIdb()) {
+        try {
+          const used = (await _useSql()) ? await EhStore.size() : await chrome.storage.local.getBytesInUse(HISTORY_KEY);
+          const now = Date.now(); const daily = {}; const days = [];
+          for (let i = 89; i >= 0; i--) {
+            const d0 = new Date(now - i * 86400000); const key = d0.toLocaleDateString('en-CA');
+            if (key in daily) continue;
+            daily[key] = 0;
+            d0.setHours(0, 0, 0, 0); const lo = d0.getTime();
+            const d1 = new Date(lo); d1.setDate(d1.getDate() + 1);
+            days.push([key, lo, d1.getTime()]);
+          }
+          const counts = await Promise.all(days.map(([, lo, hi]) => EhStore.countRange(lo, hi, true)));
+          days.forEach(([key], i) => { daily[key] = counts[i]; });
+          return { totalEntries: await EhStore.count(), storageMB: (used / 1048576).toFixed(1), oldestEntry: await EhStore.oldestVisitTime(), dailyActivity: daily };
+        } catch (e) { console.warn('[EH] index stats failed, falling back:', e.message); }
+      }
       const entries=await getAll(); const used=await chrome.storage.local.getBytesInUse(HISTORY_KEY);
       const oldest = entries.length ? entries.reduce((min, e) => e.visitTime < min ? e.visitTime : min, entries[0].visitTime) : null;
       const now=Date.now(); const daily={};
       for(let i=89;i>=0;i--) daily[new Date(now-i*86400000).toLocaleDateString('en-CA')]=0;
-      for(const e of entries){const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++;}
+      const statsFrom = now - 91*86400000;   // only the last 90 days are charted — skip the rest of a huge history
+      for(const e of entries){ if(e.visitTime < statsFrom) continue; const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++; }
       return {totalEntries:entries.length,storageMB:(used/1048576).toFixed(1),oldestEntry:oldest,dailyActivity:daily};
     }
     case 'GET_TIME_DATA': {
@@ -2601,20 +3196,10 @@ async function handle(msg) {
     case 'GET_AUTO_EXPORT_STATUS': {
       const settings = await getSettings();
       const interval = Number(settings.autoExportIntervalMonths) || 0;
-      const entries = await getAll();
-      if (!interval || !entries.length) {
-        return { enabled: !!interval, monthsAccumulated: 0, retainMonths: AUTO_EXPORT_RETAIN_MONTHS, lastRunAt: settings.autoExportLastRunAt || 0 };
-      }
-      const now = Date.now();
-      const oldest = oldestVisitTime(entries);
-      const monthsAccumulated = (now - oldest) / MS_PER_MONTH;
-      return {
-        enabled: true,
-        intervalMonths: interval,
-        retainMonths: AUTO_EXPORT_RETAIN_MONTHS,
-        monthsAccumulated,
-        lastRunAt: settings.autoExportLastRunAt || 0,
-      };
+      if (!interval) return { enabled: false };
+      const lastRunAt = Number(settings.autoExportLastRunAt) || 0;
+      const baseline = lastRunAt || Number(settings.autoExportBaselineAt) || Date.now();
+      return { enabled: true, intervalMonths: interval, lastRunAt, nextDueAt: baseline + interval * MS_PER_MONTH };
     }
     case 'SAVE_SETTINGS': {
       const cur=await getSettings(); 
@@ -2636,42 +3221,146 @@ async function handle(msg) {
       if (msg.settings.hasOwnProperty('contextMenuEnabled')) await ensureContextMenus();
       return {success:true,settings:next};
     }
+    case 'EXPORT_BEGIN': {
+      if (await _useSql()) {
+        const tdr = await chrome.storage.local.get(TIME_KEY); const sess = await getSessions();
+        const tail = ',"timeData":' + JSON.stringify(tdr[TIME_KEY] || {}) + ',"sessions":' + JSON.stringify(sess);
+        const total = await EhStore.count();
+        const gen = sqlExportParts({ exportedAt: new Date().toISOString(), totalEntries: total }, tail, {});
+        return { id: registerExportJob({ gen }), count: null, totalEntries: total };
+      }
+      const entries = await getAll(); const tdr = await chrome.storage.local.get(TIME_KEY); const sess = await getSessions();
+      const tail = ',"timeData":' + JSON.stringify(tdr[TIME_KEY] || {}) + ',"sessions":' + JSON.stringify(sess);
+      const parts = buildExportParts({ exportedAt: new Date().toISOString(), totalEntries: entries.length }, entries.map(slimEntry), tail);
+      return { id: registerExportJob(parts), count: parts.length, totalEntries: entries.length };
+    }
+    case 'EXPORT_PULL': {
+      const parts = _exportJobs.get(msg.id);
+      if (!parts) return { error: 'Export expired — please try again' };
+      if (!Array.isArray(parts)) {                 // lazy (SQLite) export: pulled strictly in order, with one part of look-ahead
+        if (parts.cur === undefined) parts.cur = await parts.gen.next();
+        const out = parts.cur.value;
+        parts.cur = await parts.gen.next();
+        if (parts.cur.done) _exportJobs.delete(msg.id);
+        return { part: out, last: parts.cur.done };
+      }
+      const part = parts[msg.i];
+      if (part === undefined) return { error: 'Invalid export chunk' };
+      if (msg.i === parts.length - 1) _exportJobs.delete(msg.id);
+      return { part, last: msg.i === parts.length - 1 };
+    }
     case 'EXPORT': {
       const entries=await getAll(); const tr=await chrome.storage.local.get(TIME_KEY); const sess=await getSessions();
       return {exportedAt:new Date().toISOString(),totalEntries:entries.length,entries,timeData:tr[TIME_KEY]||{},sessions:sess};
     }
+    case 'IMPORT_BEGIN': {
+      if (await _useSql()) {                  // no in-memory copy of history needed: UNIQUE(url, 5s-bucket) de-dupes
+        const st = await getSettings();
+        const sid = 'i' + Date.now() + Math.random().toString(36).slice(2, 6);
+        const cutoff = Date.now() - st.retentionDays * 86400000;
+        try { await EhSql.rpc('ping'); } catch (e) { return { error: 'SQLite could not start: ' + e.message }; }   // also waits for a pending upgrade
+        const bulk = msg.bulk === true;           // big file: indexes are rebuilt once at the end instead of per row
+        if (bulk) { try { await EhSql.bulkBegin(); } catch (e) { return { error: 'SQLite: ' + e.message }; } }
+        else { try { await EhSql.rpc('ftsDeferBegin'); } catch (_) {} EhSql.setCache(160).catch(() => {}); }
+        _importJobs.set(sid, { sql: true, bulk, defer: !bulk, cutoff, stats: { imported: 0, dup: 0, old: 0, invalid: 0, oldestOld: 0 } });
+        setTimeout(() => _importJobs.delete(sid), 6 * 60 * 60000);
+        // direct: the page sends batches straight to the database (no service-worker hop) and reports the totals at the end
+        return { id: sid, direct: true, cutoff };
+      }
+      const existing = await getAll(); const settings = await getSettings();
+      const job = {
+        existing,
+        existingSet: new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`)),
+        cutoff: Date.now() - settings.retentionDays * 86400000,
+        useIdb: await _useIdb(),
+        added: [],
+        stats: { imported: 0, dup: 0, old: 0, invalid: 0, oldestOld: 0 },
+      };
+      const id = 'i' + Date.now() + Math.random().toString(36).slice(2, 6);
+      _importJobs.set(id, job);
+      setTimeout(() => _importJobs.delete(id), 60 * 60000);
+      return { id };
+    }
+    case 'IMPORT_BATCH': {
+      const job = _importJobs.get(msg.id);
+      if (!job) return { error: 'Import session expired — please try again' };
+      if (job.sql) {
+        const st = await EhSql.rpc('importBatch', { entries: Array.isArray(msg.entries) ? msg.entries : [], cutoff: job.cutoff });
+        for (const k of Object.keys(st)) { if (k === 'oldestOld') { if (st.oldestOld && (!job.stats.oldestOld || st.oldestOld < job.stats.oldestOld)) job.stats.oldestOld = st.oldestOld; } else job.stats[k] += st[k]; }
+        return { ok: true, imported: job.stats.imported };
+      }
+      const fresh = importProcessBatch(job, Array.isArray(msg.entries) ? msg.entries : []);
+      if (fresh.length) {
+        if (job.useIdb) {                       // IndexedDB: write just these rows, no full rewrite
+          await EhStore.putMany(fresh);
+          for (const e of fresh) job.existing.push(e);   // job.existing IS the in-memory cache
+        } else {
+          for (const e of fresh) job.added.push(e);      // storage.local: written once at the end
+        }
+      }
+      return { ok: true, imported: job.stats.imported };
+    }
     case 'IMPORT_HISTORY': {
+      let count = 0, stats = null;
+      if (msg.job) {                            // finish a batched import
+        const job = _importJobs.get(msg.job);
+        if (!job) return { error: 'Import session expired — please try again' };
+        if (job.sql) {
+          if (msg.stats) job.stats = msg.stats;
+          if (job.bulk || job.defer) {            // rebuild the indexes; this also drops the duplicates the bulk load let through
+            _dbBusy = { phase: 'indexing', since: Date.now(), done: 0, total: 0, upgrade: true }; setTimeout(pollDbBusy, 700);
+            let removed = 0;
+            try { ({ removed } = await EhSql.bulkEnd()); } finally { _dbBusy = null; }
+            try { await EhSql.rpc('flush'); await EhSql.recycle(); } catch (_) {}      // durable, and the worker's grown memory is released
+            job.stats.imported -= removed; job.stats.dup += removed;
+          } else { EhSql.setCache(32).catch(() => {}); try { await EhSql.rpc('flush'); await EhSql.recycle(); } catch (_) {} }
+          _entriesCache = null; _entriesLoading = null;
+        }
+        else if (!job.useIdb && job.added.length) {
+          for (const e of job.added) job.existing.push(e);
+          job.existing.sort((a, b) => b.visitTime - a.visitTime);
+          await setAll(job.existing);
+        }
+        count = job.stats.imported; stats = job.stats;
+        _importJobs.delete(msg.job);
+      } else {                                  // legacy single-message import (small files)
       const {entries:imported}=msg;
       if(!Array.isArray(imported)||!imported.length) return {success:false,error:'No entries'};
       const existing=await getAll(); const settings=await getSettings();
       const cutoff=Date.now()-settings.retentionDays*86400000;
       const existingSet=new Set(existing.map(e=>`${e.url}|${Math.floor(e.visitTime/5000)}`));
-      let count=0;
       for(const e of imported){
         if(!e.url||!isTrackable(e.url)) continue;
         if(e.visitTime&&e.visitTime<cutoff) continue;
-        const norm=normalizeUrl(e.url); const key=`${norm}|${Math.floor((e.visitTime||Date.now())/5000)}`;
+        const raw=e.rawUrl||e.url;
+        const norm=normalizeUrl(raw); const key=`${norm}|${Math.floor((e.visitTime||Date.now())/5000)}`;
         if(existingSet.has(key)) continue;
-        existing.push({id:`imp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,url:norm,rawUrl:e.url,title:e.title||'',visitTime:e.visitTime||Date.now(),domain:domainOf(e.url),tabId:null,source:'import'});
+        existing.push({id:`imp_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,url:norm,...rawUrlField(norm,raw),title:e.title||'',visitTime:e.visitTime||Date.now(),domain:domainOf(raw)});
         existingSet.add(key); count++;
       }
       existing.sort((a,b)=>b.visitTime-a.visitTime); await setAll(existing);
+      }
       // Update today's history
       await updateTodayHistory();
 
       // ── Bookmark top domains into "Extended History" folder ──────────────
       try {
         // Count visits per domain across all history (imported + existing)
-        const allEntries = await getAll();
-        const domainCounts = {};
-        for (const e of allEntries) {
-          const d = e.domain || domainOf(e.url);
-          if (d) domainCounts[d] = (domainCounts[d] || 0) + 1;
+        let topDomains;
+        if (await _useSql()) {
+          topDomains = (await EhStore.topBy({ column: 'domain', limit: 20 })).map(x => x.identifier);
+        } else {
+          const allEntries = await getAll();
+          const domainCounts = {};
+          for (const e of allEntries) {
+            const d = e.domain || domainOf(e.url);
+            if (d) domainCounts[d] = (domainCounts[d] || 0) + 1;
+          }
+          topDomains = Object.entries(domainCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([domain]) => domain);
         }
-        const topDomains = Object.entries(domainCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 20)
-          .map(([domain]) => domain);
 
         if (topDomains.length) {
           // Find or create "Extended History" bookmark folder
@@ -2707,7 +3396,7 @@ async function handle(msg) {
       } catch {}
       // ────────────────────────────────────────────────────────────────────
 
-      return {success:true,imported:count};
+      return {success:true,imported:count,stats};
     }
     case 'RE_BACKFILL': {
       try {
@@ -2716,20 +3405,25 @@ async function handle(msg) {
         const entries = items.filter(i => isTrackable(i.url)).map(i => ({
           id:        `bf_${i.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
           url:       normalizeUrl(i.url),
-          rawUrl:    i.url,
+          ...rawUrlField(normalizeUrl(i.url), i.url),
           title:     i.title || '',
           visitTime: i.lastVisitTime || Date.now(),
           domain:    domainOf(i.url),
-          tabId:     null,
-          source:    'backfill',
         }));
-        const existing    = await getAll();
-        const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
-        const newOnes     = entries.filter(e => !existingSet.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
-        if (newOnes.length) await setAll([...existing, ...newOnes].sort((a, b) => b.visitTime - a.visitTime));
+        let importedCount;
+        if (await _useSql()) {
+          importedCount = await EhStore.insertIgnore(entries);
+          _entriesCache = null;
+        } else {
+          const existing    = await getAll();
+          const existingSet = new Set(existing.map(e => `${e.url}|${Math.floor(e.visitTime / 5000)}`));
+          const newOnes     = entries.filter(e => !existingSet.has(`${e.url}|${Math.floor(e.visitTime / 5000)}`));
+          if (newOnes.length) await setAll([...existing, ...newOnes].sort((a, b) => b.visitTime - a.visitTime));
+          importedCount = newOnes.length;
+        }
         await chrome.storage.local.set({ [BACKFILL_KEY]: true });
         await updateTodayHistory();
-        return { success: true, imported: newOnes.length };
+        return { success: true, imported: importedCount };
       } catch (e) { return { error: e.message }; }
     }
     case 'GET_BOOKMARKS': { try{return {tree:await chrome.bookmarks.getTree()};}catch{return {tree:[]};} }
@@ -2824,6 +3518,20 @@ async function handle(msg) {
       const res = await cleanIgnoredFromHistory();
       return { success: true, removed: res.removed || 0 };
     }
+    case 'GET_NEWEST_VISIT': {
+      const now = Date.now();
+      try {
+        let t = 0;
+        if (await _useIdb()) t = (await EhStore.newestVisitTime(now)) || 0;     // SQLite or IndexedDB
+        else { const all = await getAll(); for (const e of all) if (e.visitTime > t && e.visitTime <= now) t = e.visitTime; }
+        return { time: t || now, found: !!t };
+      } catch (e) { return { time: now, found: false, err: String(e && e.message || e) }; }
+    }
+    case 'TEST_WEBDAV': return testWebDav({ url: msg.url, username: msg.username, password: msg.password });
+    case 'GET_DB_PROGRESS': {            // live progress of a long database job (bulk delete, index rebuild…)
+      if (!(await _useSql())) return { phase: 'ready', done: 0, total: 0 };
+      try { return await withTimeout(EhSql.status(), 3000, 'status'); } catch (_) { return { phase: 'busy', done: 0, total: 0 }; }
+    }
     case 'GET_CLEANUP_STATUS': {
       return { active: _ignoreCleanupActive, done: _ignoreCleanupProgress.done, total: _ignoreCleanupProgress.total };
     }
@@ -2895,33 +3603,38 @@ async function handle(msg) {
       await chrome.storage.local.remove(TIME_KEY);
       return {success:true};
     }
-    case 'MIGRATE_TO_IDB': {
-      try {
-        // Read from localStorage, write to IDB, then switch flag
-        const r = await chrome.storage.local.get(HISTORY_KEY);
-        const entries = r[HISTORY_KEY] || [];
-        await EhIdb.setAll(entries);
-        await chrome.storage.local.set({ [IDB_STORAGE_KEY]: true });
-        _entriesCache = entries; // keep the in-memory cache in sync with the new backend
-        return { success: true, migrated: entries.length };
-      } catch(e) { return { error: e.message }; }
+    case 'MIGRATE_TO_IDB':    return migrateBackend('idb');
+    case 'MIGRATE_TO_LOCAL':  return migrateBackend('local');
+    case 'MIGRATE_TO_SQLITE': return migrateBackend('sqlite');
+    case 'GET_STORAGE_BACKEND': return { backend: await _backend() };
+    case 'RESET_SQLITE_HARD': {          // last resort when the database cannot be opened/repaired: delete it and start empty
+      try { await chrome.offscreen.closeDocument(); } catch (_) {}
+      EhSql.reset();
+      let err = null;
+      for (let i = 0; i < 8; i++) {
+        await sleep(600);
+        try { const root = await navigator.storage.getDirectory(); await root.removeEntry('.eh-sqlite', { recursive: true }); err = null; break; }
+        catch (e) { if (e && e.name === 'NotFoundError') { err = null; break; } err = e; }
+      }
+      if (err) return { error: 'Could not delete the database: ' + err.message };
+      _dbBusy = null; _entriesCache = null; _entriesLoading = null;
+      return { success: true };
     }
-    case 'MIGRATE_TO_LOCAL': {
-      try {
-        // Read from IDB, write to localStorage, then switch flag
-        const entries = await EhIdb.getAll();
-        await chrome.storage.local.set({ [HISTORY_KEY]: entries, [IDB_STORAGE_KEY]: false });
-        await EhIdb.clear();
-        _entriesCache = entries; // keep the in-memory cache in sync with the new backend
-        return { success: true, migrated: entries.length };
-      } catch(e) { return { error: e.message }; }
-    }
-    case 'GET_STORAGE_BACKEND': {
-      const r = await chrome.storage.local.get(IDB_STORAGE_KEY);
-      return { backend: r[IDB_STORAGE_KEY] === true ? 'idb' : 'local' };
+    case 'GET_MIGRATION_STATUS': {
+      if (_migrating) return { migrating: true, ..._migrating };
+      if (_dbBusy) return { migrating: true, target: 'sqlite', upgrade: true, phase: _dbBusy.phase, pctOnly: _dbBusy.pctOnly, step: _dbBusy.step, busySecs: Math.round((Date.now() - (_dbBusy.since || Date.now())) / 1000), done: _dbBusy.done, total: _dbBusy.total };
+      if ((await _backend()) === 'sqlite') {          // the database may be upgrading an older file
+        try { const st = await withTimeout(EhSql.status(), 1500, 'status'); if (st.phase && st.phase !== 'ready' && st.phase !== 'deleting') return { migrating: true, target: 'sqlite', phase: st.phase, pctOnly: !!st.pctOnly, step: st.step || '', done: st.done, total: st.total, upgrade: true }; } catch (_) {}
+      }
+      return { migrating: false };
     }
         case 'GET_MOST_VISITED': {
       const {viewType='url',period='all'}=msg;
+      if (await _useSql()) {
+        const d = period === '10' ? 10 : period === '30' ? 30 : 0;
+        const items = await EhStore.topBy({ column: viewType === 'domain' ? 'domain' : 'url', since: d ? Date.now() - d * 86400000 : 0, limit: 50 });
+        return { items };
+      }
       const entries=await getAll();
       const now=Date.now();
       let cutoffTime=0;
@@ -2950,6 +3663,165 @@ async function handle(msg) {
     default: return {error:`Unknown: ${msg.type}`};
   }
 }
+// ── Move the whole history between storage backends ─────────────────────────
+// Copies in slices (never the whole history in memory for the database stores), clears the
+// target first so deleted entries can't come back, flips the active backend only after the
+// copy succeeded, and leaves the old store's data untouched as a safety net.
+let _migrating = null;      // { target, done, total, auto } while a migration runs — everything else waits
+const AUTOSWITCH_FAIL_KEY = 'eh_autoswitch_fail';
+const AUTOSWITCH_LOCAL_BYTES = 40 * 1048576;     // chrome.storage.local history bigger than this → SQLite
+const AUTOSWITCH_IDB_ENTRIES = 250000;
+
+// Removes the copies of the history that belong to a store that is no longer the active one,
+// so the disk space is really given back (this is what made "storage" show GBs).
+async function dropLegacyCopies() {
+  try {
+    const b = await _backend();
+    if (b === 'sqlite') {
+      // Safety net: never delete the previous copy of the history unless SQLite really holds data.
+      let has = false;
+      try { has = await withTimeout(EhSql.rpc('hasRows'), 60000, 'hasRows'); } catch (_) { return; }
+      if (!has) return;
+    }
+    if (b !== 'local') await chrome.storage.local.remove([HISTORY_KEY]);
+    if (b !== 'idb') await EhIdb.destroy();
+  } catch (e) { console.warn('[EH] dropLegacyCopies:', e.message); }
+}
+
+// Recovery: SQLite is the active store but is empty while an older copy of the history still exists
+// (e.g. an earlier migration did not complete). Switch back to the old store so nothing is lost; the
+// automatic migration then runs again (and this time verifies the copy before touching the original).
+async function recoverEmptySqlite() {
+  try {
+    if ((await _backend()) !== 'sqlite') return;
+    const has = await withTimeout(EhSql.rpc('hasRows'), 60000, 'hasRows');   // not COUNT(*): that scans the whole 1 GB file and every request waits for it
+    if (has) return;
+    const localBytes = await chrome.storage.local.getBytesInUse(HISTORY_KEY);
+    let idbCount = 0;
+    try { idbCount = await EhIdb.count(); } catch (_) {}
+    if (idbCount > 0)        await chrome.storage.local.set({ [SQL_STORAGE_KEY]: false, [IDB_STORAGE_KEY]: true });
+    else if (localBytes > 64) await chrome.storage.local.set({ [SQL_STORAGE_KEY]: false, [IDB_STORAGE_KEY]: false });
+    else return;
+    await chrome.storage.local.remove(AUTOSWITCH_FAIL_KEY);
+    _backendKind = null; _entriesCache = null; _entriesLoading = null;
+    console.warn('[EH] SQLite was empty but an older copy of the history exists — switched back to it');
+  } catch (e) { console.warn('[EH] recoverEmptySqlite:', e.message); }
+}
+
+async function migrateBackend(target, auto) {
+  if (_migrating) return { error: 'A migration is already running' };
+  _migrating = { target, done: 0, total: 0, auto: !!auto, phase: 'preparing', since: Date.now() };     // claimed immediately: no other request may touch the data meanwhile
+  const phase = (p) => { if (_migrating) { _migrating.phase = p; try { chrome.runtime.sendMessage({ type: 'MIGRATE_PROGRESS', done: _migrating.done, total: _migrating.total, phase: p }).catch(() => {}); } catch (_) {} } };
+  try {
+    if (await isLocked()) return { error: 'Unlock history first' };
+    const from = await _backend();
+    if (from === target) return { success: true, migrated: 0 };
+    _entriesCache = null; _entriesLoading = null;
+    let localRows = [];
+    const progress = () => { try { chrome.runtime.sendMessage({ type: 'MIGRATE_PROGRESS', done: _migrating.done, total: _migrating.total, phase: _migrating.phase }).catch(() => {}); } catch (_) {} };
+
+    // Know the total first, so the progress bar has a real denominator from the start.
+    phase('reading');
+    let localArr = null;
+    if (from === 'local')       { localArr = (await chrome.storage.local.get(HISTORY_KEY))[HISTORY_KEY] || []; _migrating.total = localArr.length; }
+    else if (from === 'sqlite') _migrating.total = await EhSql.count();
+    else                        _migrating.total = await EhIdb.count();
+    const sourceTotal = _migrating.total;
+
+    if (target === 'sqlite') {                     // prove SQLite can start before copying anything
+      phase('starting');
+      try { await EhSql.rpc('ping'); await EhSql.status(); }
+      catch (e) { return { error: 'SQLite could not start: ' + e.message }; }
+    }
+
+    const readSource = async (fn) => {
+      if (from === 'sqlite') return EhSql.forEachSlice(fn);
+      if (from === 'idb')    return EhIdb.forEachSlice(fn);
+      for (let i = 0; i < localArr.length; i += 20000) await fn(localArr.slice(i, i + 20000));
+    };
+    phase('copying');
+    if (target === 'sqlite') await EhSql.clear();
+    if (target === 'idb')    await EhIdb.clear();
+
+    let added = 0;
+    await readSource(async (rows) => {
+      if (target === 'sqlite')    added += (await EhSql.insertIgnore(rows)) || 0;
+      else if (target === 'idb')  await EhIdb.putMany(rows);
+      else                        for (const r of rows) localRows.push(r);
+      _migrating.done += rows.length; progress();
+    });
+    const migrated = _migrating.done;
+
+    // Verify the copy BEFORE switching over and before the original is touched. Nothing is deleted
+    // unless the new store provably holds the history.
+    phase('verifying');
+    if (target === 'sqlite') {
+      await EhSql.rpc('flush');                                   // make sure the data is really on disk
+      const n = await EhSql.count();
+      if (sourceTotal > 0 && (n === 0 || n < added)) throw new Error(`Verification failed: the new database holds ${n} of ${sourceTotal} entries — your original history was left untouched`);
+    } else if (target === 'idb') {
+      const n = await EhIdb.count();
+      if (sourceTotal > 0 && n === 0) throw new Error('Verification failed: the new database is empty — your original history was left untouched');
+    }
+    localArr = null;
+
+    phase('finishing');
+    if (target === 'local') await chrome.storage.local.set({ [HISTORY_KEY]: localRows, [IDB_STORAGE_KEY]: false, [SQL_STORAGE_KEY]: false });
+    else if (target === 'idb') await chrome.storage.local.set({ [IDB_STORAGE_KEY]: true, [SQL_STORAGE_KEY]: false });
+    else await chrome.storage.local.set({ [SQL_STORAGE_KEY]: true, [IDB_STORAGE_KEY]: false });
+    _backendKind = null; _entriesCache = null; _entriesLoading = null;
+    if (from === 'sqlite' && target !== 'sqlite') { try { await EhSql.clear(); } catch (_) {} }
+    await dropLegacyCopies();                       // only removes the old copy if the active store holds data
+    await chrome.storage.local.remove(AUTOSWITCH_FAIL_KEY);
+    return { success: true, migrated };
+  } catch (e) {
+    if (auto) await chrome.storage.local.set({ [AUTOSWITCH_FAIL_KEY]: Date.now() });
+    return { error: e.message };
+  } finally { _migrating = null; }
+}
+
+// A history that is too big for Local Storage / IndexedDB moves itself to SQLite — from the
+// service worker, before any page asks for the data. (Opening the history page used to load
+// the whole thing into memory, so the user could never even reach the Settings to switch.)
+// While the SQLite worker is still starting / upgrading an older database file it cannot answer
+// queries (they would just hang until it is done). Track that, so requests get a clear
+// "busy" answer — the history page shows its progress overlay instead of "Loading…" forever.
+let _dbBusy = null;
+async function pollDbBusy() {
+  try {
+    const st = await withTimeout(EhSql.status(), 4000, 'status');
+    _dbBusy = st.phase === 'ready' ? null : { phase: st.phase, since: (_dbBusy && _dbBusy.since) || Date.now(), done: st.done || 0, total: st.total || 0, upgrade: true, pctOnly: !!st.pctOnly, step: st.step || '' };
+  } catch (_) { /* worker busy in a long step: keep the previous state */ }
+  if (_dbBusy) setTimeout(pollDbBusy, 400);
+}
+let _autoChecked = null;
+function autoMigrateCheck() {
+  if (!_autoChecked) _autoChecked = (async () => {
+    try {
+      if (await isLocked()) return;
+      const b = await _backend();
+      if (b === 'sqlite') {
+        await pollDbBusy();
+        // Runs in the BACKGROUND: it has to wait for the database to finish starting, and nothing else
+        // (settings, date pills, the first search) may be held up behind that.
+        recoverEmptySqlite().then(async () => { if ((await _backend()) === 'sqlite') setTimeout(dropLegacyCopies, 60000); }).catch(() => {});
+        return;
+      }
+      const st = await getSettings();
+      if (st.autoSwitchSqlite === false) return;
+      const fail = (await chrome.storage.local.get(AUTOSWITCH_FAIL_KEY))[AUTOSWITCH_FAIL_KEY] || 0;
+      if (Date.now() - fail < 3600000) return;
+      let big = false;
+      if (b === 'local') big = (await chrome.storage.local.getBytesInUse(HISTORY_KEY)) > AUTOSWITCH_LOCAL_BYTES;
+      else big = (await EhIdb.count()) > AUTOSWITCH_IDB_ENTRIES;
+      if (!big) return;
+      migrateBackend('sqlite', true).then(r => console.log('[EH] auto-migration to SQLite:', r));   // sets _migrating synchronously
+    } catch (e) { console.warn('[EH] autoMigrateCheck:', e.message); }
+  })();
+  return _autoChecked;
+}
+autoMigrateCheck();
+
 // ══ EXTERNAL MESSAGING ══════════════════════════════════════════════════════
 // Allows the "Extended Page" new-tab extension to query history data.
 // The sender's ID must be listed in manifest.json > externally_connectable > ids.

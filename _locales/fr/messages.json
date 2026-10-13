@@ -2,7 +2,21 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
-   "jump_to_date": {"message": "Aller à la date"},
+  "preparing_database": {"message": "Préparation de la base de données de l’historique…"},
+  "can_take_long": {"message": " secondes — les grandes bases de données peuvent prendre plusieurs minutes"},
+  "stuck_delete": {"message": "Bloqué ? Supprimez la base de données et repartez de zéro"},
+  "this_deletes_history": {"message": "Cela supprimera définitivement la base de données de l’historique stocké (l’historique propre à votre navigateur ne sera pas affecté). Continuer ?"},
+  "preparing": {"message": "Préparation…"},
+  "reading_history": {"message": "Lecture de votre historique…"},
+  "moving_to_sqlite": {"message": "Transfert de votre historique vers SQLite…"},
+  "checking_copy": {"message": "Vérification de la copie…"},
+  "finishing_up": {"message": "Finalisation…"},
+  "history_too_big": {"message": "Votre historique est volumineux ; il est donc transféré vers une base de données plus rapide. Cela ne se produit qu’une seule fois ; la page se recharge une fois l’opération terminée."},
+  "starting_database": {"message": "Démarrage de la base de données…"},
+  "upgrading_database": {"message": "Mise à niveau de la base de données de l’historique…"},
+  "building_indexes": {"message": "Création des index…"},
+  "repairing_database": {"message": "Réparation de la base de données de l’historique…"},
+  "jump_to_date": {"message": "Aller à la date"},
   "more_from_domain": {"message": "Plus de ce domaine"},
   "ignore_domain": {"message": "Ignorer le domaine"},
    "restore_all": {

@@ -39,9 +39,9 @@ function qfMatchesPattern(entry, rawPattern) {
   const title  = (entry.title || '').toLowerCase();
   const domain = (entry.domain || (typeof tryDomain === 'function' ? tryDomain(entry.url) : '') || '').toLowerCase();
 
-  // Domain-like pattern (contains a dot, no spaces) — match the domain (incl. subdomains) or full URL
+  // Domain-like pattern (contains a dot, no spaces) — match the domain or its subdomains
   if (p.includes('.') && !p.includes(' ') && !p.includes('/')) {
-    return domain === p || domain.endsWith('.' + p) || url.includes(p);
+    return domain === p || domain.endsWith('.' + p);
   }
   // Otherwise treat as a free keyword / URL fragment — match URL or title
   return url.includes(p) || title.includes(p);
@@ -222,7 +222,15 @@ function initQuickFilters() {
   qfLoadList(); // populate dropdown immediately so it's ready on the History page
 }
 
+// Patterns of the active quick filter (sent with SEARCH so the database filters the WHOLE history)
+function qfActivePatterns() {
+  if (!_qfActiveId) return null;
+  const f = _qfList.find(x => x.id === _qfActiveId);
+  return f && (f.patterns || []).length ? f.patterns : null;
+}
+
 window.QuickFilters = {
+  activePatterns: qfActivePatterns,
   loadPanel: loadQuickFiltersPanel,
   reload: qfLoadList,
 };

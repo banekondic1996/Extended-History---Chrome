@@ -31,7 +31,7 @@
   var nextBtn = document.getElementById('nextBtn');
   var i = 0;
 
-  for (let idx = 0; idx < 6; idx++) {
+  for (let idx = 0; idx < cards; idx++) {
     var d = document.createElement('button');
     d.className = 'dot' + (idx === 0 ? ' active' : '');
     d.setAttribute('aria-label', 'Go to tip ' + (idx + 1) + ' of ' + cards.length);
@@ -41,7 +41,7 @@
   var dots = Array.prototype.slice.call(dotsEl.children);
 
   function go(idx) {
-    i = (idx + 6) % 6; // wraps around at either end
+    i = (idx + cards) % cards; // wraps around at either end
     track.style.transform = 'translateX(' + (-i * 100) + '%)';
     dots.forEach(function (d, n) { d.classList.toggle('active', n === i); });
   }

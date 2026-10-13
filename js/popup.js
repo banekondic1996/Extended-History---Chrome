@@ -227,7 +227,7 @@ function _applyPopupWallpaper(wp, theme) {
 
 // ── Header "Open" button ──────────────────────────────────────────────────────
 document.getElementById('openBtn').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'history.html' });
+    chrome.tabs.create({ url: 'html/history.html' });
     // In sidebar mode, opening the full history page makes the sidebar
     // redundant — close it. window.close() is the documented way for a side
     // panel to close itself from its own script (no chrome.sidePanel.close()
@@ -351,7 +351,7 @@ function qfPopupRenderDropdown() {
     manage.textContent = '⚙ ' + tr('quick_filters', 'Quick Filters');
     manage.addEventListener('click', () => {
         qfPopupCloseDropdown();
-        chrome.tabs.create({ url: 'history.html#quickfilters' });
+        chrome.tabs.create({ url: 'html/history.html#quickfilters' });
         if (document.body.classList.contains('sidebar-mode')) window.close();
     });
     dd.appendChild(manage);
@@ -436,7 +436,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ── Footer panel buttons ──────────────────────────────────────────────────────
 document.querySelectorAll('.flink[data-panel]').forEach(btn => {
     btn.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'history.html#' + btn.dataset.panel });
+        chrome.tabs.create({ url: 'html/history.html#' + btn.dataset.panel });
     });
 });
 
@@ -538,21 +538,41 @@ function closeSearchOverlay() {
     }
 }
 
+const POP_CID = Math.random().toString(36).slice(2);
+let _popSearchGen = 0;
 function performSearch(query) {
     const resultsEl = document.getElementById('searchResults');
+    const gen = ++_popSearchGen;
+    // Same search as the main history page: the database filters the whole history (including the
+    // active quick filter), and a newer keystroke cancels the older query.
+    const qf = (typeof qfActivePatterns === 'function') ? qfActivePatterns() : null;
 
     chrome.runtime.sendMessage({
         type: 'SEARCH',
         query: query,
         mode: 'all',
-        limit: 100
+        limit: 100,
+        noTotal: true,
+        qf,
+        cid: POP_CID,
+        token: gen
     }, (response) => {
+        if (gen !== _popSearchGen) return;                       // a newer search replaced this one
         if (chrome.runtime.lastError) {
             resultsEl.innerHTML = '<div class="empty">' + tr('pop_search_error', 'Search error') + '</div>';
             return;
         }
+        if (response && response.cancelled) return;
+        if (!response || response.error) {
+            // e.g. the history database is still starting / being upgraded — say so instead of "No results"
+            const msg = (response && response.error) || tr('pop_search_error', 'Search error');
+            resultsEl.innerHTML = '<div class="empty"></div>';
+            resultsEl.firstChild.textContent = msg;
+            if (response && response.migrating) setTimeout(() => { if (gen === _popSearchGen) performSearch(query); }, 2000);
+            return;
+        }
 
-        const matches = qfPopupFilter(response.entries || []);
+        const matches = response.entries || [];
         _srchEntries = matches;
 
         if (!matches.length) {
@@ -1584,7 +1604,8 @@ function loadHistoryForSidebarDate(preserveScroll) {
     const end   = new Date(_sidebarViewDate); end.setHours(23, 59, 59, 999);
     chrome.runtime.sendMessage({
         type: 'SEARCH', query: '', mode: 'all',
-        startDate: start.getTime(), endDate: end.getTime(), limit: 1000
+        startDate: start.getTime(), endDate: end.getTime(), limit: 1000,
+        qf: (typeof qfActivePatterns === 'function') ? qfActivePatterns() : null
     }, r => {
         if (chrome.runtime.lastError || !r) return;
         const entries = qfPopupFilter((r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime));
@@ -1937,7 +1958,7 @@ if (document.body.classList.contains('sidebar-mode')) {
       const { current } = sessResp;
       const tabs = current ? current.tabs.filter(t => t.url && t.closed === null) : null;
       if (!tabs || !tabs.length) {
-        chrome.tabs.create({ url: 'history.html#sessions' });
+        chrome.tabs.create({ url: 'html/history.html#sessions' });
         return;
       }
       const label = 'Current Session';

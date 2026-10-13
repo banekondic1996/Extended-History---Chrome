@@ -5,6 +5,20 @@
     "jump_to_date": {
     "message": "Jump to date"
   },
+  "preparing_database": {"message": "Preparing the history database…"},
+  "can_take_long": {"message": " seconds — large databases can take several minutes"},
+  "stuck_delete": {"message": "Stuck? Delete the database and start empty"},
+  "this_deletes_history": {"message": "This permanently deletes the stored history database (your browser's own history is not touched). Continue?"},
+  "preparing": {"message": "Preparing…"},
+  "reading_history": {"message": "Reading your history…"},
+  "moving_to_sqlite": {"message": "Moving your history to SQLite…"},
+  "checking_copy": {"message": "Checking the copy…"},
+  "finishing_up": {"message": "Finishing up…"},
+  "history_too_big": {"message": "Your history is big, so it is being moved to a faster database. This happens once; the page reloads when it is done."},
+  "starting_database": {"message": "Starting the database…"},
+  "upgrading_database": {"message": "Upgrading the history database…"},
+  "building_indexes": {"message": "Building indexes…"},
+  "repairing_database": {"message": "Repairing the history database…"},
   "more_from_domain": {
     "message": "More from domain"
   },
