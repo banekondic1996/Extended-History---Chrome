@@ -155,6 +155,8 @@ Fixed/changed in version 4.2.1:
 -Changed Auto export behavior to not delete history on auto export (was bad choice to make it like that)
 -Added option to auto export and upload to WebDAV server
 -Hidden "History storage engine" option, as it's no longer needed, default is SQlite WASM if history is big it auto switches
+-Added new icon options
+-Fixed missing translation (still not complete)
 -Auto fade animation when switching dates now enabled by default for better experience
 -Added import/export/delete progress notification bubbles
 </pre>
