@@ -21,12 +21,11 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do (ordered by importance):**
 <pre>
+-Add option to not return most visited into history after unlocking UI
 -Popup/sidebar deleting in progress modal is missing
--Locking doesn't delete unencrypted data, just appends to localstorage (Important TO FIX)
 -Fix browser cache based favicon resolver, by saving small favicons as base64 in localstorage
 -Store page even if page didn't load completely
 -Import history within certain time range
--Change favicon when site if site is in ignore list
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
