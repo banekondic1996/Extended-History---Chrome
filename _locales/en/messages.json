@@ -781,6 +781,8 @@
   "save_now": {
     "message": "Save now"
   },
+  "avg_time_per_weekday": {"message": "Average time per weekday (all time)"},
+  "avg_visits_per_hour": {"message": "Average visits by hour of day"},
   "save_settings": {
     "message": "Save Settings"
   },

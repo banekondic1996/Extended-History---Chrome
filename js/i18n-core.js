@@ -83,16 +83,6 @@
     } catch (e) { return ['S','M','T','W','T','F','S']; }
   };
 
-  // "Oct 13"-style label (short month + day) in the language in use — the date
-  // pills used Intl with the *browser* locale (undefined), ignoring the Language menu.
-  // Returns an object with .format(date), like Intl.DateTimeFormat.
-  var LA_MONTHS_SHORT = ['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Nov','Dec'];
-  window._ehMonthDayFormat = function () {
-    if (String(window._currentLang) === 'la') return { format: function (d) { return d.getDate() + ' ' + LA_MONTHS_SHORT[d.getMonth()]; } };
-    try { return new Intl.DateTimeFormat(intlLocale(), { month: 'short', day: 'numeric' }); }
-    catch (e) { return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }); }
-  };
-
   // Strings built in JavaScript (toasts, confirms...). Extra arguments become the
   // message's substitutions; if the key is missing the English fallback is used
   // with {0}, {1} filled in.

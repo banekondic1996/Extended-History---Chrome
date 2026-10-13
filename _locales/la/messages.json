@@ -8,6 +8,7 @@
     "edit": {
     "message": "Emenda"
   },
+  "avg_time_per_weekday": {"message": "Tempus medium per diem hebdomadis (omni tempore)"},
   "jan": {"message": "Ian"},
   "feb": {"message": "Feb"},
   "mar": {"message": "Mar"},
@@ -23,6 +24,7 @@
   "disabled": {"message": "Inhabilitatum"},
   "dh_now": {"message": "Nunc"},
   "no_history_found": {"message": "Historia non inventa"},
+  "avg_visits_per_hour": {"message": "Visitationes mediae per horam diei"},
   "lock_big_warning": {"message": "Historia tua nimis magna est ad encryptandam"},
   "lock_big_limit": {"message": "limes"},
   "lock_big_warning2": {"message": "Nihil encryptabitur (ut clausura celeris maneat), sed interfacies adhuc clausa erit."},

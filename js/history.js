@@ -431,7 +431,7 @@ function buildVirtualList() {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span data-i18n-key="no_history_found">No history found</span></div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
     return;
   }
 
@@ -1458,7 +1458,7 @@ function removeEntryFromView(id) {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span data-i18n-key="no_history_found">No history found</span></div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
   }
 }
 
@@ -1607,6 +1607,66 @@ async function loadActivity() {
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
   } catch (err) { console.error(err); }
+  loadHourlyAvg();   // separate: scans all history, must not delay the charts above
+}
+
+// Positions a chart tooltip next to the cursor, flipping it to the left of the cursor when it would stick out
+// past the right edge of the chart (content must already be set so the width is known).
+function placeChartTip(tip, wrap, ev) {
+  const r = wrap.getBoundingClientRect();
+  tip.style.display = 'block';
+  const w = tip.offsetWidth, cx = ev.clientX - r.left;
+  let x = cx + 14;
+  if (x + w > r.width) x = cx - 14 - w;
+  tip.style.left = Math.max(0, x) + 'px';
+  tip.style.top  = `${ev.clientY - r.top - 38}px`;
+}
+
+// Average visits per hour of the day (0–23, local time), over the whole history.
+async function loadHourlyAvg() {
+  try {
+    const r = await sendLong('GET_HOURLY_AVG');
+    if (r && !r.error) drawHourlyChart(r.avg, r.days);
+  } catch (err) { console.error(err); }
+}
+function drawHourlyChart(avg, days) {
+  const svg = document.getElementById('hourlySvg');
+  if (!svg) return;
+  const tip = document.getElementById('hourlyTip'), wrap = svg.parentElement;
+  const W = wrap.clientWidth || 860, H = 170;
+  const p = { t: 18, r: 12, b: 26, l: 46 };
+  const iW = W - p.l - p.r, iH = H - p.t - p.b;
+  const vals = Array.from({ length: 24 }, (_, h) => (avg && avg[h]) || 0);
+  const hasData = vals.some(v => v > 0);
+  const maxV = Math.max(...vals, 0.1), maxI = vals.indexOf(Math.max(...vals));
+  const fmt = v => v >= 10 ? String(Math.round(v)) : v.toFixed(1);
+
+  let grid = '';
+  for (let i = 0; i <= 3; i++) {
+    const y = p.t + (i / 3) * iH;
+    grid += `<line class="grid-ln" x1="${p.l}" x2="${W - p.r}" y1="${y}" y2="${y}"/>`;
+    grid += `<text class="ax-lbl" font-size="9" x="${p.l - 5}" y="${y + 3}" text-anchor="end">${fmt(maxV * (1 - i / 3))}</text>`;
+  }
+  const slot = iW / 24, bw = Math.max(3, Math.min(28, slot * 0.7));
+  let bars = '';
+  vals.forEach((v, h) => {
+    const bh = Math.max(v > 0 ? 2 : 0, (v / maxV) * iH);
+    const x = p.l + slot * h + (slot - bw) / 2, y = p.t + iH - bh;
+    const lbl = `${String(h).padStart(2, '0')}:00–${String(h).padStart(2, '0')}:59`;
+    bars += `<rect class="hr-bar" x="${x}" y="${y}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" fill-opacity="${hasData && h === maxI ? 1 : 0.6}" data-h="${lbl}" data-v="${v.toFixed(1)}"/>`;
+    bars += `<text class="ax-lbl" font-size="${slot < 18 ? 8 : 9}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${h}h</text>`;
+  });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+  svg.innerHTML = grid + bars + (hasData ? '' : `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No data yet</text>`);
+
+  svg.querySelectorAll('.hr-bar').forEach(bar => {
+    bar.addEventListener('mousemove', ev => {
+      tip.innerHTML = `<b>${bar.dataset.h}</b> — ${bar.dataset.v} ${tr('visits_per_day','visits / day')}`;
+      placeChartTip(tip, wrap, ev);
+    });
+    bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
 }
 
 function drawLineChart(daily) {
@@ -1752,6 +1812,7 @@ async function loadTimeSpent(days, dateOverride) {
     if (days !== 1) drawTimeChart(r.dailyMap, days);
     renderHbars(r.topSites);
     drawPie(r.topSites);
+    drawWeekdayChart(r.weekdayAvg, r.weekdayDays);
   } catch (err) { console.error(err); }
 }
 
@@ -1843,6 +1904,54 @@ function drawTimeChart(dailyMap, days, anchorDate) {
     const lbl = (i % gap === 0) ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month:'short', day:'numeric' }) : '';
     return `<div style="flex:1;text-align:center;font-size:0.57rem;color:var(--text3);font-family:var(--font-mono);overflow:hidden">${lbl}</div>`;
   }).join('');
+}
+
+// Average hours spent browsing on each weekday, over all stored time data (Mon → Sun).
+// avgMs / dayCounts are indexed like Date.getDay() (0 = Sunday); DAYS holds the translated names.
+function drawWeekdayChart(avgMs, dayCounts) {
+  const svg  = document.getElementById('weekdaySvg');
+  if (!svg) return;
+  const tip  = document.getElementById('weekdayTip');
+  const wrap = svg.parentElement;
+  const W = wrap.clientWidth || 860, H = 170;
+  const p = { t: 18, r: 12, b: 26, l: 46 };
+  const iW = W - p.l - p.r, iH = H - p.t - p.b;
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const vals = order.map(d => ((avgMs && avgMs[d]) || 0) / 3600000);       // hours
+  const hasData = vals.some(v => v > 0);
+  const maxV = Math.max(...vals, 0.1);
+  const maxI = vals.indexOf(Math.max(...vals));
+  const fmt = h => h.toFixed(1) + 'h';
+
+  let grid = '';
+  for (let i = 0; i <= 3; i++) {
+    const y = p.t + (i / 3) * iH;
+    grid += `<line class="grid-ln" x1="${p.l}" x2="${W - p.r}" y1="${y}" y2="${y}"/>`;
+    grid += `<text class="ax-lbl" font-size="9" x="${p.l - 5}" y="${y + 3}" text-anchor="end">${fmt(maxV * (1 - i / 3))}</text>`;
+  }
+
+  const slot = iW / 7, bw = Math.min(56, slot * 0.6);
+  let bars = '';
+  order.forEach((d, i) => {
+    const v = vals[i], h = Math.max(v > 0 ? 2 : 0, (v / maxV) * iH);
+    const x = p.l + slot * i + (slot - bw) / 2, y = p.t + iH - h;
+    const n = (dayCounts && dayCounts[d]) || 0;
+    bars += `<rect class="wd-bar" x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="var(--accent2)" fill-opacity="${hasData && i === maxI ? 1 : 0.6}" data-d="${esc(DAYS[d])}" data-lbl="${fmt(v)}" data-n="${n}"/>`;
+    if (v > 0) bars += `<text font-size="10" font-weight="600" x="${x + bw / 2}" y="${y - 5}" text-anchor="middle" fill="var(--text2)">${fmt(v)}</text>`;
+    bars += `<text class="ax-lbl" font-size="10" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${esc(DAYS[d])}</text>`;
+  });
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H);
+  svg.innerHTML = grid + bars + (hasData ? '' : `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`);
+
+  svg.querySelectorAll('.wd-bar').forEach(bar => {
+    bar.addEventListener('mousemove', ev => {
+      tip.innerHTML = `<b>${bar.dataset.d}</b> — ${bar.dataset.lbl} <span style="opacity:.6">(${bar.dataset.n} ${tr('days','days')})</span>`;
+      placeChartTip(tip, wrap, ev);
+    });
+    bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
 }
 
 function renderHbars(topSites) {
@@ -5361,7 +5470,6 @@ async function handleIgnoreListAccess() {
       title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
       desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
-      resetBtn.textContent = tr('reset','Reset');
       okBtn.textContent = tr('ok','OK');
       cancelBtn.textContent = tr('cancel','Cancel');
       input.placeholder=  tr('master_password','Master Password');

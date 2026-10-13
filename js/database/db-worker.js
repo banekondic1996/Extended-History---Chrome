@@ -30,7 +30,7 @@ if (typeof importScripts === 'function') {
 let sqlite3 = null, db = null, pool = null, readyPromise = null;
 let progress = { phase: 'init', done: 0, total: 0 };
 let _cnt = null;                                   // cached row count (null = unknown)
-const READ_ONLY_OPS = new Set(['ping', 'status', 'info', 'count', 'hasRows', 'size', 'getSlice', 'page', 'countRange', 'countRanges', 'oldestVisitTime', 'newestVisitTime', 'rescueChunk', 'visitTimeAtRank', 'findByIdsOrUrls', 'topBy']);
+const READ_ONLY_OPS = new Set(['ping', 'status', 'info', 'count', 'hasRows', 'size', 'getSlice', 'page', 'countRange', 'countRanges', 'oldestVisitTime', 'newestVisitTime', 'rescueChunk', 'visitTimeAtRank', 'findByIdsOrUrls', 'topBy', 'hourBuckets']);
 const FILE_V2 = '/eh_v2.sqlite3';
 const FILE_V1 = '/eh_history.sqlite3';       // schema used by earlier test builds — upgraded on first start
 
@@ -185,7 +185,7 @@ async function ftsDeferEnd() {
   const hi = db.selectValue('SELECT MAX(rowid) FROM fts_pending') || 0;
   const W = 20000;
   let done = 0;
-  progress = { phase: 'indexing', done: 0, total: 100, pctOnly: true, step: 'Building search index…' };
+  progress = { phase: 'indexing', done: 0, total: 100, pctOnly: true, step: 'Building search index…'};
   await tick();
   for (let lo = 0; lo < hi; lo += W) {
     const t0 = performance.now();
@@ -291,7 +291,7 @@ async function bulkEnd() {
     const incFts = hadStage && ftsWasOk && hasTable('entries_fts');
     if (incFts) ftsDeferBegin();
     removed += await mergeStage();
-    progress = { phase: 'indexing', done: 0, total: 0, step: 'Building indexes…' };
+    progress = { phase: 'indexing', done: 0, total: 0, step: 'Building search index…' };
     await tick();
     removed += finalizeIndexes(hadStage);       // staged rows were already de-duplicated by mergeStage()
     if (incFts) await ftsDeferEnd(); else await rebuildFts();
@@ -339,7 +339,10 @@ function resumeInterruptedImport() {
       pendingFinish = false;
       Ops.flush();
       postMessage({ recycle: true });                   // let the page restart this worker: WebAssembly memory never shrinks by itself
-    }).catch((e) => console.error('[EH-db] resuming the import failed', e));
+    }).catch((e) => {
+      console.error('[EH-db] resuming the import failed', e);
+      if (isCorrupt(e && e.message)) handleCorrupt().catch(() => {});   // otherwise the progress stays on "Building search index…" forever
+    });
   }, 20000);
 }
 let needsRepair = false;
@@ -354,8 +357,22 @@ async function openDb() {
   if (pool.getFileNames().includes(FILE_V1)) await upgradeFromV1();
   if (needsRepair) { needsRepair = false; await repairDb(); }
   if (pendingFinish) { progress = { phase: 'ready', done: 0, total: 0 }; resumeInterruptedImport(); return; }   // full-text index is rebuilt by that job
-  await ensureFts();
+  try { await ensureFts(); }
+  catch (e) {
+    // "database disk image is malformed" while building the search index used to reject openDb() (→ fatal, retried
+    // forever, stuck on "Building search index…"). Repair automatically, or — for a BIG file — ask the user first.
+    if (!isCorrupt(e && e.message)) throw e;
+    await handleCorrupt();
+    return;
+  }
   progress = { phase: 'ready', done: 0, total: 0 };
+}
+// Damaged database: small → repair right away; big → flag it so the page offers "Try to repair" / "Export" / "Start empty".
+async function handleCorrupt() {
+  let big = false;
+  try { big = db.selectValue('PRAGMA page_count') * db.selectValue('PRAGMA page_size') > 250 * 1048576; } catch (_) {}
+  if (!big) await startRepair();
+  else if (progress.phase !== 'repair') progress = { phase: 'corrupt', done: 0, total: 0 };
 }
 
 // Copies an earlier-format database into the v2 file (in slices, so the worker stays responsive
@@ -860,6 +877,11 @@ const Ops = {
   },
   newestVisitTime(a) { return db.selectValue('SELECT MAX(visit_time) FROM entries' + (a && a.maxT ? ' WHERE visit_time <= ?' : ''), a && a.maxT ? [a.maxT] : undefined); },
   oldestVisitTime() { return db.selectValue('SELECT MIN(visit_time) FROM entries'); },
+  // Visits per 15-minute bucket since the epoch (optionally only before `hi`): [[bucket, count], ...] — a few thousand small
+  // rows instead of millions of entries. The caller maps buckets to local hours (time zone / DST aware).
+  hourBuckets({ hi }) {
+    return db.selectArrays('SELECT CAST(visit_time / 900000 AS INTEGER) AS b, COUNT(*) FROM entries' + (hi != null ? ' WHERE visit_time < ?' : '') + ' GROUP BY b', bnd(hi != null ? [hi] : []));
+  },
   visitTimeAtRank({ n }) { return db.selectValue('SELECT visit_time FROM entries ORDER BY visit_time LIMIT 1 OFFSET ?', [Math.max(0, n)]); },
 
   async removeIds({ ids }) {

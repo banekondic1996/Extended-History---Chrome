@@ -2,6 +2,8 @@
   "ext_name": {
     "message": "Historique Étendu"
   },
+  "avg_time_per_weekday": {"message": "Durée moyenne par jour de la semaine (historique complet)"},
+  "avg_visits_per_hour": {"message": "Nombre moyen de visites par heure de la journée"},
   "jan": {"message": "Janv"},
   "feb": {"message": "Févr"},
   "mar": {"message": "Mars"},

@@ -2,6 +2,7 @@
   "ext_name": {
     "message": "विस्तारित इतिहास"
   },
+  "avg_time_per_weekday": {"message": "सप्ताह के प्रत्येक दिन का औसत समय (पूरे इतिहास में)"},
   "jan": {"message": "जन॰"},
   "feb": {"message": "फ़र॰"},
   "mar": {"message": "मार्च"},
@@ -17,6 +18,7 @@
   "disabled": {"message": "अक्षम"},
   "dh_now": {"message": "अभी"},
   "no_history_found": {"message": "कोई हिस्ट्री नहीं मिली"},
+  "avg_visits_per_hour": {"message": "दिन के प्रत्येक घंटे में औसत विज़िट"},
   "lock_big_warning": {"message": "आपकी हिस्ट्री एन्क्रिप्ट करने के लिए बहुत बड़ी है"},
   "lock_big_limit": {"message": "सीमा"},
   "lock_big_warning2": {"message": "तेज़ लॉकिंग बनाए रखने के लिए कुछ भी एन्क्रिप्ट नहीं किया जाएगा, लेकिन इंटरफ़ेस लॉक रहेगा।"},

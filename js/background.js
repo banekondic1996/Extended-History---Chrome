@@ -85,11 +85,11 @@ function applyToolbarIcon(variant) {
   //refreshActiveTabIcons();   // tabs on ignored sites keep the "filtered" icon
 }
 
-// // ── "Filtered" toolbar icon DISABLED ──────────────────────────────────────────────────
-// // While the current tab is on a site that the Ignore List would skip (domain,
-// // URL-path or kw: keyword pattern, same matcher as history saving), the toolbar
-// // shows icon_filtered.png instead of the chosen icon variant. Set per tab, so
-// // switching tabs / windows always shows the right icon.
+// ── "Filtered" toolbar icon ──────────────────────────────────────────────────
+// While the current tab is on a site that the Ignore List would skip (domain,
+// URL-path or kw: keyword pattern, same matcher as history saving), the toolbar
+// shows icon_filtered.png instead of the chosen icon variant. Set per tab, so
+// switching tabs / windows always shows the right icon.
 // const FILTERED_ICON_FILE = '/icons/icon_filtered.png';
 
 // async function updateIconForTab(tab) {
@@ -2973,6 +2973,27 @@ async function handle(msg) {
       for(const e of entries){ if(e.visitTime < statsFrom) continue; const d=new Date(e.visitTime).toLocaleDateString('en-CA'); if(d in daily) daily[d]++; }
       return {totalEntries:entries.length,storageMB:(used/1048576).toFixed(1),oldestEntry:oldest,dailyActivity:daily};
     }
+    case 'GET_HOURLY_AVG': {
+      // Average number of visits in each hour of the day (local time) over the whole stored history.
+      // Today is left out (still partial); days without any visit count as 0 because the divisor is every calendar day
+      // from the oldest stored visit up to yesterday.
+      const t0 = new Date(); t0.setHours(0, 0, 0, 0); const hi = t0.getTime();
+      const B = 900000, buckets = new Map(); let oldest = null;
+      const add = (b, c) => buckets.set(b, (buckets.get(b) || 0) + c);
+      if (await _useSql()) {
+        for (const [b, c] of await EhSql.rpc('hourBuckets', { hi })) add(b, c);
+        oldest = await EhSql.oldestVisitTime();
+      } else {
+        const scan = e => { const t = e.visitTime; if (!(t < hi)) return; add(Math.floor(t / B), 1); if (oldest === null || t < oldest) oldest = t; };
+        if (await _useIdb()) await EhStore.forEachSlice(rows => { for (const e of rows) scan(e); });
+        else for (const e of await getAll()) scan(e);
+      }
+      const counts = new Array(24).fill(0);
+      for (const [b, c] of buckets) counts[new Date(b * B + B / 2).getHours()] += c;
+      let days = 0;
+      if (oldest !== null && oldest < hi) { const d0 = new Date(oldest); d0.setHours(0, 0, 0, 0); days = Math.max(1, Math.round((hi - d0.getTime()) / 86400000)); }
+      return { avg: counts.map(c => days ? c / days : 0), counts, days };
+    }
     case 'GET_TIME_DATA': {
       const {days=30, date}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
       const dateSet=new Set();
@@ -3009,7 +3030,29 @@ async function handle(msg) {
           dailyMap[date][domain]=(dailyMap[date][domain]||0)+ms;
         }
       }
-      return {topSites:sorted,dailyMap};
+      // Average time per weekday over ALL stored time data (independent of the day filter above).
+      // Every calendar day from the first tracked day up to yesterday counts (days without browsing = 0 h),
+      // today is left out while it is still partial (unless it is the only day with data).
+      const dayTotals={};
+      for(const [domain,dayMap] of Object.entries(map)){
+        if (isHidden(domain)) continue;
+        for(const [d,ms] of Object.entries(dayMap)) dayTotals[d]=(dayTotals[d]||0)+ms;
+      }
+      const weekdayMs=[0,0,0,0,0,0,0], weekdayDays=[0,0,0,0,0,0,0];
+      const keys=Object.keys(dayTotals).sort();
+      if(keys.length){
+        const todayK=new Date().toLocaleDateString('en-CA');
+        let lastK=keys[keys.length-1];
+        if(lastK>=todayK && keys.length>1) lastK=keys.filter(k=>k<todayK).pop()||lastK;
+        const cur=new Date(keys[0]+'T12:00:00'), end=new Date(lastK+'T12:00:00');
+        while(cur<=end){
+          const k=cur.toLocaleDateString('en-CA'), wd=cur.getDay();
+          weekdayMs[wd]+=dayTotals[k]||0; weekdayDays[wd]++;
+          cur.setDate(cur.getDate()+1);
+        }
+      }
+      const weekdayAvg=weekdayMs.map((ms,i)=>weekdayDays[i]?ms/weekdayDays[i]:0);   // ms per day, index = Date.getDay() (0 = Sunday)
+      return {topSites:sorted,dailyMap,weekdayAvg,weekdayDays};
     }
     case 'GET_DEVICES': { try{return {devices:await chrome.sessions.getDevices()};}catch{return {devices:[]};} }
     case 'GET_TODAY_HISTORY': {

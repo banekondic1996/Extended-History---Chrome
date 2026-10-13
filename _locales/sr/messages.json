@@ -15,6 +15,8 @@
   "oct": {"message": "Окт"},
   "nov": {"message": "Нов"},
   "dec": {"message": "Дец"},
+  "avg_time_per_weekday": {"message": "Просечно време по данима у недељи (за цео период)"},
+  "avg_visits_per_hour": {"message": "Просечан број посета по сату у току дана"},
   "disabled": {"message": "Онемогућено"},
   "dh_now": {"message": "Сада"},
   "no_history_found": {"message": "Историја није пронађена"},

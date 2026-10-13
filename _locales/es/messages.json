@@ -1251,6 +1251,8 @@
     }
   },
   "dh_now": {"message": "Ahora"},
+  "avg_time_per_weekday": {"message": "Tiempo promedio por día de la semana (todo el historial)"},
+  "avg_visits_per_hour": {"message": "Visitas promedio por hora del día"},
   "pop_cant_store": {
     "message": "No se puede guardar esta página"
   },

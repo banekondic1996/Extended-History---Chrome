@@ -2,6 +2,8 @@
   "ext_name": {
     "message": "היסטוריה מורחבת"
   },
+  "avg_time_per_weekday": {"message": "זמן ממוצע לפי יום בשבוע (כל התקופה)"},
+  "avg_visits_per_hour": {"message": "מספר ביקורים ממוצע לפי שעה ביום"},
   "jan": {"message": "ינו׳"},
   "feb": {"message": "פבר׳"},
   "mar": {"message": "מרץ"},
@@ -14,6 +16,7 @@
   "oct": {"message": "אוק׳"},
   "nov": {"message": "נוב׳"},
   "dec": {"message": "דצמ׳"},
+  "disabled": {"message": "מושבת"},
   "dh_now": {"message": "עכשיו"},
   "no_history_found": {"message": "לא נמצאה היסטוריה"},
   "lock_big_warning": {"message": "ההיסטוריה שלך גדולה מדי להצפנה"},

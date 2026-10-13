@@ -232,6 +232,14 @@
         <div class="bar30-wrap" id="bar30Wrap"></div>
         <div class="bar30-dates" id="bar30Dates"></div>
       </div>
+
+      <div class="chart-card" id="hourlyChartCard">
+        <div class="cc-header"><span class="cc-title" data-i18n-key="avg_visits_per_hour">Average visits by hour of day</span></div>
+        <div style="position:relative">
+          <svg class="chart-svg" id="hourlySvg" height="170"></svg>
+          <div class="chart-tooltip" id="hourlyTip"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -262,6 +270,8 @@
         <div id="timeLabels" style="display:flex;margin-top:5px"></div>
       </div>
 
+  
+
       <div class="chart-card">
         <div class="cc-header"><span class="cc-title" data-i18n-key="top_sites_by_time_spent">Top sites by time spent</span></div>
         <div class="timespent-grid">
@@ -270,6 +280,13 @@
             <svg class="pie-svg" id="pieSvg" width="160" height="160" viewBox="0 0 160 160"></svg>
             <div class="pie-legend" id="pieLegend"></div>
           </div>
+        </div>
+      </div>
+          <div class="chart-card" id="weekdayChartCard">
+        <div class="cc-header"><span class="cc-title" data-i18n-key="avg_time_per_weekday">Average time per weekday (all time)</span></div>
+        <div style="position:relative">
+          <svg class="chart-svg" id="weekdaySvg" height="170"></svg>
+          <div class="chart-tooltip" id="weekdayTip"></div>
         </div>
       </div>
     </div>
@@ -615,7 +632,7 @@
             <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
               <div style="display:flex;align-items:center;gap:6px">
                 <input type="number" id="autoExportInput" value="0" min="0" max="60" step="1" style="width:70px"/>
-                <span class="unit" data-i18n-key="months">months</span>
+                <span class="unit">months</span>
               </div>
               <select id="autoExportMode" class="mode-sel" style="min-width:110px">
                 <option value="full" data-i18n-key="full">Full</option>
