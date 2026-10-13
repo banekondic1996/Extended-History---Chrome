@@ -5470,6 +5470,7 @@ async function handleIgnoreListAccess() {
       title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
       desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
+      resetBtn.textContent = tr('reset','Reset');
       okBtn.textContent = tr('ok','OK');
       cancelBtn.textContent = tr('cancel','Cancel');
       input.placeholder=  tr('master_password','Master Password');
