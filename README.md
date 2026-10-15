@@ -21,17 +21,17 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 </pre>
 **To do (ordered by importance):**
 <pre>
--Add support to import from Google Takeout
+-Add button to re-download last made incremental backup
 -Add support to encrypt incremental auto export (double hashed password as encryption)
+-Add support to import from Google Takeout
+-Add option to reverse ignore filter, ignoring all sites except ones in list from history
 -Add option to export searched results only or advanced export function to export based on domain list only
 -Add option to not return most visited into history after unlocking UI
--Add option to reverse ignore filter, ignoring all sites except ones in list from history
+-Add support to import multiple .json .tsv files at once
 -Popup/sidebar deleting in progress modal is missing
 -Fix browser cache based favicon resolver, by saving small favicons as base64 in localstorage
 -Store page even if page didn't load completely
 -Import history within certain time range
--Add support to import multiple .json .tsv files at once
--Add button to re-download last made incremental backup
 </pre>
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
