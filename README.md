@@ -2,7 +2,7 @@
 **Description:**
 <pre>
 Chrome extension for extended history duration and better history view,<br>and option to store history for more then 90 days.
-Originally made just because of 90 days limit in chromium,<br>instead of rebuilding chromium I made extension. I hope it works...
+Originally made just because of 90 days limit in chromium,<br>instead of rebuilding chromium I made extension. 
 </pre>
 **Features:**
 <pre>
