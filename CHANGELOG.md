@@ -170,6 +170,7 @@ Fixed/changed in version 4.2.2:
 -Moving cursor over "Daily visits — 90 days" chart shows data for each day now
 -"Average time per weekday" chart is now based on "All time" or 7,15,30,90 days based on selection
 -Added changed settings confirmation dialog
+-Fixed quick filters keyword working even if keyword is contained in words, now only if * is used at the beginning or end of word (regex)
 </pre>
 
 
