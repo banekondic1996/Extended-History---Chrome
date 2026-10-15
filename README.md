@@ -1,7 +1,9 @@
 # <img width="48" height="48" alt="icon48" src="/icons/icon128.png" /> Extended History <br>
-
-Chrome extension for extended history duration and better history view,<br> and option to store history for more then 90 days.<br>
-Originally made just because of 90 days limit in chromium, <br> instead of rebuilding chromium I made extension. I hope it works...<br><br>
+**Description:**
+<pre>
+Chrome extension for extended history duration and better history view,<br>and option to store history for more then 90 days.
+Originally made just because of 90 days limit in chromium,<br>instead of rebuilding chromium I made extension. 
+</pre>
 **Features:**
 <pre>
 -Filter history by date, url, title
