@@ -61,6 +61,21 @@ function hash53(str) {
 }
 const newSeq = () => Math.floor(Math.random() * 2147483647);
 
+const _kwRe = new Map();
+function qfKwRe(w, f) {
+  const key = f + ':' + w;
+  let re = _kwRe.get(key);
+  if (!re) {
+    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), W = '\\p{L}\\p{N}';
+    // a boundary only makes sense next to a letter/digit (a keyword edge that is a symbol, e.g. "/login", needs none)
+    const left  = !(f & 1) && new RegExp('^[' + W + ']', 'u').test(w) ? '(?<![' + W + '])' : '';
+    const right = !(f & 2) && new RegExp('[' + W + ']$', 'u').test(w) ? '(?![' + W + '])'  : '';
+    re = new RegExp(left + esc + right, 'iu');
+    _kwRe.set(key, re);
+  }
+  return re;
+}
+
 function createSchema(d) {
   d.exec(`
     CREATE TABLE IF NOT EXISTS entries(
@@ -77,6 +92,8 @@ function createSchema(d) {
     ) WITHOUT ROWID;
   `);
   d.createFunction('jslower', (cx, v) => lc(v), { arity: 1, deterministic: true });   // Unicode-aware, like JS toLowerCase()
+  // qfkw(text, keyword, flags): whole-word keyword test for quick filters. flags: 1 = "*" before the keyword (no left boundary), 2 = "*" after it
+  d.createFunction('qfkw', (cx, v, w, f) => qfKwRe(String(w), f | 0).test(v == null ? '' : String(v)), { arity: 3, deterministic: true });
 }
 
 function hasTable(n) { return db.selectValue("SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table','virtual table') AND name=?", [n]) > 0; }
@@ -472,12 +489,26 @@ function qfWhere(patterns, pre = '') {
     if (!p) continue;
     const ascii = /^[\x00-\x7f]*$/.test(p);
     const has = (n, v) => ascii ? { s: `${col(n)} LIKE ?${E}`, b: [L(v)] } : { s: `instr(jslower(ifnull(${col(n)},'')), ?) > 0`, b: [v] };
-    if (p.includes('.') && !p.includes(' ') && !p.includes('/')) {
+    if (p.includes('.') && !p.includes(' ') && !p.includes('/') && !p.includes('*')) {
       const esc = p.replace(/[\\%_]/g, '\\$&');
       ors.push(ascii ? `(${col('domain')} = ? OR ${col('domain')} LIKE ?${E})` : `(jslower(ifnull(${col('domain')},'')) = ? OR jslower(ifnull(${col('domain')},'')) LIKE ?${E})`);
       b.push(p, '%.' + esc);
     } else {
-      const u = has('url', p), t = has('title', p);
+      // Keyword: whole word unless "*" opens a side ("ana*" starts with, "*ana" ends with, "*ana*" contains).
+      // LIKE is only a cheap pre-filter; qfkw() does the exact word-boundary test.
+      const lead = p.startsWith('*'), trail = p.endsWith('*');
+      const core = p.replace(/^\*+|\*+$/g, '');
+      if (!core) continue;
+      const flags = (lead ? 1 : 0) | (trail ? 2 : 0);
+      const part = (n) => {
+        const pre = /^[\x00-\x7f]*$/.test(core) ? `${col(n)} LIKE ?${E} AND ` : '';
+        const pb = pre ? [L(core)] : [];
+        if (flags === 3) {                                  // *ana* → plain substring, as before
+          return /^[\x00-\x7f]*$/.test(core) ? { s: `${col(n)} LIKE ?${E}`, b: [L(core)] } : { s: `instr(jslower(ifnull(${col(n)},'')), ?) > 0`, b: [core] };
+        }
+        return { s: `(${pre}qfkw(${col(n)}, ?, ?))`, b: [...pb, core, flags] };
+      };
+      const u = part('url'), t = part('title');
       ors.push(`(${u.s} OR ${t.s})`); b.push(...u.b, ...t.b);
     }
   }

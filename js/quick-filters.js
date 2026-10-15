@@ -32,6 +32,28 @@ let _qfActiveId = '';   // '' = no filter applied
 let _qfEditingId = null; // id currently being edited in the panel form, or null = "new"
 
 // ── Matching ─────────────────────────────────────────────────────────────────
+// Keyword rules: a keyword matches only as a WHOLE word — "ana" matches "ana", "my ana-page" or
+// "site/ana" but not "ananas" or "banana". Wildcards open a side up: "ana*" = starts with ana
+// (ananas), "*ana" = ends with ana (banana), "*ana*" = contains ana anywhere.
+// Patterns with a dot and no space/slash are domains (domain or subdomain match), as before.
+const _qfReCache = new Map();
+function qfKeywordRegex(raw) {
+  let hit = _qfReCache.get(raw);
+  if (hit !== undefined) return hit;
+  let p = raw, openL = false, openR = false;
+  if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+  if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+  if (!p) { _qfReCache.set(raw, null); return null; }
+  const esc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const W = '\\p{L}\\p{N}';
+  // A boundary only makes sense next to a letter/digit; a pattern edge that is already a symbol ("/login") needs none
+  const left  = (!openL && new RegExp('^[' + W + ']', 'u').test(p))              ? '(?<![' + W + '])' : '';
+  const right = (!openR && new RegExp('[' + W + ']$', 'u').test(p))              ? '(?![' + W + '])'  : '';
+  hit = new RegExp(left + esc + right, 'iu');
+  _qfReCache.set(raw, hit);
+  return hit;
+}
+
 function qfMatchesPattern(entry, rawPattern) {
   const p = (rawPattern || '').trim().toLowerCase();
   if (!p) return false;
@@ -40,11 +62,12 @@ function qfMatchesPattern(entry, rawPattern) {
   const domain = (entry.domain || (typeof tryDomain === 'function' ? tryDomain(entry.url) : '') || '').toLowerCase();
 
   // Domain-like pattern (contains a dot, no spaces) — match the domain or its subdomains
-  if (p.includes('.') && !p.includes(' ') && !p.includes('/')) {
+  if (p.includes('.') && !p.includes(' ') && !p.includes('/') && !p.includes('*')) {
     return domain === p || domain.endsWith('.' + p);
   }
-  // Otherwise treat as a free keyword / URL fragment — match URL or title
-  return url.includes(p) || title.includes(p);
+  // Otherwise a whole-word keyword / URL fragment (with optional * wildcards) — match URL or title
+  const re = qfKeywordRegex(p);
+  return !!re && (re.test(url) || re.test(title));
 }
 
 function qfEntryMatches(entry, filter) {

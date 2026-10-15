@@ -2359,16 +2359,29 @@ async function removeEntries(idSet, urlSet) {
 }
 // Quick filters (named groups of domains / keywords / URL fragments) are applied here, in the background,
 // so they cover the WHOLE history — not just the page of results the history page happens to have loaded.
+// Same rules as quick-filters.js: keywords match whole words only ("ana" ≠ "ananas"/"banana"); "ana*" = starts with,
+// "*ana" = ends with, "*ana*" = contains. Dotted patterns without space/slash/* are domains.
+function qfKeywordRegex(p) {
+  let openL = false, openR = false;
+  if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+  if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+  if (!p) return null;
+  const esc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const W = '\\p{L}\\p{N}';
+  const left  = (!openL && new RegExp('^[' + W + ']', 'u').test(p)) ? '(?<![' + W + '])' : '';
+  const right = (!openR && new RegExp('[' + W + ']$', 'u').test(p)) ? '(?![' + W + '])'  : '';
+  return new RegExp(left + esc + right, 'iu');
+}
 function qfMakeMatcher(patterns) {
-  const ps = (Array.isArray(patterns) ? patterns : []).map(p => String(p || '').trim().toLowerCase()).filter(Boolean);
+  const ps = (Array.isArray(patterns) ? patterns : []).map(p => String(p || '').trim().toLowerCase()).filter(Boolean)
+    .map(p => (p.includes('.') && !p.includes(' ') && !p.includes('/') && !p.includes('*')) ? { dom: p } : { re: qfKeywordRegex(p) })
+    .filter(x => x.dom || x.re);
   if (!ps.length) return null;
   return (e) => {
     const url = String(e.url || '').toLowerCase(), title = String(e.title || '').toLowerCase();
     let domain = String(e.domain || '').toLowerCase();
     if (!domain) { try { domain = new URL(e.url).hostname.replace(/^www\./, '').toLowerCase(); } catch (_) {} }
-    return ps.some(p => (p.includes('.') && !p.includes(' ') && !p.includes('/'))
-      ? (domain === p || domain.endsWith('.' + p))
-      : (url.includes(p) || title.includes(p)));
+    return ps.some(x => x.dom ? (domain === x.dom || domain.endsWith('.' + x.dom)) : (x.re.test(url) || x.re.test(title)));
   };
 }
 async function getSettings() { const r=await chrome.storage.local.get(SETTINGS_KEY); return {...DEFAULT_SETTINGS,...(r[SETTINGS_KEY]||{})}; }
