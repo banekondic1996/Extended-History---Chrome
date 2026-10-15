@@ -20,159 +20,10 @@ function send(type, extra = {}) {
       done = true;
       clearTimeout(timer);
       if (chrome.runtime.lastError) { rej(new Error(chrome.runtime.lastError.message)); return; }
-      if (r && r.migrating) ehShowMigration();
       if (r && r.error) { rej(new Error(r.error)); return; }
       res(r);
     });
   });
-}
-
-// While the history is being moved to SQLite (automatic for big histories) the background
-// answers every data request with {migrating:true}. Cover the page with a progress overlay,
-// poll until it is done, then reload.
-let _ehMigOverlay = null;
-function ehShowMigration() {
-  if (_ehMigOverlay) return;
-  const o = document.createElement('div');
-  o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(8,8,12,.88);color:#f0eee8;font-family:system-ui,sans-serif;text-align:center;padding:24px';
-  o.innerHTML = '<div style="max-width:420px"><div style="font-size:18px;font-weight:600;margin-bottom:8px" id="ehMigTitle" data-i18n-key="moving_to_sqlite">Moving your history to SQLite…</div>' +
-    '<div id="ehMigNote" style="opacity:.75;font-size:13px;line-height:1.5;margin-bottom:14px;display:none"></div>' +
-    '<style>#ehMigBar{height:100%;width:3%;background:#3b9eff;transition:width .4s}#ehMigBar.indet{width:35%!important;animation:ehMigSlide 1.2s ease-in-out infinite;transition:none}@keyframes ehMigSlide{0%{margin-left:-35%}100%{margin-left:100%}}</style>' +
-    '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden"><div id="ehMigBar"></div></div>' +
-    '<div id="ehMigTxt" style="margin-top:8px;font-size:12px;opacity:.7"></div></div>';
-  document.body.appendChild(o);
-  _ehMigOverlay = o;
-  const t00 = Date.now();
-  const tick = async () => {
-    try {
-      const r = await new Promise((res) => chrome.runtime.sendMessage({ type: 'GET_MIGRATION_STATUS' }, x => res(x || {})));
-      if (!r.migrating) { location.reload(); return; }
-      const bar = document.getElementById('ehMigBar'), txt = document.getElementById('ehMigTxt'), ttl = document.getElementById('ehMigTitle');
-      const pct = r.total ? Math.min(99, Math.round(100 * r.done / r.total)) : 0;
-      const hasTotal = !!r.total;
-      const secs = Math.max(r.busySecs || 0, r.since ? Math.round((Date.now() - r.since) / 1000) : 0, Math.round((Date.now() - t00) / 1000));
-      // No denominator yet (database starting, indexes building…): animated bar instead of a bar stuck at 3 %.
-      bar.classList.toggle('indet', !r.total);
-      if (r.total) bar.style.width = Math.max(3, pct) + '%'; else bar.style.width = '';
-      const isCorrupt = r.upgrade && r.phase === 'corrupt';
-      if (!isCorrupt) delete txt.dataset.corrupt;
-      if (!isCorrupt) txt.textContent = r.total ? (r.pctOnly ? `${pct}% · ${secs} s` : `${pct}% · ${Number(r.done).toLocaleString()} / ${Number(r.total).toLocaleString()}`) : (secs ? secs + ' s' : '');
-      const note = document.getElementById('ehMigNote');
-      if (note) { note.style.display = r.upgrade ? 'none' : ''; if (!r.upgrade) note.textContent = tr('history_too_big','Your history is big, so it is being moved to a faster database. This happens once; the page reloads when it is done.'); }
-      if (!r.upgrade) {
-        const mig = { preparing: tr('preparing','Preparing…'), reading: tr('reading_history','Reading your history…'), starting: tr('starting_database','Starting the database…'), copying: tr('moving_to_sqlite','Moving your history to SQLite…'), verifying: tr('checking_copy','Checking the copy…'), finishing: tr('finishing_up','Finishing up…') };
-        ttl.textContent = mig[r.phase] || tr('moving_to_sqlite','Moving your history to SQLite…');
-      }
-      if (r.upgrade && r.phase === 'corrupt') {
-        ttl.textContent = tr('history_damaged','The history database is damaged');
-        if (!txt.dataset.corrupt) { txt.dataset.corrupt = '1'; txt.textContent = tr('explain_damage','This can happen when the browser was closed or ran out of memory in the middle of a big write. Repair can take a few minutes. You can also export what is readable to a .json file first, delete the database and import that file again.'); }
-        bar.style.display = 'none';
-        if (!document.getElementById('ehMigFix')) {
-          const box = document.createElement('div'); box.id = 'ehMigFix'; box.style.cssText = 'margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap';
-          const mk = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;cursor:pointer'; b.onclick = fn; box.appendChild(b); return b; };
-          mk(tr('try_repair','Try to repair'), () => { box.remove(); bar.style.display = ''; chrome.runtime.sendMessage({ target: 'eh-sql', op: 'repair' }, () => { void chrome.runtime.lastError; }); });
-          mk(tr('export_then_delete','Export what can be read (.json), then delete'), async (ev) => {
-            const btn = ev.currentTarget; btn.disabled = true;
-            try {
-              const rs = (a) => new Promise((res, rej) => chrome.runtime.sendMessage({ target: 'eh-sql', op: 'rescueChunk', args: a }, x => { if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else if (!x || !x.ok) rej(new Error((x && x.error) || 'no answer')); else res(x.result); }));
-              const lo0 = Date.UTC(2000, 0, 1), hi0 = Date.now() + 86400000, STEP = 14 * 86400000;
-              let parts = ['{"exportedAt":"' + new Date().toISOString() + '","entries":['], n = 0, pending = 0, first = true;
-              for (let lo = lo0; lo < hi0; lo += STEP) {
-                const r = await rs({ lo, hi: Math.min(lo + STEP, hi0) });
-                if (r.rows.length) {
-                  const s = r.rows.map(e => JSON.stringify(e)).join(',');
-                  parts.push((first ? '' : ',') + s); first = false; n += r.rows.length; pending += s.length;
-                  if (pending > 16e6) { parts = [new Blob(parts)]; pending = 0; }   // let the browser keep it on disk, not in memory
-                }
-                txt.textContent = tr('exporting','Exporting...')+` ${Math.round(100 * (lo - lo0) / (hi0 - lo0))}% · ${n.toLocaleString()}`+ tr('entries','entries');
-                await new Promise(r2 => setTimeout(r2, 0));
-              }
-              parts.push('],"totalEntries":' + n + '}');
-              if (!n) { alert(tr('no_readable_entries','No readable entries were found.')); btn.disabled = false; return; }
-              const url = URL.createObjectURL(new Blob(parts, { type: 'application/json' }));
-              const a = Object.assign(document.createElement('a'), { href: url, download: 'extended-history_rescued_' + new Date().toISOString().slice(0, 10) + '.json' });
-              document.body.appendChild(a); a.click();
-              setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 600000);
-              txt.textContent = tr('saved','Saved ')+`${n.toLocaleString()}`+ tr('entries','entries');
-              await new Promise(r2 => setTimeout(r2, 1500));
-              if (!confirm(`${n.toLocaleString()}`+ tr('entries_were_saved','entries were saved to your downloads. Check that the file was saved, then delete the damaged database now? You can import the file afterwards.'))) { btn.disabled = false; return; }
-              const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
-              if (x.error) alert(x.error); else location.reload();
-            } catch (e) { alert('Export failed: ' + (e.message || e)); btn.disabled = false; }
-          });
-          mk(tr('delete_start_empty','Delete it and start empty'), async () => {
-            if (!confirm(tr('this_deletes_history','This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?'))) return;
-            const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
-            if (x.error) alert(x.error); else location.reload();
-          });
-          txt.parentNode.appendChild(box);
-        }
-        setTimeout(tick, 1500); return;
-      }
-      if (r.upgrade) {
-        const names = { init: tr('starting_database','Starting the database…'), upgrade: tr('upgrading_database','Upgrading the history database…'), indexing: tr('building_indexes','Building indexes…'), repair: tr('repairing_database','Repairing the history database…') };
-        ttl.textContent = names[r.phase] || tr('preparing_database','Preparing the history database…');
-        if (r.pctOnly && r.step) ttl.textContent = r.step;
-        if (!r.total) txt.textContent = secs + ' s';
-        if (secs > (r.phase === 'indexing' ? 420 : 180) && !r.pctOnly && !document.getElementById('ehMigReset')) {
-          const b = document.createElement('button');
-          b.id = 'ehMigReset';
-          b.textContent = tr('stuck_delete','Stuck? Delete the database and start empty');
-          b.style.cssText = 'margin-top:16px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:inherit;cursor:pointer';
-          b.onclick = async () => {
-            if (!confirm(tr('confirm_history_drop','This permanently deletes the stored history database (your browser\'s own history is not touched). Continue?'))) return;
-            b.disabled = true; b.textContent = tr('deleting','Deleting…');
-            const x = await new Promise(res => chrome.runtime.sendMessage({ type: 'RESET_SQLITE_HARD' }, y => res(y || {})));
-            if (x.error) { b.textContent = x.error; b.disabled = false; } else location.reload();
-          };
-          document.getElementById('ehMigTxt').parentNode.appendChild(b);
-        }
-      }
-    } catch (_) {}
-    setTimeout(tick, 500);
-  };
-  tick();
-}
-// Check once at page load, before anything asks for data.
-try { chrome.runtime.sendMessage({ type: 'GET_MIGRATION_STATUS' }, r => { void chrome.runtime.lastError; if (r && r.migrating) ehShowMigration(); }); } catch (_) {}
-
-// Same as send() but without the 15 s timeout — for operations that legitimately
-// take long on a big history (building/pulling an export).
-function sendLong(type, extra = {}) {
-  return new Promise((res, rej) => {
-    chrome.runtime.sendMessage({ type, ...extra }, r => {
-      if (chrome.runtime.lastError) { rej(new Error(chrome.runtime.lastError.message)); return; }
-      if (r && r.migrating && type !== 'MIGRATE_TO_SQLITE' && type !== 'MIGRATE_TO_IDB' && type !== 'MIGRATE_TO_LOCAL') ehShowMigration();
-      if (r && r.error) { rej(new Error(r.error)); return; }
-      res(r);
-    });
-  });
-}
-// Pulls an export that background.js prepared as chunks (see EXPORT_BEGIN / EXPORT_PULL there),
-// handing each text part to onPart(str) as it arrives. Nothing is accumulated here.
-async function ehPullEach(id, count, onPart) {
-  if (count == null) {
-    for (let i = 0; ; i++) {
-      const r = await sendLong('EXPORT_PULL', { id, i });
-      await onPart(r.part);
-      if (r.last) break;
-    }
-    return;
-  }
-  for (let i = 0; i < count; i++) await onPart((await sendLong('EXPORT_PULL', { id, i })).part);
-}
-// Same, but collects the text into Blob batches: Blob storage lives outside the JS heap, so a 1 GB+ history
-// never sits in memory as strings (that crashed the tab). Returns an array of Blobs — usable as `new Blob(result)`.
-async function ehPullParts(id, count, onProgress) {
-  const blobs = [];
-  let batch = [], len = 0, bytes = 0;
-  await ehPullEach(id, count, (part) => {
-    batch.push(part); len += part.length; bytes += part.length;
-    if (len > 32e6) { blobs.push(new Blob(batch)); batch = []; len = 0; }
-    if (onProgress) onProgress(bytes);
-  });
-  if (batch.length) blobs.push(new Blob(batch));
-  return blobs;
 }
 
 // ── Crypto helpers (AES-GCM + PBKDF2) ─────────────────────────────────────
@@ -186,12 +37,7 @@ function _u8toB64(buf) {
   }
   return btoa(binary);
 }
-function _b64toU8(s) {
-  // plain loop: Uint8Array.from(…, callback) was many times slower on the 20 MB pieces of a big encrypted export
-  const bin = atob(s), n = bin.length, u = new Uint8Array(n);
-  for (let i = 0; i < n; i++) u[i] = bin.charCodeAt(i);
-  return u;
-}
+function _b64toU8(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
 
 async function ehEncrypt(plaintext, password) {
   const enc  = new TextEncoder();
@@ -217,52 +63,6 @@ async function ehDecrypt({ salt, iv, ct }, password) {
   return new TextDecoder().decode(plain);
 }
 
-// Chunked encryption (format v2) for big exports: the plain text is encrypted in ~16 MB pieces, each with its own IV
-// under one PBKDF2 key, written one chunk per line:
-//   {"__eh_encrypted":true,"v":2,"salt":"…",
-//   "chunks":[
-//   {"iv":"…","ct":"…"},
-//   …
-//   ]}
-// Neither side ever needs the whole history as a single string (the old format could not reach 1 GB).
-async function ehDeriveKey(password, salt, usage) {
-  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, [usage]);
-}
-async function ehEncryptChunk(key, text) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text));
-  return JSON.stringify({ iv: _u8toB64(iv), ct: _u8toB64(ct) });
-}
-
-// Pulls the export and returns the finished file as a Blob (plain JSON, or encrypted when pw is given).
-// Encrypted format v3 (binary, no base64): one ASCII header line, then for every ~64 MB piece of the plain text
-//   [4 bytes: length of ciphertext][12 bytes: IV][ciphertext]
-// AES-GCM under one PBKDF2 key. Decoding needs no text parsing at all — see the v3 branch of ehReadEntries().
-const EH_ENC_CHUNK = 64e6;
-async function ehExportToBlob(begin, pw, onProgress) {
-  if (!pw) return new Blob(await ehPullParts(begin.id, begin.count, onProgress), { type: 'application/json' });
-  const blobs = [];
-  let bytes = 0, acc = '';
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const key = await ehDeriveKey(pw, salt, 'encrypt');
-  blobs.push(new Blob(['{"__eh_encrypted":true,"v":3,"salt":"' + _u8toB64(salt) + '"}\n']));
-  const flush = async () => {
-    if (!acc) return;
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(acc));
-    const len = new Uint8Array(4); new DataView(len.buffer).setUint32(0, ct.byteLength, true);
-    blobs.push(new Blob([len, iv, ct]));             // Blob storage keeps it off the JS heap
-    acc = '';
-  };
-  await ehPullEach(begin.id, begin.count, async (part) => {
-    acc += part; bytes += part.length;
-    if (acc.length >= EH_ENC_CHUNK) await flush();
-    if (onProgress) onProgress(bytes);
-  });
-  await flush();
-  return new Blob(blobs, { type: 'application/json' });
-}
 
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -324,13 +124,6 @@ function setFavicon(img, domain) {
 
 // ── Toast ──────────────────────────────────────────────────────────────────
 let _toastTimer;
-// Same as toast() but stays up for `ms` — for results the user must not miss (e.g. "import finished").
-function toastLong(msg, type = '', ms = 12000) {
-  toast(msg, type);
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { document.getElementById('toast').className = 'toast'; }, ms);
-}
-
 function toast(msg, type = '') {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -339,71 +132,16 @@ function toast(msg, type = '') {
   _toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
 }
 
-let _progTimer;
-function toastProgress(msg, pct = 0, type = 'ok') {
-  // Own element: ordinary toasts (e.g. "Settings saved") can never overwrite or hide it.
-  let el = document.getElementById('toastProgress');
-  if (!el) { el = document.createElement('div'); el.id = 'toastProgress'; el.className = 'toast'; document.body.appendChild(el); }
-  const indet = pct === null || pct === undefined;
-  const p = indet ? 0 : Math.max(0, Math.min(100, Number(pct) || 0));
-  const title = msg + (indet ? '' : ' · ' + Math.round(p) + '%');
-  let t = el.querySelector(':scope > .toast-title'), line = el.querySelector(':scope > .toast-line');
-  if (!t || !line) {
-    el.textContent = '';
-    t = document.createElement('div'); t.className = 'toast-title';
-    line = document.createElement('div'); line.className = 'toast-line';
-    line.appendChild(document.createElement('span'));
-    el.append(t, line);
-  }
-  if (t.textContent !== title) t.textContent = title;
-  line.classList.toggle('indet', indet);
-  line.firstChild.style.width = p + '%';
-  const cls = `toast show progress progress-slot ${type}`;
-  if (el.className !== cls) el.className = cls;
-  clearTimeout(_progTimer);
-  if (!indet && p >= 100) _progTimer = setTimeout(toastProgressHide, 1800);
-  else _progTimer = setTimeout(toastProgressHide, 120000);   // safety: never stay forever if the worker dies
-}
-function toastProgressHide() {
-  clearTimeout(_progTimer);
-  const el = document.getElementById('toastProgress');
-  if (el) { el.className = 'toast'; el.textContent = ''; }
-}
-
-// Progress of an auto-export / WebDAV upload, sent by the background
-chrome.runtime.onMessage.addListener((m) => {
-  if (!m || m.type !== 'AUTO_EXPORT_PROGRESS') return;
-  if (m.error) { toastProgressHide(); toastLong(m.label || 'Export failed', 'err'); }
-  else toastProgress(m.label || 'Exporting…', m.pct == null ? null : m.pct, 'ok');
-});
-
 // ── Theme ──────────────────────────────────────────────────────────────────
-// theme-init.js (loaded in <head>) already applied the last-known theme before first paint.
-// applyTheme() only syncs the rest of the UI to the effective theme; it never saves anything.
-function applyTheme() {
-  const t = window.EhTheme ? EhTheme.effective() : (document.documentElement.getAttribute('data-theme') || 'dark');
+function setTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeLight')?.classList.toggle('active', t === 'light');
-  document.getElementById('themeDark')?.classList.toggle('active', t === 'dark');
+  document.getElementById('themeLight').classList.toggle('active', t === 'light');
+  document.getElementById('themeDark').classList.toggle('active', t === 'dark');
+  _curSettings.theme = t;
+  send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
   // Re-apply wallpaper so overlay color adapts to new theme
   chrome.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
-// Manual Light / Dark buttons (hidden while "Follow system theme" is on).
-function setTheme(t) {
-  if (window.EhTheme) EhTheme.set(false, t, true); else document.documentElement.setAttribute('data-theme', t);
-  _curSettings.theme = t;
-  applyTheme();
-  send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
-}
-// Applies saved settings: stored manual choice + follow-system flag. persist=true mirrors them
-// to localStorage (what theme-init.js reads before the next paint).
-function applyThemeSettings(s, persist = true) {
-  const follow = s.followSystemTheme === true, theme = s.theme === 'light' ? 'light' : 'dark';
-  if (window.EhTheme) EhTheme.set(follow, theme, persist);
-  applyTheme();
-}
-// OS switched light/dark while following it (or the toggle was previewed in Settings)
-window.addEventListener('eh-theme-changed', applyTheme);
 
 // ── State ──────────────────────────────────────────────────────────────────
 let allResults   = [];   // all matching entries from backend
@@ -448,7 +186,7 @@ function buildVirtualList() {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
     return;
   }
 
@@ -589,77 +327,19 @@ function getFilters() {
 // do NOT duplicate the entire history into this page's memory (that was tried
 // and caused growing RAM usage across reloads) — only the current filtered
 // result set is held here, same as before.
-const EH_CID = Math.random().toString(36).slice(2);
-let _searchGen = 0;
 async function doSearch() {
   const { query, mode, startDate, endDate } = getFilters();
-  const gen = ++_searchGen;
   selected.clear(); selMode = false; updateSelBar();
 
   listArea().innerHTML = `<div class="state-msg" style="color:var(--text3);font-size:0.85rem">Loading…</div>`;
 
   try {
-    // Two steps: the first screenful comes back (and renders) almost immediately — the database stops
-    // scanning as soon as it has that many matches — then the rest of the list is appended behind it.
-    const FIRST = 600, MAX = 20000, STEP = 4000;
-    const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;   // applied by the database over the whole history
-    const r = await sendLong('SEARCH', { query, mode, startDate, endDate, limit: FIRST, qf, noTotal: true, cid: EH_CID, token: gen });
-    if (gen !== _searchGen || r.cancelled) return;      // a newer search (next keystroke) replaced this one
+    const r = await send('SEARCH', { query, mode, startDate, endDate, limit: 20000 });
     allResults = applyQuickFilterEntries(r.entries);
     buildVirtualList();
-    if (!startDate && !endDate) mergeLiveTodayIntoAll(gen, query, mode).catch(() => {});
-    if (r.entries.length >= FIRST) {
-      // The rest arrives in modest steps (not one 19 000-row query): the database can notice a newer keystroke
-      // between steps instead of finishing a huge superseded query first — that is what made typing slow down.
-      let offset = FIRST;
-      while (offset < MAX) {
-        const r2 = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: Math.min(STEP, MAX - offset), qf, noTotal: true, cid: EH_CID, token: gen });
-        if (gen !== _searchGen || r2.cancelled) return;
-        const had = allResults.length;
-        allResults = allResults.concat(applyQuickFilterEntries(r2.entries));
-        if (vsOffset >= had && allResults.length > had) appendPage();
-        offset += r2.entries.length;
-        if (r2.entries.length < Math.min(STEP, MAX - (offset - r2.entries.length))) break;
-      }
-      if (!startDate && !endDate) mergeLiveTodayIntoAll(gen, query, mode).catch(() => {});
-    }
   } catch (err) {
-    if (gen !== _searchGen) return;
     listArea().innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
-}
-
-function historyEntryMatches(e, query, mode) {
-  const words = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
-  if (!words.length) return true;
-  const hay = (mode === 'title')  ? (e.title || '').toLowerCase()
-            : (mode === 'url')    ? String(e.url || '').toLowerCase()
-            : (mode === 'domain') ? (e.domain || '').toLowerCase()
-            : ((e.url || '') + ' ' + (e.title || '') + ' ' + (e.domain || '')).toLowerCase();
-  return words.every(w => hay.includes(w));
-}
-
-function historyDupKey(e) {
-  return `${e.url || ''}|${Math.floor((Number(e.visitTime) || 0) / 5000)}`;
-}
-
-async function mergeLiveTodayIntoAll(gen, query, mode) {
-  const r = await sendLong('GET_TODAY_HISTORY');
-  if (gen !== _searchGen || !r || !Array.isArray(r.entries) || !r.entries.length) return;
-  const seen = new Set(allResults.map(historyDupKey));
-  const live = r.entries
-    .filter(e => historyEntryMatches(e, query, mode))
-    .filter(e => {
-      const k = historyDupKey(e);
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .sort((a, b) => b.visitTime - a.visitTime);
-  const merged = applyQuickFilterEntries(live);
-  if (!merged.length || gen !== _searchGen) return;
-  allResults = merged.concat(allResults).sort((a, b) => b.visitTime - a.visitTime);
-  buildVirtualList();
 }
 
 // Back-compat no-ops — earlier revision kept a full-history page-side cache that
@@ -708,11 +388,7 @@ function applyRoundedCorners(enabled) {
 }
 
 // ── Date nav ────────────────────────────────────────────────────────────────
-const DAYS = [tr('sun','Sun'),tr('mon','Mon'),tr('tue','Tue'),tr('wed','Wed'),tr('thu','Thu'),tr('fri','Fri'),tr('sat','Sat')];
-// Short month names from the extension's own translations (keys jan..dec), so the date pills follow the Language menu.
-const MONTHS_SHORT = [tr('jan','Jan'),tr('feb','Feb'),tr('mar','Mar'),tr('apr','Apr'),tr('may','May'),tr('jun','Jun'),tr('jul','Jul'),tr('aug','Aug'),tr('sep','Sep'),tr('oct','Oct'),tr('nov','Nov'),tr('dec','Dec')];
-// Same interface as Intl.DateTimeFormat#format, used for the .dn-pill-label ("Oct 13")
-const PILL_DATE_FMT = { format: d => MONTHS_SHORT[d.getMonth()] + ' ' + d.getDate() };
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // Lets a normal mouse wheel (vertical-only deltaY) scroll the horizontally
 // scrolling date-pill bar — off by default since trackpads already scroll it
@@ -722,7 +398,7 @@ const PILL_DATE_FMT = { format: d => MONTHS_SHORT[d.getMonth()] + ' ' + d.getDat
 let _datePillsWheelEnabled = false;
 let _datePillsWheelSensitivity = 1;
 // Settings > Appearance > "Fade in list on date change"
-let _fadeInListEnabled = true;   // on by default (until the user switches it off in Settings)
+let _fadeInListEnabled = false;
 function applyDatePillsWheelScroll(enabled, sensitivity) {
   _datePillsWheelEnabled = enabled;
   if (sensitivity != null) _datePillsWheelSensitivity = Math.max(1, Math.min(6, sensitivity));
@@ -742,137 +418,51 @@ function applyDatePillsWheelScroll(enabled, sensitivity) {
     _wheelCooldown = true;
     setTimeout(() => { _wheelCooldown = false; }, 110);
 
-    const pillWidth = _vp ? _vp.W + _vp.gap : 60;
+    const pill = document.querySelector('#dateScroll .dn-pill');
+    const gap  = parseFloat(getComputedStyle(document.getElementById('dateScroll')).gap) || 6;
+    const pillWidth = pill ? pill.getBoundingClientRect().width + gap : 60;
     const dir = e.deltaY > 0 ? 1 : -1;
     wrap.scrollBy({ left: dir * pillWidth * _datePillsWheelSensitivity, behavior: 'smooth' });
   }, { passive: false });
 }
 
-// ── Virtualized date pills ──────────────────────────────────────────────────
-// A 10-year history means ~3 650 buttons; keeping them all in the DOM costs a lot of RAM. Only the pills in (and
-// just around) the visible part of the strip exist; two spacer elements stand in for the rest, so the scroll width
-// and every position stay exactly what they would be with all pills present.
-let _vp = null;   // { N, W, gap, w0, w1, s, e, t0, fmt, active, needMeasure }
-function vpDate(i) { const t = _vp.t0; return new Date(t.getFullYear(), t.getMonth(), t.getDate() - i, 12); }   // noon: immune to DST
-function vpKey(i)  { const d = vpDate(i); return calDateKey(d.getFullYear(), d.getMonth(), d.getDate()); }
-function vpIndexOfKey(key) {
-  if (!_vp || !key) return -1;
-  const [y, m, d] = key.split('-').map(Number);
-  const t = _vp.t0;
-  const a = Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()), b = Date.UTC(y, m - 1, d);
-  return Math.round((a - b) / 86400000);
-}
-function vpLeft(i) {                                   // x of pill i inside the strip
-  const v = _vp, g = v.gap;
-  if (i <= 0) return 0;
-  if (i === 1) return v.w0 + g;
-  return v.w0 + g + v.w1 + g + (i - 2) * (v.W + g);
-}
-function vpIndexAt(x) {
-  const v = _vp, g = v.gap;
-  if (x < v.w0 + g) return 0;
-  if (x < v.w0 + g + v.w1 + g) return 1;
-  return Math.min(v.N - 1, 2 + Math.floor((x - (v.w0 + v.w1 + 2 * g)) / (v.W + g)));
-}
-function vpMakePill(i) {
-  const d = vpDate(i), key = calDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-  const b = document.createElement('button');
-  b.className = 'dn-pill';
-  b.dataset.date = key;
-  if (i < 2) {
-    b.classList.add('no-day');
-    b.textContent = i === 0 ? (_ehMsg('today') || 'Today') : (_ehMsg('yesterday') || 'Yesterday');
-  } else {
-    const l = document.createElement('span'); l.className = 'dn-pill-label'; l.textContent = _vp.fmt.format(d);
-    const w = document.createElement('span'); w.className = 'dn-pill-day';   w.textContent = DAYS[d.getDay()];
-    b.append(l, w);
-  }
-  if (key === _vp.active) b.classList.add('active');
-  return b;
-}
-function vpRender(s, e) {
-  const v = _vp, scroll = document.getElementById('dateScroll');
-  s = Math.max(0, s); e = Math.min(v.N, e);
-  const frag = document.createDocumentFragment();
-  if (s > 0) { const sp = document.createElement('div'); sp.className = 'dn-spacer'; sp.style.width = Math.max(0, vpLeft(s) - v.gap) + 'px'; frag.appendChild(sp); }
-  for (let i = s; i < e; i++) frag.appendChild(vpMakePill(i));
-  if (e < v.N) {
-    const sp = document.createElement('div'); sp.className = 'dn-spacer';
-    const total = vpLeft(v.N - 1) + v.W;                      // full strip width
-    const endX = e > 0 ? vpLeft(e - 1) + (e - 1 < 2 ? (e - 1 === 0 ? v.w0 : v.w1) : v.W) : 0;
-    sp.style.width = Math.max(0, total - endX - v.gap) + 'px';
-    frag.appendChild(sp);
-  }
-  scroll.textContent = '';
-  scroll.appendChild(frag);
-  v.s = s; v.e = e;
-}
-function vpMeasure() {
-  const v = _vp, scroll = document.getElementById('dateScroll');
-  scroll.style.removeProperty('--pw');
-  const probes = [];
-  const longest = DAYS.reduce((a, b) => (b.length > a.length ? b : a), '');
-  const mk = (cls, label, day) => {
-    const b = document.createElement('button'); b.className = 'dn-pill ' + cls; b.style.visibility = 'hidden';
-    if (day != null) { const l = document.createElement('span'); l.className = 'dn-pill-label'; l.textContent = label; const w = document.createElement('span'); w.className = 'dn-pill-day'; w.textContent = day; b.append(l, w); }
-    else b.textContent = label;
-    scroll.appendChild(b); probes.push(b); return b;
-  };
-  const p0 = mk('no-day', _ehMsg('today') || 'Today'), p1 = mk('no-day', _ehMsg('yesterday') || 'Yesterday');
-  let W = 0;
-  for (let m = 0; m < 12; m++) { const b = mk('', v.fmt.format(new Date(2001, m, 28)), longest); W = Math.max(W, b.getBoundingClientRect().width); }
-  const w0 = p0.getBoundingClientRect().width, w1 = p1.getBoundingClientRect().width;
-  const gap = parseFloat(getComputedStyle(scroll).columnGap || getComputedStyle(scroll).gap) || 5;
-  probes.forEach(b => b.remove());
-  if (W > 0 && w0 > 0) { v.W = Math.ceil(W); v.w0 = Math.ceil(w0); v.w1 = Math.ceil(w1); v.gap = gap; v.needMeasure = false; }
-  else { v.W = v.W || 62; v.w0 = v.w0 || 56; v.w1 = v.w1 || 84; v.gap = gap; v.needMeasure = true; }   // hidden right now: measure when it shows
-  scroll.style.setProperty('--pw', v.W + 'px');
-}
-// Make sure the pills around the visible area exist.
-function vpEnsure(force) {
-  const v = _vp, wrap = document.getElementById('dateScrollWrap');
-  if (!v || !wrap) return;
-  if (v.needMeasure && wrap.clientWidth > 0) { vpMeasure(); force = true; }
-  const x0 = wrap.scrollLeft, x1 = x0 + Math.max(wrap.clientWidth, 300);
-  const i0 = vpIndexAt(x0), i1 = vpIndexAt(x1);
-  const margin = 12;
-  if (!force && v.s <= Math.max(0, i0 - margin) && v.e >= Math.min(v.N, i1 + margin + 1)) return;       // still inside the built window
-  const pad = 45;
-  vpRender(i0 - pad, i1 + pad + 1);
-}
-function vpSetActive(key) {
-  if (!_vp) return;
-  _vp.active = key;
-  const scroll = document.getElementById('dateScroll');
-  scroll.querySelectorAll('.dn-pill.active').forEach(b => b.classList.remove('active'));
-  if (key) { const t = scroll.querySelector(`.dn-pill[data-date="${key}"]`); if (t) t.classList.add('active'); }
-}
 function buildDateNav(retentionDays) {
   const scroll = document.getElementById('dateScroll');
-  const wrap   = document.getElementById('dateScrollWrap');
+  const now    = Date.now();
 
   // Use the setting value; fall back to 365 if not provided or not a valid number.
   // Add 1 so "today" (i=0) is always included even when retentionDays is exactly 1.
-  const pillCount = (Number.isFinite(retentionDays) && retentionDays > 0) ? retentionDays + 1 : 366;
+  const pillCount = (Number.isFinite(retentionDays) && retentionDays > 0)
+    ? retentionDays + 1
+    : 366;
 
-  const prevActive = _vp ? _vp.active : null;
-  _vp = { N: pillCount, W: 62, gap: 5, w0: 56, w1: 84, s: 0, e: 0, t0: new Date(), fmt: PILL_DATE_FMT, active: prevActive, needMeasure: false };
-  scroll.textContent = '';
-  vpMeasure();
-  vpRender(0, 100);
-  vpEnsure(true);
-  if (scroll._ehWired) return;                       // listeners below are attached once
-  scroll._ehWired = true;
-  scroll.addEventListener('click', (ev) => {
-    const pill = ev.target.closest('.dn-pill');
-    if (pill && scroll.contains(pill)) activateDatePill(pill.dataset.date);
-  });
-  const allPillBtn = document.getElementById('dnAllPill');
-  allPillBtn.textContent=tr('all','All');
-  if (allPillBtn) allPillBtn.addEventListener('click', () => activateDatePill('all'));
-  let _raf = 0;
-  wrap.addEventListener('scroll', () => { if (_raf) return; _raf = requestAnimationFrame(() => { _raf = 0; vpEnsure(false); }); }, { passive: true });
-  try { new ResizeObserver(() => vpEnsure(false)).observe(wrap); } catch (_) {}
+  function addBtn(label, key, weekday) {
+    const b = document.createElement('button');
+    b.className    = 'dn-pill';
+    b.dataset.date = key;
+    if (weekday) {
+      b.innerHTML = `<span class="dn-pill-label">${esc(label)}</span><span class="dn-pill-day">${esc(weekday)}</span>`;
+    } else {
+      b.classList.add('no-day');
+      b.textContent = label;
+    }
+    b.addEventListener('click', () => activateDatePill(key));
+    scroll.appendChild(b);
+    return b;
+  }
+
+  // "All" is a static pill in HTML (outside the scroll), just wire it
+  const allPill = document.getElementById('dnAllPill');
+  if (allPill) allPill.addEventListener('click', () => activateDatePill('all'));
+
+  // Date pills: today, yesterday, then remaining days — "All" is NOT in the scroll
+  for (let i = 0; i < pillCount; i++) {
+    const d   = new Date(now - i * 86400000);
+    const key = d.toLocaleDateString('en-CA');
+    if (i === 0) { addBtn(_ehMsg('today')     || 'Today',     key, ''); continue; }
+    if (i === 1) { addBtn(_ehMsg('yesterday') || 'Yesterday', key, ''); continue; }
+    addBtn(d.toLocaleDateString(undefined, { month:'short', day:'numeric' }), key, DAYS[d.getDay()]);
+  }
 
   // ── Scroll year indicator on dnAllPill ──────────────────────────────────────
   (function setupScrollYearIndicator() {
@@ -884,59 +474,60 @@ function buildDateNav(retentionDays) {
     let _isScrolling = false;
 
     wrap.addEventListener('scroll', () => {
-      if (!_vp) return;
-      const i = vpIndexAt(wrap.scrollLeft);
-      const year = String(vpDate(i).getFullYear());
-      allPill.textContent = year;
-      _isScrolling = true;
+      // Find the first dn-pill whose left edge is at or past the scroll container's left
+      const wrapLeft = wrap.getBoundingClientRect().left;
+      const pills    = document.querySelectorAll('#dateScroll .dn-pill');
+      let firstVisible = null;
+      for (const pill of pills) {
+        if (pill.getBoundingClientRect().left >= wrapLeft - 2) {
+          firstVisible = pill;
+          break;
+        }
+      }
+
+      if (firstVisible) {
+        const date = firstVisible.dataset.date; // 'YYYY-MM-DD'
+        const year = date ? date.slice(0, 4) : null;
+        if (year) {
+          allPill.textContent = year;
+          _isScrolling = true;
+        }
+      }
 
       // Reset back to "All" shortly after scrolling stops
       clearTimeout(_scrollStopTimer);
       _scrollStopTimer = setTimeout(() => {
         _isScrolling = false;
         // Restore the original label — "All" (use i18n if available)
-        allPill.textContent = tr('all','All');
+        allPill.textContent = _ehMsg('all') || 'All';
       }, 600);
     }, { passive: true });
   })();
 
-  // Arrow buttons: ‹ selects the date pill to the left of the active one, › the pill to the right
-  // (pills run newest → oldest, left to right). With no day selected ("All") the first press picks Today.
+  // Arrow buttons: click scrolls; hold scrolls continuously
   (function setupArrows() {
+    const wrap = document.getElementById('dateScrollWrap');
+    let _holdTimer = null, _holdInterval = null;
+    function startHold(dir) {
+      stopHold();
+      wrap.scrollBy({ left: dir * 220, behavior: 'smooth' });
+      _holdTimer = setTimeout(() => {
+        _holdInterval = setInterval(() => wrap.scrollBy({ left: dir * 120 }), 80);
+      }, 400);
+    }
+    function stopHold() {
+      clearTimeout(_holdTimer); clearInterval(_holdInterval);
+      _holdTimer = null; _holdInterval = null;
+    }
     const L = document.getElementById('dnLeft');
     const R = document.getElementById('dnRight');
-    function step(dir) {
-      if (!_vp) return;
-      const cur = vpIndexOfKey(_vp.active);
-      const next = (!_vp.active || cur < 0) ? 0 : Math.max(0, Math.min(_vp.N - 1, cur + dir));
-      if (next === cur) return;                       // already at the first / last pill
-      activateDatePill(vpKey(next));
-    }
-    L.addEventListener('click', () => step(-1));
-    R.addEventListener('click', () => step(1));
-
-    // Right-click: ‹ jumps to the newest day (today), › jumps to the oldest day that has history
-    L.addEventListener('contextmenu', (e) => { e.preventDefault(); jumpToNewestDay(); });
-    R.addEventListener('contextmenu', (e) => { e.preventDefault(); jumpToOldestDay(); });
+    L.addEventListener('mousedown', () => startHold(-1));
+    R.addEventListener('mousedown', () => startHold(1));
+    ['mouseup','mouseleave'].forEach(ev => { L.addEventListener(ev, stopHold); R.addEventListener(ev, stopHold); });
+    L.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(-1); }, { passive: false });
+    R.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(1);  }, { passive: false });
+    ['touchend','touchcancel'].forEach(ev => { L.addEventListener(ev, stopHold); R.addEventListener(ev, stopHold); });
   })();
-}
-
-function jumpToNewestDay() {
-  if (_vp) activateDatePill(vpKey(0));               // pills run newest → oldest
-}
-
-async function jumpToOldestDay() {
-  if (!_vp) return;
-  let idx = _vp.N - 1;
-  try {
-    const st = await sendLong('GET_STATS');
-    if (st && st.oldestEntry) {
-      const key = new Date(st.oldestEntry).toLocaleDateString('en-CA');
-      const i = vpIndexOfKey(key);
-      if (i >= 0 && i < _vp.N) idx = i;               // older than the pill range → last pill
-    }
-  } catch {}
-  activateDatePill(vpKey(idx));
 }
 
 function activateDatePill(key, silent) {
@@ -949,21 +540,30 @@ function activateDatePill(key, silent) {
   document.getElementById('dateTo').value   = filterDate || '';
 
   // Clear all pills in scroll + the external All pill
+  document.querySelectorAll('#dateScroll .dn-pill').forEach(b => b.classList.remove('active'));
   const allPill = document.getElementById('dnAllPill');
   if (allPill) allPill.classList.remove('active');
-  vpSetActive(key === 'all' ? null : key);
 
   if (key === 'all') {
     if (allPill) allPill.classList.add('active');
   } else {
-    const idx = vpIndexOfKey(key);
-    if (_vp && idx >= 0 && idx < _vp.N && !silent) {
-      const wrap = document.getElementById('dateScrollWrap');
-      // Land with a few pills visible to the left of the active one. Positions are computed, so this works
-      // even when the target pill isn't in the DOM yet (it is created as the strip scrolls there).
-      const pillsBack = wrap.offsetWidth < 700 ? 2 : 6;
-      const left = vpLeft(idx) - (vpLeft(idx) - vpLeft(Math.max(0, idx - pillsBack)));
-      wrap.scrollTo({ left, behavior: 'smooth' });
+    const t = document.querySelector(`#dateScroll .dn-pill[data-date="${key}"]`);
+    if (t) {
+      t.classList.add('active');
+      if (!silent) {
+        const wrap = document.getElementById('dateScrollWrap');
+        // Collect all pills and measure the combined width of up to 4 pills before
+        // the active one (including their gaps), so the active pill lands with
+        // 4 visible pills to its left.
+        const allPills = Array.from(document.querySelectorAll('#dateScroll .dn-pill'));
+        const idx = allPills.indexOf(t);
+        const pillsBack = wrap.offsetWidth < 700 ? 2 : 6;
+        const precedingPills = allPills.slice(Math.max(0, idx - pillsBack), idx);
+        const gap = 5; // matches CSS gap: 5px on .date-scroll
+        const offsetBefore = precedingPills.reduce((sum, p) => sum + p.offsetWidth + gap, 0);
+        const pillLeft = t.getBoundingClientRect().left - wrap.getBoundingClientRect().left + wrap.scrollLeft;
+        wrap.scrollTo({ left: pillLeft - offsetBefore, behavior: 'smooth' });
+      }
     }
   }
   updateHourPillsState();
@@ -985,7 +585,7 @@ function buildHourNav() {
     return b;
   }
 
-  addPill(tr('all','All'), null).classList.add('active');
+  addPill('All', null).classList.add('active');
   for (let h = 0; h < 24; h++) {
     const lbl = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h-12}pm`;
     addPill(lbl, h);
@@ -1027,10 +627,6 @@ function updateHourPillsState() {
 // ══ CALENDAR MODE ═══════════════════════════════════════════════════════════
 // Right-side calendar sidebar, shown instead of the date/hour pill nav when
 // the "UI calendar mode" setting is on and the History panel is active.
-// The calendar sidebar serves two panels: History (default) and Reading Mode (always, once a file is loaded).
-let _calTarget = 'history';
-const calSel = () => (_calTarget === 'reading' ? _rmFilterDate : filterDate);
-function calActivate(key) { if (_calTarget === 'reading') rmActivateDatePill(key); else activateDatePill(key); }
 function calMonths() { return window._ehMonthNames(); }
 function calWeekdays() { return window._ehWeekdayInitials(); }
 
@@ -1108,15 +704,11 @@ function renderCalendarWidget() {
     btn.dataset.date = key;
     if (c.outside) btn.classList.add('outside');
     if (key === todayKey) btn.classList.add('today');
-    const sel = calSel();
-    if (key === sel) btn.classList.add('selected');
-    else if (!sel && key === calActiveDate && _calTarget !== 'reading') btn.classList.add('scroll-highlight');
+    if (key === filterDate) btn.classList.add('selected');
+    else if (!filterDate && key === calActiveDate) btn.classList.add('scroll-highlight');
     if (key > todayKey) btn.classList.add('future');
-    // Reading mode: only days that exist in the loaded file can be picked
-    const noData = _calTarget === 'reading' && !_rmDayMap.has(key);
-    if (_calTarget === 'reading') btn.classList.add(noData ? 'no-data' : 'has-data');
     btn.addEventListener('click', () => {
-      if (key > todayKey || noData) return;
+      if (key > todayKey) return;
       calSelectDate(key);
     });
     daysEl.appendChild(btn);
@@ -1125,12 +717,12 @@ function renderCalendarWidget() {
 
 function calSelectDate(key) {
   closeCalPickers();
-  calActivate(key); // handles the active date, calendar sync, and the search / filter
+  activateDatePill(key); // handles filterDate, old pills, calendar sync, and doSearch
 }
 
 function calGoAllTime() {
   closeCalPickers();
-  calActivate('all');
+  activateDatePill('all');
 }
 
 function calShiftMonth(delta) {
@@ -1140,31 +732,7 @@ function calShiftMonth(delta) {
   renderCalendarWidget();
 }
 
-async function calJumpEnd(oldest) {
-  if (_calTarget === 'reading') {
-    if (!_rmDayIndex.length) return;
-    calSelectDate(oldest ? _rmDayIndex[_rmDayIndex.length - 1].key : _rmDayIndex[0].key);
-    return;
-  }
-  if (!oldest) { calSelectDate(calTodayKey()); return; }
-  try {
-    const st = await sendLong('GET_STATS');
-    if (st && st.oldestEntry) { calSelectDate(new Date(st.oldestEntry).toLocaleDateString('en-CA')); return; }
-  } catch (_) {}
-}
-
 function calShiftDay(delta) {
-  if (_calTarget === 'reading') {                       // previous / next day that actually has entries in the file
-    const keys = _rmDayIndex.map(d => d.key);            // newest → oldest
-    if (!keys.length) return;
-    const a = _rmFilterDate;
-    let pick = null;
-    if (!a) pick = keys[0];
-    else if (delta < 0) pick = keys.find(k => k < a) || null;                       // older
-    else { for (let i = keys.length - 1; i >= 0; i--) if (keys[i] > a) { pick = keys[i]; break; } }   // newer
-    if (pick) calSelectDate(pick);
-    return;
-  }
   const anchor = filterDate || calActiveDate || calTodayKey();
   const [y, m, d] = anchor.split('-').map(Number);
   const nd = new Date(y, m - 1, d + delta);
@@ -1297,11 +865,7 @@ function applyCalendarMode(enabled) {
 
 function updateCalSidebarVisibility() {
   const onHistoryPanel = document.getElementById('panel-history')?.classList.contains('active');
-  // Reading Mode always uses the calendar (a loaded file can span years — hundreds of pills were slow and clumsy)
-  const onReading = !!document.getElementById('panel-readingmode')?.classList.contains('active') && _rmEntries.length > 0;
-  const active = onReading || (document.body.classList.contains('cal-mode') && !!onHistoryPanel);
-  _calTarget = onReading ? 'reading' : 'history';
-  document.body.classList.toggle('rm-cal', onReading);
+  const active = document.body.classList.contains('cal-mode') && !!onHistoryPanel;
   document.body.classList.toggle('cal-sidebar-active', active);
   if (active) { renderCalendarWidget(); updateCalHourGridState(); }
   checkCalNarrow();
@@ -1322,9 +886,6 @@ function wireCalendarSidebar() {
   document.getElementById('calYearLabel')?.addEventListener('click', calOpenYearPicker);
   document.getElementById('calPrevDayBtn')?.addEventListener('click', () => calShiftDay(-1));
   document.getElementById('calNextDayBtn')?.addEventListener('click', () => calShiftDay(1));
-  // Right-click: Prev day → oldest day, Next day → newest day (same as the ‹ › arrows over the date pills)
-  document.getElementById('calPrevDayBtn')?.addEventListener('contextmenu', (e) => { e.preventDefault(); calJumpEnd(true); });
-  document.getElementById('calNextDayBtn')?.addEventListener('contextmenu', (e) => { e.preventDefault(); calJumpEnd(false); });
 
   buildCalHourGrid();
   renderCalendarWidget();
@@ -1409,10 +970,10 @@ function setupToolbar() {
     document.getElementById('dateFrom').value = '';
     document.getElementById('dateTo').value   = '';
     filterDate = null; filterHour = null;
-    vpSetActive(null);
+    document.querySelectorAll('#dateScroll .dn-pill').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
     const allPill = document.getElementById('dnAllPill');
-    if (allPill) allPill.classList.add('active');
+    if (allPill) { document.querySelectorAll('#dateScroll .dn-pill').forEach(b=>b.classList.remove('active')); allPill.classList.add('active'); }
     document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
     updateHourPillsState();
     doSearch();
@@ -1475,7 +1036,7 @@ function removeEntryFromView(id) {
   }
 
   if (!allResults.length) {
-    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
+    area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No history found</div>`;
   }
 }
 
@@ -1489,7 +1050,7 @@ async function deleteSingle(id) {
 
   try {
     console.log('[EH] deleteSingle:', id, urls);
-    const result = await sendLong('DELETE_IDS', { ids: [id], urls });
+    const result = await send('DELETE_IDS', { ids: [id], urls });
     console.log('[EH] deleteSingle response:', result);
     toast('Deleted', 'ok');
   } catch (err) {
@@ -1509,7 +1070,7 @@ async function performDelete(ids) {
   const urls = allResults
     .filter(e => idSet.has(e.id))
     .flatMap(e => [e.url, e.rawUrl].filter(Boolean));
-  return sendLong('DELETE_IDS', { ids, urls });
+  return send('DELETE_IDS', { ids, urls });
 }
 
 // ══ DELETE PROGRESS BUBBLE ══════════════════════════════════════════════════
@@ -1610,7 +1171,7 @@ async function deleteMatching() {
 // ══ ACTIVITY ════════════════════════════════════════════════════════════════
 async function loadActivity() {
   try {
-    const s    = await sendLong('GET_STATS');
+    const s    = await send('GET_STATS');
     const key  = new Date().toLocaleDateString('en-CA');
     const todayCt = s.dailyActivity?.[key] || 0;
     document.getElementById('actKpi').innerHTML = `
@@ -1624,111 +1185,6 @@ async function loadActivity() {
     drawLineChart(s.dailyActivity);
     drawBarChart(s.dailyActivity);
   } catch (err) { console.error(err); }
-  loadHourlyAvg();   // separate: scans all history, must not delay the charts above
-}
-
-// Positions a chart tooltip next to the cursor, flipping it to the left of the cursor when it would stick out
-// past the right edge of the chart (content must already be set so the width is known).
-function placeChartTip(tip, wrap, ev) {
-  const r = wrap.getBoundingClientRect();
-  tip.style.display = 'block';
-  const w = tip.offsetWidth, cx = ev.clientX - r.left;
-  let x = cx + 14;
-  if (x + w > r.width) x = cx - 14 - w;
-  tip.style.left = Math.max(0, x) + 'px';
-  tip.style.top  = `${ev.clientY - r.top - 38}px`;
-}
-
-// Average visits per hour of the day (0–23, local time), over the whole history.
-async function loadHourlyAvg() {
-  try {
-    const r = await sendLong('GET_HOURLY_AVG');
-    if (r && !r.error) drawHourlyChart(r.avg, r.days);
-  } catch (err) { console.error(err); }
-}
-function drawHourlyChart(avg, days) {
-  const svg = document.getElementById('hourlySvg');
-  if (!svg) return;
-  const tip = document.getElementById('hourlyTip'), wrap = svg.parentElement;
-  const W = wrap.clientWidth || 860, H = 170;
-  const p = { t: 18, r: 12, b: 26, l: 46 };
-  const iW = W - p.l - p.r, iH = H - p.t - p.b;
-  const vals = Array.from({ length: 24 }, (_, h) => (avg && avg[h]) || 0);
-  const hasData = vals.some(v => v > 0);
-  const maxV = Math.max(...vals, 0.1), curH = new Date().getHours();   // highlight the hour we are in now
-  const fmt = v => v >= 10 ? String(Math.round(v)) : v.toFixed(1);
-
-  let grid = '';
-  for (let i = 0; i <= 3; i++) {
-    const y = p.t + (i / 3) * iH;
-    grid += `<line class="grid-ln" x1="${p.l}" x2="${W - p.r}" y1="${y}" y2="${y}"/>`;
-    grid += `<text class="ax-lbl" font-size="9" x="${p.l - 5}" y="${y + 3}" text-anchor="end">${fmt(maxV * (1 - i / 3))}</text>`;
-  }
-  const slot = iW / 24, bw = Math.max(3, Math.min(28, slot * 0.7));
-  let bars = '';
-  vals.forEach((v, h) => {
-    const bh = Math.max(v > 0 ? 2 : 0, (v / maxV) * iH);
-    const x = p.l + slot * h + (slot - bw) / 2, y = p.t + iH - bh;
-    const lbl = `${String(h).padStart(2, '0')}:00–${String(h).padStart(2, '0')}:59`;
-    bars += `<rect class="hr-bar" x="${x}" y="${y}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" fill-opacity="${h === curH ? 1 : 0.6}" data-h="${lbl}" data-v="${v.toFixed(1)}"/>`;
-    bars += `<text class="ax-lbl" font-size="${slot < 18 ? 8 : 9}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${h}h</text>`;
-  });
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('height', H);
-  svg.innerHTML = grid + bars + (hasData ? '' : `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No data yet</text>`);
-
-  svg.querySelectorAll('.hr-bar').forEach(bar => {
-    bar.addEventListener('mousemove', ev => {
-      tip.innerHTML = `<b>${bar.dataset.h}</b> — ${bar.dataset.v} ${tr('visits_per_day','visits / day')}`;
-      placeChartTip(tip, wrap, ev);
-    });
-    bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-  });
-}
-
-// Hover for a smooth line chart: the pointer snaps to the nearest data point, a dot + guide line
-// appear on it and the tooltip shows its label. points = [{x, y, text}] in SVG viewBox coordinates.
-function attachLineHover(svg, wrap, tip, points, color, onClick) {
-  if (!points.length) return;
-  const NS = 'http://www.w3.org/2000/svg';
-  const g = document.createElementNS(NS, 'g');
-  g.setAttribute('pointer-events', 'none');
-  g.style.display = 'none';
-  const guide = document.createElementNS(NS, 'line');
-  guide.setAttribute('stroke', color); guide.setAttribute('stroke-opacity', '0.35'); guide.setAttribute('stroke-dasharray', '3 3');
-  const dot = document.createElementNS(NS, 'circle');
-  dot.setAttribute('r', '5'); dot.setAttribute('fill', color); dot.setAttribute('stroke', 'var(--bg)'); dot.setAttribute('stroke-width', '2');
-  g.append(guide, dot);
-  svg.appendChild(g);
-
-  const vb = svg.viewBox.baseVal;
-  const nearest = ev => {
-    const r = svg.getBoundingClientRect();
-    const x = (ev.clientX - r.left) * (vb.width / (r.width || 1));
-    let lo = 0, hi = points.length - 1;
-    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (points[m].x <= x) lo = m; else hi = m; }
-    return Math.abs(points[lo].x - x) <= Math.abs(points[hi].x - x) ? lo : hi;
-  };
-  let cur = -1;
-  svg.style.cursor = onClick ? 'pointer' : 'default';
-  // The same <svg> is redrawn many times: drop the previous redraw's listeners first
-  if (svg._ehHover) { svg.removeEventListener('mousemove', svg._ehHover.move); svg.removeEventListener('mouseleave', svg._ehHover.leave); svg.removeEventListener('click', svg._ehHover.click); }
-  const move = ev => {
-    cur = nearest(ev);
-    const pt = points[cur];
-    guide.setAttribute('x1', pt.x); guide.setAttribute('x2', pt.x);
-    guide.setAttribute('y1', pt.top); guide.setAttribute('y2', pt.bottom);
-    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
-    g.style.display = '';
-    tip.innerHTML = pt.text;
-    placeChartTip(tip, wrap, ev);
-  };
-  const leave = () => { g.style.display = 'none'; tip.style.display = 'none'; cur = -1; };
-  const click = () => { if (onClick && cur >= 0) onClick(points[cur]); };
-  svg.addEventListener('mousemove', move);
-  svg.addEventListener('mouseleave', leave);
-  svg.addEventListener('click', click);
-  svg._ehHover = { move, leave, click };
 }
 
 function drawLineChart(daily) {
@@ -1762,6 +1218,12 @@ function drawLineChart(daily) {
   }
   const area = path + ` L ${xOf(entries.length-1)} ${H} L ${xOf(0)} ${H} Z`;
 
+  let dots = '';
+  entries.forEach(([date, v], i) => {
+    if (i % 7 !== 0 && i !== entries.length - 1) return;
+    dots += `<circle class="c-dot" cx="${xOf(i)}" cy="${yOf(v)}" r="4" fill="var(--accent)" stroke="var(--bg)" stroke-width="2" data-d="${date}" data-v="${v}"/>`;
+  });
+
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
   svg.innerHTML = `
@@ -1773,11 +1235,20 @@ function drawLineChart(daily) {
   </defs>
   ${grid}
   <path d="${area}" fill="url(#lg1)"/>
-  <path class="c-path" d="${path}" stroke="var(--accent)"/>`;
+  <path class="c-path" d="${path}" stroke="var(--accent)"/>
+  ${dots}`;
 
-  attachLineHover(svg, wrap, tip,
-    entries.map(([date, v], i) => ({ x: xOf(i), y: yOf(v), top: p.t, bottom: p.t + iH, date, text: `<b>${esc(date)}</b> — ${fmtNum(v)} ${tr('visits', 'visits')}` })),
-    'var(--accent)', pt => { activateDatePill(pt.date); switchPanel('history'); });
+  svg.querySelectorAll('.c-dot').forEach(dot => {
+    dot.addEventListener('mousemove', ev => {
+      const r = wrap.getBoundingClientRect();
+      tip.style.display = 'block';
+      tip.style.left = `${ev.clientX - r.left + 14}px`;
+      tip.style.top  = `${ev.clientY - r.top  - 38}px`;
+      tip.innerHTML  = `<b>${dot.dataset.d}</b> — ${dot.dataset.v} visits`;
+    });
+    dot.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    dot.addEventListener('click', () => { activateDatePill(dot.dataset.d); switchPanel('history'); });
+  });
 
   const lblEl = document.getElementById('lineLabels');
   lblEl.innerHTML = entries.map(([date], i) => {
@@ -1859,16 +1330,6 @@ async function loadTimeSpent(days, dateOverride) {
     if (days !== 1) drawTimeChart(r.dailyMap, days);
     renderHbars(r.topSites);
     drawPie(r.topSites);
-    // One day selected → all-time weekday averages. 7/15/30/90 days → averages over just those days.
-    const wdTitle = document.getElementById('weekdayTitle');
-    if (days === 1) {
-      if (wdTitle) { wdTitle.setAttribute('data-i18n-key', 'avg_time_per_weekday'); wdTitle.textContent = tr('avg_time_per_weekday', 'Average time per weekday (all time)'); }
-      drawWeekdayChart(r.weekdayAvg, r.weekdayDays);
-    } else {
-      if (wdTitle) { wdTitle.setAttribute('data-i18n-key', 'avg_time_per_weekday_range'); wdTitle.textContent = tr('avg_time_per_weekday_range', 'Average time per weekday (last {0} days)').replace("{0}",days); }
-      const wd = weekdayAvgForRange(r.dailyMap, days);
-      drawWeekdayChart(wd.avg, wd.counts);
-    }
   } catch (err) { console.error(err); }
 }
 
@@ -1878,19 +1339,6 @@ document.getElementById('timeFilters').addEventListener('click', ev => {
   const days = parseInt(btn.dataset.days);
   loadTimeSpent(days, days === 1 ? tsToday() : undefined);
 });
-
-// Average browsing time per weekday (index = Date.getDay()) over the last `days` calendar days,
-// from the per-day totals already loaded for the range. Days without data count as 0.
-function weekdayAvgForRange(dailyMap, days) {
-  const sum = [0,0,0,0,0,0,0], counts = [0,0,0,0,0,0,0], now = Date.now();
-  for (let i = 0; i < days; i++) {
-    const dt = new Date(now - i * 86400000);
-    const dm = (dailyMap || {})[dt.toLocaleDateString('en-CA')] || {};
-    sum[dt.getDay()] += Object.values(dm).reduce((s, v) => s + v, 0);
-    counts[dt.getDay()]++;
-  }
-  return { avg: sum.map((s, d) => counts[d] ? s / counts[d] : 0), counts };
-}
 
 function drawTimeChart(dailyMap, days, anchorDate) {
   const svg  = document.getElementById('timeSvg');
@@ -1935,7 +1383,14 @@ function drawTimeChart(dailyMap, days, anchorDate) {
     area = path + ` L ${xOf(dates.length-1)} ${H} L ${xOf(0)} ${H} Z`;
   }
 
+  let dots = '';
   const gap = days <= 15 ? 2 : days <= 30 ? 4 : 9;
+  dates.forEach((d, i) => {
+    if (i % gap !== 0 && i !== dates.length - 1) return;
+    const v = vals[i], lbl = v >= 60 ? `${(v/60).toFixed(1)}h` : `${v}m`;
+    dots += `<circle class="c-dot" cx="${xOf(i)}" cy="${yOf(v)}" r="3.5" fill="var(--accent2)" stroke="var(--bg)" stroke-width="2" data-d="${d}" data-lbl="${lbl}"/>`;
+  });
+
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
   svg.innerHTML = `
@@ -1947,65 +1402,25 @@ function drawTimeChart(dailyMap, days, anchorDate) {
   </defs>
   ${grid}
   ${area ? `<path d="${area}" fill="url(#lg2)"/>` : ''}
-  ${path ? `<path class="c-path" d="${path}" stroke="var(--accent2)"/>` : `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`}`;
+  ${path ? `<path class="c-path" d="${path}" stroke="var(--accent2)"/>` : `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`}
+  ${dots}`;
 
-  if (path) attachLineHover(svg, wrap, tip,
-    dates.map((d, i) => { const v = vals[i]; return { x: xOf(i), y: yOf(v), top: p.t, bottom: p.t + iH, text: `<b>${esc(d)}</b> — ${v >= 60 ? (v / 60).toFixed(1) + 'h' : v + 'm'}` }; }),
-    'var(--accent2)');
+  svg.querySelectorAll('.c-dot').forEach(dot => {
+    dot.addEventListener('mousemove', ev => {
+      const r = wrap.getBoundingClientRect();
+      tip.style.display = 'block';
+      tip.style.left = `${ev.clientX - r.left + 14}px`;
+      tip.style.top  = `${ev.clientY - r.top  - 38}px`;
+      tip.innerHTML  = `<b>${dot.dataset.d}</b> — ${dot.dataset.lbl}`;
+    });
+    dot.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
 
   const lblEl = document.getElementById('timeLabels');
   lblEl.innerHTML = dates.map((d, i) => {
     const lbl = (i % gap === 0) ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month:'short', day:'numeric' }) : '';
     return `<div style="flex:1;text-align:center;font-size:0.57rem;color:var(--text3);font-family:var(--font-mono);overflow:hidden">${lbl}</div>`;
   }).join('');
-}
-
-// Average hours spent browsing on each weekday, over all stored time data (Mon → Sun).
-// avgMs / dayCounts are indexed like Date.getDay() (0 = Sunday); DAYS holds the translated names.
-function drawWeekdayChart(avgMs, dayCounts) {
-  const svg  = document.getElementById('weekdaySvg');
-  if (!svg) return;
-  const tip  = document.getElementById('weekdayTip');
-  const wrap = svg.parentElement;
-  const W = wrap.clientWidth || 860, H = 170;
-  const p = { t: 18, r: 12, b: 26, l: 46 };
-  const iW = W - p.l - p.r, iH = H - p.t - p.b;
-  const order = [1, 2, 3, 4, 5, 6, 0];
-  const vals = order.map(d => ((avgMs && avgMs[d]) || 0) / 3600000);       // hours
-  const hasData = vals.some(v => v > 0);
-  const maxV = Math.max(...vals, 0.1);
-  const maxI = vals.indexOf(Math.max(...vals));
-  const fmt = h => h.toFixed(1) + 'h';
-
-  let grid = '';
-  for (let i = 0; i <= 3; i++) {
-    const y = p.t + (i / 3) * iH;
-    grid += `<line class="grid-ln" x1="${p.l}" x2="${W - p.r}" y1="${y}" y2="${y}"/>`;
-    grid += `<text class="ax-lbl" font-size="9" x="${p.l - 5}" y="${y + 3}" text-anchor="end">${fmt(maxV * (1 - i / 3))}</text>`;
-  }
-
-  const slot = iW / 7, bw = Math.min(56, slot * 0.6);
-  let bars = '';
-  order.forEach((d, i) => {
-    const v = vals[i], h = Math.max(v > 0 ? 2 : 0, (v / maxV) * iH);
-    const x = p.l + slot * i + (slot - bw) / 2, y = p.t + iH - h;
-    const n = (dayCounts && dayCounts[d]) || 0;
-    bars += `<rect class="wd-bar" x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="var(--accent2)" fill-opacity="${hasData && i === maxI ? 1 : 0.6}" data-d="${esc(DAYS[d])}" data-lbl="${fmt(v)}" data-n="${n}"/>`;
-    if (v > 0) bars += `<text font-size="10" font-weight="600" x="${x + bw / 2}" y="${y - 5}" text-anchor="middle" fill="var(--text2)">${fmt(v)}</text>`;
-    bars += `<text class="ax-lbl" font-size="10" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${esc(DAYS[d])}</text>`;
-  });
-
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('height', H);
-  svg.innerHTML = grid + bars + (hasData ? '' : `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`);
-
-  svg.querySelectorAll('.wd-bar').forEach(bar => {
-    bar.addEventListener('mousemove', ev => {
-      tip.innerHTML = `<b>${bar.dataset.d}</b> — ${bar.dataset.lbl} <span style="opacity:.6">(${bar.dataset.n} ${tr('days','days')})</span>`;
-      placeChartTip(tip, wrap, ev);
-    });
-    bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-  });
 }
 
 function renderHbars(topSites) {
@@ -3135,7 +2550,7 @@ function _updateBmSelBar() {
   const count   = document.getElementById('bmSelCount');
   if (bar)     bar.style.display     = _bmSelMode ? 'flex' : 'none';
   if (toolbar) toolbar.style.display = _bmSelMode ? 'none' : 'flex';
-  if (count) count.textContent = `${_bmSelected.size} `+ tr('selected','selected');
+  if (count) count.textContent = `${_bmSelected.size} selected`;
   const pane = document.getElementById('bookmarksContent');
   if (pane) pane.classList.toggle('bm-sel-mode', _bmSelMode);
 }
@@ -3850,8 +3265,6 @@ function syncCps() {
 }
 
 function populateSettings(s) {
-  const followTgl = document.getElementById('followSystemThemeToggle');
-  if (followTgl) followTgl.checked = s.followSystemTheme === true;
   if (s.retentionDays) { document.getElementById('retDays').value = s.retentionDays; syncRetChips(s.retentionDays); }
   if (s.maxSessions)   { const el = document.getElementById('maxSessionsInput'); if (el) el.value = s.maxSessions; }
   if (s.fontSize)       document.getElementById('fontSzInput').value = s.fontSize;
@@ -3909,7 +3322,7 @@ function populateSettings(s) {
     if (row) row.style.opacity = s.popupAsSidebar === true ? '0.4' : '';
   }
   const popupQuickFiltersToggle = document.getElementById('popupQuickFiltersToggle');
-  if (popupQuickFiltersToggle) popupQuickFiltersToggle.checked = s.popupQuickFilters !== false;
+  if (popupQuickFiltersToggle) popupQuickFiltersToggle.checked = s.popupQuickFilters === true;
   const sidebarAutoHideToggle = document.getElementById('sidebarAutoHideToggle');
   if (sidebarAutoHideToggle) sidebarAutoHideToggle.checked = s.sidebarAutoHide !== false;
 
@@ -3929,8 +3342,8 @@ function populateSettings(s) {
   const calendarModeTgl = document.getElementById('calendarModeToggle');
   if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
   const fadeInListTgl = document.getElementById('fadeInListToggle');
-  if (fadeInListTgl) fadeInListTgl.checked = s.fadeInListOnDateChange !== false;
-  _fadeInListEnabled = s.fadeInListOnDateChange !== false;
+  if (fadeInListTgl) fadeInListTgl.checked = s.fadeInListOnDateChange === true;
+  _fadeInListEnabled = s.fadeInListOnDateChange === true;
   const contextMenuTgl = document.getElementById('contextMenuToggle');
   if (contextMenuTgl) contextMenuTgl.checked = s.contextMenuEnabled !== false;
 
@@ -3948,19 +3361,6 @@ function populateSettings(s) {
   // Auto export interval
   const autoExportInput = document.getElementById('autoExportInput');
   if (autoExportInput) autoExportInput.value = s.autoExportIntervalMonths || 0;
-  const autoExportModeSel = document.getElementById('autoExportMode');
-  if (autoExportModeSel) autoExportModeSel.value = s.autoExportMode === 'incremental' ? 'incremental' : 'full';
-  const autoExportZipChk = document.getElementById('autoExportZip');
-  if (autoExportZipChk) autoExportZipChk.checked = s.autoExportZip === true;
-  const autoExportDestSel = document.getElementById('autoExportDestination');
-  if (autoExportDestSel) autoExportDestSel.value = ['local', 'webdav', 'both'].includes(s.autoExportDestination) ? s.autoExportDestination : 'local';
-  const autoExportWebDavUrl = document.getElementById('autoExportWebDavUrl');
-  if (autoExportWebDavUrl) autoExportWebDavUrl.value = s.autoExportWebDavUrl || '';
-  const autoExportWebDavUsername = document.getElementById('autoExportWebDavUsername');
-  if (autoExportWebDavUsername) autoExportWebDavUsername.value = s.autoExportWebDavUsername || '';
-  const autoExportWebDavPassword = document.getElementById('autoExportWebDavPassword');
-  if (autoExportWebDavPassword) autoExportWebDavPassword.value = s.autoExportWebDavPassword || '';
-  updateAutoExportDestinationUi();
   refreshAutoExportStatus();
 
   // Populate toolbar icon picker
@@ -4006,9 +3406,6 @@ const ICON_VARIANT_FILES = {
   gold:    '/icons/icon_gold.png',
   pink:    '/icons/icon_pink.png',
   red:     '/icons/icon_red.png',
-  purple:     '/icons/icon_purple.png',
-  orange:     '/icons/icon_orange.png',
-  blue:     '/icons/icon_darkblue.png',
 };
 function applyIconVariant(variant) {
   const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
@@ -4022,7 +3419,7 @@ function applyVisuals(s) {
   if (s.accentColor2) r.style.setProperty('--accent2', s.accentColor2);
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
-  applyThemeSettings(s);
+  if (s.theme)        setTheme(s.theme);
   applyRoundedCorners(s.roundedCorners !== false);
   applyNavIcons(s.navIcons !== false);
   applyMatchUiColors(s.matchUiColors === true);
@@ -4043,8 +3440,6 @@ function applyVisuals(s) {
   }
 }
 // ── Storage backend migration ─────────────────────────────────────────────────
-const EH_BACKEND_NAMES = { local: 'Local Storage', idb: 'IndexedDB', sqlite: 'SQLite' };
-
 async function loadStorageBackend() {
   try {
     const r = await send('GET_STORAGE_BACKEND');
@@ -4052,7 +3447,7 @@ async function loadStorageBackend() {
     const sel = document.getElementById('storageBackendSel');
     const lbl = document.getElementById('storageBackendLabel');
     if (sel) sel.value = backend;
-    if (lbl) { lbl.textContent = EH_BACKEND_NAMES[backend] || backend; lbl.dataset.backend = backend; }
+    if (lbl) lbl.textContent = backend === 'idb' ? 'IndexedDB' : 'Local Storage';
   } catch {}
 }
 
@@ -4064,43 +3459,43 @@ async function migrateStorage() {
   if (!sel) return;
 
   const target = sel.value;
-  const currentBackend = lbl?.dataset.backend || 'local';
-  const nameOf = (k) => EH_BACKEND_NAMES[k] || k;
+  const current = lbl?.textContent;
+  const currentBackend = current?.includes('IndexedDB') ? 'idb' : 'local';
 
   if (target === currentBackend) {
-    toast('Already using ' + nameOf(target), 'ok');
+    toast('Already using ' + (target === 'idb' ? 'IndexedDB' : 'Local Storage'), 'ok');
     return;
   }
-  if (!confirm(`Migrate history to ${nameOf(target)}? This may take a while for large histories — keep this tab open. ` +
-               `The old copy is deleted once the move is complete (so it does not take up disk space); you can move back at any time.`)) return;
+
+  if (!confirm(
+    target === 'idb'
+      ? 'Migrate history to IndexedDB? This may take a moment for large histories.'
+      : 'Migrate history back to Local Storage? This may take a moment for large histories.'
+  )) return;
 
   btn.disabled = true;
   btn.textContent = 'Migrating…';
   if (status) status.textContent = 'Please wait…';
-  const onProgress = (m) => { if (m && m.type === 'MIGRATE_PROGRESS' && status) status.textContent = (m.phase && m.phase !== 'copying') ? ({ reading: 'Reading your history…', starting: 'Starting the database…', verifying: 'Checking the copy…', finishing: 'Finishing up…' }[m.phase] || 'Please wait…') : `Copied ${fmtNum(m.done)} of ${fmtNum(m.total)} entries…`; };
-  chrome.runtime.onMessage.addListener(onProgress);
 
   try {
-    const type = target === 'sqlite' ? 'MIGRATE_TO_SQLITE' : (target === 'idb' ? 'MIGRATE_TO_IDB' : 'MIGRATE_TO_LOCAL');
-    const r = await sendLong(type);
+    const type = target === 'idb' ? 'MIGRATE_TO_IDB' : 'MIGRATE_TO_LOCAL';
+    const r = await send(type);
     if (r.error) throw new Error(r.error);
-    if (lbl) { lbl.textContent = nameOf(target); lbl.dataset.backend = target; }
+    if (lbl) lbl.textContent = target === 'idb' ? 'IndexedDB' : 'Local Storage';
     if (status) status.textContent = `✓ Migrated ${fmtNum(r.migrated)} entries`;
-    toastLong(`Migrated ${fmtNum(r.migrated)} entries to ${nameOf(target)}`, 'ok');
-    doSearch();
+    toast(`Migrated to ${target === 'idb' ? 'IndexedDB' : 'Local Storage'}`, 'ok');
   } catch(err) {
     if (status) status.textContent = '✗ Migration failed: ' + err.message;
-    toastLong('Migration failed: ' + err.message, 'err');
+    toast('Migration failed: ' + err.message, 'err');
+    // Revert select to current
     if (sel) sel.value = currentBackend;
-  } finally {
-    chrome.runtime.onMessage.removeListener(onProgress);
-    btn.disabled = false;
-    btn.textContent = tr('apply_migrate', 'Apply & Migrate');
   }
+
+  btn.disabled = false;
+  btn.textContent = 'Apply & Migrate';
 }
 
-// Returns true when everything was saved (used by the unsaved-changes prompt too).
-async function saveSettings() {
+document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
   const days    = parseInt(document.getElementById('retDays').value);
   const c1      = document.getElementById('cp1').value;
   const c2      = document.getElementById('cp2').value;
@@ -4124,26 +3519,14 @@ async function saveSettings() {
   const navIcons = document.getElementById('navIconsToggle')?.checked !== false;
   const matchUiColors = document.getElementById('matchUiColorsToggle')?.checked === true;
   const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
-  const fadeInListOnDateChange = document.getElementById('fadeInListToggle')?.checked !== false;
+  const fadeInListOnDateChange = document.getElementById('fadeInListToggle')?.checked === true;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
   const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
   const datePillsWheelSensitivity = Math.max(1, Math.min(6, parseInt(document.getElementById('datePillsWheelSensInput')?.value || '1') || 1));
   const toolbarIcon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || 'default';
   const autoExportIntervalMonths = Math.max(0, Math.min(60, parseInt(document.getElementById('autoExportInput')?.value || '0') || 0));
-  const autoExportMode = document.getElementById('autoExportMode')?.value === 'incremental' ? 'incremental' : 'full';
-  const autoExportZip  = document.getElementById('autoExportZip')?.checked === true;
-  const autoExportDestination = ['local', 'webdav', 'both'].includes(document.getElementById('autoExportDestination')?.value)
-    ? document.getElementById('autoExportDestination').value
-    : 'local';
-  const autoExportWebDavUrl = document.getElementById('autoExportWebDavUrl')?.value.trim() || '';
-  const autoExportWebDavUsername = document.getElementById('autoExportWebDavUsername')?.value || '';
-  const autoExportWebDavPassword = document.getElementById('autoExportWebDavPassword')?.value || '';
   
-  if (!days || days < 1) { toast('Invalid retention', 'err'); return false; }
-  if ((autoExportDestination === 'webdav' || autoExportDestination === 'both') && autoExportIntervalMonths > 0) {
-    if (!autoExportWebDavUrl) { toast('Enter a WebDAV URL', 'err'); return false; }
-    if (!await ensureWebDavPermission(autoExportWebDavUrl)) return false;
-  }
+  if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
   try {
     const r = await send('SAVE_SETTINGS', { 
       settings: { 
@@ -4153,7 +3536,6 @@ async function saveSettings() {
         font, 
         fontSize: sz, 
         theme: _curSettings.theme || 'dark',
-        followSystemTheme: document.getElementById('followSystemThemeToggle')?.checked === true,
         bgTintEnabled,
         bgTintHue,
         bgTintOpacity,
@@ -4177,12 +3559,6 @@ async function saveSettings() {
         datePillsWheelSensitivity,
         toolbarIcon,
         autoExportIntervalMonths,
-        autoExportMode,
-        autoExportZip,
-        autoExportDestination,
-        autoExportWebDavUrl,
-        autoExportWebDavUsername,
-        autoExportWebDavPassword,
         timeTrackingEnabled: document.getElementById('timeTrackingToggle')?.checked !== false,
         syncInterval: Math.max(1, Math.min(1440, parseInt(document.getElementById('syncIntervalInput')?.value || '30') || 30)),
         autoStoreEnabled: document.getElementById('autoStoreToggle')?.checked === true,
@@ -4190,7 +3566,6 @@ async function saveSettings() {
       } 
     });
     _curSettings = r.settings;
-    applyThemeSettings(_curSettings);
     applyIconVariant(_curSettings.toolbarIcon || 'default');
     applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
     applyHighContrastMode(_curSettings.highContrastMode === true);
@@ -4206,87 +3581,22 @@ async function saveSettings() {
     await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
     refreshAutoExportStatus();
-    snapshotSettings();
-    return true;
-  } catch (err) { toast(err.message, 'err'); return false; }
-}
-document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-
-// ── Auto export interval ──────────────────────────────────────────────────────
-function updateAutoExportDestinationUi() {
-  const dest = document.getElementById('autoExportDestination')?.value || 'local';
-  const fields = document.getElementById('autoExportWebDavFields');
-  if (fields) fields.style.display = (dest === 'webdav' || dest === 'both') ? 'flex' : 'none';
-  const zip = document.getElementById('autoExportZip');
-  if (zip) {
-    zip.disabled = dest === 'webdav';
-    zip.title = dest === 'webdav' ? 'WebDAV uploads are saved as JSON' : '';
-  }
-}
-
-async function ensureWebDavPermission(rawUrl) {
-  try {
-    const u = new URL(rawUrl);
-    const origin = u.origin + '/*';
-    if (!chrome.permissions || !chrome.permissions.request) return true;
-    const has = await chrome.permissions.contains({ origins: [origin] });
-    if (has) return true;
-    const ok = await chrome.permissions.request({ origins: [origin] });
-    if (!ok) toast('WebDAV server permission was not granted', 'err');
-    return ok;
-  } catch {
-    toast('Invalid WebDAV URL', 'err');
-    return false;
-  }
-}
-
-document.getElementById('autoExportDestination')?.addEventListener('change', updateAutoExportDestinationUi);
-
-// Delegated (capture) so nothing around the field can swallow the click.
-document.addEventListener('click', (ev) => {
-  const eye = ev.target.closest && ev.target.closest('#autoExportWebDavEye');
-  if (!eye) return;
-  ev.preventDefault();
-  const i = document.getElementById('autoExportWebDavPassword');
-  if (!i) return;
-  const show = i.type === 'password';
-  i.type = show ? 'text' : 'password';
-  eye.setAttribute('aria-pressed', show ? 'true' : 'false');
-  eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-  eye.textContent = show ? '🙈' : '👁';
-}, true);
-
-// Test the WebDAV settings currently typed in: uploads a tiny file, then removes it again.
-document.getElementById('testWebDavBtn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('testWebDavBtn');
-  const out = document.getElementById('webDavTestResult');
-  const url = document.getElementById('autoExportWebDavUrl')?.value.trim() || '';
-  const username = document.getElementById('autoExportWebDavUsername')?.value || '';
-  const password = document.getElementById('autoExportWebDavPassword')?.value || '';
-  const show = (t, c) => { if (out) { out.textContent = t; out.className = 'wd-result ' + (c || ''); } };
-  if (!url) { show('Enter the server URL first.', 'err'); return; }
-  if (!await ensureWebDavPermission(url)) { show('Permission for this server was not granted.', 'err'); return; }
-  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Testing…'; show('Uploading a test file…');
-  try {
-    const r = await send('TEST_WEBDAV', { url, username, password });
-    if (r.ok) { show('✓ ' + r.message + (r.ms ? ' (' + r.ms + ' ms)' : ''), 'ok'); toast('WebDAV upload works', 'ok'); }
-    else { show('✗ ' + r.message, 'err'); toast('WebDAV test failed', 'err'); }
-  } catch (e) { show('✗ ' + e.message, 'err'); }
-  btn.disabled = false; btn.textContent = orig;
+  } catch (err) { toast(err.message, 'err'); }
 });
 
+// ── Auto export interval ──────────────────────────────────────────────────────
 async function refreshAutoExportStatus() {
   const el = document.getElementById('autoExportStatus');
   if (!el) return;
   try {
     const r = await send('GET_AUTO_EXPORT_STATUS');
-    if (!r.enabled) { el.textContent = tr('disabled', 'Disabled'); return; }
-    const parts = [];
-    if (r.lastRunAt) parts.push(tr('auto_export_last', 'Last export: {0}', new Date(r.lastRunAt).toLocaleDateString()));
-    parts.push(Date.now() >= r.nextDueAt
-      ? tr('auto_export_due', 'Due — will run on next check')
-      : tr('auto_export_next', 'Next export: {0}', new Date(r.nextDueAt).toLocaleDateString()));
-    el.textContent = parts.join(' · ');
+    if (!r.enabled) { el.textContent = 'Disabled'; return; }
+    const acc = r.monthsAccumulated || 0;
+    if (acc < r.retainMonths + r.intervalMonths) {
+      el.textContent = `${acc.toFixed(1)} / ${r.retainMonths + r.intervalMonths} months accumulated`;
+    } else {
+      el.textContent = 'Due — will run on next check';
+    }
   } catch {
     el.textContent = '';
   }
@@ -4298,49 +3608,29 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
   const interval = Math.max(0, Math.min(60, parseInt(inputEl?.value || '0') || 0));
   if (interval <= 0) { toast('Enter a number of months above 0 first', 'err'); return; }
 
-  const mode = document.getElementById('autoExportMode')?.value === 'incremental' ? 'incremental' : 'full';
-  const zip  = document.getElementById('autoExportZip')?.checked === true;
-  const destination = ['local', 'webdav', 'both'].includes(document.getElementById('autoExportDestination')?.value)
-    ? document.getElementById('autoExportDestination').value
-    : 'local';
-  const webDavUrl = document.getElementById('autoExportWebDavUrl')?.value.trim() || '';
-  const webDavUsername = document.getElementById('autoExportWebDavUsername')?.value || '';
-  const webDavPassword = document.getElementById('autoExportWebDavPassword')?.value || '';
-  if ((destination === 'webdav' || destination === 'both') && !webDavUrl) { toast('Enter a WebDAV URL first', 'err'); return; }
-  if ((destination === 'webdav' || destination === 'both') && !await ensureWebDavPermission(webDavUrl)) return;
-  const ok = confirm(mode === 'incremental'
-    ? tr('auto_export_confirm_incr', 'This will export everything recorded since your last export. Nothing is deleted. Continue?')
-    : tr('auto_export_confirm_full', 'This will export your full history. Nothing is deleted. Continue?'));
+  const ok = confirm(
+    `This will export everything in your extended history older than 3 months to a .json file, ` +
+    `then remove it from this extension's storage (your last 3 months always stay). ` +
+    `This never touches Chrome's native history. Continue?`
+  );
   if (!ok) return;
 
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Running…';
   try {
     // Persist the interval so "Run now" always reflects what's currently typed in,
     // even if "Save Settings" was never clicked.
-    await send('SAVE_SETTINGS', { settings: {
-      autoExportIntervalMonths: interval,
-      autoExportMode: mode,
-      autoExportZip: zip,
-      autoExportDestination: destination,
-      autoExportWebDavUrl: webDavUrl,
-      autoExportWebDavUsername: webDavUsername,
-      autoExportWebDavPassword: webDavPassword,
-    } });
+    await send('SAVE_SETTINGS', { settings: { autoExportIntervalMonths: interval } });
     _curSettings.autoExportIntervalMonths = interval;
-    _curSettings.autoExportMode = mode;
-    _curSettings.autoExportZip = zip;
-    _curSettings.autoExportDestination = destination;
 
-    const r = await sendLong('TRIGGER_AUTO_EXPORT');
+    const r = await send('TRIGGER_AUTO_EXPORT');
     if (r.success) {
-      const target = r.uploaded && !r.downloaded ? ' to WebDAV' : (r.uploaded ? ' + WebDAV' : '');
-      toast(tr('auto_export_done', 'Exported {0} entries', fmtNum(r.exported)) + target, 'ok');
-    } else if (r.reason === 'empty' || r.reason === 'nothing_new') {
-      toast(tr('auto_export_nothing_new', 'Nothing new to export since the last export'), 'ok');
+      toast(`Exported & removed ${fmtNum(r.exported)} entries older than 3 months from extended storage`, 'ok');
+      invalidateHistCache();
+      doSearch();
+    } else if (r.reason === 'empty' || r.reason === 'nothing_past_cutoff') {
+      toast('Nothing older than 3 months to export yet', 'ok');
     } else if (r.reason === 'download_failed') {
-      toast(tr('auto_export_failed', 'Could not save the export file. Try again.'), 'err');
-    } else if (r.reason === 'webdav_failed') {
-      toast(r.error || 'WebDAV upload failed', 'err');
+      toast('Could not save the export file — nothing was deleted. Try again.', 'err');
     } else {
       toast('Nothing to export yet', 'err');
     }
@@ -4370,130 +3660,40 @@ chrome.runtime.sendMessage({ type: 'AUTO_SAVE_READY' }).catch(() => {});
 
 // SW sends the content to download — use anchor click (bypasses browser "ask where to save").
 // Used for both session auto-save (HTML) and history auto-export (JSON).
-chrome.runtime.onMessage.addListener((msg, _sender, respond) => {
+chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type !== 'AUTO_SAVE_DOWNLOAD') return;
-  const save = (blob, filename) => {
-    const url  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), {
-      href: url, download: filename || 'extended-history-session.html', target:"_blank",
-    });
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 10000);
-  };
-  (async () => {
-    try {
-      // Big exports arrive as chunks the page pulls itself (message size limit); small ones inline.
-      const source = msg.pullId
-        ? new Blob(await ehPullParts(msg.pullId, msg.pullCount), { type: 'application/json' })
-        : (msg.content ?? msg.html); // msg.html kept for back-compat
-      if (msg.zipEntryName) {
-        try {
-          save(await ehMakeZip(msg.zipEntryName, source), msg.filename);
-        } catch {
-          // zipping failed → still deliver the data, as plain JSON
-          save(new Blob([source], { type: 'application/json' }), (msg.filename || 'export.zip').replace(/\.zip$/i, '.json'));
-        }
-      } else {
-        save(source instanceof Blob ? source : new Blob([source], { type: msg.mime || 'text/html' }), msg.filename);
-      }
-      respond({ ok: true });
-    } catch (err) {
-      respond({ ok: false, error: err.message });
-    }
-  })();
-  return true; // async response
+  const content = msg.content ?? msg.html; // msg.html kept for back-compat
+  const blob = new Blob([content], { type: msg.mime || 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url, download: msg.filename || 'extended-history-session.html', target:"_blank",
+  });
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 3000);
 });
 
-// ── Minimal single-file .zip writer (deflate via CompressionStream, else "stored") ──
-let _crcTable = null;
-function ehCrc32(bytes) {
-  if (!_crcTable) {
-    _crcTable = new Uint32Array(256);
-    for (let n = 0; n < 256; n++) {
-      let c = n;
-      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-      _crcTable[n] = c >>> 0;
-    }
-  }
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < bytes.length; i++) crc = _crcTable[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
-
-async function ehMakeZip(entryName, source) {   // source: string or Blob
-  const enc  = new TextEncoder();
-  const srcBlob = source instanceof Blob ? source : new Blob([source]);
-  const data = new Uint8Array(await srcBlob.arrayBuffer());
-  const name = enc.encode(entryName);
-  const crc  = ehCrc32(data);
-
-  let body = data, method = 0; // 0 = stored, 8 = deflate
-  if (typeof CompressionStream === 'function') {
-    try {
-      const cs = new CompressionStream('deflate-raw');
-      body = new Uint8Array(await new Response(srcBlob.stream().pipeThrough(cs)).arrayBuffer());
-      method = 8;
-    } catch { body = data; method = 0; }
-  }
-
-  const d = new Date();
-  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
-  const dosDate = ((Math.max(d.getFullYear(), 1980) - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
-
-  const lh = new DataView(new ArrayBuffer(30));
-  lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); // UTF-8 names
-  lh.setUint16(8, method, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
-  lh.setUint32(14, crc, true); lh.setUint32(18, body.length, true); lh.setUint32(22, data.length, true);
-  lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
-
-  const cd = new DataView(new ArrayBuffer(46));
-  cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(8, 0x0800, true);
-  cd.setUint16(10, method, true); cd.setUint16(12, dosTime, true); cd.setUint16(14, dosDate, true);
-  cd.setUint32(16, crc, true); cd.setUint32(20, body.length, true); cd.setUint32(24, data.length, true);
-  cd.setUint16(28, name.length, true); // extra(30), comment(32), disk(34), attrs(36,38), offset(42) all 0
-
-  const cdOffset = 30 + name.length + body.length;
-  const eo = new DataView(new ArrayBuffer(22));
-  eo.setUint32(0, 0x06054b50, true); eo.setUint16(8, 1, true); eo.setUint16(10, 1, true);
-  eo.setUint32(12, 46 + name.length, true); eo.setUint32(16, cdOffset, true);
-
-  return new Blob([lh, name, body, cd, name, eo], { type: 'application/zip' });
-}
-
 document.getElementById('exportDataBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('exportDataBtn');
   try {
-    // Ask everything up front, then do the (possibly long) work.
+    const data = await send('EXPORT');
     const useEncrypt = confirm('Encrypt export with a password?\n\nClick OK to encrypt, Cancel to export as plain JSON.');
-    let pw = null;
+    let blob, filename;
     if (useEncrypt) {
-      pw = prompt('Enter encryption password:');
+      const pw = prompt('Enter encryption password:');
       if (!pw) { toast('Export cancelled', 'err'); return; }
       const pw2 = prompt('Confirm password:');
       if (pw !== pw2) { toast('Passwords do not match', 'err'); return; }
+      const encrypted = await ehEncrypt(JSON.stringify(data), pw);
+      blob = new Blob([JSON.stringify({ __eh_encrypted: true, ...encrypted })], { type: 'application/json' });
+      filename = `extended-history_${new Date().toISOString().slice(0,10)}_enc.json`;
+      toast(`Exported ${fmtNum(data.totalEntries)} entries (encrypted)`, 'ok');
+    } else {
+      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      filename = `extended-history_${new Date().toISOString().slice(0,10)}.json`;
+      toast(`Exported ${fmtNum(data.totalEntries)} entries`, 'ok');
     }
-
-    btn.disabled = true;
-    toastProgress(tr('export_preparing', 'Preparing export…'), null);
-    const begin = await sendLong('EXPORT_BEGIN');            // the data stays in the background; we pull it in chunks
-    const t0 = Date.now();
-    const blob = await ehExportToBlob(begin, pw, (chars) => {
-      toastProgress(`${useEncrypt ? tr('export_encrypting', 'Exporting & encrypting…') : tr('export_exporting', 'Exporting…')} ${Math.round(chars / 1048576)} MB`, null);
-    });
-    const filename = `extended-history_${new Date().toISOString().slice(0,10)}${useEncrypt ? '_enc' : ''}.json`;
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);     // a big file is still being saved for a while
-    toastProgressHide();
-    toast(`Exported ${fmtNum(begin.totalEntries)} entries${useEncrypt ? ' (encrypted)' : ''}`, 'ok');
-  } catch (err) {
-    toastProgressHide();
-    toast('Export failed: ' + (err.message || err), 'err');
-  } finally {
-    btn.disabled = false;
-  }
+    Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename }).click();
+  } catch (err) { toast(err.message, 'err'); }
 });
 
 document.getElementById('importDataBtn')?.addEventListener('click', () => {
@@ -4501,180 +3701,35 @@ document.getElementById('importDataBtn')?.addEventListener('click', () => {
 });
 document.getElementById('importDataFile')?.addEventListener('change', async ev => {
   const file = ev.target.files[0];
-  ev.target.value = '';
-  if (file) ehRunImport(file, true);
-});
-
-// Files at least this big (≈130k+ entries) are imported into SQLite: IndexedDB / Local Storage
-// keep too much in memory for millions of entries. The switch happens automatically.
-const EH_LARGE_IMPORT_BYTES = 25 * 1024 * 1024;
-
-async function ehEnsureSqliteForLargeImport(file, btn) {
-  if (file.size < EH_LARGE_IMPORT_BYTES) return true;
-  let backend = 'local';
-  try { backend = (await send('GET_STORAGE_BACKEND')).backend || 'local'; } catch {}
-  if (backend === 'sqlite') return true;
-  const mb = Math.round(file.size / 1048576);
-  if (btn) btn.textContent = tr('switching_sqlite', 'Switching to SQLite…');
-  toastLong(tr('large_import_switch', 'Large file ({0} MB): switching storage to SQLite first. Your existing history is copied over.', mb), 'ok');
+  if (!file) return;
   try {
-    const r = await sendLong('MIGRATE_TO_SQLITE');
-    if (r && r.error) throw new Error(r.error);
-    loadStorageBackend();
-    toast(tr('switched_sqlite', 'Now using SQLite ({0} existing entries copied)', fmtNum(r.migrated)), 'ok');
-    return true;
-  } catch (err) {
-    return confirm(tr('sqlite_switch_failed',
-      'Could not switch to SQLite:\n{0}\n\nImport into {1} anyway? A file this large can use many GB of memory and may crash the browser.',
-      err.message || err, EH_BACKEND_NAMES[backend] || backend));
-  }
-}
-
-async function ehRunImport(file, allowRetentionPrompt) {
-  const btn = document.getElementById('importDataBtn');
-  const btnHtml = btn ? btn.innerHTML : '';
-  const setBtn = (t) => { if (btn) btn.textContent = t; };
-  if (btn) btn.disabled = true;
-  if (!(await ehEnsureSqliteForLargeImport(file, btn))) {
-    if (btn) { btn.innerHTML = btnHtml; btn.disabled = false; }
-    return;
-  }
-  let jobId = null, total = 0, r = null;
-  let direct = false, cutoff = 0, realCutoff = 0, minT = 0, dstats = { imported: 0, dup: 0, old: 0, invalid: 0, oldestOld: 0 };
-  // Batches are sent straight to the database and several are kept in flight, so reading the
-  // file, preparing rows and writing them all happen at the same time.
-  const inflight = new Set(); let sendErr = null;
-  const sendDirect = async (batch) => {
-    const resp = await new Promise((res, rej) => chrome.runtime.sendMessage({ target: 'eh-sql', op: 'importBatch', args: { entries: batch, cutoff } },
-      x => { if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else res(x); }));
-    if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'database did not answer');
-    const st = resp.result;
-    dstats.imported += st.imported; dstats.dup += st.dup; dstats.old += st.old; dstats.invalid += st.invalid;
-    if (st.oldestOld && (!dstats.oldestOld || st.oldestOld < dstats.oldestOld)) dstats.oldestOld = st.oldestOld;
-  };
-  try {
-    setBtn('⬆ 0%');
-    toast(tr('import_started', 'Reading {0}…', file.name), 'ok');
-    await ehReadEntries(file, {
-      onBatch: async (batch) => {
-        if (sendErr) throw sendErr;
-        if (!jobId) {
-          const b = await sendLong('IMPORT_BEGIN', { bulk: file.size >= EH_LARGE_IMPORT_BYTES })    // big files are staged append-only (flat speed however large the database is) and merged in throttled windows at the end; small ones go straight in
-          jobId = b.id; direct = !!b.direct; cutoff = b.cutoff || 0;
-          // Direct import: nothing is skipped for being older than the retention window. The oldest date is tracked while
-          // reading, and the user is asked ONCE at the end whether to raise retention — no second import pass is ever needed.
-          if (direct && allowRetentionPrompt) { realCutoff = cutoff; cutoff = 0; }
-        }
-        if (realCutoff) for (const e of batch) { const t = e && e.visitTime; if (t && (!minT || t < minT)) minT = t; }
-        total += batch.length;
-        if (!direct) { await sendLong('IMPORT_BATCH', { id: jobId, entries: batch }); return; }
-        const p = sendDirect(batch).catch(e => { sendErr = e; }).finally(() => inflight.delete(p));
-        inflight.add(p);
-        if (inflight.size >= 3) await Promise.race(inflight);
-      },
-      onProgress: (read, size, n) => setBtn(`⬆ ${Math.min(100, Math.floor(read / (size || 1) * 100))}% · ${fmtNum(n)}`),
-    });
-    if (!jobId || !total) {
-      toast(tr('no_entries_file','No entries found in file'), 'err');
-      if (btn) { btn.innerHTML = btnHtml; btn.disabled = false; }
-      return;
+    const raw = JSON.parse(await file.text());
+    let data = raw;
+    if (raw.__eh_encrypted) {
+      const pw = prompt('This file is encrypted. Enter the password to decrypt:');
+      if (!pw) { toast('Import cancelled', 'err'); ev.target.value = ''; return; }
+      try {
+        const decrypted = await ehDecrypt(raw, pw);
+        data = JSON.parse(decrypted);
+      } catch {
+        toast('Wrong password or corrupted file', 'err');
+        ev.target.value = '';
+        return;
+      }
     }
-    setBtn('⬆ 100%');
-    await Promise.all([...inflight]);
-    if (sendErr) throw sendErr;
-    // The upload is done, but the database still sorts the rows and builds its indexes (minutes for a big file):
-    // show that honestly, with real progress where the database reports it.
-    const t0 = Date.now();
-    const names = { indexing: tr('import_indexing', 'Building search index…'), upgrade: 'Optimizing database…', ready: tr('import_finishing', 'Finishing…') };
-    const mmss = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-    const poll = async () => {
-      try {
-        const st = await send('GET_DB_PROGRESS');
-        const secs = Math.round((Date.now() - t0) / 1000);
-        if (st && st.pctOnly && st.total) {
-          setBtn(`⚙ ${Math.round(100 * st.done / st.total)}%`);
-          toastProgress(`${st.step || names.indexing} (${mmss(secs)})`, 100 * st.done / st.total);
-        } else {
-          setBtn(`⚙ ${mmss(secs)}`);
-          toastProgress(`${tr('import_organizing', 'Organizing history & building indexes…')} (${mmss(secs)})`, null);
-        }
-      } catch (_) {}
-    };
-    poll();
-    const pollTimer = setInterval(poll, 1000);
-    try { r = await sendLong('IMPORT_HISTORY', { job: jobId, ...(direct ? { stats: dstats } : {}) }); }
-    finally { clearInterval(pollTimer); toastProgressHide(); }
-  } catch (err) {
-    toastLong('Import failed: ' + (err.message || err), 'err');
-    if (btn) { btn.innerHTML = btnHtml; btn.disabled = false; }
-    return;
-  }
-  // Success: say so on the button itself for a while, then restore it.
-  if (btn) {
-    btn.textContent = `✔ ${tr('import_done', 'Done')} · ${fmtNum(r.imported)}`;
-    btn.disabled = false;
-    setTimeout(() => { btn.innerHTML = btnHtml; }, 10000);
-  }
-
-  const st = r.stats || {};
-  const notes = [];
-  if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
-  if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
-  if (st.invalid) notes.push(`${fmtNum(st.invalid)} invalid`);
-  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)}`+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
-  invalidateHistCache();
-  doSearch();
-
-  // Direct import kept everything; if the file reaches back further than the retention window, decide now (no re-import).
-  if (realCutoff && minT && minT < realCutoff) {
-    const cur    = _curSettings.retentionDays || 365;
-    const needed = Math.ceil((Date.now() - minT) / 86400000) + 1;
-    if (confirm(
-      `The imported file contains entries back to ${new Date(minT).toLocaleDateString()}, older than your retention setting (${fmtNum(cur)} days).\n\n` +
-      `OK = raise retention to ${fmtNum(needed)} days and keep them all.\nCancel = remove the entries older than ${fmtNum(cur)} days.`)) {
-      try {
-        await send('SAVE_SETTINGS', { settings: { retentionDays: needed } });
-        _curSettings.retentionDays = needed;
-        const rd = document.getElementById('retDays'); if (rd) rd.value = needed;
-        syncRetChips(needed);
-        buildDateNav(needed);
-      } catch (err) { toast(err.message || tr('cant_update_ret','Could not update retention'), 'err'); }
-    } else {
-      try {
-        toastProgress(tr('import_pruning', 'Removing entries older than the retention window…'), null);
-        const resp = await new Promise((res, rej) => chrome.runtime.sendMessage({ target: 'eh-sql', op: 'deleteBelow', args: { t: realCutoff } },
-          x => { if (chrome.runtime.lastError) rej(new Error(chrome.runtime.lastError.message)); else res(x); }));
-        if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'database did not answer');
-      } catch (err) { toast(err.message || tr('cant_remove_old','Could not remove old entries'), 'err'); }
-      finally { toastProgressHide(); }
-    }
+    const entries = data.entries || (Array.isArray(data) ? data : null);
+    if (!entries) { toast('Invalid file format', 'err'); return; }
+    const r = await send('IMPORT_HISTORY', { entries });
+    toast(`Imported ${fmtNum(r.imported)} new entries`, 'ok');
     invalidateHistCache();
     doSearch();
-  }
-
-  // Entries older than the retention window were skipped (and would be pruned later anyway).
-  // Offer to widen retention so they can be kept, then run the import again.
-  if (allowRetentionPrompt && st.old && st.oldestOld) {
-    const cur    = _curSettings.retentionDays || 365;
-    const needed = Math.ceil((Date.now() - st.oldestOld) / 86400000) + 1;
-    if (needed > cur && confirm(
-      `${fmtNum(st.old)} entries were skipped because they're older than your retention setting (${fmtNum(cur)} days).\n\n` +
-      `Raise retention to ${fmtNum(needed)} days (back to ${new Date(st.oldestOld).toLocaleDateString()}) and import them now?`)) {
-      try {
-        await send('SAVE_SETTINGS', { settings: { retentionDays: needed } });
-        _curSettings.retentionDays = needed;
-        const rd = document.getElementById('retDays'); if (rd) rd.value = needed;
-        syncRetChips(needed);
-        buildDateNav(needed);
-        await ehRunImport(file, false);
-      } catch (err) { toast(err.message || tr('cant_update_retention','Could not update retention'), 'err'); }
-    }
-  }
-}
+    ev.target.value = '';
+  } catch (err) { toast(err.message || 'Import failed', 'err'); }
+});
 
 document.getElementById('reBackfillBtn')?.addEventListener('click', async () => {
-  if (!confirm(tr('re_import_all','Re-import all available Chrome native history? New entries will be merged in.'))) return;
-  toast(tr('importing_from_chrome','Importing from Chrome history…'));
+  if (!confirm('Re-import all available Chrome native history? New entries will be merged in.')) return;
+  toast('Importing from Chrome history…');
   try {
     const r = await send('RE_BACKFILL');
     if (r?.error) { toast(r.error, 'err'); return; }
@@ -4685,19 +3740,19 @@ document.getElementById('reBackfillBtn')?.addEventListener('click', async () => 
 });
 
 document.getElementById('clearAllBtn').addEventListener('click', async () => {
-  if (!confirm(tr('delete_all_confirm','Delete ALL history permanently? Cannot be undone.'))) return;
+  if (!confirm('Delete ALL history permanently? Cannot be undone.')) return;
   try {
-    await sendLong('CLEAR_ALL');
+    await send('CLEAR_ALL');
     allResults = []; invalidateHistCache(); exitSelMode(); buildVirtualList();
-    toast(tr('all_cleared','All history cleared'), 'ok');
+    toast('All history cleared', 'ok');
   } catch (err) { toast(err.message, 'err'); }
 });
 
 document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
-  if (!confirm(tr('clear_time_data','Clear all time-spent data? This will not affect history. Cannot be undone.'))) return;
+  if (!confirm('Clear all time-spent data? This will not affect history. Cannot be undone.')) return;
   try {
     await send('CLEAR_TIME_DATA');
-    toast(tr('time_data_cleared','Time data cleared'), 'ok');
+    toast('Time data cleared', 'ok');
     loadTimeSpent(curTimeDays || 15);
   } catch (err) { toast(err.message, 'err'); }
 });
@@ -4951,253 +4006,6 @@ function exportSessionAsHtml(label, tabs, tabStorageEntries) {
 }
 
 // ══ PANEL NAV ════════════════════════════════════════════════════════════════
-// ══ FILE FORMAT HELPERS (shared by Import + Reading Mode) ══════════════════
-// JSON exports start with { or [ ; anything else is treated as TSV.
-function ehLooksLikeJson(text) {
-  const c = String(text).replace(/^\uFEFF/, '').trimStart().charAt(0);
-  return c === '{' || c === '[';
-}
-
-// ── Streaming file reader (Import + Reading Mode) ───────────────────────────
-// Files are read in chunks and turned into entries as they go, so the whole file
-// text is never held in memory (a 400 MB export used to need several GB).
-
-// V8 "sliced strings" keep their whole parent string alive. When entries are kept
-// (Reading Mode), copy the strings so the big chunk text can be freed.
-function ehDetach(s) { return (' ' + s).slice(1); }
-
-const _EH_HOST_RE = /^[a-z][a-z0-9+.-]*:\/\/(?:[^\/?#@]*@)?([^\/?#:]+)/i;
-function ehFastDomain(url) {
-  const m = _EH_HOST_RE.exec(url);
-  if (!m || m[1].charAt(0) === '[') return tryDomain(url);
-  return m[1].toLowerCase().replace(/^www\./, '');
-}
-
-// One TSV line (History Trends Unlimited):
-//   url <TAB> U<timestamp ms, fractional> <TAB> <number, ignored> <TAB> title (optional)
-function ehParseTsvLine(line, retain) {
-  const i1 = line.indexOf('\t');
-  if (i1 < 0) return null;
-  const url = line.slice(0, i1).trim();
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) return null;                 // not a URL → skip (header/junk)
-  const i2 = line.indexOf('\t', i1 + 1);
-  let ts = parseFloat(line.slice(i1 + 1, i2 < 0 ? undefined : i2).trim().replace(/^U/i, ''));
-  if (!isFinite(ts) || ts <= 0) return null;
-  if (ts < 1e11) ts *= 1000;                                            // seconds → ms, just in case
-  const i3 = i2 < 0 ? -1 : line.indexOf('\t', i2 + 1);
-  const title = i3 < 0 ? '' : line.slice(i3 + 1).trim();
-  if (!retain) return { url, title, visitTime: ts };
-  return { url: ehDetach(url), title: title ? ehDetach(title) : '', visitTime: ts, domain: ehFastDomain(url) };
-}
-function ehParseHistoryTsv(text) {   // whole-text variant, kept for small inputs
-  const out = [];
-  for (const line of String(text).replace(/^\uFEFF/, '').split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    const e = ehParseTsvLine(line, true);
-    if (e) out.push(e);
-  }
-  return out;
-}
-
-// Incremental scanner for {"...":..., "entries":[{...},{...}], ...} or a bare [{...},...] array.
-// Feed it text chunks; it calls onObject(parsedEntry) per entry and returns true once the
-// entries array has ended. Handles strings/escapes and objects split across chunks.
-function ehJsonScanner(onObject) {
-  let depth = 0, inStr = false, esc = false, started = false;
-  let capturing = false, keyBuf = '', lastKey = '';
-  let rootArray = false, inEntries = false, objDepth = 0, inObj = false, objStart = 0, pending = '';
-  return function push(text) {
-    if (inObj) objStart = 0;
-    const n = text.length;
-    for (let i = 0; i < n; i++) {
-      const c = text.charCodeAt(i);
-      if (inStr) {
-        if (esc) { esc = false; if (capturing) keyBuf += text[i]; }
-        else if (c === 92) { esc = true; }
-        else if (c === 34) { inStr = false; if (capturing) { capturing = false; lastKey = keyBuf; } }
-        else if (capturing) keyBuf += text[i];
-        continue;
-      }
-      if (c === 34) {                                   // "
-        inStr = true;
-        if (depth === 1 && !rootArray && !inEntries) { capturing = true; keyBuf = ''; }
-      } else if (c === 123) {                           // {
-        started = true; depth++;
-        if (inEntries && !inObj && depth === objDepth) { inObj = true; objStart = i; pending = ''; }
-      } else if (c === 125) {                           // }
-        if (inObj && depth === objDepth) {
-          const s = pending + text.slice(objStart, i + 1);
-          inObj = false; pending = '';
-          try { onObject(JSON.parse(s)); } catch {}
-        }
-        depth--;
-      } else if (c === 91) {                            // [
-        if (!started) { started = true; rootArray = true; inEntries = true; objDepth = 2; }
-        else if (depth === 1 && !rootArray && lastKey === 'entries') { inEntries = true; objDepth = 3; }
-        depth++;
-      } else if (c === 93) {                            // ]
-        if (inEntries && depth === (rootArray ? 1 : 2)) { inEntries = false; return true; }
-        depth--;
-      }
-    }
-    if (inObj) pending += text.slice(objStart);
-    return false;
-  };
-}
-
-// Reads a .json / .tsv / .txt history file in chunks, handing entries to onBatch(array)
-// (awaited, so the consumer sets the pace) in batches. onProgress(bytesRead, fileSize, entriesSoFar).
-// retain:true → entries are kept by the caller (Reading Mode): add domain, detach strings.
-// Encrypted exports can't be streamed, so those are decrypted whole, then batched.
-async function ehReadEntries(file, { onBatch, onProgress, batchSize = 10000, retain = false }) {
-  const head = await file.slice(0, 65536).text();
-  const isJson = ehLooksLikeJson(head);
-  let total = 0, lastUi = 0;
-  const queue = [];
-  const drain = async (force) => {
-    while (queue.length >= batchSize || (force && queue.length)) {
-      const b = queue.splice(0, batchSize);
-      total += b.length;
-      await onBatch(b);
-    }
-  };
-  const report = (read, force) => {
-    if (!onProgress) return;
-    const now = performance.now();
-    if (force || now - lastUi > 120) { lastUi = now; onProgress(read, file.size, total + queue.length); }
-  };
-
-  if (isJson && head.includes('"__eh_encrypted"') && /"v"\s*:\s*3/.test(head)) {
-    // Binary chunked encrypted export (v3): read each piece straight from the file, decrypt, stream it through the scanner.
-    const nl = head.indexOf('\n');                                   // the header is ASCII, so character index = byte index
-    const hm = /"salt"\s*:\s*"([^"]+)"/.exec(head.slice(0, nl));
-    if (nl < 0 || !hm) throw new Error('Damaged encrypted file');
-    const pw = prompt('This file is encrypted. Enter the password to decrypt:');
-    if (!pw) throw new Error('Cancelled');
-    const key = await ehDeriveKey(pw, _b64toU8(hm[1]), 'decrypt');
-    const scanner = ehJsonScanner(o => queue.push(o));
-    const td = new TextDecoder('utf-8');
-    const readAt = async (off) => {                                    // → {iv, ct, next} or null at end
-      if (off + 16 > file.size) return null;
-      const lenBuf = new DataView(await file.slice(off, off + 4).arrayBuffer());
-      const len = lenBuf.getUint32(0, true);
-      if (len < 16 || off + 16 + len > file.size) throw new Error('Damaged encrypted file');
-      const buf = await file.slice(off + 4, off + 16 + len).arrayBuffer();
-      return { iv: new Uint8Array(buf, 0, 12), ct: new Uint8Array(buf, 12), next: off + 16 + len };
-    };
-    let cur = await readAt(nl + 1), done = false;
-    while (cur) {
-      const pending = readAt(cur.next);                                // read the next piece while this one is decrypted + scanned
-      let plain;
-      try { plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: cur.iv }, key, cur.ct); }
-      catch { throw new Error('Wrong password or corrupted file'); }
-      if (scanner(td.decode(plain))) done = true;
-      if (retain) for (const e of queue) if (e && !e.domain && e.url) e.domain = ehFastDomain(e.url);
-      await drain(false);
-      report(cur.next, false);
-      cur = done ? null : await pending;
-    }
-    await drain(true);
-    report(file.size, true);
-    return total;
-  }
-
-  if (isJson && head.includes('"__eh_encrypted"') && /"v"\s*:\s*2/.test(head)) {
-    // Chunked encrypted export (v2): decrypt chunk by chunk and stream the plain text through the normal scanner.
-    const pw = prompt('This file is encrypted. Enter the password to decrypt:');
-    if (!pw) throw new Error('Cancelled');
-    const reader = file.stream().getReader();
-    const td = new TextDecoder('utf-8');
-    const scanner = ehJsonScanner(o => queue.push(o));
-    let read = 0, key = null, finished = false, done = false;
-    const handleLine = async (line) => {
-      line = line.trim();
-      if (!line) return;
-      if (!key) {                                          // header line(s) until the salt is known
-        const m = /"salt"\s*:\s*"([^"]+)"/.exec(line);
-        if (m) key = await ehDeriveKey(pw, _b64toU8(m[1]), 'decrypt');
-        return;
-      }
-      if (!line.startsWith('{')) return;                   // "chunks":[ / ]}
-      const c = JSON.parse(line.replace(/,$/, ''));
-      let plain;
-      try { plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _b64toU8(c.iv) }, key, _b64toU8(c.ct)); }
-      catch { throw new Error('Wrong password or corrupted file'); }
-      if (!done && scanner(td2.decode(plain))) done = true;
-      if (retain) for (const e of queue) if (e && !e.domain && e.url) e.domain = ehFastDomain(e.url);
-      await drain(false);
-    };
-    const td2 = new TextDecoder('utf-8');
-    // A line is one 20 MB encrypted piece; it arrives in 64 KB reads. Collect the fragments and join ONCE per line
-    // (carry + text on every read copied the growing line again and again — gigabytes of copying).
-    let pieces = [];
-    const feed = async (text, final) => {
-      let start = 0;
-      for (;;) {
-        const nl = text.indexOf('\n', start);
-        if (nl === -1) break;
-        pieces.push(text.slice(start, nl));
-        const line = pieces.join(''); pieces = [];
-        await handleLine(line);
-        start = nl + 1;
-      }
-      pieces.push(start ? text.slice(start) : text);
-      if (final) { const line = pieces.join(''); pieces = []; await handleLine(line); }
-    };
-    while (!finished) {
-      const { done: d, value } = await reader.read();
-      let text;
-      if (d) { text = td.decode(); finished = true; } else { read += value.byteLength; text = td.decode(value, { stream: true }); }
-      await feed(text, finished);
-      report(read, finished);
-    }
-    await drain(true);
-    return total;
-  }
-
-  if (isJson && head.includes('"__eh_encrypted"')) {
-    const raw = JSON.parse(await file.text());
-    const pw = prompt('This file is encrypted. Enter the password to decrypt:');
-    if (!pw) throw new Error('Cancelled');
-    let data;
-    try { data = JSON.parse(await ehDecrypt(raw, pw)); }
-    catch { throw new Error('Wrong password or corrupted file'); }
-    const list = Array.isArray(data) ? data : (data.entries || []);
-    for (let i = 0; i < list.length; i += batchSize) {
-      queue.push(...list.slice(i, i + batchSize));
-      await drain(true);
-      report(file.size * Math.min(1, (i + batchSize) / list.length), true);
-    }
-    return total;
-  }
-
-  const scanner = isJson ? ehJsonScanner(o => queue.push(o)) : null;
-  const reader  = file.stream().getReader();
-  const dec     = new TextDecoder('utf-8');
-  let read = 0, first = true, carry = '', finished = false;
-  while (!finished) {
-    const { done, value } = await reader.read();
-    let text;
-    if (done) { text = dec.decode(); finished = true; }
-    else { read += value.byteLength; text = dec.decode(value, { stream: true }); }
-    if (first && text) { if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1); first = false; }
-
-    if (scanner) {
-      if (text && scanner(text)) { finished = true; read = file.size; try { await reader.cancel(); } catch {} }
-    } else {
-      const lines = (carry + text).split('\n');
-      carry = finished ? '' : lines.pop();
-      for (const line of lines) { if (line.length > 4) { const e = ehParseTsvLine(line, retain); if (e) queue.push(e); } }
-    }
-    if (retain && scanner) {                             // JSON entries (Reading Mode): same extras as TSV
-      for (const e of queue) if (e && !e.domain && e.url) e.domain = ehFastDomain(e.url);
-    }
-    await drain(finished);
-    report(read, finished);
-  }
-  return total;
-}
-
 // ══ READING MODE ════════════════════════════════════════════════════════════
 let _rmEntries    = [];   // all entries from loaded file
 let _rmFiltered   = [];   // after date/search filter
@@ -5210,38 +4018,29 @@ function rmListArea()  { return document.getElementById('rmListArea'); }
 
 // ── Load file ────────────────────────────────────────────────────────────────
 async function rmLoadFile(file) {
-  const inner = document.querySelector('#rm-dropzone .rm-drop-inner');
-  let prog = document.getElementById('rmProgress');
-  if (!prog && inner) {
-    prog = document.createElement('div');
-    prog.id = 'rmProgress';
-    prog.style.cssText = 'margin-top:14px;font-size:0.82rem;color:var(--text2);text-align:center';
-    inner.appendChild(prog);
-  }
-  const setProg = (t) => { if (prog) prog.textContent = t; };
   try {
-    const entries = [];
-    let n = 0;
-    setProg(`${tr('reading_file', 'Reading file…')} 0%`);
-    await ehReadEntries(file, {
-      retain: true,
-      onBatch: async (batch) => {
-        for (const e of batch) {
-          // Slim exports / TSV files carry no ids; the list UI needs a unique one per row.
-          if (!e.id) e.id = 'rm_' + n;
-          n++;
-          entries.push(e);
-        }
-      },
-      onProgress: (read, size, count) =>
-        setProg(`${tr('reading_file', 'Reading file…')} ${Math.min(100, Math.floor(read / (size || 1) * 100))}% · ${fmtNum(count)} ${tr('entries', 'entries')}`),
-    });
-    if (!entries.length) { toast('No entries found in file', 'err'); setProg(''); return; }
+    const text = await file.text();
+    const raw = JSON.parse(text);
+    let data = raw;
 
-    setProg(tr('sorting_entries', 'Sorting…'));
-    await new Promise(r => setTimeout(r, 30));          // let the message paint before the long sort
-    entries.sort((a, b) => b.visitTime - a.visitTime);
-    _rmEntries = entries;
+    // Auto-detect encrypted export
+    if (raw.__eh_encrypted) {
+      const pw = prompt('This file is encrypted. Enter the password to decrypt:');
+      if (!pw) { toast('Cancelled', 'err'); return; }
+      try {
+        const decrypted = await ehDecrypt(raw, pw);
+        data = JSON.parse(decrypted);
+      } catch {
+        toast('Wrong password or corrupted file', 'err');
+        return;
+      }
+    }
+
+    // Support both raw array and {entries:[...]} exports
+    const entries = Array.isArray(data) ? data : (data.entries || []);
+    if (!entries.length) { toast('No entries found in file', 'err'); return; }
+
+    _rmEntries = entries.sort((a, b) => b.visitTime - a.visitTime);
     _rmFilterDate = null;
     _rmSearchVal  = '';
 
@@ -5253,17 +4052,13 @@ async function rmLoadFile(file) {
 
     rmBuildDateNav();
     rmDoFilter();
-    setProg('');
   } catch (err) {
-    setProg('');
     toast('Could not read file: ' + err.message, 'err');
   }
 }
 
 function rmUnload() {
   _rmEntries = []; _rmFiltered = []; _rmFilterDate = null; _rmSearchVal = '';
-  _rmDayIndex = []; _rmDayMap = new Map();
-  updateCalSidebarVisibility();
   document.getElementById('rm-dropzone').style.display = 'flex';
   document.getElementById('rm-reader').style.display   = 'none';
   document.getElementById('rmDateScroll').innerHTML    = '';
@@ -5271,43 +4066,49 @@ function rmUnload() {
 }
 
 // ── Date nav ─────────────────────────────────────────────────────────────────
-// One pass over the (newest-first) entries: each day is a contiguous slice, so picking a day later is a
-// slice() instead of formatting the date of every entry in the file.
-let _rmDayIndex = [];            // [{key:'YYYY-MM-DD', from, to}] newest → oldest
-let _rmDayMap   = new Map();
-function rmBuildDayIndex() {
-  _rmDayIndex = []; _rmDayMap = new Map();
-  const n = _rmEntries.length;
-  let i = 0;
-  while (i < n) {
-    const d = new Date(_rmEntries[i].visitTime);
-    if (isNaN(d)) { i++; continue; }
-    const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
-    const start = new Date(y, m, day).getTime(), end = new Date(y, m, day + 1).getTime();
-    let j = i;
-    while (j < n && _rmEntries[j].visitTime >= start && _rmEntries[j].visitTime < end) j++;
-    if (j === i) j = i + 1;
-    const rec = { key: calDateKey(y, m, day), from: i, to: j };
-    if (!_rmDayMap.has(rec.key)) { _rmDayIndex.push(rec); _rmDayMap.set(rec.key, rec); }
-    i = j;
-  }
-}
-
 function rmBuildDateNav() {
-  rmBuildDayIndex();
-  // Open the calendar on the newest day in the file
-  if (_rmDayIndex.length) {
-    const [y, m] = _rmDayIndex[0].key.split('-').map(Number);
-    calViewYear = y; calViewMonth = m - 1; calActiveDate = null;
-  }
-  updateCalSidebarVisibility();
-  rmActivateDatePill('all', true);
-}
+  const scroll = document.getElementById('rmDateScroll');
+  scroll.innerHTML = '';
 
-// keep the calendar sidebar in step when the filter changes through the range inputs / "all time" button
-function rmSyncCal(isAll) {
-  document.getElementById('calAllTimeBtn')?.classList.toggle('active', !!isAll);
-  if (_calTarget === 'reading') renderCalendarWidget();
+  // "All" is a static pill in HTML (outside the scroll), just wire it once
+  const allPill = document.getElementById('rmAllPill');
+  if (allPill) {
+    // Replace listener by cloning to avoid duplicates on reload
+    const fresh = allPill.cloneNode(true);
+    allPill.parentNode.replaceChild(fresh, allPill);
+    fresh.addEventListener('click', () => rmActivateDatePill('all'));
+  }
+
+  // Collect unique dates in the file, newest first — no "All" in scroll
+  const dateSet = new Set(_rmEntries.map(e => new Date(e.visitTime).toLocaleDateString('en-CA')));
+  const dates   = [...dateSet].sort((a, b) => b.localeCompare(a));
+
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  for (const key of dates) {
+    const d   = new Date(key + 'T12:00:00');
+    const lbl = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const sub = DAYS[d.getDay()];
+    const b = document.createElement('button');
+    b.className = 'dn-pill';
+    b.dataset.date = key;
+    b.innerHTML = `<span class="dn-pill-label">${esc(lbl)}</span><span class="dn-pill-day">${esc(sub)}</span>`;
+    b.addEventListener('click', () => rmActivateDatePill(key));
+    scroll.appendChild(b);
+  }
+
+  rmActivateDatePill('all', true);
+
+  // Arrow hold-scroll
+  (function() {
+    const wrap = document.getElementById('rmDateScrollWrap');
+    let _t = null, _i = null;
+    function startH(dir) { stopH(); wrap.scrollBy({left:dir*220,behavior:'smooth'}); _t=setTimeout(()=>{_i=setInterval(()=>wrap.scrollBy({left:dir*120}),80);},400); }
+    function stopH()  { clearTimeout(_t); clearInterval(_i); _t=_i=null; }
+    const L = document.getElementById('rmDnLeft');
+    const R = document.getElementById('rmDnRight');
+    L.addEventListener('mousedown',()=>startH(-1)); R.addEventListener('mousedown',()=>startH(1));
+    ['mouseup','mouseleave'].forEach(ev=>{L.addEventListener(ev,stopH);R.addEventListener(ev,stopH);});
+  })();
 }
 
 function rmActivateDatePill(key, silent) {
@@ -5316,13 +4117,30 @@ function rmActivateDatePill(key, silent) {
   const toEl   = document.getElementById('rmDateTo');
   if (fromEl) fromEl.value = _rmFilterDate || '';
   if (toEl)   toEl.value   = _rmFilterDate || '';
-  if (key !== 'all') {
-    calActiveDate = key;
-    const [y, m] = key.split('-').map(Number);
-    calViewYear = y; calViewMonth = m - 1;
+  // Clear scroll pills + external All pill
+  document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
+  const rmAllPill = document.getElementById('rmAllPill');
+  if (rmAllPill) rmAllPill.classList.remove('active');
+
+  if (key === 'all') {
+    if (rmAllPill) rmAllPill.classList.add('active');
+  } else {
+    const t = document.querySelector(`#rmDateScroll .dn-pill[data-date="${key}"]`);
+    if (t) {
+      t.classList.add('active');
+      if (!silent) {
+        const wrap = document.getElementById('rmDateScrollWrap');
+        const allPills = Array.from(document.querySelectorAll('#rmDateScroll .dn-pill'));
+        const idx = allPills.indexOf(t);
+        const pillsBack = wrap.offsetWidth < 700 ? 2 : 6;
+        const precedingPills = allPills.slice(Math.max(0, idx - pillsBack), idx);
+        const gap = 5;
+        const offsetBefore = precedingPills.reduce((sum, p) => sum + p.offsetWidth + gap, 0);
+        const pillLeft = t.getBoundingClientRect().left - wrap.getBoundingClientRect().left + wrap.scrollLeft;
+        wrap.scrollTo({ left: pillLeft - offsetBefore, behavior: 'smooth' });
+      }
+    }
   }
-  document.getElementById('calAllTimeBtn')?.classList.toggle('active', key === 'all');
-  if (_calTarget === 'reading') renderCalendarWidget();
   if (!silent) rmDoFilter();
 }
 
@@ -5338,26 +4156,24 @@ function rmDoFilter() {
   const fromTs  = (!_rmFilterDate && fromVal) ? new Date(fromVal + 'T00:00:00').getTime() : null;
   const toTs    = (!_rmFilterDate && toVal)   ? new Date(toVal + 'T23:59:59').getTime()   : null;
 
-  // Narrow down by date first, without touching entries outside the range:
-  // a single day is a precomputed slice, a range is two binary searches (entries are sorted newest-first).
-  let base = _rmEntries;
-  if (_rmFilterDate) {
-    const r = _rmDayMap.get(_rmFilterDate);
-    base = r ? _rmEntries.slice(r.from, r.to) : [];
-  } else if (fromTs || toTs) {
-    const firstIdx = (fn) => { let lo = 0, hi = _rmEntries.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (fn(_rmEntries[mid])) hi = mid; else lo = mid + 1; } return lo; };
-    const start = toTs   ? firstIdx(e => e.visitTime <= toTs)   : 0;
-    const end   = fromTs ? firstIdx(e => e.visitTime <  fromTs) : _rmEntries.length;
-    base = _rmEntries.slice(start, Math.max(start, end));
-  }
-  _rmFiltered = !words.length ? base : base.filter(e => {
-    const dom = e.domain || tryDomain(e.url);
-    let hay;
-    if      (mode === 'title')  hay = (e.title || '').toLowerCase();
-    else if (mode === 'url')    hay = (e.url   || '').toLowerCase();
-    else if (mode === 'domain') hay = dom.toLowerCase();
-    else                        hay = [e.url, e.title||'', dom].join(' ').toLowerCase();
-    return words.every(w => hay.includes(w));
+  _rmFiltered = _rmEntries.filter(e => {
+    if (_rmFilterDate) {
+      const eDate = new Date(e.visitTime).toLocaleDateString('en-CA');
+      if (eDate !== _rmFilterDate) return false;
+    } else if (fromTs || toTs) {
+      if (fromTs && e.visitTime < fromTs) return false;
+      if (toTs   && e.visitTime > toTs)   return false;
+    }
+    if (words.length) {
+      const dom = e.domain || tryDomain(e.url);
+      let hay;
+      if      (mode === 'title')  hay = (e.title || '').toLowerCase();
+      else if (mode === 'url')    hay = (e.url   || '').toLowerCase();
+      else if (mode === 'domain') hay = dom.toLowerCase();
+      else                        hay = [e.url, e.title||'', dom].join(' ').toLowerCase();
+      if (!words.every(w => hay.includes(w))) return false;
+    }
+    return true;
   });
 
   _rmVsOffset = 0; _rmVsLoading = false;
@@ -5460,14 +4276,12 @@ document.addEventListener('DOMContentLoaded', () => {
     _rmFilterDate = null; // clear pill selection when using range
     document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
     document.getElementById('rmAllPill')?.classList.remove('active');
-    rmSyncCal(false);
     rmDoFilter();
   });
   document.getElementById('rmDateTo')?.addEventListener('change', () => {
     _rmFilterDate = null;
     document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
     document.getElementById('rmAllPill')?.classList.remove('active');
-    rmSyncCal(false);
     rmDoFilter();
   });
   // All time / clear filters
@@ -5481,7 +4295,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('rmDateTo').value   = '';
     document.querySelectorAll('#rmDateScroll .dn-pill').forEach(b => b.classList.remove('active'));
     document.getElementById('rmAllPill')?.classList.add('active');
-    rmSyncCal(true);
     rmDoFilter();
   });
 });
@@ -5526,23 +4339,16 @@ async function handleIgnoreListAccess() {
       desc.textContent  = tr('ignore_list_setup_desc','No password is set yet. Create a master password to protect your ignore list.');
       resetBtn.style.display = 'none';
       okBtn.textContent =  tr('create_password','Create Password');
-      cancelBtn.textContent = tr('cancel','Cancel');
-      input.placeholder=  tr('master_password','Master Password');
     } else if (m === 'unlock') {
       title.textContent = tr('ignore_list_access','🔒 Ignore List Access');
       desc.textContent  = tr('ignore_list_access_desc','Enter your master password to view the ignore list.');
       resetBtn.style.display = '';
-      resetBtn.textContent = tr('reset','Reset');
       okBtn.textContent = tr('ok','OK');
-      cancelBtn.textContent = tr('cancel','Cancel');
-      input.placeholder=  tr('master_password','Master Password');
     } else if (m === 'reset-new') {
       title.textContent = tr('reset_ignore_list','🔑 Reset Ignore List');
       desc.textContent  = tr('reset_ignore_list_desc','Ignore list has been cleared. Enter a new master password to continue.');
       resetBtn.style.display = 'none';
       okBtn.textContent = tr('set_new_password','Set New Password');
-      cancelBtn.textContent = tr('cancel','Cancel');
-      input.placeholder=  tr('master_password','Master Password');
     }
     input.value = '';
     errEl.style.display = 'none';
@@ -5587,7 +4393,7 @@ async function handleIgnoreListAccess() {
   }
 
   async function onReset() {
-    if (!confirm(tr('confirm_clear_ignore_list','This will clear your entire ignore list and remove the password. Continue?'))) return;
+    if (!confirm('This will clear your entire ignore list and remove the password. Continue?')) return;
     // Clear ignore list and password
     await chrome.storage.local.remove([IGNORE_PW_KEY, 'eh_ignore_list']);
     await send('SET_IGNORE_LIST', { list: [] }).catch(() => {});
@@ -5725,81 +4531,7 @@ function _showIgnorePanel() {
   if (typeof window.applyTranslations === 'function') window.applyTranslations();
 }
 
-// ══ SETTINGS: UNSAVED CHANGES ═══════════════════════════════════════════════
-// A snapshot of every Settings control is taken once the panel has been filled from the saved
-// settings (and again after a successful save). Leaving the panel with a different state asks
-// whether to save. Controls that apply/save on their own (language, wallpaper, storage backend,
-// file pickers) are not part of the snapshot.
-let _settingsSnap = null;
-function _settingsState() {
-  const out = {};
-  document.querySelectorAll('#panel-settings input, #panel-settings select, #panel-settings textarea').forEach((el, i) => {
-    if (el.type === 'file' || el.type === 'button' || el.type === 'submit') return;
-    if (el.id === 'languageSelect' || el.id === 'storageBackendSel' || /^wp/.test(el.id)) return;
-    out[el.id || ('#' + i)] = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
-  });
-  out.__icon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || '';
-  return JSON.stringify(out);
-}
-function snapshotSettings() { _settingsSnap = _settingsState(); }
-function settingsDirty() { return _settingsSnap !== null && _settingsSnap !== _settingsState(); }
-
-// Save / Discard / Cancel dialog. Resolves 'save' | 'discard' | 'cancel'.
-function askSaveSettings() {
-  return new Promise(resolve => {
-    const ov = document.createElement('div');
-    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.5)';
-    ov.innerHTML = `<div role="dialog" aria-modal="true" style="width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1);color:var(--text);border:1px solid var(--border2);box-shadow:0 20px 60px var(--shadow)">
-      <div style="font-size:1.05rem;font-weight:700;margin-bottom:6px"></div>
-      <div style="font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:16px"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"></div></div>`;
-    const [title, msg, btns] = ov.firstElementChild.children;
-    title.textContent = tr('unsaved_changes_title', 'Save changes?');
-    msg.textContent = tr('unsaved_changes_msg', 'You have unsaved changes in Settings.');
-    const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
-    const mk = (label, v, cls) => {
-      const b = document.createElement('button');
-      b.className = 'action-btn' + (cls ? ' ' + cls : '');
-      b.textContent = label;
-      b.addEventListener('click', () => done(v));
-      btns.appendChild(b);
-      return b;
-    };
-    mk(tr('cancel', 'Cancel'), 'cancel');
-    mk(tr('discard', 'Discard'), 'discard');
-    const saveBtn = mk(tr('save_changes', 'Save changes'), 'save', 'primary');
-    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); done('cancel'); } };
-    document.addEventListener('keydown', onKey, true);
-    ov.addEventListener('mousedown', e => { if (e.target === ov) done('cancel'); });
-    document.body.appendChild(ov);
-    saveBtn.focus();
-  });
-}
-// Puts every live-previewed setting back to what is saved.
-function revertSettingsPreview() {
-  populateSettings(_curSettings);
-  applyVisuals(_curSettings);
-  applyHighContrastMode(_curSettings.highContrastMode === true);
-}
-let _leavingSettings = false;
-async function guardLeaveSettings(name) {
-  if (_leavingSettings) return false;
-  _leavingSettings = true;
-  try {
-    const choice = await askSaveSettings();
-    if (choice === 'cancel') return false;
-    if (choice === 'save') { if (!await saveSettings()) return false; }
-    else { revertSettingsPreview(); snapshotSettings(); }
-    return true;
-  } finally { _leavingSettings = false; }
-}
-
-function switchPanel(name, skipGuard) {
-  // Leaving Settings with unsaved edits: ask first, then continue (or stay)
-  if (!skipGuard && name !== 'settings' && document.getElementById('panel-settings')?.classList.contains('active') && settingsDirty()) {
-    guardLeaveSettings(name).then(ok => { if (ok) switchPanel(name, true); });
-    return;
-  }
+function switchPanel(name) {
   // Lock the ignore list whenever navigating away from it
   if (name !== 'ignorelist') {
     const inner = document.getElementById('ignoreListInner');
@@ -5828,52 +4560,32 @@ function switchPanel(name, skipGuard) {
    if (name === 'mostvisited') loadMostVisited();
   if (name === 'quickfilters') { if (window.QuickFilters) window.QuickFilters.loadPanel(); }
   if (name === 'settings') {
-    _settingsSnap = null;   // not dirty-checked until the form has been filled
-    Promise.all([
-      send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {}),
-      send('GET_SESSIONS').then(r => {
-        const el = document.getElementById('maxSessionsInput');
-        if (el && r.maxSessions) el.value = r.maxSessions;
-      }).catch(() => {}),
-      send('GET_AUTO_SAVE_INTERVAL').then(r => {
-        const el = document.getElementById('autoSaveInput');
-        if (el) el.value = r.minutes || 0;
-      }).catch(() => {}),
-    ]).then(snapshotSettings);
+    send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
+    send('GET_SESSIONS').then(r => {
+      const el = document.getElementById('maxSessionsInput');
+      if (el && r.maxSessions) el.value = r.maxSessions;
+    }).catch(() => {});
+    send('GET_AUTO_SAVE_INTERVAL').then(r => {
+      const el = document.getElementById('autoSaveInput');
+      if (el) el.value = r.minutes || 0;
+    }).catch(() => {});
   }
 }
 
 // ══ DELETE HISTORY MODAL ═════════════════════════════════════════════════════
 let _dhSelectedRange = null;
 
-// "Last hour / 5 months…" counts back from the newest entry in the history (not from today), so a history
-// that ends a while ago still has its latest period selected. The end is always "now" (nothing newer exists).
-let _dhAnchor = 0, _dhAnchorFound = false, _dhAnchorErr = '';
-async function dhLoadAnchor() {
-  _dhAnchorFound = false; _dhAnchorErr = '';
-  const now = Date.now();
-  try {
-    const r = await sendLong('GET_NEWEST_VISIT');
-    if (r && r.found && r.time) { _dhAnchor = r.time; _dhAnchorFound = true; return _dhAnchor; }
-    if (r && r.err) _dhAnchorErr = r.err;
-  } catch (e) { _dhAnchorErr = String(e && e.message || e); }
-  // Fallback: the list is newest-first, so the first row of an unfiltered search is the newest entry.
-  try {
-    const r = await sendLong('SEARCH', { query: '', mode: 'all', limit: 1, offset: 0, noTotal: true });
-    const e0 = r && r.entries && r.entries[0];
-    if (e0 && e0.visitTime) { _dhAnchor = Math.min(e0.visitTime, now); _dhAnchorFound = true; return _dhAnchor; }
-  } catch (e) { _dhAnchorErr = (_dhAnchorErr ? _dhAnchorErr + ' / ' : '') + String(e && e.message || e); }
-  console.warn('[EH] newest entry lookup failed:', _dhAnchorErr);
-  _dhAnchor = now;
-  return _dhAnchor;
-}
 function rangeToTimes(range) {
   const now = Date.now();
-  const a = _dhAnchor || now;
-  const span = { '1h': 3600000, '24h': 86400000, '7d': 7*86400000, '30d': 30*86400000, '5mo': 150*86400000 }[range];
-  if (range === 'all') return [0, now];
-  if (!span) return null;
-  return [a - span, now];
+  const map = {
+    '1h':  [now - 3600000,       now],
+    '24h': [now - 86400000,      now],
+    '7d':  [now - 7*86400000,    now],
+    '30d': [now - 30*86400000,   now],
+    '5mo': [now - 150*86400000,  now],
+    'all': [0,                   now],
+  };
+  return map[range] || null;
 }
 
 function openDeleteHistoryModal() {
@@ -6055,7 +4767,7 @@ async function loadDevStats() {
   const grid = document.getElementById('devStatsGrid');
   if (!grid) return;
   try {
-    const s = await sendLong('GET_DEV_STATS');
+    const s = await send('GET_DEV_STATS');
     const nextFlushLabel = s.syncIntervalMins === 0
       ? 'Every visit (instant mode)'
       : s.nextFlushAt ? fmtWhen(s.nextFlushAt) : 'Due on next check (~1m)';
@@ -6744,11 +5456,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Theme buttons
   document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
   document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
-  // Follow-system toggle: previews immediately, saved with "Save Settings" (or reverted on discard)
-  document.getElementById('followSystemThemeToggle')?.addEventListener('change', ev => {
-    if (window.EhTheme) EhTheme.set(ev.target.checked, _curSettings.theme === 'light' ? 'light' : 'dark', false);
-    applyTheme();
-  });
 
   // Setup
   document.querySelectorAll('.nav-item[data-panel]').forEach(b =>
@@ -6880,14 +5587,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const activeBtn = document.querySelector('.dh-range-btn.active');
       const label = (activeBtn ? activeBtn.textContent.trim() : '') || _dhSelectedRange;
       await dhLoadExceptions();
-      await dhLoadAnchor();
       const warn = document.getElementById('dhConfirmWarn');
       if (warn) {
-        const tt = rangeToTimes(_dhSelectedRange);
-        const when = (tt && tt[0] > 0)
-          ? ` (${new Date(tt[0]).toLocaleString()} → ${tr('dh_now', 'now')}; ${_dhAnchorFound ? tr('dh_from_newest','counted from your newest entry, {0}').replace('{0}', new Date(_dhAnchor).toLocaleString()) : tr('dh_from_now', 'newest entry unknown — counted from now')})`
-          : '';
-        let msg = tr('dh_confirm_warn', 'This will permanently delete history for: {0}. Click Delete again to confirm.', label + when);
+        let msg = tr('dh_confirm_warn', 'This will permanently delete history for: {0}. Click Delete again to confirm.', label);
         if (_dhExceptions.length) msg += ' ' + tr('dh_confirm_exceptions', 'Domains on your exceptions list ({0}) will be kept.', _dhExceptions.length);
         warn.textContent = '\u26a0 ' + msg;
         warn.style.display = 'block';
@@ -6907,18 +5609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.textContent = tr('deleting', 'Deleting…');
     try {
       await dhLoadExceptions(); // same list the background will enforce
-      // Long deletes (big history) report progress from the database — show it on the button.
-      const poll = setInterval(async () => {
-        try {
-          const p = await new Promise(res => chrome.runtime.sendMessage({ type: 'GET_DB_PROGRESS' }, x => { void chrome.runtime.lastError; res(x || {}); }));
-          const base = tr('deleting', 'Deleting…');
-          if (p.phase === 'deleting' && p.total) btn.textContent = base + ' ' + Math.min(99, Math.round(100 * p.done / p.total)) + '%';
-          else if (p.phase === 'indexing') btn.textContent = base + ' (' + tr('updating_index', 'updating search index') + ')';
-        } catch (_) {}
-      }, 700);
-      let r;
-      try { r = await sendLong('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache }); }
-      finally { clearInterval(poll); }
+      const r = await send('DELETE_HISTORY_RANGE', { startTime, endTime, clearCookies, clearCache });
       if (r?.error) { toast(r.error, 'err'); }
       else {
         toast(tr('deleted_history_entries', 'Deleted {0} history entries', fmtNum(r.deleted || 0))
@@ -6978,7 +5669,7 @@ async function loadMostVisited() {
   el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">⏳</span><span data-i18n-key="loading">Loading…</span></div>';
   
   try {
-    const data = await sendLong('GET_MOST_VISITED', { viewType: curMvType, period: curMvPeriod });
+    const data = await send('GET_MOST_VISITED', { viewType: curMvType, period: curMvPeriod });
     renderMostVisited(data.items);
   } catch (err) {
     //console.error('[MostVisited] Error:', err);

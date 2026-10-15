@@ -172,10 +172,6 @@ a { color: inherit; text-decoration: none; }
   overflow-wrap: anywhere;
 }
 .sa-btn:hover { background: var(--surf2); color: var(--text); }
-/* "Follow system theme" is on: the manual Light / Dark buttons go away and the
-   Lock button (flex:1) stretches across the whole sidebar footer. */
-html[data-follow-theme="true"] #themeLight,
-html[data-follow-theme="true"] #themeDark { display: none; }
 .sa-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Main + Panels ── */
@@ -1789,61 +1785,3 @@ html.hide-nav-icons .nav-icon { display: none; }
    sidebar, calendar sidebar and panels (--surf0) instead of its own shade. Set on
    <html>, so it out-ranks the per-theme --list-bg declarations. */
 html.match-ui-colors { --list-bg: var(--surf0); }
-
-/* ═══ WebDAV settings ═══════════════════════════════════════════════════════ */
-.wd-box {
-  display: flex; flex-direction: column; gap: 10px;
-  width: 100%; max-width: 320px; margin-top: 4px; padding: 12px;
-  background: var(--surf1); border: 1px solid var(--border2); border-radius: 12px;
-}
-.wd-field { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-.wd-lbl { font-size: 0.7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text3); }
-.wd-input {
-  width: 100%; box-sizing: border-box !important;
-  background: var(--surf2); border: 1.5px solid var(--border2) !important; border-radius: var(--r) !important;
-  color: var(--text) !important; font-size: 0.85rem; font-family: inherit;
-  padding: 8px 10px !important; outline: none !important; text-align: left;
-  transition: border-color .15s, box-shadow .15s, background .15s;
-}
-.wd-input::placeholder { color: var(--text3); }
-.wd-input:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border2)); }
-.wd-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-.wd-pw { position: relative; display: block; }
-.wd-pw .wd-input { padding-right: 34px; }
-.wd-eye {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 4px 6px;
-  border-radius: 6px; opacity: .6; color: var(--text);
-}
-.wd-eye:hover { opacity: 1; background: var(--surf3); }
-.wd-actions { display: flex; justify-content: flex-end; }
-.wd-result { min-height: 1.1em; font-size: 0.75rem; line-height: 1.35; color: var(--text3); text-align: left; word-break: break-word; }
-.wd-result.ok  { color: var(--green); }
-.wd-result.err { color: var(--danger); }
-
-/* ═══ Progress toast (uploads etc.) ═════════════════════════════════════════ */
-.toast.progress { min-width: 260px; max-width: min(420px, 90vw); }
-.toast .toast-title { font-size: 0.85rem; margin-bottom: 8px; }
-.toast .toast-line { height: 6px; border-radius: 3px; background: color-mix(in srgb, currentColor 18%, transparent); overflow: hidden; }
-.toast .toast-line > span { display: block; height: 100%; border-radius: 3px; background: currentColor; transition: width .25s ease; }
-.toast .toast-line.indet > span { width: 38% !important; animation: toastSlide 1.1s ease-in-out infinite; transition: none; }
-@keyframes toastSlide { 0% { margin-left: -38%; } 100% { margin-left: 100%; } }
-
-
-/* ═══ Reading Mode uses the calendar sidebar (always) ═══════════════════════ */
-body.rm-cal #panel-readingmode .date-nav-row,
-body.rm-cal .cal-hours-label,
-body.rm-cal .cal-hours-grid { display: none; }
-.cal-day-cell.no-data { opacity: 0.3; cursor: default; }
-.cal-day-cell.has-data:not(.selected):not(.outside) { font-weight: 600; }
-.cal-day-cell.has-data { position: relative; }
-.cal-day-cell.has-data:not(.selected)::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: .7; }
-
-.toast.progress-slot { bottom: 84px; z-index: 10001; }
-
-/* the global `span{pointer-events:none}` rule must not reach the password field */
-.wd-pw, .wd-pw * { pointer-events: auto; }
-
-/* virtualized date pills: regular pills share one measured width so positions can be computed */
-#dateScroll .dn-pill:not(.no-day) { width: var(--pw, auto); box-sizing: border-box; padding-left: 4px; padding-right: 4px; }
-#dateScroll .dn-spacer { flex: 0 0 auto; height: 1px; pointer-events: none; }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Extended History",
-  "version": "4.2.2",
+  "version": "4.2.0",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "permissions": [
@@ -11,7 +11,6 @@
     "browsingData",
     "contextMenus",
     "history",
-    "offscreen",
     "sessions",
     "sidePanel",
     "storage",
@@ -20,27 +19,21 @@
     "webNavigation",
     "windows"
   ],
-  "optional_host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
   "externally_connectable": {
-    "ids": [
-      "kgoinbofcdfokmfmlgadadfkabjliofl"
-    ],
+    "ids": ["kgoinbofcdfokmfmlgadadfkabjliofl"],
     "matches": []
   },
   "background": {
-    "service_worker": "js/background.js"
+    "service_worker": "background.js"
   },
   "chrome_url_overrides": {
-    "history": "html/history.html"
+    "history": "history.html"
   },
   "omnibox": {
     "keyword": "q"
   },
   "side_panel": {
-    "default_path": "html/popup.html?sidebar=1"
+    "default_path": "popup.html?sidebar=1"
   },
   "commands": {
     "open_sidebar": {
@@ -51,16 +44,12 @@
     }
   },
   "action": {
-    "default_popup": "html/popup.html",
+    "default_popup": "popup.html",
     "default_title": "Extended History"
   },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "minimum_chrome_version": "116",
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }
