@@ -162,6 +162,13 @@ Fixed/changed in version 4.2.1:
 -Added import/export/delete progress notification bubbles
 -Added average visits by hour of day in Activity tab
 -Added average time per weekday (all time) in Time Spent tab
+
+Fixed/changed in version 4.2.2:
+-Fixed black flashing when using light mode
+-Fixed "Average visits by hour of day" not highlighting based current time
+-Added follow system theme option
+-Moving cursor over "Daily visits — 90 days" chart shows data for each day now
+-"Average time per weekday" chart is now based on "All time" or 7,15,30,90 days based on selection
 </pre>
 
 
