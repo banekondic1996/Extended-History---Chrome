@@ -144,8 +144,9 @@ Fixed/changed in version 4.2.0:
 
 Fixed/changed in version 4.2.1:
 -Major architectural change, database uses now WASM based SQlite to read large history faster.
-  date pills now lazy load to save ram when history is big.
-  Also other performance improvements regarding UI loading time
+  Date pills now lazy load to save ram when history is big.
+  Also other performance improvements regarding UI loading time.
+  Database auto repairs if broken, but needs some time if it's big
 -Fixed history deleting bug, that was only deleting counting from current date and not last entry date
 -Date pill arrows now switch between dates
 -Right clicking date pill arrows or next/prev date buttons now skips to oldest or newest date
