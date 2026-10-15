@@ -169,6 +169,7 @@ Fixed/changed in version 4.2.2:
 -Added follow system theme option
 -Moving cursor over "Daily visits — 90 days" chart shows data for each day now
 -"Average time per weekday" chart is now based on "All time" or 7,15,30,90 days based on selection
+-Added changed settings confirmation dialog
 </pre>
 
 
