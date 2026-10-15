@@ -115,16 +115,24 @@ let _popupShowUrl = true; // cached from settings — defaults on, matches "!== 
 // including the recent-history list - could start until that whole blob had
 // been read and parsed. Settings now resolve on their own; the wallpaper is
 // fetched separately and applied whenever it arrives.
+let _popupWp = null;
 chrome.storage.local.get('eh_wallpaper', w => {
     const wp = w && w.eh_wallpaper;
     if (!(wp && wp.enabled && wp.dataUrl)) return;
+    _popupWp = wp;
     onSettingsReady(() => {
         _applyPopupWallpaper(wp, document.documentElement.getAttribute('data-theme') || 'dark');
     });
 });
+// OS switched light/dark while "follow system theme" is on (the side panel stays open): recolor the wallpaper overlay
+window.addEventListener('eh-theme-changed', () => {
+    if (_popupWp) _applyPopupWallpaper(_popupWp, document.documentElement.getAttribute('data-theme') || 'dark');
+});
 chrome.storage.local.get('eh_settings', r => {
     const s  = r.eh_settings  || {};
-    document.documentElement.setAttribute('data-theme', s.theme || 'dark');
+    // Same rule as history.js: manual choice, or the OS light/dark setting when "follow system" is on
+    if (window.EhTheme) EhTheme.set(s.followSystemTheme === true, s.theme === 'light' ? 'light' : 'dark', true);
+    else document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
     applyIconVariant(s.toolbarIcon || 'default');

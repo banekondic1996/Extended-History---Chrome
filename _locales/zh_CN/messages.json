@@ -1241,7 +1241,9 @@
       }
     }
   },
-  "no_history_found": {"message": "未找到历史记录"},
+  "avg_time_per_weekday_range": {"message": "每周各工作日的平均用时（最近 {0} 天）"},
+  "follow_system_theme": {"message": "跟随系统主题"},
+  "follow_system_theme_desc": {"message": "根据操作系统自动切换浅色和深色模式。启用此选项时，侧边栏中的“浅色 / 深色”按钮将被隐藏。"},
   "pop_cant_store": {
     "message": "无法存储此页面"
   },

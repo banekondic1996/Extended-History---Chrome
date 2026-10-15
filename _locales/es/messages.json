@@ -1250,6 +1250,9 @@
       }
     }
   },
+  "avg_time_per_weekday_range": {"message": "Tiempo promedio por día de la semana (últimos {0} días)"},
+  "follow_system_theme": {"message": "Seguir el tema del sistema"},
+  "follow_system_theme_desc": {"message": "Cambiar automáticamente entre el modo claro y oscuro según el sistema operativo. Los botones Claro / Oscuro de la barra lateral se ocultan mientras esta opción está activada."},
   "dh_now": {"message": "Ahora"},
   "avg_time_per_weekday": {"message": "Tiempo promedio por día de la semana (todo el historial)"},
   "avg_visits_per_hour": {"message": "Visitas promedio por hora del día"},

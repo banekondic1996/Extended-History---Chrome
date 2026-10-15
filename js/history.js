@@ -378,15 +378,32 @@ chrome.runtime.onMessage.addListener((m) => {
 });
 
 // ── Theme ──────────────────────────────────────────────────────────────────
-function setTheme(t) {
+// theme-init.js (loaded in <head>) already applied the last-known theme before first paint.
+// applyTheme() only syncs the rest of the UI to the effective theme; it never saves anything.
+function applyTheme() {
+  const t = window.EhTheme ? EhTheme.effective() : (document.documentElement.getAttribute('data-theme') || 'dark');
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeLight').classList.toggle('active', t === 'light');
-  document.getElementById('themeDark').classList.toggle('active', t === 'dark');
-  _curSettings.theme = t;
-  send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
+  document.getElementById('themeLight')?.classList.toggle('active', t === 'light');
+  document.getElementById('themeDark')?.classList.toggle('active', t === 'dark');
   // Re-apply wallpaper so overlay color adapts to new theme
   chrome.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
+// Manual Light / Dark buttons (hidden while "Follow system theme" is on).
+function setTheme(t) {
+  if (window.EhTheme) EhTheme.set(false, t, true); else document.documentElement.setAttribute('data-theme', t);
+  _curSettings.theme = t;
+  applyTheme();
+  send('SAVE_SETTINGS', { settings: { theme: t } }).catch(() => {});
+}
+// Applies saved settings: stored manual choice + follow-system flag. persist=true mirrors them
+// to localStorage (what theme-init.js reads before the next paint).
+function applyThemeSettings(s, persist = true) {
+  const follow = s.followSystemTheme === true, theme = s.theme === 'light' ? 'light' : 'dark';
+  if (window.EhTheme) EhTheme.set(follow, theme, persist);
+  applyTheme();
+}
+// OS switched light/dark while following it (or the toggle was previewed in Settings)
+window.addEventListener('eh-theme-changed', applyTheme);
 
 // ── State ──────────────────────────────────────────────────────────────────
 let allResults   = [];   // all matching entries from backend
@@ -1638,7 +1655,7 @@ function drawHourlyChart(avg, days) {
   const iW = W - p.l - p.r, iH = H - p.t - p.b;
   const vals = Array.from({ length: 24 }, (_, h) => (avg && avg[h]) || 0);
   const hasData = vals.some(v => v > 0);
-  const maxV = Math.max(...vals, 0.1), maxI = vals.indexOf(Math.max(...vals));
+  const maxV = Math.max(...vals, 0.1), curH = new Date().getHours();   // highlight the hour we are in now
   const fmt = v => v >= 10 ? String(Math.round(v)) : v.toFixed(1);
 
   let grid = '';
@@ -1653,7 +1670,7 @@ function drawHourlyChart(avg, days) {
     const bh = Math.max(v > 0 ? 2 : 0, (v / maxV) * iH);
     const x = p.l + slot * h + (slot - bw) / 2, y = p.t + iH - bh;
     const lbl = `${String(h).padStart(2, '0')}:00–${String(h).padStart(2, '0')}:59`;
-    bars += `<rect class="hr-bar" x="${x}" y="${y}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" fill-opacity="${hasData && h === maxI ? 1 : 0.6}" data-h="${lbl}" data-v="${v.toFixed(1)}"/>`;
+    bars += `<rect class="hr-bar" x="${x}" y="${y}" width="${bw}" height="${bh}" rx="2" fill="var(--accent)" fill-opacity="${h === curH ? 1 : 0.6}" data-h="${lbl}" data-v="${v.toFixed(1)}"/>`;
     bars += `<text class="ax-lbl" font-size="${slot < 18 ? 8 : 9}" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${h}h</text>`;
   });
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -1667,6 +1684,51 @@ function drawHourlyChart(avg, days) {
     });
     bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
   });
+}
+
+// Hover for a smooth line chart: the pointer snaps to the nearest data point, a dot + guide line
+// appear on it and the tooltip shows its label. points = [{x, y, text}] in SVG viewBox coordinates.
+function attachLineHover(svg, wrap, tip, points, color, onClick) {
+  if (!points.length) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('pointer-events', 'none');
+  g.style.display = 'none';
+  const guide = document.createElementNS(NS, 'line');
+  guide.setAttribute('stroke', color); guide.setAttribute('stroke-opacity', '0.35'); guide.setAttribute('stroke-dasharray', '3 3');
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('r', '5'); dot.setAttribute('fill', color); dot.setAttribute('stroke', 'var(--bg)'); dot.setAttribute('stroke-width', '2');
+  g.append(guide, dot);
+  svg.appendChild(g);
+
+  const vb = svg.viewBox.baseVal;
+  const nearest = ev => {
+    const r = svg.getBoundingClientRect();
+    const x = (ev.clientX - r.left) * (vb.width / (r.width || 1));
+    let lo = 0, hi = points.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (points[m].x <= x) lo = m; else hi = m; }
+    return Math.abs(points[lo].x - x) <= Math.abs(points[hi].x - x) ? lo : hi;
+  };
+  let cur = -1;
+  svg.style.cursor = onClick ? 'pointer' : 'default';
+  // The same <svg> is redrawn many times: drop the previous redraw's listeners first
+  if (svg._ehHover) { svg.removeEventListener('mousemove', svg._ehHover.move); svg.removeEventListener('mouseleave', svg._ehHover.leave); svg.removeEventListener('click', svg._ehHover.click); }
+  const move = ev => {
+    cur = nearest(ev);
+    const pt = points[cur];
+    guide.setAttribute('x1', pt.x); guide.setAttribute('x2', pt.x);
+    guide.setAttribute('y1', pt.top); guide.setAttribute('y2', pt.bottom);
+    dot.setAttribute('cx', pt.x); dot.setAttribute('cy', pt.y);
+    g.style.display = '';
+    tip.innerHTML = pt.text;
+    placeChartTip(tip, wrap, ev);
+  };
+  const leave = () => { g.style.display = 'none'; tip.style.display = 'none'; cur = -1; };
+  const click = () => { if (onClick && cur >= 0) onClick(points[cur]); };
+  svg.addEventListener('mousemove', move);
+  svg.addEventListener('mouseleave', leave);
+  svg.addEventListener('click', click);
+  svg._ehHover = { move, leave, click };
 }
 
 function drawLineChart(daily) {
@@ -1700,12 +1762,6 @@ function drawLineChart(daily) {
   }
   const area = path + ` L ${xOf(entries.length-1)} ${H} L ${xOf(0)} ${H} Z`;
 
-  let dots = '';
-  entries.forEach(([date, v], i) => {
-    if (i % 7 !== 0 && i !== entries.length - 1) return;
-    dots += `<circle class="c-dot" cx="${xOf(i)}" cy="${yOf(v)}" r="4" fill="var(--accent)" stroke="var(--bg)" stroke-width="2" data-d="${date}" data-v="${v}"/>`;
-  });
-
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
   svg.innerHTML = `
@@ -1717,20 +1773,11 @@ function drawLineChart(daily) {
   </defs>
   ${grid}
   <path d="${area}" fill="url(#lg1)"/>
-  <path class="c-path" d="${path}" stroke="var(--accent)"/>
-  ${dots}`;
+  <path class="c-path" d="${path}" stroke="var(--accent)"/>`;
 
-  svg.querySelectorAll('.c-dot').forEach(dot => {
-    dot.addEventListener('mousemove', ev => {
-      const r = wrap.getBoundingClientRect();
-      tip.style.display = 'block';
-      tip.style.left = `${ev.clientX - r.left + 14}px`;
-      tip.style.top  = `${ev.clientY - r.top  - 38}px`;
-      tip.innerHTML  = `<b>${dot.dataset.d}</b> — ${dot.dataset.v} visits`;
-    });
-    dot.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-    dot.addEventListener('click', () => { activateDatePill(dot.dataset.d); switchPanel('history'); });
-  });
+  attachLineHover(svg, wrap, tip,
+    entries.map(([date, v], i) => ({ x: xOf(i), y: yOf(v), top: p.t, bottom: p.t + iH, date, text: `<b>${esc(date)}</b> — ${fmtNum(v)} ${tr('visits', 'visits')}` })),
+    'var(--accent)', pt => { activateDatePill(pt.date); switchPanel('history'); });
 
   const lblEl = document.getElementById('lineLabels');
   lblEl.innerHTML = entries.map(([date], i) => {
@@ -1812,7 +1859,16 @@ async function loadTimeSpent(days, dateOverride) {
     if (days !== 1) drawTimeChart(r.dailyMap, days);
     renderHbars(r.topSites);
     drawPie(r.topSites);
-    drawWeekdayChart(r.weekdayAvg, r.weekdayDays);
+    // One day selected → all-time weekday averages. 7/15/30/90 days → averages over just those days.
+    const wdTitle = document.getElementById('weekdayTitle');
+    if (days === 1) {
+      if (wdTitle) { wdTitle.setAttribute('data-i18n-key', 'avg_time_per_weekday'); wdTitle.textContent = tr('avg_time_per_weekday', 'Average time per weekday (all time)'); }
+      drawWeekdayChart(r.weekdayAvg, r.weekdayDays);
+    } else {
+      if (wdTitle) { wdTitle.setAttribute('data-i18n-key', 'avg_time_per_weekday_range'); wdTitle.textContent = tr('avg_time_per_weekday_range', 'Average time per weekday (last {0} days)').replace("{0}",days); }
+      const wd = weekdayAvgForRange(r.dailyMap, days);
+      drawWeekdayChart(wd.avg, wd.counts);
+    }
   } catch (err) { console.error(err); }
 }
 
@@ -1822,6 +1878,19 @@ document.getElementById('timeFilters').addEventListener('click', ev => {
   const days = parseInt(btn.dataset.days);
   loadTimeSpent(days, days === 1 ? tsToday() : undefined);
 });
+
+// Average browsing time per weekday (index = Date.getDay()) over the last `days` calendar days,
+// from the per-day totals already loaded for the range. Days without data count as 0.
+function weekdayAvgForRange(dailyMap, days) {
+  const sum = [0,0,0,0,0,0,0], counts = [0,0,0,0,0,0,0], now = Date.now();
+  for (let i = 0; i < days; i++) {
+    const dt = new Date(now - i * 86400000);
+    const dm = (dailyMap || {})[dt.toLocaleDateString('en-CA')] || {};
+    sum[dt.getDay()] += Object.values(dm).reduce((s, v) => s + v, 0);
+    counts[dt.getDay()]++;
+  }
+  return { avg: sum.map((s, d) => counts[d] ? s / counts[d] : 0), counts };
+}
 
 function drawTimeChart(dailyMap, days, anchorDate) {
   const svg  = document.getElementById('timeSvg');
@@ -1866,14 +1935,7 @@ function drawTimeChart(dailyMap, days, anchorDate) {
     area = path + ` L ${xOf(dates.length-1)} ${H} L ${xOf(0)} ${H} Z`;
   }
 
-  let dots = '';
   const gap = days <= 15 ? 2 : days <= 30 ? 4 : 9;
-  dates.forEach((d, i) => {
-    if (i % gap !== 0 && i !== dates.length - 1) return;
-    const v = vals[i], lbl = v >= 60 ? `${(v/60).toFixed(1)}h` : `${v}m`;
-    dots += `<circle class="c-dot" cx="${xOf(i)}" cy="${yOf(v)}" r="3.5" fill="var(--accent2)" stroke="var(--bg)" stroke-width="2" data-d="${d}" data-lbl="${lbl}"/>`;
-  });
-
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('height', H);
   svg.innerHTML = `
@@ -1885,19 +1947,11 @@ function drawTimeChart(dailyMap, days, anchorDate) {
   </defs>
   ${grid}
   ${area ? `<path d="${area}" fill="url(#lg2)"/>` : ''}
-  ${path ? `<path class="c-path" d="${path}" stroke="var(--accent2)"/>` : `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`}
-  ${dots}`;
+  ${path ? `<path class="c-path" d="${path}" stroke="var(--accent2)"/>` : `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="12" fill="var(--text3)" font-family="var(--font-mono)">No time data yet</text>`}`;
 
-  svg.querySelectorAll('.c-dot').forEach(dot => {
-    dot.addEventListener('mousemove', ev => {
-      const r = wrap.getBoundingClientRect();
-      tip.style.display = 'block';
-      tip.style.left = `${ev.clientX - r.left + 14}px`;
-      tip.style.top  = `${ev.clientY - r.top  - 38}px`;
-      tip.innerHTML  = `<b>${dot.dataset.d}</b> — ${dot.dataset.lbl}`;
-    });
-    dot.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-  });
+  if (path) attachLineHover(svg, wrap, tip,
+    dates.map((d, i) => { const v = vals[i]; return { x: xOf(i), y: yOf(v), top: p.t, bottom: p.t + iH, text: `<b>${esc(d)}</b> — ${v >= 60 ? (v / 60).toFixed(1) + 'h' : v + 'm'}` }; }),
+    'var(--accent2)');
 
   const lblEl = document.getElementById('timeLabels');
   lblEl.innerHTML = dates.map((d, i) => {
@@ -3796,6 +3850,8 @@ function syncCps() {
 }
 
 function populateSettings(s) {
+  const followTgl = document.getElementById('followSystemThemeToggle');
+  if (followTgl) followTgl.checked = s.followSystemTheme === true;
   if (s.retentionDays) { document.getElementById('retDays').value = s.retentionDays; syncRetChips(s.retentionDays); }
   if (s.maxSessions)   { const el = document.getElementById('maxSessionsInput'); if (el) el.value = s.maxSessions; }
   if (s.fontSize)       document.getElementById('fontSzInput').value = s.fontSize;
@@ -3966,7 +4022,7 @@ function applyVisuals(s) {
   if (s.accentColor2) r.style.setProperty('--accent2', s.accentColor2);
   if (s.fontSize)     r.style.setProperty('--fsize',   s.fontSize + 'px');
   if (s.font)         r.style.setProperty('--font',    s.font);
-  if (s.theme)        setTheme(s.theme);
+  applyThemeSettings(s);
   applyRoundedCorners(s.roundedCorners !== false);
   applyNavIcons(s.navIcons !== false);
   applyMatchUiColors(s.matchUiColors === true);
@@ -4043,7 +4099,8 @@ async function migrateStorage() {
   }
 }
 
-document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+// Returns true when everything was saved (used by the unsaved-changes prompt too).
+async function saveSettings() {
   const days    = parseInt(document.getElementById('retDays').value);
   const c1      = document.getElementById('cp1').value;
   const c2      = document.getElementById('cp2').value;
@@ -4082,10 +4139,10 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
   const autoExportWebDavUsername = document.getElementById('autoExportWebDavUsername')?.value || '';
   const autoExportWebDavPassword = document.getElementById('autoExportWebDavPassword')?.value || '';
   
-  if (!days || days < 1) { toast('Invalid retention', 'err'); return; }
+  if (!days || days < 1) { toast('Invalid retention', 'err'); return false; }
   if ((autoExportDestination === 'webdav' || autoExportDestination === 'both') && autoExportIntervalMonths > 0) {
-    if (!autoExportWebDavUrl) { toast('Enter a WebDAV URL', 'err'); return; }
-    if (!await ensureWebDavPermission(autoExportWebDavUrl)) return;
+    if (!autoExportWebDavUrl) { toast('Enter a WebDAV URL', 'err'); return false; }
+    if (!await ensureWebDavPermission(autoExportWebDavUrl)) return false;
   }
   try {
     const r = await send('SAVE_SETTINGS', { 
@@ -4096,6 +4153,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         font, 
         fontSize: sz, 
         theme: _curSettings.theme || 'dark',
+        followSystemTheme: document.getElementById('followSystemThemeToggle')?.checked === true,
         bgTintEnabled,
         bgTintHue,
         bgTintOpacity,
@@ -4132,6 +4190,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
       } 
     });
     _curSettings = r.settings;
+    applyThemeSettings(_curSettings);
     applyIconVariant(_curSettings.toolbarIcon || 'default');
     applyDatePillsWheelScroll(_curSettings.datePillsWheelScroll === true, _curSettings.datePillsWheelSensitivity);
     applyHighContrastMode(_curSettings.highContrastMode === true);
@@ -4147,8 +4206,11 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     await send('SET_AUTO_SAVE_INTERVAL', { minutes: autoSaveMins });
     toast('Settings saved', 'ok');
     refreshAutoExportStatus();
-  } catch (err) { toast(err.message, 'err'); }
-});
+    snapshotSettings();
+    return true;
+  } catch (err) { toast(err.message, 'err'); return false; }
+}
+document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
 
 // ── Auto export interval ──────────────────────────────────────────────────────
 function updateAutoExportDestinationUi() {
@@ -5663,7 +5725,81 @@ function _showIgnorePanel() {
   if (typeof window.applyTranslations === 'function') window.applyTranslations();
 }
 
-function switchPanel(name) {
+// ══ SETTINGS: UNSAVED CHANGES ═══════════════════════════════════════════════
+// A snapshot of every Settings control is taken once the panel has been filled from the saved
+// settings (and again after a successful save). Leaving the panel with a different state asks
+// whether to save. Controls that apply/save on their own (language, wallpaper, storage backend,
+// file pickers) are not part of the snapshot.
+let _settingsSnap = null;
+function _settingsState() {
+  const out = {};
+  document.querySelectorAll('#panel-settings input, #panel-settings select, #panel-settings textarea').forEach((el, i) => {
+    if (el.type === 'file' || el.type === 'button' || el.type === 'submit') return;
+    if (el.id === 'languageSelect' || el.id === 'storageBackendSel' || /^wp/.test(el.id)) return;
+    out[el.id || ('#' + i)] = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
+  });
+  out.__icon = document.querySelector('#toolbarIconGrid .icon-opt.on')?.dataset.icon || '';
+  return JSON.stringify(out);
+}
+function snapshotSettings() { _settingsSnap = _settingsState(); }
+function settingsDirty() { return _settingsSnap !== null && _settingsSnap !== _settingsState(); }
+
+// Save / Discard / Cancel dialog. Resolves 'save' | 'discard' | 'cancel'.
+function askSaveSettings() {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.5)';
+    ov.innerHTML = `<div role="dialog" aria-modal="true" style="width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1);color:var(--text);border:1px solid var(--border2);box-shadow:0 20px 60px var(--shadow)">
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:6px"></div>
+      <div style="font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"></div></div>`;
+    const [title, msg, btns] = ov.firstElementChild.children;
+    title.textContent = tr('unsaved_changes_title', 'Save changes?');
+    msg.textContent = tr('unsaved_changes_msg', 'You have unsaved changes in Settings.');
+    const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
+    const mk = (label, v, cls) => {
+      const b = document.createElement('button');
+      b.className = 'action-btn' + (cls ? ' ' + cls : '');
+      b.textContent = label;
+      b.addEventListener('click', () => done(v));
+      btns.appendChild(b);
+      return b;
+    };
+    mk(tr('cancel', 'Cancel'), 'cancel');
+    mk(tr('discard', 'Discard'), 'discard');
+    const saveBtn = mk(tr('save_changes', 'Save changes'), 'save', 'primary');
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); done('cancel'); } };
+    document.addEventListener('keydown', onKey, true);
+    ov.addEventListener('mousedown', e => { if (e.target === ov) done('cancel'); });
+    document.body.appendChild(ov);
+    saveBtn.focus();
+  });
+}
+// Puts every live-previewed setting back to what is saved.
+function revertSettingsPreview() {
+  populateSettings(_curSettings);
+  applyVisuals(_curSettings);
+  applyHighContrastMode(_curSettings.highContrastMode === true);
+}
+let _leavingSettings = false;
+async function guardLeaveSettings(name) {
+  if (_leavingSettings) return false;
+  _leavingSettings = true;
+  try {
+    const choice = await askSaveSettings();
+    if (choice === 'cancel') return false;
+    if (choice === 'save') { if (!await saveSettings()) return false; }
+    else { revertSettingsPreview(); snapshotSettings(); }
+    return true;
+  } finally { _leavingSettings = false; }
+}
+
+function switchPanel(name, skipGuard) {
+  // Leaving Settings with unsaved edits: ask first, then continue (or stay)
+  if (!skipGuard && name !== 'settings' && document.getElementById('panel-settings')?.classList.contains('active') && settingsDirty()) {
+    guardLeaveSettings(name).then(ok => { if (ok) switchPanel(name, true); });
+    return;
+  }
   // Lock the ignore list whenever navigating away from it
   if (name !== 'ignorelist') {
     const inner = document.getElementById('ignoreListInner');
@@ -5692,15 +5828,18 @@ function switchPanel(name) {
    if (name === 'mostvisited') loadMostVisited();
   if (name === 'quickfilters') { if (window.QuickFilters) window.QuickFilters.loadPanel(); }
   if (name === 'settings') {
-    send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {});
-    send('GET_SESSIONS').then(r => {
-      const el = document.getElementById('maxSessionsInput');
-      if (el && r.maxSessions) el.value = r.maxSessions;
-    }).catch(() => {});
-    send('GET_AUTO_SAVE_INTERVAL').then(r => {
-      const el = document.getElementById('autoSaveInput');
-      if (el) el.value = r.minutes || 0;
-    }).catch(() => {});
+    _settingsSnap = null;   // not dirty-checked until the form has been filled
+    Promise.all([
+      send('GET_SETTINGS').then(s => { _curSettings = s; populateSettings(s); }).catch(() => {}),
+      send('GET_SESSIONS').then(r => {
+        const el = document.getElementById('maxSessionsInput');
+        if (el && r.maxSessions) el.value = r.maxSessions;
+      }).catch(() => {}),
+      send('GET_AUTO_SAVE_INTERVAL').then(r => {
+        const el = document.getElementById('autoSaveInput');
+        if (el) el.value = r.minutes || 0;
+      }).catch(() => {}),
+    ]).then(snapshotSettings);
   }
 }
 
@@ -6605,6 +6744,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Theme buttons
   document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
   document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
+  // Follow-system toggle: previews immediately, saved with "Save Settings" (or reverted on discard)
+  document.getElementById('followSystemThemeToggle')?.addEventListener('change', ev => {
+    if (window.EhTheme) EhTheme.set(ev.target.checked, _curSettings.theme === 'light' ? 'light' : 'dark', false);
+    applyTheme();
+  });
 
   // Setup
   document.querySelectorAll('.nav-item[data-panel]').forEach(b =>

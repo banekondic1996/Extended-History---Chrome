@@ -172,6 +172,10 @@ a { color: inherit; text-decoration: none; }
   overflow-wrap: anywhere;
 }
 .sa-btn:hover { background: var(--surf2); color: var(--text); }
+/* "Follow system theme" is on: the manual Light / Dark buttons go away and the
+   Lock button (flex:1) stretches across the whole sidebar footer. */
+html[data-follow-theme="true"] #themeLight,
+html[data-follow-theme="true"] #themeDark { display: none; }
 .sa-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Main + Panels ── */
