@@ -22,6 +22,7 @@ Originaly made just because of 90 days limit in chromium, <br> instead of rebuil
 **To do (ordered by importance):**
 <pre>
 -Add support to import from Google Takeout
+-Add support to encrypt incremental auto export (double hashed password as encryption)
 -Add option to export searched results only or advanced export function to export based on domain list only
 -Add option to not return most visited into history after unlocking UI
 -Add option to reverse ignore filter, ignoring all sites except ones in list from history
