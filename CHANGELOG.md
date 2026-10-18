@@ -171,6 +171,13 @@ Fixed/changed in version 4.2.2:
 -"Average time per weekday" chart is now based on "All time" or 7,15,30,90 days based on selection
 -Added changed settings confirmation dialog
 -Fixed quick filters keyword working even if keyword is contained in words, now only if * is used at the beginning or end of word (regex)
+
+Fixed/changed in version 4.2.3 (in Firefox):
+-Added support to encrypt incremental auto export
+-Added option to reverse ignore filter, ignoring all sites except ones in list from history
+-Added option to export searched results
+-Added option to not return some sites back into history after unlocking UI, that's used so auto complete works in address bar based on history
+-Added support to import multiple .json .tsv files at once
 </pre>
 
 
