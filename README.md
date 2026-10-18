@@ -23,6 +23,7 @@ Originally made just because of 90 days limit in chromium,<br>instead of rebuild
 </pre>
 **To do (ordered by importance):**
 <pre>
+-Added regex support to search
 -Add button to re-download last made incremental backup
 -Add support to encrypt incremental auto export (double hashed password as encryption)
 -Add support to import from Google Takeout
