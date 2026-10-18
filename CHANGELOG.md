@@ -174,6 +174,7 @@ Fixed/changed in version 4.2.2:
 
 Fixed/changed in version 4.2.3 (in Firefox):
 -Added support to encrypt incremental auto export
+-Added option to re-download last incremental backup
 -Added option to reverse ignore filter, ignoring all sites except ones in list from history
 -Added option to export searched results
 -Added option to not return some sites back into history after unlocking UI, that's used so auto complete works in address bar based on history
