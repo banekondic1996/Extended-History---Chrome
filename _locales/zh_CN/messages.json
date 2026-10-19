@@ -1,0 +1,1302 @@
+{
+  "ext_name": {
+    "message": "扩展历史"
+  },
+  "jan": {"message": "1月"},
+  "feb": {"message": "2月"},
+  "mar": {"message": "3月"},
+  "apr": {"message": "4月"},
+  "may": {"message": "5月"},
+  "jun": {"message": "6月"},
+  "jul": {"message": "7月"},
+  "aug": {"message": "8月"},
+  "sep": {"message": "9月"},
+  "oct": {"message": "10月"},
+  "nov": {"message": "11月"},
+  "dec": {"message": "12月"},
+  "discard": {"message": "丢弃"},
+  "ignore_invert_note": {"message": "列表为空时，不会忽略任何网站。启用此选项不会更改现有历史记录。"},
+  "ignore_invert_clean": {"message": "立即删除其他网站的现有记录"},
+  "enc_incremental": {"message": "使用密码加密增量导出文件"},
+  "enc_change_pw": {"message": "更改密码"},
+  "allow_list_mode": {"message": "允许列表模式（反向筛选）"},
+  "allow_list_mode_desc": {"message": "忽略除下方列表中网站以外的所有网站 — 只有列表中的网站会保存到历史记录"},
+  "unlock_keep_most_visited_out": {"message": "解锁后，不要将访问次数最多的网站重新添加到浏览器历史记录"},
+  "history_encrypted_enter_password": {"message": "你的历史记录已加密。请输入密码以解锁。"},
+  "keep_most_visited_out": {"message": "不要将访问次数最多的网站重新添加到浏览器历史记录"},
+  "redownload_last_incremental_backup": {"message": "重新下载最近一次增量备份"},
+  "no_incremental_backup_yet": {"message": "尚未创建增量备份"},
+  "export_results": {"message": "导出结果"},
+  "export_results_title": {"message": "仅导出符合当前搜索、筛选条件和日期范围的条目"},
+  "dh_now": {"message": "现在"},
+  "disabled": {"message": "已禁用"},
+  "no_history_found": {"message": "未找到历史记录"},
+  "lock_big_warning": {"message": "你的历史记录太大，无法加密"},
+  "lock_big_limit": {"message": "上限"},
+  "lock_big_warning2": {"message": "为了保持锁定速度，不会加密任何内容，但界面仍会保持锁定状态。"},
+  "dh_from_newest": {"message": "从最新记录开始计算，{0}"},
+  "new_entries_added": {"message": "条新记录已添加"},
+  "import_finished": {"message": "导入完成 — "},
+  "skipped": {"message": "已跳过"},
+  "cant_update_ret": {"message": "无法更新保留期限"},
+  "cant_remove_old": {"message": "无法删除旧记录"},
+  "re_import_all": {"message": "重新导入 Browser 中所有可用的原生历史记录？新记录将合并到现有记录中。"},
+  "importing_from_chrome": {"message": "正在从 Browser 历史记录导入…"},
+  "delete_all_confirm": {"message": "确定永久删除全部历史记录吗？此操作无法撤销。"},
+  "all_cleared": {"message": "所有历史记录已清除"},
+  "time_data_cleared": {"message": "时间数据已清除"},
+  "cant_update_retention": {"message": "无法更新保留期限"},
+  "no_entries_file": {"message": "文件中未找到记录"},
+  "sun": {"message": "周日"},
+  "mon": {"message": "周一"},
+  "tue": {"message": "周二"},
+  "wed": {"message": "周三"},
+  "thu": {"message": "周四"},
+  "fri": {"message": "周五"},
+  "sat": {"message": "周六"},
+  "merging_imported": {"message": "正在合并导入的历史记录…"},
+  "building_search_index": {"message": "正在建立搜索索引…"},
+  "reparing_database": {"message": "正在修复历史记录数据库…"},
+  "rescuing": {"message": "正在恢复可读取的历史记录…"},
+  "rebuilding_database": {"message": "正在重建数据库…"},
+  "freeing_disk_space": {"message": "正在释放磁盘空间…"},
+  "preparing_database": {"message": "正在准备历史记录数据库…"},
+  "can_take_long": {"message": " 秒 — 大型数据库可能需要几分钟"},
+  "stuck_delete": {"message": "卡住了？删除数据库并从空数据库重新开始"},
+  "this_deletes_history": {"message": "这将永久删除已存储的历史记录数据库（不会影响浏览器自身的历史记录）。是否继续？"},
+  "preparing": {"message": "正在准备…"},
+  "reading_history": {"message": "正在读取你的历史记录…"},
+  "moving_to_sqlite": {"message": "正在将你的历史记录迁移到 SQLite…"},
+  "checking_copy": {"message": "正在检查副本…"},
+  "finishing_up": {"message": "即将完成…"},
+  "history_too_big": {"message": "你的历史记录较多，因此正在将其迁移到速度更快的数据库。此操作只会进行一次；完成后页面将重新加载。"},
+  "starting_database": {"message": "正在启动数据库…"},
+  "upgrading_database": {"message": "正在升级历史记录数据库…"},
+  "building_indexes": {"message": "正在建立索引…"},
+  "repairing_database": {"message": "正在修复历史记录数据库…"},
+   "load_exported_history_read2": {"message": "加载导出的历史记录文件（.json 或 .tsv），无需导入即可浏览。界面与“历史记录”标签页完全相同，包括日期筛选、搜索等所有功能。"},
+  "choose_file_hint2": {"message": "或将 .json 或 .tsv 文件拖放到此区域的任意位置"},
+  "selected": {"message": "已选择"},
+  "open": {"message": "打开"},
+  "move_to": {"message": "移动到…"},
+  "copy_links": {"message": "复制链接"},
+  "move": {"message": "移动"},
+  "move_to_folder": {"message": "📁 移动到文件夹"},
+  "sel_dest_folder": {"message": "选择目标文件夹："},
+  "enter_url_first": {"message": "请先输入服务器 URL。"},
+  "permission_server_none": {"message": "未获得此服务器的访问权限。"},
+  "uploading_test": {"message": "正在上传测试文件…"},
+  "webdav_works": {"message": "WebDAV 上传正常"},
+  "webdav_test_fail": {"message": "WebDAV 测试失败"},
+  "webdav_permission_none": {"message": "未获得 WebDAV 服务器的访问权限"},
+  "invalid_webdav_url": {"message": "WebDAV URL 无效"},
+  "webdav_test": {"message": "测试上传"},
+  "webdav_server": {"message": "服务器 URL"},
+  "webdav_username": {"message": "用户名"},
+  "webdav_password": {"message": "密码"},
+  "jump_to_date": {"message": "跳转到日期"},
+  "more_from_domain": {"message": "查看更多此域名内容"},
+  "ignore_domain": {"message": "忽略域名"},
+  "quick_filter_button": {"message": "快速筛选按钮"},
+  "quick_filter_button_desc": {"message": "在弹出窗口中显示筛选按钮，位于“存储”左侧，并提供快速筛选器下拉菜单。选择一个筛选器后，弹出窗口中的最近历史记录和搜索结果将仅限于这些域名/关键词/URL；搜索仍可正常在筛选结果中进行。每次重新打开弹出窗口时都会重置为无筛选。"},
+  "fade_in_list_on_date_change": {"message": "切换日期时淡入列表"},
+  "fade_in_list_on_date_change_desc": {"message": "切换日期时 — 无论通过日期按钮栏、日历还是“使用时间”的日期箭头 — 历史记录列表都会在加载时淡入，而不是立即显示。"},
+  "auto_export_confirm_incr": {"message": "这将导出自上次导出以来记录的所有内容。不会删除任何内容。是否继续？"},
+  "auto_export_confirm_full": {"message": "这将导出你的全部历史记录。不会删除任何内容。是否继续？"},
+  "auto_export_due": {"message": "已到期 — 将在下次检查时运行"},
+  "auto_export_next": {"message": "下次导出：{0}"},
+  "auto_export_done": {"message": "已导出 {0} 条记录"},
+  "auto_export_nothing_new": {"message": "自上次导出以来没有新的内容可导出"},
+  "auto_export_failed": {"message": "无法保存导出文件。请重试。"},
+  "running": {"message": "正在运行…"},
+  "keep_saving_history_while_locked": {
+    "message": "锁定时继续保存历史记录（解锁后会重新合并回历史记录，而不是删除）"
+  },
+  "unique_tabs": {
+    "message": "唯一标签页"
+  },
+    "restore_all": {
+    "message": "全部恢复"
+  },
+    "edit": {
+    "message": "编辑"
+  },
+  "auto_export_interval_desc3": {"message": "每 N 个月自动将历史记录导出为 .json 文件。完整导出每次都会包含全部历史记录；增量导出仅包含上次导出后新增的内容。不会删除任何内容。设置为 0 可禁用。"},
+  "last_export": {"message": "上次导出："},
+  "next_export": {"message": "下次导出："},
+  "compress_as_zip": {"message": "压缩为 .zip"},
+  "download_locally": {"message": "下载到本地"},
+  "upload_to_webdav": {"message": "上传到 WebDAV"},
+  "local_plus_webdav": {"message": "本地 + WebDAV"},
+  "full": {"message": "完整"},
+  "incremental": {"message": "增量"},
+  "import_file": {"message": "导入文件"},
+  "import_file_desc": {"message": "合并之前导出的 JSON 或 .TSV 文件中的条目"},
+  "import_organizing": {"message": "正在整理历史记录并建立索引…"},
+  "import_finishing": {"message": "正在完成…"},
+  "import_indexing": {"message": "正在建立搜索索引…"},
+    "no_stored_tabs": {"message": "尚未存储任何标签页。"},
+  "store_tab_hint": {"message": "右键点击任意页面 → Extended History → 存储此标签页"},
+  "no_synced_devices": {"message": "未找到已同步的设备。"},
+  "chrome_sync_hint": {"message": "登录 Browser 并启用同步功能。"},
+  "run_now": {"message": "立即运行"},
+  "select": {"message": "选择"},
+   "please_enter_password": {"message": "请输入密码。"},
+  "master_password": {"message": "主密码"},
+  "ignore_list_setup": {
+    "message": "🔒 设置忽略列表"
+  },
+  "ignore_list_setup_desc": {
+    "message": "尚未设置密码。创建主密码以保护你的忽略列表。"
+  },
+  "ignore_list_access_desc": {
+    "message": "输入主密码以查看忽略列表。"
+  },
+  "reset_ignore_list": {
+    "message": "🔑 重置忽略列表"
+  },
+  "reset_ignore_list_desc": {
+    "message": "忽略列表已清空。输入新的主密码以继续。"
+  },
+  "set_new_password": {
+    "message": "设置新密码"
+  },
+   "quick_filters_none": {
+    "message": "快速筛选：无"
+  },
+  "auto_hide_sidebar": {
+    "message": "鼠标离开时自动隐藏侧边栏"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "当光标离开侧边栏后自动将其关闭，类似于弹出窗口自动消失的方式。关闭此选项可让侧边栏保持打开状态，直到你手动将其关闭。"
+  },
+  "auto_export_interval": {
+    "message": "自动导出间隔"
+  },
+  "auto_export_interval_desc": {
+    "message": "每 N 个月自动将最早的历史记录导出为 .json 文件并删除。无论设置什么间隔，最近 3 个月的历史记录始终会保留。设置为 0 可禁用此功能。"
+  },
+  "high_contrast_mode": {
+    "message": "高对比度模式"
+  },
+  "high_contrast_mode_desc": {
+    "message": "在通常使用次要/第三级（较暗）文本颜色的地方使用主要文本颜色，以提高可读性"
+  },
+  "create_password": {
+    "message": "创建密码"
+  },
+  "lock_warning_title": {
+    "message": "锁定历史记录？"
+  },
+  "lock_warning_body": {
+    "message": "锁定后，扩展程序中的所有历史记录都会被加密。浏览器本身中的所有历史记录都会被删除，而扩展程序自己的副本会以加密形式保留。请务必先导出历史记录进行备份，以防发生断电等情况。锁定后，你可以输入密码解锁，扩展程序中的历史记录会恢复，但浏览器原生的历史记录不会恢复。这意味着地址栏中的部分自动补全建议将会缺失，只会显示访问次数最多的网址和域名。如果忘记密码，历史记录将无法恢复。"
+  },
+  "lock_logout_everywhere": {
+    "message": "退出所有位置的登录状态（同时清除 Cookie 和网站数据）"
+  },
+  "lock_hide_bookmarks": {
+    "message": "隐藏书签（解锁前会从浏览器中移除）"
+  },
+  "lock_password": {
+    "message": "密码"
+  },
+  "lock_confirm_password": {
+    "message": "确认密码"
+  },
+  "lock_btn": {
+    "message": "锁定"
+  },
+  "lock_password_short": {
+    "message": "密码至少需要 4 个字符"
+  },
+  "lock_password_mismatch": {
+    "message": "两次输入的密码不一致"
+  },
+  "lock_locking": {
+    "message": "正在加密…"
+  },
+  "rename_bookmark": {
+  "message": "✏️ 重命名书签"
+},
+"remove_bookmark": {
+    "message": "🗑 删除书签"
+  },
+   "quick_filters": {
+    "message": "快速筛选"
+  },
+  "quick_filter_desc": {
+    "message": "保存一组命名的域名、关键词或网址（例如“社交媒体” → facebook.com、instagram.com、pinterest.com）。在历史记录页面的搜索框旁边的下拉菜单中选择它，即可立即只筛选这些条目。"
+  },
+  "filter_name": {
+    "message": "筛选名称（例如：社交媒体）"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "每行输入一个域名、关键词或网址 — 例如：\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "保存更改"
+  },
+  "add_filter": {
+    "message": "添加筛选"
+  },
+  "no_qfilters": {
+    "message": "暂无快速筛选"
+  },
+    "scroll_sensitivity": {
+    "message": "滚动灵敏度"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "每次滚动移动多少个日期按钮"
+  },
+  "scroll_date": {
+    "message": "使用鼠标滚轮滚动日期按钮"
+  },
+  "scroll_date_desc": {
+    "message": "允许普通鼠标滚轮（只能垂直滚动）横向移动日期按钮栏 — 在桌面设备上很方便，因为鼠标滚轮本身无法进行水平滚动。"
+  },
+  "ignore_list_access": {
+    "message": "🔒 忽略列表访问"
+  },
+  "ignore_list_enter_password": {
+    "message": "请输入主密码以查看忽略列表。"
+  },
+  "reset": {
+    "message": "重置"
+  },
+  "ok": {
+    "message": "确定"
+  },
+  "current_session": {
+    "message": "当前会话"
+  },
+  "active": {
+    "message": "活跃"
+  },
+  "all_fields": {
+    "message": "所有字段"
+  },
+  "title": {
+    "message": "标题"
+  },
+  "url": {
+    "message": "网址"
+  },
+  "domain": {
+    "message": "域名"
+  },
+  "ph_search_history": {
+    "message": "搜索历史…"
+  },
+  "ph_search_bookmarks": {
+    "message": "搜索书签…"
+  },
+  "most_visited": {
+    "message": "最常访问"
+  },
+  "tabs": {
+    "message": "标签页"
+  },
+  "since": {
+    "message": "自从"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "最常访问的 URL — 全部时间"
+  },
+  "urls": {
+    "message": "URL"
+  },
+  "domains": {
+    "message": "域名"
+  },
+  "enable_ignore": {
+    "message": "启用忽略列表"
+  },
+  "filter_urls": {
+    "message": "过滤匹配以下模式的 URL"
+  },
+  "popup_show_url": {
+    "message": "URL"
+  },
+  "popup_show_url_desc": {
+    "message": "在弹出列表中标题下方显示页面URL"
+  },
+  "auto_store_idle_tabs": {
+    "message": "自动存储空闲标签页"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "当标签页在一段时间内未被激活时，自动将其移动到标签存储中。标签页会被关闭并保存——不会丢失任何内容。"
+  },
+  "idle_threshold": {
+    "message": "空闲阈值"
+  },
+  "idle_threshold_desc": {
+    "message": "在未激活达到此小时数后存储标签页。默认：6。"
+  },
+  "history_storage": {
+    "message": "历史记录存储引擎"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB 对于大型历史记录（100k+ 条目）更快且占用更少内存。迁移会复制所有数据——您可以随时切换回来。当前："
+  },
+  "apply_migrate": {
+    "message": "应用并迁移"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 壁纸模式"
+  },
+  "wallpaper_mode_desc": {
+    "message": "设置自定义背景图片，启用磨砂玻璃效果。"
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 自定义图片"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 来自 Unsplash 的随机图片"
+  },
+  "wallpaper_drop_image": {
+    "message": "拖放图片或 点击浏览"
+  },
+  "wallpaper_fetch": {
+    "message": "获取随机高清图片（每次都会变化）"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 随机"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "每次打开自动随机"
+  },
+  "wallpaper_current": {
+    "message": "当前壁纸："
+  },
+  "overlay_opacity": {
+    "message": "覆盖透明度"
+  },
+  "overlay_control_desc": {
+    "message": "控制深色或浅色覆盖层。"
+  },
+  "wallpaper_blur": {
+    "message": "背景模糊"
+  },
+  "wallpaper_remove": {
+    "message": "✕ 移除壁纸"
+  },
+  "reading_mode": {
+    "message": "阅读模式"
+  },
+  "tab_storage": {
+    "message": "标签存储"
+  },
+  "load_exported_history_read": {
+    "message": "加载导出的历史记录文件 (.json) 以浏览它，而无需导入。界面与历史记录标签完全相同——日期筛选、搜索等。"
+  },
+  "choose_file": {
+    "message": "选择文件…"
+  },
+  "choose_file_hint": {
+    "message": "或将 .json 文件拖放到这里"
+  },
+  "leave_reading_mode": {
+    "message": "✕ 退出阅读模式"
+  },
+  "reading": {
+    "message": "正在阅读："
+  },
+  "confirm_delete_all_time": {
+    "message": "⚠️ 确认删除所有时间的结果\n\n这将从你的全部历史记录中删除 $COUNT$ 个匹配结果。\n\n确定吗？",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "confirm_delete_filtered": {
+    "message": "删除 $COUNT$ 个匹配结果？",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleted_items": {
+    "message": "已删除 $COUNT$ 个项目",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "all": {
+    "message": "全部"
+  },
+  "auto_focus_search": {
+    "message": "打开时自动聚焦搜索"
+  },
+  "auto_focus_search_desc": {
+    "message": "打开历史页面时自动聚焦搜索框"
+  },
+  "back": {
+    "message": "← 返回"
+  },
+  "background_tint": {
+    "message": "背景色调"
+  },
+  "browser_cache": {
+    "message": "浏览器缓存"
+  },
+  "delete_history_reset_password": {
+    "message": "删除历史并重置密码"
+  },
+  "enable_bg_tint": {
+    "message": "启用背景色调"
+  },
+  "enable_lock": {
+    "message": "启用锁定"
+  },
+  "enter_password_to_continue": {
+    "message": "输入密码继续"
+  },
+  "ext_locked": {
+    "message": "Extended History — 已锁定"
+  },
+  "favicon_resolver": {
+    "message": "图标解析方式"
+  },
+  "favicon_resolver_desc": {
+    "message": "站点图标获取方式。浏览器缓存更快且私密，Google 使用 CDN 获取。"
+  },
+  "for_password_reset": {
+    "message": "（用于密码重置）"
+  },
+  "forgot_password_reset": {
+    "message": "忘记密码 / 重置"
+  },
+  "google_resolver": {
+    "message": "Google 解析"
+  },
+  "history_merge_interval": {
+    "message": "历史合并间隔"
+  },
+  "history_merge_interval_desc": {
+    "message": "浏览器历史合并到本地存储的频率"
+  },
+  "lock_extension_page": {
+    "message": "锁定扩展页面"
+  },
+  "lock_extension_page_desc": {
+    "message": "需要密码才能查看历史页面。历史不会加密。"
+  },
+  "password": {
+    "message": "密码"
+  },
+  "performance": {
+    "message": "性能"
+  },
+  "popup": {
+    "message": "弹出窗口"
+  },
+  "popup_height": {
+    "message": "弹窗高度"
+  },
+  "popup_height_desc": {
+    "message": "弹出列表区域最大高度(px)"
+  },
+  "refresh": {
+    "message": "↻ 刷新"
+  },
+  "reset_password_warning": {
+    "message": "⚠️ 警告：重置密码会永久删除所有历史记录"
+  },
+  "search_bar": {
+    "message": "搜索栏"
+  },
+  "search_bar_desc": {
+    "message": "在弹窗底部显示搜索栏"
+  },
+  "security_answer": {
+    "message": "安全答案"
+  },
+  "security_question": {
+    "message": "安全问题"
+  },
+  "set_up_page_lock": {
+    "message": "🔐 设置页面锁定"
+  },
+  "tabs_bar": {
+    "message": "标签栏"
+  },
+  "tabs_bar_desc": {
+    "message": "显示最近历史 / 已关闭标签切换"
+  },
+  "time_spent_tracking": {
+    "message": "时间统计"
+  },
+  "time_spent_tracking_desc": {
+    "message": "按域名统计使用时间。关闭可减少 CPU 使用"
+  },
+  "ui": {
+    "message": "界面"
+  },
+  "unlock": {
+    "message": "解锁"
+  },
+  "ph_ignore_pattern": {
+    "message": "example.com 或关键字"
+  },
+  "opt_all_fields": {
+    "message": "所有字段"
+  },
+  "opt_title": {
+    "message": "标题"
+  },
+  "opt_url": {
+    "message": "URL"
+  },
+  "opt_domain": {
+    "message": "域名"
+  },
+  "block_all_example_7": {
+    "message": "只会屏蔽该关键字"
+  },
+  "specific_word": {
+    "message": "特定关键字"
+  },
+  "example_com_6": {
+    "message": "示例"
+  },
+  "today": {
+    "message": "今天"
+  },
+  "storage": {
+    "message": "存储"
+  },
+  "total_visits": {
+    "message": "总访问次数"
+  },
+  "restore": {
+    "message": "恢复"
+  },
+  "most_visited_URLS": {
+    "message": "访问最多的 URL"
+  },
+  "browse": {
+    "message": "浏览"
+  },
+  "history": {
+    "message": "历史"
+  },
+  "sessions": {
+    "message": "会话"
+  },
+  "devices": {
+    "message": "设备"
+  },
+  "insights": {
+    "message": "洞察"
+  },
+  "activity": {
+    "message": "活动"
+  },
+  "time_spent": {
+    "message": "使用时间"
+  },
+  "library": {
+    "message": "资料库"
+  },
+  "bookmarks": {
+    "message": "书签"
+  },
+  "system": {
+    "message": "系统"
+  },
+  "delete_history": {
+    "message": "删除历史"
+  },
+  "ignore_list": {
+    "message": "忽略列表"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "more": {
+    "message": "更多"
+  },
+  "light": {
+    "message": "浅色"
+  },
+  "dark": {
+    "message": "深色"
+  },
+  "all_time": {
+    "message": "所有时间"
+  },
+  "delete_results": {
+    "message": "删除结果"
+  },
+  "selected_lower": {
+    "message": "已选择"
+  },
+  "select_all_visible": {
+    "message": "选择所有可见"
+  },
+  "deselect_all": {
+    "message": "取消全选"
+  },
+  "delete_selected": {
+    "message": "删除已选"
+  },
+  "loading": {
+    "message": "加载中…"
+  },
+  "daily_visits_90": {
+    "message": "每日访问 — 90 天"
+  },
+  "daily_visits_30": {
+    "message": "每日访问 — 30 天"
+  },
+  "hours": {
+    "message": "小时"
+  },
+  "days": {
+    "message": "天数"
+  },
+  "clear_time_data": {
+    "message": "清除时间数据"
+  },
+  "daily_browsing_time": {
+    "message": "每日浏览时间"
+  },
+  "top_sites_by_time_spent": {
+    "message": "按时间浏览最多的网站"
+  },
+  "export": {
+    "message": "导出"
+  },
+  "import": {
+    "message": "导入"
+  },
+  "history_retention": {
+    "message": "历史保留"
+  },
+  "keep_history_for": {
+    "message": "保留历史"
+  },
+  "older_enteries_are_pruned": {
+    "message": "旧条目将被自动删除"
+  },
+  "months": {
+    "message": "月"
+  },
+  "year": {
+    "message": "年"
+  },
+  "years": {
+    "message": "年"
+  },
+  "forever": {
+    "message": "永远"
+  },
+  "appearance": {
+    "message": "外观"
+  },
+  "language": {
+    "message": "语言"
+  },
+  "select_pref_language": {
+    "message": "选择首选语言"
+  },
+  "font_family": {
+    "message": "字体系列"
+  },
+  "font_size": {
+    "message": "字体大小"
+  },
+  "base_ui_text_size": {
+    "message": "基础界面文字大小"
+  },
+  "pixels": {
+    "message": "像素"
+  },
+  "accent_colors": {
+    "message": "强调色"
+  },
+  "primary": {
+    "message": "主颜色"
+  },
+  "secondary": {
+    "message": "辅助颜色"
+  },
+  "data": {
+    "message": "数据"
+  },
+  "export_history": {
+    "message": "导出历史"
+  },
+  "full_json_backup": {
+    "message": "完整 JSON 备份（全部历史+时间数据）"
+  },
+  "export_json": {
+    "message": "导出 JSON"
+  },
+  "import_history": {
+    "message": "导入历史"
+  },
+  "merge_entries_json": {
+    "message": "从先前导出的 JSON 合并条目"
+  },
+  "import_json": {
+    "message": "导入 JSON"
+  },
+  "sessions_to_keep": {
+    "message": "保留的会话数量"
+  },
+  "how_many_past_sessions": {
+    "message": "保存多少过去的会话（1–20）"
+  },
+  "auto_save_session": {
+    "message": "自动保存当前会话"
+  },
+  "save_open_tabs_to": {
+    "message": "将打开的标签保存到 extended-history-session.html 到下载文件夹。设置为 0 以禁用。"
+  },
+  "min": {
+    "message": "分钟"
+  },
+  "save_now": {
+    "message": "立即保存"
+  },
+  "save_settings": {
+    "message": "保存设置"
+  },
+  "danger_zone": {
+    "message": "危险区域"
+  },
+  "reimport_chrome_history": {
+    "message": "重新导入 Browser 历史"
+  },
+  "pull_all_chrome_history": {
+    "message": "重新提取所有可用 Browser 原生历史（合并，无重复）"
+  },
+  "reimport": {
+    "message": "重新导入"
+  },
+  "clear_all_history": {
+    "message": "清除所有历史"
+  },
+  "permanently_delete_all_stored": {
+    "message": "永久删除所有存储的历史，无法撤消。"
+  },
+  "clear_all": {
+    "message": "全部清除"
+  },
+  "about": {
+    "message": "关于"
+  },
+  "created_by": {
+    "message": "由 Bane Kondić 创建，因为他不喜欢 Chromium 的 90 天限制。本扩展不会发送数据且完全开源，代码可在作者的 Github 查看。"
+  },
+  "github_profile": {
+    "message": "Github 个人主页"
+  },
+  "feedback": {
+    "message": "反馈"
+  },
+  "link_to_discord": {
+    "message": "Discord 反馈服务器链接（或仅在 Browser 商店留下评论）"
+  },
+  "discord_server": {
+    "message": "Discord 服务器"
+  },
+  "rate_extension": {
+    "message": "评价此扩展"
+  },
+  "confirm_ignore_invert_clean": {"message": "这将永久删除已保存的历史记录（以及浏览器历史记录）中所有网站不在列表中的条目。此操作无法撤销。是否继续？"},
+  "toast_ignore_invert_off": {"message": "允许列表模式已关闭：列表中的网站将被忽略"},
+  "toast_ignore_invert_on": {"message": "允许列表模式已开启：仅保留列表中的网站"},
+  "confirm_ignore_invert": {"message": "允许列表模式：从现在起，除了列表中的网站，其他任何内容都不会保存到历史记录中。是否继续？"},
+  "enc_prompt_pw": {"message": "用于加密增量导出文件的密码（再次导入时需要）："},
+  "link_to_chrome_webstore": {"message": "扩展程序页面链接"},
+  "click_to_rate": {
+    "message": "点击评价"
+  },
+  "ignored_domains": {
+    "message": "忽略域"
+  },
+  "domains_added_will_not_be": {
+    "message": "此处添加的域将不会保存到历史中。现有条目将自动删除。"
+  },
+  "add_patern": {
+    "message": "添加模式"
+  },
+  "pattern_guide": {
+    "message": "模式指南"
+  },
+  "basic_domain": {
+    "message": "基本域"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "阻止所有 example.com"
+  },
+  "all_subdomains": {
+    "message": "所有子域"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "阻止 blog.example.com、shop.example.com 等"
+  },
+  "specific_subdomain": {
+    "message": "指定子域"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "仅阻止 blog.example.com"
+  },
+  "specific_path": {
+    "message": "指定路径"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "仅阻止 /private 下的 URL"
+  },
+  "specific_file": {
+    "message": "指定文件"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "仅阻止该特定文件"
+  },
+  "no_patterns_added": {
+    "message": "尚未添加任何模式"
+  },
+  "open_in_new_tab": {
+    "message": "在新标签页打开"
+  },
+  "open_in_incognito": {
+    "message": "在无痕模式打开"
+  },
+  "copy_url": {
+    "message": "复制 URL"
+  },
+  "copy_title": {
+    "message": "复制标题"
+  },
+  "delete_from_history": {
+    "message": "从历史中删除"
+  },
+  "new_subfolder": {
+    "message": "新子文件夹"
+  },
+  "rename_folder": {
+    "message": "重命名文件夹"
+  },
+  "delete_folder": {
+    "message": "删除文件夹"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "delete": {
+    "message": "删除"
+  },
+  "choose_a_time_range": {
+    "message": "选择要删除的时间范围。这将从此扩展和 Browser 本地历史记录中删除条目。"
+  },
+  "last_1_hour": {
+    "message": "过去 1 小时"
+  },
+  "last_24_hours": {
+    "message": "过去 24 小时"
+  },
+  "last_7_days": {
+    "message": "过去 7 天"
+  },
+  "last_30_days": {
+    "message": "过去 30 天（一个月）"
+  },
+  "last_5_months": {
+    "message": "过去 5 个月"
+  },
+  "clear_cookies_local_storage": {
+    "message": "清除 Cookies 和本地存储"
+  },
+  "clear_cache": {
+    "message": "清除缓存"
+  },
+  "open_dev_mode": {
+    "message": "🛠 打开开发者模式"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 列出打开的标签页和空闲时间"
+  },
+  "cal_all_time": {
+    "message": "全部时间"
+  },
+  "prev_day": {
+    "message": "‹ 前一天"
+  },
+  "next_day": {
+    "message": "后一天 ›"
+  },
+  "previous_month": {
+    "message": "上个月"
+  },
+  "next_month": {
+    "message": "下个月"
+  },
+  "clear": {
+    "message": "清除"
+  },
+  "ui_rounded_corners": {
+    "message": "界面圆角"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "为侧边栏和主面板添加圆角（并保留周围的小间距）。关闭后为直角、贴边的布局。"
+  },
+  "ui_calendar_mode": {
+    "message": "日历模式"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "用右侧的日历侧边栏取代历史记录页面的日期/小时导航——可选择日期、月份和年份，并直接跳转到任意小时。"
+  },
+  "developer": {
+    "message": "开发者"
+  },
+  "dev_mode": {
+    "message": "开发者模式"
+  },
+  "developer_mode_title": {
+    "message": "🛠 开发者模式"
+  },
+  "dev_mode_desc": {
+    "message": "内部诊断：用于自动存储的标签页空闲跟踪实时数据，以及后台计时器统计。仅用于故障排查。"
+  },
+  "dev_mode_modal_sub": {
+    "message": "内部诊断——后台计时器以及用于自动存储的标签页空闲跟踪实时状态。"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "hour": {
+    "message": "小时"
+  },
+  "all_hours": {
+    "message": "全部小时"
+  },
+  "ph_search_devices": {
+    "message": "按标题或 URL 搜索设备标签页…"
+  },
+  "add": {
+    "message": "添加"
+  },
+  "domain_exceptions": {
+    "message": "域名例外"
+  },
+  "domain_exceptions_desc": {
+    "message": "删除历史记录时会跳过此列表中的域名：其历史记录条目、Cookie 和网站数据都会保留。子域名也包含在内。"
+  },
+  "no_exceptions_yet": {
+    "message": "暂无例外"
+  },
+  "remove": {
+    "message": "移除"
+  },
+  "invalid_domain": {
+    "message": "请输入有效的域名，例如 example.com"
+  },
+  "domain_already_added": {
+    "message": "该域名已在列表中"
+  },
+  "dh_confirm_warn": {
+    "message": "这将永久删除以下时间范围的历史记录：$N1$。再次点击“删除”以确认。",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "例外列表中的域名（$N1$）将被保留。",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "正在删除…"
+  },
+  "deleted_history_entries": {
+    "message": "已删除 $N1$ 条历史记录",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "Cookie"
+  },
+  "word_cache": {
+    "message": "缓存"
+  },
+  "confirm_restore_tabs": {
+    "message": "恢复 $N1$ 个标签页？",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "已在 $N2$ 个窗口中恢复 $N1$ 个标签页",
+    "placeholders": {
+      "n2": {
+        "content": "$2"
+      },
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "已在新窗口中恢复 $N1$ 个标签页",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "已移除模式"
+  },
+  "toast_enter_pattern": {
+    "message": "请输入模式"
+  },
+  "toast_pattern_added": {
+    "message": "已添加模式：$N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "已启用忽略列表"
+  },
+  "toast_ignore_disabled": {
+    "message": "已停用忽略列表"
+  },
+  "toast_ts_hidden": {
+    "message": "被忽略的域名现已在“花费时间”中隐藏"
+  },
+  "toast_ts_shown": {
+    "message": "被忽略的域名不再在“花费时间”中隐藏"
+  },
+  "hide_from_time_spent": {
+    "message": "在“花费时间”中隐藏"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "在“花费时间”视图中隐藏与下方模式匹配的域名——不会删除任何已记录的时间数据"
+  },
+  "url_pattern_guide": {
+    "message": "URL 模式指南"
+  },
+  "ignore_keywords_note": {
+    "message": "不含点号的词会被视为关键词——它们会匹配包含该词的任何 URL 或页面标题。"
+  },
+  "toast_cleaning": {
+    "message": "正在从历史记录中清理被忽略的 URL…"
+  },
+  "toast_removed_ignored": {
+    "message": "已从历史记录中移除 $N1$ 个被忽略的 URL",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "历史记录中未发现被忽略的 URL"
+  },
+  "keyword_prefix": {
+    "message": "关键词：$N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "已缓存（本地）"
+  },
+  "context_menu_on_pages": {
+    "message": "网站右键菜单"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "在网页上右键单击时显示“Extended History”选项"
+  },
+  "no_sessions_yet": {
+    "message": "尚无已记录的会话"
+  },
+  "popup_as_sidebar": {
+    "message": "用作侧边栏"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "在 Browser 侧边栏而非弹出窗口中打开 Extended History，使其可以占满整个页面"
+  },
+  "toolbar_icon": {
+    "message": "工具栏图标"
+  },
+  "toolbar_icon_desc": {
+    "message": "选择显示在浏览器工具栏中的图标"
+  },
+  "wallpaper_opacity": {
+    "message": "壁纸不透明度"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "淡化背景图片本身——与下方玻璃面板的色调分开。"
+  },
+  "yesterday": {
+    "message": "昨天"
+  },
+  "language_auto": {
+    "message": "自动（浏览器语言）"
+  },
+  "nav_icons": {
+    "message": "导航图标"
+  },
+  "nav_icons_desc": {
+    "message": "在侧边栏导航项旁显示图标。关闭后仅显示文字。"
+  },
+  "match_ui_colors": {
+    "message": "匹配界面颜色"
+  },
+  "match_ui_colors_desc": {
+    "message": "使历史记录列表与界面其余部分（侧边栏、日历侧边栏和面板）颜色一致，而非使用不同的色调。"
+  },
+  "pop_store": {
+    "message": "存储"
+  },
+  "pop_open": {
+    "message": "打开"
+  },
+  "pop_prev_day": {
+    "message": "前一天"
+  },
+  "pop_next_day": {
+    "message": "后一天"
+  },
+  "pop_clear_search": {
+    "message": "清除搜索并返回今天"
+  },
+  "pop_recent_history": {
+    "message": "最近历史记录"
+  },
+  "pop_closed_tabs": {
+    "message": "已关闭的标签页"
+  },
+  "pop_active_tabs": {
+    "message": "活动标签页"
+  },
+  "pop_unselect_all": {
+    "message": "取消全选"
+  },
+  "pop_select_all": {
+    "message": "全选"
+  },
+  "pop_search_results": {
+    "message": "搜索结果"
+  },
+  "pop_start_typing": {
+    "message": "开始输入以搜索..."
+  },
+  "pop_export_session_title": {
+    "message": "右键单击以导出最新会话"
+  },
+  "pop_searching": {
+    "message": "正在搜索..."
+  },
+  "pop_search_error": {
+    "message": "搜索出错"
+  },
+  "pop_no_results": {
+    "message": "未找到结果"
+  },
+  "pop_no_closed": {
+    "message": "没有最近关闭的标签页"
+  },
+  "pop_no_storable": {
+    "message": "没有可存储的已打开标签页"
+  },
+  "pop_ts_error": {
+    "message": "加载标签页存储时出错"
+  },
+  "pop_no_stored": {
+    "message": "没有已存储的标签页。"
+  },
+  "pop_no_stored_hint": {
+    "message": "右键单击此按钮以存储已打开的标签页"
+  },
+  "pop_no_data": {
+    "message": "暂无数据"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "要从标签页存储中移除 $N1$ 个已存储的标签页吗？",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "avg_time_per_weekday_range": {"message": "每周各工作日的平均用时（最近 {0} 天）"},
+  "follow_system_theme": {"message": "跟随系统主题"},
+  "follow_system_theme_desc": {"message": "根据操作系统自动切换浅色和深色模式。启用此选项时，侧边栏中的“浅色 / 深色”按钮将被隐藏。"},
+  "pop_cant_store": {
+    "message": "无法存储此页面"
+  },
+  "pop_no_history_day": {
+    "message": "这一天没有历史记录"
+  },
+  "pop_no_history_today": {
+    "message": "今天还没有历史记录"
+  },
+  "pop_just_now": {
+    "message": "刚刚"
+  },
+  "pop_min_ago": {
+    "message": "$N1$ 分钟前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "avg_time_per_weekday": {"message": "每周各工作日的平均用时（全部历史记录）"},
+  "avg_visits_per_hour": {"message": "一天中每个小时的平均访问次数"},
+  "pop_hour_ago": {
+    "message": "$N1$ 小时前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$ 天前",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
+}

@@ -4,7 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title data-i18n-key="ext_name">Extended History</title>
-<link rel="stylesheet" href="history.css"/>
+<link rel="stylesheet" href="../css/history.css"/>
+<script src="../js/theme-init.js"></script>
 </head>
 <body>
 <div class="layout">
@@ -15,7 +16,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.1.3</div>
+      <div class="logo-sub">v4.2.3</div>
     </div>
   </div>
 
@@ -57,7 +58,7 @@
     <button class="nav-item" data-panel="ignorelist">
       <span class="ni-icon">🚫</span><span data-i18n-key="ignore_list">Ignore List</span>
     </button>
-    <button class="nav-item" data-panel="quickfilters">
+    <button class="nav-item" data-panel="quickfilters" data-i18n-key="quick_filters">
       <span class="ni-icon">⚡</span><span>Quick Filters</span>
     </button>
     <button class="nav-item" data-panel="settings">
@@ -69,7 +70,8 @@
   </div>
 
   <div class="sidebar-actions">
-    <button class="sa-btn active" id="themeLight">☀ <span data-i18n-key="light">Light</span></button>
+    <button class="sa-btn" id="lockBtn" data-i18n-title="lock_btn_hint" title="Encrypt history and lock the extension">🔒 <span data-i18n-key="lock_btn">Lock</span></button>
+    <button class="sa-btn" id="themeLight">☀ <span data-i18n-key="light">Light</span></button>
     <button class="sa-btn" id="themeDark">🌙 <span data-i18n-key="dark">Dark</span></button>
   </div>
 </nav>
@@ -81,7 +83,7 @@
       <!-- Date pills with arrows -->
       <div class="date-nav-row">
         <div class="dn-pill no-day active" id="dnAllPill" data-date="all" style="flex-shrink:0;cursor:pointer;width: 60px;
-    height: 36px;">All</div>
+    height: 36px;" data-i18n-title="all">All</div>
         <div class="date-scroll-wrap" id="dateScrollWrap">
           <div class="date-scroll" id="dateScroll"></div>
         </div>
@@ -93,12 +95,11 @@
       <!-- Search + controls -->
       <div class="search-row">
         <div class="search-box">
-          <span class="search-box-icon">🔍</span>
           <input type="text" id="searchInput" placeholder="Search history…"/>
-          <button class="search-clear-btn" id="searchClearBtn" title="Clear">✕</button>
+          <button class="search-clear-btn" id="searchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
         </div>
         <select class="mode-sel" id="quickFilterSelect" title="Quick Filters">
-          <option value="">Quick Filters: None</option>
+          <option value="" data-i18n-key="quick_filters">Quick Filters: None</option>
         </select>
         <select class="mode-sel" id="searchMode">
           <option value="all" data-i18n-key="all_fields">All fields</option>
@@ -106,10 +107,10 @@
           <option value="url" data-i18n-key="url">URL</option>
           <option value="domain" data-i18n-key="domain">Domain</option>
         </select>
-        <input type="date" id="dateFrom"/>
+        <div class="date-picker-btn" id="dateFromBtn"><input type="date" id="dateFrom" tabindex="-1"/></div>
         <span style="color:var(--text3);flex-shrink:0">→</span>
-        <input type="date" id="dateTo"/>
-        <button class="tb-btn" id="clearFiltersBtn" data-i18n-key="all_time">All time</button>
+        <div class="date-picker-btn" id="dateToBtn"><input type="date" id="dateTo" tabindex="-1"/></div>
+        <button class="tb-btn" id="clearFiltersBtn" data-i18n-key="all_time" style="display:none">All time</button>
         <button class="tb-btn danger" id="deleteResultsBtn" data-i18n-key="delete_results">Delete results</button>
       </div>
     </div>
@@ -144,10 +145,10 @@
       <div class="rm-drop-inner">
         <div class="rm-drop-icon">📖</div>
         <div class="rm-drop-title" data-i18n-key="reading_mode">Reading Mode</div>
-        <div class="rm-drop-desc" data-i18n-key="load_exported_history_read">Load an exported history file (.json) to browse it without importing it.The UI works exactly like the History tab — date pills, search, everything.</div>
+        <div class="rm-drop-desc" data-i18n-key="load_exported_history_read2">Load an exported history file (.json or .tsv) to browse it without importing it. The UI works exactly like the History tab — date pills, search, everything.</div>
         <button class="action-btn primary" id="rmPickBtn" data-i18n-key="choose_file">Choose file…</button>
-        <div class="rm-drop-hint" data-i18n-key="choose_file_hint">or drag &amp; drop a .json file anywhere here</div>
-        <input type="file" id="rmFileInput" accept=".json" style="display:none"/>
+        <div class="rm-drop-hint" data-i18n-key="choose_file_hint2">or drag &amp; drop a .json or .tsv file anywhere here</div>
+        <input type="file" id="rmFileInput" accept=".json,.tsv,.txt" style="display:none"/>
       </div>
     </div>
     <!-- Reader UI (shown when file loaded) -->
@@ -171,11 +172,10 @@
         </div>
         <div class="search-row" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <div class="search-box" style="flex:1;min-width:160px">
-            <span class="search-box-icon">🔍</span>
-            <input type="text" id="rmSearchInput" placeholder="Search this file…" data-i18n-key="ph_search_history"/>
-            <button class="search-clear-btn" id="rmSearchClearBtn" title="Clear">✕</button>
+              <input type="text" id="rmSearchInput" placeholder="Search this file…" data-i18n-key="ph_search_history"/>
+            <button class="search-clear-btn" id="rmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
           </div>
-          <select id="rmSearchMode" title="Search field" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;cursor:pointer;outline:none;flex-shrink:0">
+          <select id="rmSearchMode" class="mode-sel" title="Search field" style="height:36px">
             <option value="all" data-i18n-key="opt_all_fields">All fields</option>
             <option value="title" data-i18n-key="opt_title">Title</option>
             <option value="url" data-i18n-key="opt_url">URL</option>
@@ -200,8 +200,15 @@
 
   <!-- DEVICES -->
   <div class="panel" id="panel-devices">
-    <div class="panel-scroll">
+    <div class="panel-scroll" id="devicesScroll">
       <div class="panel-heading" data-i18n-key="devices">Devices</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:0px 0px 15px">
+        <div class="search-box" style="flex:1;max-width:420px">
+          <input type="text" id="deviceSearchInput" placeholder="Search device tabs by title or URL…" spellcheck="false" autocomplete="off">
+          <button class="search-clear-btn" id="deviceSearchClearBtn" title="Clear" data-i18n-title="clear">&#10005;</button>
+        </div>
+        <button class="tb-btn" id="devicesRefreshBtn" style="font-size:0.72rem;padding:10px 12px;flex-shrink:0" data-i18n-key="refresh">↻ Refresh</button>
+      </div>
       <div id="devicesContent"><div class="state-msg"><span class="state-msg-icon">📱</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
   </div>
@@ -226,6 +233,14 @@
         <div class="bar30-wrap" id="bar30Wrap"></div>
         <div class="bar30-dates" id="bar30Dates"></div>
       </div>
+
+      <div class="chart-card" id="hourlyChartCard">
+        <div class="cc-header"><span class="cc-title" data-i18n-key="avg_visits_per_hour">Average visits by hour of day</span></div>
+        <div style="position:relative">
+          <svg class="chart-svg" id="hourlySvg" height="170"></svg>
+          <div class="chart-tooltip" id="hourlyTip"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -235,7 +250,11 @@
       <div class="panel-heading" data-i18n-key="time_spent">Time Spent</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <div class="time-filter-row" id="timeFilters" style="margin-bottom:0">
-          <button class="tf-btn" data-days="1" >24 <span data-i18n-key="hours">hours</span></button>
+          <button class="tf-arrow" id="tsPrevDay" title="Previous day" aria-label="Previous day">‹</button>
+          <button class="tf-arrow" id="tsNextDay" title="Next day" aria-label="Next day">›</button>
+          <span class="tf-date" id="tsDateLabel"></span>
+          <button class="tf-btn" data-days="1" data-i18n-key="today">Today</button>
+          <button class="tf-btn" data-days="7">7 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn active" data-days="15">15 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn" data-days="30">30 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn" data-days="90">90 <span data-i18n-key="days">days</span></button>
@@ -243,7 +262,7 @@
         <button class="tb-btn danger" id="clearTimeBtn" title="Clear all time-spent data (does not affect history)">🗑 <span data-i18n-key="clear_time_data">Clear time data</span></button>
       </div>
 
-      <div class="chart-card">
+      <div class="chart-card" id="dailyChartCard">
         <div class="cc-header"><span class="cc-title" data-i18n-key="daily_browsing_time">Daily browsing time</span></div>
         <div style="position:relative">
           <svg class="chart-svg" id="timeSvg" height="130"></svg>
@@ -251,6 +270,8 @@
         </div>
         <div id="timeLabels" style="display:flex;margin-top:5px"></div>
       </div>
+
+  
 
       <div class="chart-card">
         <div class="cc-header"><span class="cc-title" data-i18n-key="top_sites_by_time_spent">Top sites by time spent</span></div>
@@ -260,6 +281,13 @@
             <svg class="pie-svg" id="pieSvg" width="160" height="160" viewBox="0 0 160 160"></svg>
             <div class="pie-legend" id="pieLegend"></div>
           </div>
+        </div>
+      </div>
+          <div class="chart-card" id="weekdayChartCard">
+        <div class="cc-header"><span class="cc-title" id="weekdayTitle" data-i18n-key="avg_time_per_weekday">Average time per weekday (all time)</span></div>
+        <div style="position:relative">
+          <svg class="chart-svg" id="weekdaySvg" height="170"></svg>
+          <div class="chart-tooltip" id="weekdayTip"></div>
         </div>
       </div>
     </div>
@@ -297,23 +325,24 @@
       <button class="action-btn" id="importBmBtn" style="font-size:0.76rem;padding:6px 12px">⬆ <span data-i18n-key="import">Import</span></button>
       <input type="file" id="importBmFile" accept=".html" style="display:none"/>
       <div class="search-box" style="flex:1;min-width:160px;max-width:320px">
-        <span class="search-box-icon">🔍</span>
         <input type="text" id="bmSearch" placeholder="Search bookmarks…"/>
-        <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear">✕</button>
+        <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
       </div>
-      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" style="display:none">Selection Mode</button>
+      <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" title="Select multiple bookmarks" data-i18n-key="select">Select</button>
     </div>
     <!-- Bookmark multiselect bar (hidden until selection mode active) -->
     <div class="bm-sel-bar" id="bmSelBar" style="display:none">
-      <span class="bm-sel-count" id="bmSelCount">0 selected</span>
-      <button class="bm-sel-btn" id="bmSelMoveBtn">Move to…</button>
-      <button class="bm-sel-btn" id="bmSelCopyBtn">Copy Links</button>
-      <button class="bm-sel-btn bm-sel-del" id="bmSelDeleteBtn">Delete</button>
-      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn">Unselect All</button>
+      <span class="bm-sel-count" id="bmSelCount">0 <span data-i18n-key="selected">selected</span></span>
+      <button class="bm-sel-btn" id="bmSelOpenBtn" data-i18n-key="open">Open</button>
+      <button class="bm-sel-btn" id="bmSelMoveBtn" data-i18n-key="move_to">Move to…</button>
+      <button class="bm-sel-btn" id="bmSelCopyBtn" data-i18n-key="copy_links">Copy Links</button>
+      <button class="bm-sel-btn bm-sel-del" id="bmSelDeleteBtn" data-i18n-key="delete">Delete</button>
+      <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn" data-i18n-key="cancel">Cancel</button>
     </div>
     <!-- Split pane: tree left, items right -->
     <div class="bm-split">
       <div class="bm-tree-pane" id="bmTreePane"></div>
+      <div class="bm-resizer" id="bmResizer" title="Drag to resize · double-click to reset"></div>
       <div class="bm-items-pane" id="bookmarksContent">
         <div class="state-msg"><span class="state-msg-icon">🔖</span><span data-i18n-key="loading">Loading…</span></div>
         <button class="scroll-to-bottom" id="bmScrollBottom" title="Scroll by one page">↓</button>
@@ -353,28 +382,28 @@
 
         <div class="s-card">
           <div class="s-card-title" data-i18n-key="appearance">Appearance</div>
-          <div class="s-row" style="opacity: 0.2;">
+          <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="language">Language</div>
               <div class="s-row-desc" data-i18n-key="select_pref_language">Select your preferred language</div>
             </div>
             <div class="s-ctrl">
               <select id="languageSelect">
+                <option value="auto" data-i18n-key="language_auto">Auto (browser language)</option>
                 <option value="en">English</option>
-                <option value="nl">Dutch</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
-                <option value="sr">Српски</option>
-                <option value="ru">Русский</option>
-                <option value="zh">中文</option>
-                <option value="hi">हिन्दी</option>
-                <option value="la">Latin</option>
-                <option value="no">Norsk</option>
                 <option value="he">עברית</option>
+                <option value="hi">हिन्दी</option>
+                <option value="la">Latina</option>
+                <option value="nl">Nederlands</option>
+                <option value="no">Norsk</option>
+                <option value="ru">Русский</option>
+                <option value="sr">Српски</option>
+                <option value="zh_CN">中文</option>
               </select>
             </div>
           </div>
-            <a style="color: red;opacity: 0.6;margin: auto;display: flex;justify-content: center;"> Not ready yet! But you can partially translate</a>
           <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="font_family">Font family</div>
@@ -401,36 +430,44 @@
               <span class="unit"><span data-i18n-key="pixels">px</span></span>
             </div>
           </div>
-          <div class="s-row" style="flex-direction:column;align-items:flex-start;gap:12px">
+          <div class="s-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="toolbar_icon">Toolbar icon</div>
               <div class="s-row-desc" data-i18n-key="toolbar_icon_desc">Choose the icon shown in your browser's toolbar</div>
             </div>
             <div id="toolbarIconGrid" style="display:flex;flex-wrap:wrap;gap:10px;width:100%">
               <button type="button" class="icon-opt on" data-icon="default" title="Default" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--accent);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon16.png" alt="Default" style="width:22px;height:22px">Default
+                <img src="/icons/icon16.png" alt="Default" style="width:22px;height:22px">Default
               </button>
               <button type="button" class="icon-opt" data-icon="bw" title="Black &amp; White" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_bw.png" alt="Black &amp; White" style="width:22px;height:22px">B/W
+                <img src="/icons/icon_bw.png" alt="Black &amp; White" style="width:22px;height:22px">B/W
               </button>
               <button type="button" class="icon-opt" data-icon="emerald" title="Emerald" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_emerlad.png" alt="Emerald" style="width:22px;height:22px">Emerald
+                <img src="/icons/icon_emerlad.png" alt="Emerald" style="width:22px;height:22px">Emerald
               </button>
               <button type="button" class="icon-opt" data-icon="green" title="Green" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_green.png" alt="Green" style="width:22px;height:22px">Green
+                <img src="/icons/icon_green.png" alt="Green" style="width:22px;height:22px">Green
               </button>
               <button type="button" class="icon-opt" data-icon="gold" title="Gold" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_gold.png" alt="Gold" style="width:22px;height:22px">Gold
+                <img src="/icons/icon_gold.png" alt="Gold" style="width:22px;height:22px">Gold
               </button>
               <button type="button" class="icon-opt" data-icon="pink" title="Pink" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_pink.png" alt="Pink" style="width:22px;height:22px">Pink
+                <img src="/icons/icon_pink.png" alt="Pink" style="width:22px;height:22px">Pink
               </button>
               <button type="button" class="icon-opt" data-icon="red" title="Red" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
-                <img src="icons/icon_red.png" alt="Red" style="width:22px;height:22px">Red
+                <img src="/icons/icon_red.png" alt="Red" style="width:22px;height:22px">Red
+              </button>
+              <button type="button" class="icon-opt" data-icon="orange" title="Orange" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
+                <img src="/icons/icon_orange.png" alt="Orange" style="width:22px;height:22px">Orange
+              </button>
+              <button type="button" class="icon-opt" data-icon="blue" title="Blue" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
+                <img src="/icons/icon_darkblue.png" alt="Blue" style="width:22px;height:22px">Blue
+              </button>
+              <button type="button" class="icon-opt" data-icon="purple" title="Purple" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;background:var(--s1);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text2);font-size:0.62rem">
+                <img src="/icons/icon_purple.png" alt="Purple" style="width:22px;height:22px">Purple
               </button>
             </div>
           </div>
-
           <div class="s-row" style="border-bottom:none;flex-direction:column;align-items:flex-start;gap:12px">
             <div class="s-row-lbl" data-i18n-key="accent_colors">Accent colors</div>
             <div class="color-grid" style="width:100%;padding:0">
@@ -535,13 +572,22 @@
                 <div style="font-size:0.78rem;color:var(--text2);margin-bottom:6px" data-i18n-key="wallpaper_current">Current wallpaper:</div>
                 <img id="wpCurrentPreview" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>
               </div>
+              <!-- Wallpaper (image) opacity -->
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="color:var(--text2);font-size:0.85rem" data-i18n-key="wallpaper_opacity">Wallpaper opacity</span>
+                  <span id="wpImageOpacityVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">60%</span>
+                </div>
+                <input type="range" id="wpImageOpacity" min="5" max="100" value="60" step="1" style="width:100%;accent-color:var(--accent)"/>
+                <div style="font-size:0.72rem;color:var(--text3)" data-i18n-key="wallpaper_opacity_desc">Fades the background image itself — separate from the glass panel tint below.</div>
+              </div>
               <!-- Overlay opacity -->
               <div style="display:flex;flex-direction:column;gap:8px">
                 <div style="display:flex;align-items:center;justify-content:space-between">
                   <span style="color:var(--text2);font-size:0.85rem" data-i18n-key="overlay_opacity">Overlay opacity</span>
-                  <span id="wpOverlayVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">60%</span>
+                  <span id="wpOverlayVal" style="color:var(--text);font-size:0.85rem;font-family:var(--font-mono)">40%</span>
                 </div>
-                <input type="range" id="wpOverlayOpacity" min="0" max="95" value="60" step="1" style="width:100%;accent-color:var(--accent)"/>
+                <input type="range" id="wpOverlayOpacity" min="40" max="95" value="50" step="1" style="width:100%;accent-color:var(--accent)"/>
                 <div style="font-size:0.72rem;color:var(--text3)" data-i18n-key="overlay_control_desc">Controls the dark (dark mode) or white (light mode) overlay on top of the wallpaper.</div>
               </div>
               <!-- Blur -->
@@ -572,25 +618,58 @@
           <div class="s-row" style="border-top:1px solid var(--border)">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="import_history">Import history</div>
-              <div class="s-row-desc" data-i18n-key="merge_entries_json">Merge entries from a previously exported JSON file</div>
+              <div class="s-row-desc" data-i18n-key="import_file_desc">Merge entries from a previously exported JSON or .TSV file</div>
             </div>
             <div class="s-ctrl">
-              <button class="action-btn" id="importDataBtn">⬆ <span data-i18n-key="import_json">Import JSON</span></button>
-              <input type="file" id="importDataFile" accept=".json" style="display:none"/>
+              <button class="action-btn" id="importDataBtn">⬆ <span data-i18n-key="import_file">Import file</span></button>
+              <input type="file" id="importDataFile" accept=".json,.tsv,.txt" style="display:none"/>
             </div>
           </div>
           <div class="s-row" style="border-top:1px solid var(--border);border-bottom:none">
             <div class="s-row-info">
-              <div class="s-row-lbl">Auto export interval</div>
-              <div class="s-row-desc" id="autoExportDesc">Automatically export &amp; delete the oldest history as a .json file every N months. The most recent 3 months are always kept, no matter what interval you set. Set to 0 to disable.</div>
+              <div class="s-row-lbl"data-i18n-key="auto_export_interval">Auto export interval</div>
+              <div class="s-row-desc" id="autoExportDesc" data-i18n-key="auto_export_interval_desc3">Automatically export your history as a .json file every N months. Full exports all history each time; Incremental exports only what is new since the previous export. Nothing is deleted. Set to 0 to disable.</div>
             </div>
             <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
               <div style="display:flex;align-items:center;gap:6px">
                 <input type="number" id="autoExportInput" value="0" min="0" max="60" step="1" style="width:70px"/>
-                <span class="unit">months</span>
+                <span class="unit" data-i18n-key="months">months</span>
+              </div>
+              <select id="autoExportMode" class="mode-sel" style="min-width:110px">
+                <option value="full" data-i18n-key="full">Full</option>
+                <option value="incremental" data-i18n-key="incremental">Incremental</option>
+              </select>
+              <select id="autoExportDestination" class="mode-sel" style="min-width:150px">
+                <option value="local" data-i18n-key="download_locally">Download locally</option>
+                <option value="webdav" data-i18n-key="upload_to_webdav">Upload to WebDAV</option>
+                <option value="both" data-i18n-key="local_plus_webdav">Local + WebDAV</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer">
+                <input type="checkbox" id="compress_as_zip"/> <span data-i18n-key="compress_as_zip">Compress as .zip</span>
+              </label>
+              <div id="autoExportWebDavFields" class="wd-box" style="display:none">
+                <label class="wd-field">
+                  <span class="wd-lbl" data-i18n-key="webdav_server">Server URL</span>
+                  <input type="url" id="autoExportWebDavUrl" class="wd-input" placeholder="https://server.example/dav/history/" spellcheck="false" autocomplete="off"/>
+                </label>
+                <label class="wd-field">
+                  <span class="wd-lbl" data-i18n-key="webdav_username">Username</span>
+                  <input type="text" id="autoExportWebDavUsername" class="wd-input" placeholder="optional" autocomplete="username" spellcheck="false"/>
+                </label>
+                <div class="wd-field">
+                  <label class="wd-lbl" for="autoExportWebDavPassword" data-i18n-key="webdav_password">Password</label>
+                  <div class="wd-pw">
+                    <input type="password" id="autoExportWebDavPassword" class="wd-input" placeholder="optional" autocomplete="current-password"/>
+                    <button type="button" class="wd-eye" id="autoExportWebDavEye" title="Show / hide password" aria-label="Show password" aria-pressed="false">👁</button>
+                  </div>
+                </div>
+                <div class="wd-actions">
+                  <button type="button" class="action-btn" id="testWebDavBtn" data-i18n-key="webdav_test">Test upload</button>
+                </div>
+                <div id="webDavTestResult" class="wd-result" role="status"></div>
               </div>
               <div id="autoExportStatus" style="font-size:0.72rem;color:var(--text3);text-align:right;max-width:220px"></div>
-              <button class="action-btn" id="testAutoExportBtn" style="font-size:0.75rem;padding:4px 10px">▶ Run now</button>
+              <button class="action-btn" id="testAutoExportBtn" style="font-size:0.75rem;padding:4px 10px" data-i18n-key="run_now">▶ Run now</button>
             </div>
           </div>
         </div>
@@ -655,7 +734,19 @@
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
-                <input type="checkbox" id="popupURLsToggle">
+                <input type="checkbox" id="popupURLsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="quick_filter_button">Quick filter button</div>
+              <div class="s-row-desc" data-i18n-key="quick_filter_button_desc">Show an filter button in the popup, left of Store, with a dropdown of your Quick Filters. Picking one narrows the popup's Recent History and Search to just those domains/keywords/URLs — search still works normally on top of it. Resets to no filter each time the popup is reopened.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="popupQuickFiltersToggle">
                 <span class="toggle-slider"></span>
               </label>
             </div>
@@ -670,14 +761,26 @@
               <span id="popupHeightVal" style="color:var(--text);font-size:0.85rem;min-width:44px;font-family:var(--font-mono)">320px</span>
             </div>
           </div>
-          <div class="s-row" style="border-bottom:none">
+          <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="popup_as_sidebar">Use as sidebar</div>
-              <div class="s-row-desc" data-i18n-key="popup_as_sidebar_desc">Open Extended History in Firefox's sidebar instead of a popup, so it can extend over the whole page</div>
+              <div class="s-row-desc" data-i18n-key="popup_as_sidebar_desc">Open Extended History in Browser's side panel instead of a popup, so it can extend over the whole page</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
                 <input type="checkbox" id="popupSidebarToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row" style="border-bottom:none" id="sidebarAutoHideRow">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="auto_hide_sidebar">Auto-hide sidebar on mouse leave</div>
+              <div class="s-row-desc" data-i18n-key="auto_hide_sidebar_desc">Close the sidebar automatically once your cursor leaves it, similar to how a popup dismisses itself. Turn off to keep it open until you close it manually.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="sidebarAutoHideToggle" checked>
                 <span class="toggle-slider"></span>
               </label>
             </div>
@@ -712,8 +815,94 @@
           </div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll date pills with mouse wheel</div>
-              <div class="s-row-desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
+              <div class="s-row-lbl" data-i18n-key="high_contrast_mode">High contrast mode</div>
+              <div class="s-row-desc" data-i18n-key="high_contrast_mode_desc">Uses the primary text color everywhere secondary/tertiary (dimmer) text color would normally be used, for better readability</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="highContrastToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+           <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="follow_system_theme">Follow system theme</div>
+              <div class="s-row-desc" data-i18n-key="follow_system_theme_desc">Automatically switch between light and dark mode with your operating system. The Light / Dark buttons in the sidebar are hidden while this is on.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="followSystemThemeToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="ui_rounded_corners">UI rounded corners</div>
+              <div class="s-row-desc" data-i18n-key="ui_rounded_corners_desc">Rounds the corners of the sidebar and main panel (and keeps the small gap around them). Turn off for a sharp-edged, flush, edge-to-edge layout.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="roundedCornersToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+                    <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="nav_icons">Navigation icons</div>
+              <div class="s-row-desc" data-i18n-key="nav_icons_desc">Show the icons next to the items in the sidebar navigation. Turn off for a text-only menu.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="navIconsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="match_ui_colors">Match UI colors</div>
+              <div class="s-row-desc" data-i18n-key="match_ui_colors_desc">Makes the history list the same color as the rest of the interface (sidebar, calendar sidebar and panels) instead of a distinct shade.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="matchUiColorsToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+<div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="ui_calendar_mode">UI calendar mode</div>
+              <div class="s-row-desc" data-i18n-key="ui_calendar_mode_desc">Replaces the date/hour pill navigation on the History page with a right-side calendar sidebar — pick dates, months and years, and jump straight to any hour.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="calendarModeToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="fade_in_list_on_date_change">Fade in list on date change</div>
+              <div class="s-row-desc" data-i18n-key="fade_in_list_on_date_change_desc">When switching dates — pill bar, calendar, or the Time Spent date arrows — the history list fades in as it loads instead of just appearing instantly.</div>
+            </div>
+            <div class="s-ctrl">
+              <label class="toggle-switch">
+                <input type="checkbox" id="fadeInListToggle" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="scroll_date">Scroll date pills with mouse wheel</div>
+              <div class="s-row-desc" data-i18n-key="scroll_date_desc">Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own.</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
@@ -724,15 +913,15 @@
           </div>
           <div class="s-row" id="datePillsWheelSensRow">
             <div class="s-row-info">
-              <div class="s-row-lbl">Scroll sensitivity</div>
-              <div class="s-row-desc">How many day pills each scroll click moves</div>
+              <div class="s-row-lbl" data-i18n-key="scroll_sensitivity">Scroll sensitivity</div>
+              <div class="s-row-desc" data-i18n-key="scroll_sensitivity_desc">How many day pills each scroll click moves</div>
             </div>
             <div class="s-ctrl" style="gap:10px">
               <input type="range" id="datePillsWheelSensInput" value="1" min="1" max="6" step="1" style="width:120px;accent-color:var(--accent)"/>
               <span id="datePillsWheelSensVal" style="color:var(--text);font-size:0.85rem;min-width:70px">1 day/click</span>
             </div>
           </div>
-          <div class="s-row" style="border-bottom:none">
+           <div class="s-row" style="border-bottom:none">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="context_menu_on_pages">Right-click menu on websites</div>
               <div class="s-row-desc" data-i18n-key="context_menu_on_pages_desc">Show the "Extended History" entry when you right-click on a webpage</div>
@@ -797,20 +986,34 @@
             </div>
           </div>
         </div>
-           <div class="s-card">
+           <div class="s-card" style="display:none;">
           <div class="s-card-title">Storage Backend</div>
           <div class="s-row" style="border-bottom:none">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="history_storage">History storage engine</div>
-              <div class="s-row-desc"><span data-i18n-key="history_storage_desc">IndexedDB is faster for large histories (100k+ entries) and uses less memory. Migration copies all data — you can switch back any time. Current: </span><strong id="storageBackendLabel">checking…</strong></div>
+              <div class="s-row-desc"><span data-i18n-key="history_storage_desc">IndexedDB is faster for large histories (100k+ entries) and uses less memory. Migration moves all data (the old copy is deleted afterwards to free disk space) — you can switch back any time. Current: </span><strong id="storageBackendLabel">checking…</strong></div>
             </div>
             <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:8px">
-              <select id="storageBackendSel" style="width:130px">
+              <select id="storageBackendSel" style="width:210px">
                 <option value="local">Local Storage</option>
                 <option value="idb">IndexedDB</option>
+                <option value="sqlite">SQLite (best for big histories)</option>
               </select>
               <button class="action-btn" id="migrateStorageBtn" style="font-size:0.78rem;padding:5px 12px" data-i18n-key="apply_migrate">Apply &amp; Migrate</button>
               <div id="migrateStorageStatus" style="font-size:0.75rem;color:var(--text3);text-align:right"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="s-card">
+          <div class="s-card-title" data-i18n-key="developer">Developer</div>
+          <div class="s-row" style="border-bottom:none">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="dev_mode">Dev Mode</div>
+              <div class="s-row-desc" data-i18n-key="dev_mode_desc">Internal diagnostics: live tab idle-tracking data used for auto-store, and background timer stats. For troubleshooting only.</div>
+            </div>
+            <div class="s-ctrl">
+              <button class="action-btn" id="devModeBtn" data-i18n-key="open_dev_mode">🛠 Open Dev Mode</button>
             </div>
           </div>
         </div>
@@ -819,8 +1022,8 @@
           <div class="s-card-title" style="color:var(--danger)" data-i18n-key="danger_zone">Danger Zone</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Firefox history</div>
-              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Firefox native history again (merges, no duplicates)</div>
+              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Browser history</div>
+              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Browser native history again (merges, no duplicates)</div>
             </div>
             <div class="s-ctrl">
               <button class="action-btn" id="reBackfillBtn">↺ <span data-i18n-key="reimport">Re-import</span></button>
@@ -862,7 +1065,7 @@
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="feedback">Feedback</div>
       <div style="max-width:560px;padding:8px 0 8px"> <br>
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_discord">
-          Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave a review)
+          Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in chrome store)
         </div>
         <a class="sa-btn" href="https://discord.gg/xyzeh2WjmQ" target="_blank"
            style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
@@ -873,9 +1076,9 @@
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;" data-i18n-key="rate_extension">Rate this extension </div>
       <div style="max-width:560px;padding:8px 0 8px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_chrome_webstore"> 
-          Link to <strong style="color:var(--text)">Firefox Add-ons</strong> page
+          Link to extensions page
         </div>
-        <a class="sa-btn" href="https://addons.mozilla.org/firefox/addon/extended-history/" target="_blank"
+        <a class="sa-btn" href="https://addons.mozilla.org/en-US/firefox/addon/extended-history/" target="_blank"
            style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="click_to_rate">
           Click to Rate 
@@ -891,7 +1094,6 @@
     <div id="ignoreListInner" style="display:none;flex:1;flex-direction:column;overflow:hidden"></div>
   </div>
 
-  <!-- QUICK FILTERS -->
   <div class="panel" id="panel-quickfilters">
     <div id="quickFiltersInner" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
   </div>
@@ -906,12 +1108,16 @@
   <div class="ctx-item" id="ctx-open-tab">↗ <span data-i18n-key="open_in_new_tab">Open in new tab</span></div>
   <div class="ctx-item" id="ctx-open-incognito">🕵 <span data-i18n-key="open_in_incognito">Open in incognito</span></div>
    <div class="ctx-sep" id="ctx-jump-sep"></div>
-  <div class="ctx-item" id="ctx-jump-to-date">📅 Jump to date</div>
+  <div class="ctx-item" id="ctx-jump-to-date">📅 <span data-i18n-key="jump_to_date">Jump to date</span></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-more-domain">🔎 <span data-i18n-key="more_from_domain">More from domain</span></div>
+  <div class="ctx-item" id="ctx-ignore-domain">🚫 <span data-i18n-key="ignore_domain">Ignore domain</span></div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
+  <div class="ctx-item" id="ctx-rename-bookmark" style="display:none" data-i18n-key="rename_bookmark">Rename bookmark</div>
   <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
-  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none">🗑 Remove bookmark</div>
+  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none" data-i18n-key="remove_bookmark">🗑 Remove bookmark</div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
 </div>
@@ -927,12 +1133,12 @@
 <!-- Move bookmarks to folder modal -->
 <div class="modal-backdrop" id="bmMoveModal">
   <div class="modal-box" style="max-width:340px">
-    <div class="modal-title">📁 Move to folder</div>
-    <div class="modal-sub" style="margin-bottom:10px">Select destination folder:</div>
+    <div class="modal-title" data-i18n-key="move_to_folder">📁 Move to folder</div>
+    <div class="modal-sub" style="margin-bottom:10px" data-i18n-key="sel_dest_folder">Select destination folder:</div>
     <div id="bmMoveFolderList" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surf0)"></div>
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="action-btn" id="bmMoveConfirmBtn" style="flex:1;background:var(--accent);color:#fff">Move</button>
-      <button class="action-btn" id="bmMoveCancelBtn" style="flex:1">Cancel</button>
+      <button class="action-btn" id="bmMoveConfirmBtn" style="flex:1;background:var(--accent);color:#fff" data-i18n-key="move">Move</button>
+      <button class="action-btn" id="bmMoveCancelBtn" style="flex:1" data-i18n-key="cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -940,8 +1146,9 @@
 <!-- Delete History Modal -->
 <div class="modal-backdrop" id="deleteHistoryModal">
   <div class="modal-box">
+    <div id="dhMainView">
     <div class="modal-title">🗑 <span data-i18n-key="delete_history">Delete History</span></div>
-    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Firefox's native history.</div>
+    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Browser's native history.</div>
     <div class="dh-range-grid" id="dhRangeGrid">
       <button class="dh-range-btn" data-range="1h" data-i18n-key="last_1_hour">Last 1 hour</button>
       <button class="dh-range-btn" data-range="24h" data-i18n-key="last_24_hours">Last 24 hours</button>
@@ -954,27 +1161,105 @@
       <label class="dh-option"><input type="checkbox" id="dhCookies"/> <span data-i18n-key="clear_cookies_local_storage">Clear cookies &amp; local storage</span></label>
       <label class="dh-option"><input type="checkbox" id="dhCache"/> <span data-i18n-key="clear_cache">Clear cache</span></label>
     </div>
+    <button type="button" class="dh-exc-open" id="dhExceptionsBtn">
+      <span data-i18n-key="domain_exceptions">Domain exceptions</span>
+      <span class="dh-exc-count" id="dhExcCount"></span>
+    </button>
     <div id="dhConfirmWarn" style="display:none;background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);border-radius:8px;padding:9px 13px;font-size:0.8rem;color:var(--danger);margin-bottom:14px;line-height:1.5"></div>
     <div class="dh-actions">
       <button class="dh-cancel" id="dhCancelBtn" data-i18n-key="cancel">Cancel</button>
       <button class="dh-confirm" id="dhConfirmBtn" disabled data-i18n-key="delete">Delete</button>
     </div>
+    </div>
+    <div id="dhExcView" style="display:none">
+      <div class="modal-title"><span data-i18n-key="domain_exceptions">Domain exceptions</span></div>
+      <div class="modal-sub" style="margin-top:8px" data-i18n-key="domain_exceptions_desc">Domains on this list are skipped when you delete history: their history entries, cookies and site data are kept. Subdomains are included.</div>
+      <div class="dh-exc-add">
+        <div class="search-box" style="flex:1;min-width:0">
+          <input type="text" id="dhExcInput" placeholder="example.com" spellcheck="false" autocomplete="off">
+        </div>
+        <button class="action-btn primary" id="dhExcAddBtn" type="button" data-i18n-key="add">Add</button>
+      </div>
+      <div class="dh-exc-error" id="dhExcError"></div>
+      <div class="dh-exc-list" id="dhExcList"></div>
+      <div class="dh-actions" style="margin-top:16px">
+        <button class="dh-cancel" id="dhExcBackBtn" type="button" data-i18n-key="back">&larr; Back</button>
+      </div>
+    </div>
   </div>
 </div>
-<script src="history.js"></script>
-<script src="ignore-list.js"></script>
-<script src="quick-filters.js"></script>
-<script src="ui-translate.js"></script>
+<!-- Dev Mode Modal -->
+<div class="modal-backdrop" id="devModeModal">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-title" data-i18n-key="developer_mode_title">🛠 Developer Mode</div>
+    <div class="modal-sub" style="margin-top:0" data-i18n-key="dev_mode_modal_sub">Internal diagnostics — background timers and the live tab idle-tracking state used for auto-store.</div>
+
+    <div id="devStatsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 18px">
+      <div class="state-msg" style="grid-column:1/-1"><span class="state-msg-icon">📊</span>Loading…</div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <button class="action-btn" id="devListTabsBtn" data-i18n-key="dev_list_tabs">🗂 List open tabs &amp; idle time</button>
+      <button class="action-btn" id="devRefreshBtn" data-i18n-key="refresh">↻ Refresh</button>
+    </div>
+
+    <div id="devTabsList" style="display:none;max-height:320px;overflow-y:auto;border:1px solid var(--border2);border-radius:8px;margin-top:10px"></div>
+
+    <div class="dh-actions" style="margin-top:16px">
+      <button class="dh-cancel" id="devModeCloseBtn" data-i18n-key="close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Sidebar (UI Calendar Mode) — replaces date/hour pills on the History page -->
+<div class="cal-hover-zone" id="calHoverZone"></div>
+<aside class="cal-sidebar" id="calSidebar">
+  <div class="cal-sidebar-inner">
+    <button class="cal-alltime-btn tb-btn" id="calAllTimeBtn" data-i18n-key="cal_all_time">All Time</button>
+
+    <div class="cal-widget">
+      <div class="cal-head">
+        <button class="cal-arrow-btn tb-btn" id="calPrevMonthBtn" title="Previous month" data-i18n-title="previous_month">‹</button>
+        <div class="cal-head-labels">
+          <button class="cal-label-btn" id="calMonthLabel">Month</button>
+          <button class="cal-label-btn" id="calYearLabel">Year</button>
+        </div>
+        <button class="cal-arrow-btn tb-btn" id="calNextMonthBtn" title="Next month" data-i18n-title="next_month">›</button>
+      </div>
+
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-days" id="calDays"></div>
+
+      <div class="cal-picker" id="calMonthPicker" style="display:none"></div>
+      <div class="cal-picker" id="calYearPicker" style="display:none"></div>
+    </div>
+
+    <div class="cal-daynav-row">
+      <button class="cal-daynav-btn tb-btn" id="calPrevDayBtn" data-i18n-key="prev_day">‹ Prev day</button>
+      <button class="cal-daynav-btn tb-btn" id="calNextDayBtn" data-i18n-key="next_day">Next day ›</button>
+    </div>
+
+    <div class="cal-hours-label" data-i18n-key="hour">Hour</div>
+    <div class="cal-hours-grid" id="calHoursGrid"></div>
+  </div>
+</aside>
+
+<script src="../js/i18n-core.js"></script>
+<script src="../js/lock.js"></script>
+<script src="../js/history.js"></script>
+<script src="../js/ignore-list.js"></script>
+<script src="../js/quick-filters.js"></script>
+<script src="../js/ui-translate.js"></script>
 <!-- Ignore List Password Modal -->
 <div class="modal-backdrop" id="ignorePasswordModal">
   <div class="modal-box" style="max-width:360px">
-    <div class="modal-title" id="ignorePwTitle">🔒 Ignore List Access</div>
-    <div class="modal-sub" id="ignorePwDesc">Enter your master password to view the ignore list.</div>
+    <div class="modal-title" id="ignorePwTitle" data-i18n-key="ignore_list_access">🔒 Ignore List Access</div>
+    <div class="modal-sub" id="ignorePwDesc" data-i18n-key="ignore_list_enter_password">Enter your master password to view the ignore list.</div>
     <input type="password" id="ignorePwInput" placeholder="Master password" style="width:100%;padding:8px 12px;margin-top:12px;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;outline:none"/>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)">Reset</button>
-      <button class="sa-btn" id="ignorePwCancelBtn">Cancel</button>
-      <button class="sa-btn" id="ignorePwOkBtn">OK</button>
+      <button class="sa-btn" id="ignorePwResetBtn" style="color:var(--danger);border-color:color-mix(in srgb,var(--danger) 30%,transparent)" data-i18n-key="reset">Reset</button>
+      <button class="sa-btn" id="ignorePwCancelBtn" data-i18n-key="cancel">Cancel</button>
+      <button class="sa-btn" id="ignorePwOkBtn" data-i18n-key="ok">OK</button>
     </div>
     <div id="ignorePwError" style="color:#e05252;font-size:0.78rem;margin-top:8px;display:none"></div>
   </div>

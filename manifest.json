@@ -1,15 +1,17 @@
 {
   "manifest_version": 2,
   "name": "Extended History",
-  "version": "4.2.7",
+  "version": "4.3.1",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "browser_specific_settings": {
     "gecko": {
       "id": "extended-history@extension",
-      "strict_min_version": "109.0",
+      "strict_min_version": "115.0",
       "data_collection_permissions": {
-        "required": ["none"],
+        "required": [
+          "none"
+        ],
         "optional": []
       }
     }
@@ -27,17 +29,31 @@
     "unlimitedStorage",
     "webNavigation"
   ],
+  "optional_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "background": {
-    "service_worker": "background.js",
-    "scripts": ["eh-idb.js","background.js"],
+    "scripts": [
+      "js/database/eh-idb.js",
+      "js/database/eh-sql.js",
+      "js/background.js"
+    ],
     "persistent": true
   },
-  "browser_action": {
-    "default_popup": "popup.html",
-    "default_title": "Extended History"
+  "omnibox": {
+    "keyword": "q"
   },
-    "sidebar_action": {
-    "default_panel": "popup.html?sidebar=1",
+  "commands": {
+    "open_sidebar": {
+      "suggested_key": {
+        "default": "Alt+Shift+H"
+      },
+      "description": "Open Extended History in the sidebar"
+    }
+  },
+  "browser_action": {
+    "default_popup": "html/popup.html",
     "default_title": "Extended History",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -45,9 +61,20 @@
       "128": "icons/icon128.png"
     }
   },
+  "sidebar_action": {
+    "default_panel": "html/popup.html?sidebar=1",
+    "default_title": "Extended History",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "open_at_install": false
+  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
 }

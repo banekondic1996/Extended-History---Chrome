@@ -1,21 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" overflow-x-hidden>
 <head>
 <meta charset="utf-8"/>
 <title>Extended History</title>
+<script src="../js/theme-init.js"></script>
 <style>
-:root { --accent:#3b9eff; --fsize:13px; --font:system-ui,-apple-system,'Segoe UI',sans-serif; }
+html{
+  overflow-x: hidden;
+}
+:root { --accent:#3b9eff; }
 [data-theme="dark"]  { --bg:#131318; --s1:#18181f; --s2:#1f1f28; --border:rgba(255,255,255,0.08); --text:#f0eee8; --text2:#a09eb0; --text3:#5a5870; }
 [data-theme="light"] { --bg:#ffffff; --s1:#f5f5f7; --s2:#eeeef2; --border:rgba(0,0,0,0.08); --text:#111118; --text2:#555568; --text3:#aaaabc; }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html { font-size:var(--fsize); }
-body { background:var(--bg); color:var(--text); font-family:var(--font); width:340px; max-width:340px; font-size:1rem; position:relative; overflow-x:hidden; }
-/* Sidebar mode: loaded via sidebar_action (popup.html?sidebar=1) — fill the
+body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',sans-serif; width:340px; font-size:13px; position:relative; }
+/* Sidebar mode: loaded via chrome.sidePanel (popup.html?sidebar=1) — fill the
    full-height panel instead of the small fixed-size popup dropdown. */
 body.sidebar-mode { width:100%; max-width:none; height:100vh; display:flex; flex-direction:column; }
 body.sidebar-mode .content-wrapper { flex:1; display:flex; flex-direction:column; min-height:0; }
-body.sidebar-mode .content { flex:1; max-height:none !important; }
-body.sidebar-mode .search-list { flex:1; max-height:none !important; }
+body.sidebar-mode .content {flex:1;max-height:none !important;min-height: 100%;}
+body.sidebar-mode .search-list { flex:1; max-height:none !important; min-height:0; }
+body.sidebar-mode .tab-panel.active { min-height:100%; }
 /* Keep the title bar pinned at the top and never let it get squeezed by the
    flex column — same for the other fixed-height chrome (tabs, footer, search). */
 body.sidebar-mode .header { display:none; }
@@ -25,14 +29,14 @@ body.sidebar-mode .hico, body.sidebar-mode .htitle { display:none; }
 .sdn-arrow { width:26px; height:26px; background:transparent; border:1.5px solid var(--accent); border-radius:6px; color:var(--accent); font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
 .sdn-arrow:hover { background:var(--accent); color:#fff; transform:translateY(-1px); }
 .sdn-arrow:active { transform:translateY(0); }
-.sdn-arrow:disabled { opacity:0.35; cursor:default; border-color:var(--border); color:var(--text2); }
+.sdn-arrow:disabled { opacity:0.7; cursor:default; border-color:var(--border); color:var(--text3); }
 .sdn-arrow:disabled:hover { background:transparent; color:var(--text2); transform:none; }
 .sdn-datelabel { padding:5px 10px; margin-left:4px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.1s; }
 .sdn-datelabel:hover { border-color:var(--accent); color:var(--accent); }
 .sdn-clear { width:24px; height:24px; margin-left:4px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
 .sdn-clear:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); transform:translateY(-1px); }
 .sdn-clear:active:not(:disabled) { transform:translateY(0); }
-.sdn-clear:disabled { opacity:0.3; cursor:default; }
+.sdn-clear:disabled { opacity:0.65; cursor:default; }
 .sdn-right { display:flex; align-items:center; gap:6px; align-self: flex-end; }
 
 /* ── Custom calendar (sidebar day picker) ─────────────────────────────────── */
@@ -69,6 +73,22 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .open-btn { padding:5px 11px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:0.75rem; font-weight:600; cursor:pointer; }
 .store-btn { padding:5px 11px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--text2); font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.1s; }
 .store-btn:hover { border-color:var(--accent); color:var(--accent); }
+/* Quick Filters ("F") button + dropdown, next to Store */
+.qf-wrap { position:relative; }
+.qf-btn { min-width:26px; padding:5px 9px; display:inline-flex; align-items:center; justify-content:center; }
+.qf-btn svg { display:block; }
+.qf-btn.qf-active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.qf-dropdown { display:none; position:fixed; width:220px; max-height:260px; overflow-y:auto; background:var(--s1); border:1px solid var(--border); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,0.4); z-index:99999; padding:4px; }
+.qf-dropdown.open { display:block; }
+.qf-item { display:flex; align-items:center; gap:6px; padding:7px 9px; border-radius:6px; font-size:0.76rem; color:var(--text); cursor:pointer; }
+.qf-item span:last-child { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.qf-item:hover { background:var(--s2); }
+.qf-item.qf-item-active { color:var(--accent); font-weight:600; }
+.qf-item-check { width:12px; flex-shrink:0; font-size:0.7rem; color:var(--accent); }
+.qf-divider { height:1px; background:var(--border); margin:4px 2px; }
+.qf-empty { padding:10px 9px; font-size:0.72rem; color:var(--text3); text-align:center; line-height:1.4; }
+.qf-manage-link { display:block; text-align:center; padding:7px 9px; margin-top:2px; border-radius:6px; font-size:0.72rem; color:var(--text2); cursor:pointer; }
+.qf-manage-link:hover { background:var(--s2); color:var(--accent); }
 .tabs { display:flex; gap:4px; padding:8px 14px; background:var(--bg); border-bottom:1px solid var(--border); transition:opacity 0.2s, transform 0.2s; }
 .tabs.hidden { opacity:0; transform:scaleY(0); height:0; overflow:hidden; padding:0; border:none; }
 .tab { flex:1; padding:6px 4px; background:transparent; border:none; border-radius:6px; color:var(--text2); font-size:0.7rem; font-weight:500; cursor:pointer; transition:color 0.15s; text-align:center; }
@@ -87,7 +107,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .ritem.sel-checked .ritem-check { background:var(--accent); border-color:var(--accent); color:#fff; }
 .ritem.sel-mode { cursor:default; user-select:none; }
 .ritem.sel-checked { background:rgba(59,158,255,0.08); }
-.content-wrapper { position:relative; }
+.content-wrapper { position:relative; contain: content; }
 .content { max-height:320px; overflow-y:auto; scrollbar-width:auto; scrollbar-color:var(--s2) transparent; }
 .content::-webkit-scrollbar { width:10px; }
 .content::-webkit-scrollbar-track { background:transparent; }
@@ -103,7 +123,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .rurl   { font-size:0.65rem; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
 .loading { padding:18px 14px; color:var(--text3); font-size:0.8rem; text-align:center; }
 .empty { padding:18px 14px; color:var(--text3); font-size:0.8rem; text-align:center; }
-.search-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--bg); z-index:100; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); visibility:hidden; }
+.search-overlay { position:absolute !important; top:0; left:0; right:0; bottom:0; background:var(--bg); z-index:100; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); visibility:hidden; }
 .search-overlay.active { transform:translateX(0); visibility:visible; }
 .search-header { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
 .search-title { font-size:0.8rem; font-weight:600; color:var(--text2); }
@@ -144,18 +164,22 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 <div class="header">
   <img src="/icons/icon128.png" class="hico">
   <div class="htitle">Extended History</div>
-  <button class="store-btn" id="storeBtn">Store</button>
-  <button class="open-btn" id="openBtn">Open</button>
+  <div class="qf-wrap" id="qfWrap" style="display:none">
+    <button class="store-btn qf-btn" id="qfBtn" title="Quick Filters" data-i18n-title="quick_filters"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg></button>
+    <div class="qf-dropdown" id="qfDropdown"></div>
+  </div>
+  <button class="store-btn" id="storeBtn" data-i18n-key="pop_store">Store</button>
+  <button class="open-btn" id="openBtn" data-i18n-key="pop_open">Open</button>
 </div>
 <!-- Sidebar-mode only: prev/next day nav + date label on the left, Store/Open
      (relocated from the header, which is hidden in sidebar mode) on the right.
      Only ever shown while on the Recent History sub-view — see popup.js. -->
 <div class="sidebar-daynav" id="sidebarDayNav" style="display:none">
   <div class="sdn-left">
-    <button class="sdn-arrow" id="sdnPrev" title="Previous day">‹</button>
-    <button class="sdn-arrow" id="sdnNext" title="Next day">›</button>
+    <button class="sdn-arrow" id="sdnPrev" title="Previous day" data-i18n-title="pop_prev_day">‹</button>
+    <button class="sdn-arrow" id="sdnNext" title="Next day" data-i18n-title="pop_next_day">›</button>
     <button class="sdn-datelabel" id="sdnDateLabel">Today</button>
-    <button class="sdn-clear" id="sdnClear" title="Clear search &amp; reset to today">✕</button>
+    <button class="sdn-clear" id="sdnClear" title="Clear search &amp; reset to today" data-i18n-title="pop_clear_search">✕</button>
   </div>
   <div class="sdn-right" id="sdnRight"></div>
 </div>
@@ -174,35 +198,36 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
 </div>
 <div class="tabs" id="tabsRow">
-  <button class="tab active" data-tab="history" id="historyTab">Recent History</button>
-  <button class="tab" data-tab="tabs">Closed Tabs</button>
-  <button class="tab" data-tab="tabstorage">Tab Storage</button>
+  <button class="tab active" data-tab="history" id="historyTab" data-i18n-key="pop_recent_history">Recent History</button>
+  <button class="tab" data-tab="tabs" data-i18n-key="pop_closed_tabs">Closed Tabs</button>
+  <button class="tab" data-tab="tabstorage" data-i18n-key="tab_storage">Tab Storage</button>
 </div>
 <div class="sel-mode-row hidden" id="selModeRow">
-  <button class="sel-mode-btn" id="selUnselectBtn">Unselect All</button>
-  <button class="sel-mode-btn del" id="selDelBtn">Delete</button>
+  <button class="sel-mode-btn" id="selUnselectBtn" data-i18n-key="pop_unselect_all">Unselect All</button>
+  <button class="sel-mode-btn del" id="selDelBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="sel-mode-row hidden" id="tsModeRow">
-  <button class="sel-mode-btn" id="tsUnselectBtn">Unselect All</button>
-  <button class="sel-mode-btn del" id="tsUnstoreBtn">Unstore</button>
+  <button class="sel-mode-btn" id="tsUnselectBtn" data-i18n-key="pop_unselect_all">Unselect All</button>
+  <button class="sel-mode-btn" id="tsUnstoreBtn" data-i18n-key="restore">Restore</button>
+  <button class="sel-mode-btn del" id="tsDeleteBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="sel-mode-row hidden" id="srchModeRow">
-  <button class="sel-mode-btn" id="srchSelAllBtn">Select All</button>
-  <button class="sel-mode-btn del" id="srchDelBtn">Delete</button>
+  <button class="sel-mode-btn" id="srchSelAllBtn" data-i18n-key="pop_select_all">Select All</button>
+  <button class="sel-mode-btn del" id="srchDelBtn" data-i18n-key="delete">Delete</button>
 </div>
 <div class="content-wrapper">
   <div class="content" id="mainContent">
     <div class="tab-panel active" id="panel-history">
-      <div class="ts-view active" id="h-recent"><div id="recent"><div class="loading">Loading…</div></div></div>
-      <div class="ts-view" id="h-mostvisited"><div id="mvPopup"><div class="loading">Loading…</div></div></div>
+      <div class="ts-view active" id="h-recent"><div id="recent"><div class="loading" data-i18n-key="pop_start_typing">Loading…</div></div></div>
+      <div class="ts-view" id="h-mostvisited"><div id="mvPopup"><div class="loading" data-i18n-key="loading">Loading…</div></div></div>
     </div>
     <div class="tab-panel" id="panel-tabs">
-      <div id="recentTabs"><div class="loading">Loading…</div></div>
+      <div id="recentTabs"><div class="loading" data-i18n-key="loading">Loading…</div></div>
     </div>
      <div class="tab-panel" id="panel-tabstorage">
       <!-- Stored tabs view (default, left click) -->
       <div class="ts-view active" id="ts-stored">
-        <div id="tabStoragePopup"><div class="loading">Loading…</div></div>
+        <div id="tabStoragePopup"><div class="loading" data-i18n-key="loading">Loading…</div></div>
       </div>
       <!-- Quick-store view (right click) -->
       <div class="ts-view" id="ts-quickstore">
@@ -212,7 +237,7 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
   <div class="search-overlay" id="searchOverlay">
     <div class="search-header">
-      <span class="search-title">Search Results</span>
+      <span class="search-title" data-i18n-key="pop_search_results">Search Results</span>
     </div>
     <div class="search-list" id="searchResults">
       <div class="loading">Start typing to search...</div>
@@ -220,15 +245,19 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
   </div>
 </div>
 <div class="footer">
-  <button class="flink" data-panel="activity">Activity</button>
-  <button class="flink" data-panel="bookmarks">Bookmarks</button>
-  <button class="flink" data-panel="sessions" title="Right-click to export latest session">Sessions</button>
-  <button class="flink" data-panel="settings">Settings</button>
+  <button class="flink" data-panel="activity" data-i18n-key="activity">Activity</button>
+  <button class="flink" data-panel="bookmarks" data-i18n-key="bookmarks">Bookmarks</button>
+  <button class="flink" data-panel="sessions" title="Right-click to export latest session" data-i18n-title="pop_export_session_title" data-i18n-key="sessions">Sessions</button>
+  <button class="flink" data-panel="settings" data-i18n-key="settings">Settings</button>
 </div>
 <div class="search-bar">
   <input type="text" class="search-input" id="searchInput" placeholder="Search all history...">
   <button class="search-clear" id="searchClear">✕</button>
 </div>
-<script src="popup.js"></script>
+<script src="../js/i18n-core.js"></script>
+<script src="../js/lock.js"></script>
+<script src="../js/quick-filters.js"></script>
+<script src="../js/popup.js"></script>
+<script src="../js/ui-translate.js"></script>
 </body>
 </html>

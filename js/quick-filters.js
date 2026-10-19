@@ -14,11 +14,10 @@
 
 function qfSend(type, extra = {}) {
   return new Promise((res, rej) => {
-    browser.runtime.sendMessage({ type, ...extra }, r => {
-      if (browser.runtime.lastError) { rej(new Error(browser.runtime.lastError.message)); return; }
+    browser.runtime.sendMessage({ type, ...extra }).then(r => {
       if (r && r.error) { rej(new Error(r.error)); return; }
       res(r);
-    });
+    }, rej);
   });
 }
 
@@ -32,13 +31,26 @@ let _qfActiveId = '';   // '' = no filter applied
 let _qfEditingId = null; // id currently being edited in the panel form, or null = "new"
 
 // ── Matching ─────────────────────────────────────────────────────────────────
-// Whole-word test for single-word patterns — bounded by non-word characters
-// (spaces, slashes, dots, punctuation, string start/end, etc.), so a pattern
-// like "home" matches ".../home/" or "My Home Page" but NOT "homeland" or
-// "whitehome".
-function qfWholeWordTest(haystack, word) {
-  const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp('(?:^|\\W)' + esc + '(?:$|\\W)').test(haystack);
+// Keyword rules: a keyword matches only as a WHOLE word — "ana" matches "ana", "my ana-page" or
+// "site/ana" but not "ananas" or "banana". Wildcards open a side up: "ana*" = starts with ana
+// (ananas), "*ana" = ends with ana (banana), "*ana*" = contains ana anywhere.
+// Patterns with a dot and no space/slash are domains (domain or subdomain match), as before.
+const _qfReCache = new Map();
+function qfKeywordRegex(raw) {
+  let hit = _qfReCache.get(raw);
+  if (hit !== undefined) return hit;
+  let p = raw, openL = false, openR = false;
+  if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+  if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+  if (!p) { _qfReCache.set(raw, null); return null; }
+  const esc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const W = '\\p{L}\\p{N}';
+  // A boundary only makes sense next to a letter/digit; a pattern edge that is already a symbol ("/login") needs none
+  const left  = (!openL && new RegExp('^[' + W + ']', 'u').test(p))              ? '(?<![' + W + '])' : '';
+  const right = (!openR && new RegExp('[' + W + ']$', 'u').test(p))              ? '(?![' + W + '])'  : '';
+  hit = new RegExp(left + esc + right, 'iu');
+  _qfReCache.set(raw, hit);
+  return hit;
 }
 
 function qfMatchesPattern(entry, rawPattern) {
@@ -48,18 +60,13 @@ function qfMatchesPattern(entry, rawPattern) {
   const title  = (entry.title || '').toLowerCase();
   const domain = (entry.domain || (typeof tryDomain === 'function' ? tryDomain(entry.url) : '') || '').toLowerCase();
 
-  // Domain-like pattern (contains a dot, no spaces) — match the domain (incl. subdomains) or full URL
-  if (p.includes('.') && !p.includes(' ') && !p.includes('/')) {
-    return domain === p || domain.endsWith('.' + p) || url.includes(p);
+  // Domain-like pattern (contains a dot, no spaces) — match the domain or its subdomains
+  if (p.includes('.') && !p.includes(' ') && !p.includes('/') && !p.includes('*')) {
+    return domain === p || domain.endsWith('.' + p);
   }
-  // A single word (no spaces) must match as a whole word, not as a
-  // substring of a longer word — "home" shouldn't also catch "homeland"
-  // or "whitehome". Multi-word phrases still match as a plain substring.
-  if (!p.includes(' ')) {
-    return qfWholeWordTest(url, p) || qfWholeWordTest(title, p);
-  }
-  // Otherwise treat as a free keyword phrase / URL fragment — match URL or title
-  return url.includes(p) || title.includes(p);
+  // Otherwise a whole-word keyword / URL fragment (with optional * wildcards) — match URL or title
+  const re = qfKeywordRegex(p);
+  return !!re && (re.test(url) || re.test(title));
 }
 
 function qfEntryMatches(entry, filter) {
@@ -80,7 +87,7 @@ function qfRenderDropdown() {
   const sel = document.getElementById('quickFilterSelect');
   if (!sel) return;
   const prev = _qfActiveId;
-  sel.innerHTML = '<option value="">Quick Filters: None</option>';
+  sel.innerHTML = '<option value="">'+tr('quick_filters_none','Quick Filters: None')+'</option>';
   for (const f of _qfList) {
     const opt = document.createElement('option');
     opt.value = f.id;
@@ -122,21 +129,21 @@ function qfRenderPanel() {
 
   inner.innerHTML = `
     <div class="panel-scroll">
-      <div class="panel-heading">⚡ Quick Filters</div>
-      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
-        Save a named group of domains, keywords, or URLs (e.g. "Social Media" → facebook.com, instagram.com, pinterest.com).
-        Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries.
+      <div class="panel-heading">⚡ <span data-i18n-key="quick_filters">`+tr('quick_filters','Quick Filters')+`</span></div>
+      <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px" data-i18n-key="quick_filter_desc">
+       `+tr('quick_filter_desc',`Save a named group of domains, keywords, or URLs (e.g. "Social Media" → facebook.com, instagram.com, pinterest.com).
+        Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries.`)+`
       </p>
       <div class="ignore-add" style="flex-direction:column;align-items:stretch;gap:8px">
-        <input type="text" id="qfNameInput" placeholder="Filter name (e.g. Social Media)" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
-        <textarea id="qfPatternsInput" placeholder="One domain, keyword, or URL per line — e.g.&#10;facebook.com&#10;instagram.com&#10;pinterest.com" rows="4" style="width:100%;resize:vertical;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;padding:8px 10px;font-family:inherit">${editing ? esc((editing.patterns || []).join('\n')) : ''}</textarea>
+        <input type="text" id="qfNameInput" data-i18n-key="filter_name" placeholder="`+tr('filter_name','Filter name (e.g. Social Media)')+`" spellcheck="false" value="${editing ? esc(editing.name) : ''}">
+        <textarea id="qfPatternsInput" placeholder="`+tr('quick_filter_patterns_placeholder','One domain, keyword, or URL per line — e.g.&#10;facebook.com&#10;instagram.com&#10;pinterest.com')+`" rows="4" style="width:100%;resize:vertical;background:var(--surf3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:0.85rem;padding:8px 10px;font-family:inherit">${editing ? esc((editing.patterns || []).join('\n')) : ''}</textarea>
         <div style="display:flex;gap:8px">
-          <button id="qfSaveBtn" class="action-btn" style="background:var(--accent);color:#fff">${editing ? 'Save changes' : 'Add Filter'}</button>
-          ${editing ? '<button id="qfCancelEditBtn" class="action-btn">Cancel</button>' : ''}
+          <button id="qfSaveBtn" class="action-btn" style="background:var(--accent);color:#fff">${editing ? tr('save_changes','Save changes') : tr('add_filter','Add Filter')}</button>
+          ${editing ? '<button id="qfCancelEditBtn" class="action-btn" data-i18n-key="cancel">'+tr('cancel','Cancel')+'</button>' : ''}
         </div>
       </div>
       <div id="qfList" class="ignore-list" style="margin-top:20px">
-        ${_qfList.length ? '' : '<div class="empty-msg">No quick filters yet</div>'}
+        ${_qfList.length ? '' : '<div class="empty-msg" data-i18n-key="no_qfilters">No quick filters yet</div>'}
       </div>
     </div>`;
 
@@ -163,13 +170,13 @@ function qfRenderPanel() {
 
     const editBtn = document.createElement('button');
     editBtn.className = 'ignore-remove-btn';
-    editBtn.textContent = 'Edit';
+    editBtn.textContent = tr('edit','Edit');
     editBtn.style.marginRight = '6px';
     editBtn.onclick = () => { _qfEditingId = f.id; qfRenderPanel(); };
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'ignore-remove-btn';
-    removeBtn.textContent = 'Remove';
+    removeBtn.textContent = tr('remove','Remove');
     removeBtn.onclick = async () => {
       if (!confirm(`Remove quick filter "${f.name}"?`)) return;
       try {
@@ -237,7 +244,15 @@ function initQuickFilters() {
   qfLoadList(); // populate dropdown immediately so it's ready on the History page
 }
 
+// Patterns of the active quick filter (sent with SEARCH so the database filters the WHOLE history)
+function qfActivePatterns() {
+  if (!_qfActiveId) return null;
+  const f = _qfList.find(x => x.id === _qfActiveId);
+  return f && (f.patterns || []).length ? f.patterns : null;
+}
+
 window.QuickFilters = {
+  activePatterns: qfActivePatterns,
   loadPanel: loadQuickFiltersPanel,
   reload: qfLoadList,
 };

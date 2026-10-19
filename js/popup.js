@@ -24,9 +24,58 @@ function tryDomain(url) {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
+let _popupFavMode = 'google'; // updated when settings load
+let _popupSettingsReady = false;
+let _popupSettingsCallbacks = [];
+function onSettingsReady(fn) {
+    if (_popupSettingsReady) { fn(); } else { _popupSettingsCallbacks.push(fn); }
+}
+function _resolveSettingsReady() {
+    _popupSettingsReady = true;
+    _popupSettingsCallbacks.forEach(fn => fn());
+    _popupSettingsCallbacks = [];
+}
+
 function favUrl(domain) {
     return `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(domain)}`;
 }
+function setFavicon(img, domain) {
+    if (!domain) return;
+    if (_popupFavMode === 'cached') {
+        // Always go via background — it fetches through the service worker
+        // (no CORS restriction there) and returns a data URL we can use safely
+        browser.runtime.sendMessage({ type: 'GET_FAVICON_CACHED', domain }).catch(() => undefined).then((resp) => {
+            if (resp && resp.dataUrl) img.src = resp.dataUrl;
+            else img.src = favUrl(domain); // fallback to direct if fetch failed
+        });
+    } else {
+        img.src = favUrl(domain);
+    }
+}
+
+//Fast history page open function
+(async () => {
+  const now = Date.now();
+  
+  // 1. Retrieve the last recorded open time from local storage
+  const storage = await browser.storage.local.get("lastOpenTime");
+  const lastOpenTime = storage.lastOpenTime || 0;
+  
+  // 2. Immediately update storage with the current open timestamp
+  await browser.storage.local.set({ lastOpenTime: now });
+
+  // 3. Check if the gap matches a double-click threshold (e.g., 500ms)
+  if (now - lastOpenTime < 500) {
+     console.log("Ab-Normal single-click popup open.");
+    browser.runtime.sendMessage({ action: "open_history_page" });
+    
+    // Optional: Close the popup immediately so it doesn't linger
+    window.close();
+  } else {
+    // Normal single-click behavior goes here
+    console.log("Normal single-click popup open.");
+  }
+})();
 
 // ── Toolbar icon variants (kept in sync with background.js TOOLBAR_ICON_FILES) ─
 const ICON_VARIANT_FILES = {
@@ -37,6 +86,9 @@ const ICON_VARIANT_FILES = {
     gold:    '/icons/icon_gold.png',
     pink:    '/icons/icon_pink.png',
     red:     '/icons/icon_red.png',
+    purple:     '/icons/icon_purple.png',
+    orange:     '/icons/icon_orange.png',
+    blue:     '/icons/icon_darkblue.png',
 };
 function applyIconVariant(variant) {
     const file = ICON_VARIANT_FILES[variant] || ICON_VARIANT_FILES.default;
@@ -44,22 +96,63 @@ function applyIconVariant(variant) {
     if (img) img.src = file;
 }
 
-// ── Sidebar-mode detection (loaded via sidebar_action as popup.html?sidebar=1) ─
+// ── Sidebar-mode detection (loaded via browser.sidebarAction as popup.html?sidebar=1) ─
 if (new URLSearchParams(location.search).get('sidebar') === '1') {
     document.body.classList.add('sidebar-mode');
+
+    // Let other extension pages (notably history.html's calendar-mode sidebar,
+    // which hover-reveals from the right edge on narrow windows) know the browser's
+    // side panel is currently open, so they don't compete for the same edge.
+    // Set on load, cleared on close/navigate-away — never left stale.
+    // (deferred: a storage write at startup competes with the reads the first paint needs)
+    setTimeout(() => { browser.storage.local.set({ eh_sidebar_open: true }).catch(() => {}); }, 600);
+    const clearSidebarOpenFlag = () => { browser.storage.local.set({ eh_sidebar_open: false }).catch(() => {}); };
+    window.addEventListener('pagehide', clearSidebarOpenFlag);
+    window.addEventListener('beforeunload', clearSidebarOpenFlag);
+
+    // Firefox's sidebar stays open until the user closes it, and (unlike Chrome's side panel)
+    // it cannot be closed from a timer or a mouseleave handler: sidebarAction.close() only works
+    // inside a real user action. So there is no "auto-hide on mouse leave" here; the "Open" button
+    // below (a real click) does close the sidebar when it opens the full history page.
 }
 
 // ── Theme & Popup Settings ────────────────────────────────────────────────────
-let _popupShowUrl = false; // cached from settings
-browser.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
+let _popupShowUrl = true; // cached from settings — defaults on, matches "!== false" pattern below
+
+// PERF: eh_settings is tiny, but eh_wallpaper is the entire wallpaper image as a
+// data URL (often several MB). They used to be read together, so nothing -
+// including the recent-history list - could start until that whole blob had
+// been read and parsed. Settings now resolve on their own; the wallpaper is
+// fetched separately and applied whenever it arrives.
+let _popupWp = null;
+browser.storage.local.get('eh_wallpaper').catch(() => undefined).then(w => {
+    const wp = w && w.eh_wallpaper;
+    if (!(wp && wp.enabled && wp.dataUrl)) return;
+    _popupWp = wp;
+    onSettingsReady(() => {
+        _applyPopupWallpaper(wp, document.documentElement.getAttribute('data-theme') || 'dark');
+    });
+});
+// OS switched light/dark while "follow system theme" is on (the side panel stays open): recolor the wallpaper overlay
+window.addEventListener('eh-theme-changed', () => {
+    if (_popupWp) _applyPopupWallpaper(_popupWp, document.documentElement.getAttribute('data-theme') || 'dark');
+});
+browser.storage.local.get('eh_settings').catch(() => undefined).then(r => {
     const s  = r.eh_settings  || {};
-    const wp = r.eh_wallpaper || null;
-    document.documentElement.setAttribute('data-theme', s.theme || 'dark');
+    // Same rule as history.js: manual choice, or the OS light/dark setting when "follow system" is on
+    if (window.EhTheme) EhTheme.set(s.followSystemTheme === true, s.theme === 'light' ? 'light' : 'dark', true);
+    else document.documentElement.setAttribute('data-theme', s.theme || 'dark');
     if (s.accentColor)  document.documentElement.style.setProperty('--accent',  s.accentColor);
     if (s.accentColor2) document.documentElement.style.setProperty('--accent2', s.accentColor2);
-    if (s.fontSize)      document.documentElement.style.setProperty('--fsize', s.fontSize + 'px');
-    if (s.font)           document.documentElement.style.setProperty('--font', s.font);
     applyIconVariant(s.toolbarIcon || 'default');
+    // High contrast mode — overriding these two custom properties makes every
+    // rule using var(--text2)/var(--text3) resolve to the primary text color
+    // instead, no need to touch individual selectors. Shared with history.js's
+    // Settings toggle via the same eh_settings.highContrastMode value.
+    if (s.highContrastMode === true) {
+        document.documentElement.style.setProperty('--text2', 'var(--text)');
+        document.documentElement.style.setProperty('--text3', 'var(--text)');
+    }
 
     // Popup-specific settings
     if (s.popupShowSearch === false) document.querySelector('.search-bar').style.display = 'none';
@@ -68,19 +161,30 @@ browser.storage.local.get(['eh_settings', 'eh_wallpaper'], r => {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
-     if(s.popupShowUrl){
-        _popupShowUrl=true;
-    }
+    _popupShowUrl = s.popupShowUrl !== false;
+    if (s.faviconResolver) _popupFavMode = s.faviconResolver;
 
-    // Wallpaper mode
-    if (wp && wp.enabled && wp.dataUrl) {
-        _applyPopupWallpaper(wp, s.theme || 'dark');
-    }
+    // Quick Filters ("F") button — off by default, opt-in per Settings > Popup
+    const qfEnabled = s.popupQuickFilters === true;
+    const qfWrap = document.getElementById('qfWrap');
+    if (qfWrap) qfWrap.style.display = qfEnabled ? '' : 'none';
+    try { localStorage.setItem('eh_popup_qf', qfEnabled ? '1' : '0'); } catch (e) {}
+
+    _resolveSettingsReady();
 });
-
+// Best-effort pre-paint guess from the last-known setting (mirrored to
+// localStorage by history.js's Settings save) so the button doesn't pop in
+// a beat after the popup opens — the async read above still runs and is the
+// source of truth, this just avoids the flash on the common case.
+try {
+    if (localStorage.getItem('eh_popup_qf') === '1') {
+        const qfWrap = document.getElementById('qfWrap');
+        if (qfWrap) qfWrap.style.display = '';
+    }
+} catch (e) {}
 function _applyPopupWallpaper(wp, theme) {
     const isDark = theme === 'dark';
-    const overlayOpacity = (wp.overlayOpacity ?? 60) / 100;
+    const overlayOpacity = (wp.overlayOpacity ?? 50) / 100;
     const blurAmount     = wp.blurAmount ?? 8;
     const overlayColor   = isDark
         ? `rgba(0,0,0,${overlayOpacity})`
@@ -95,7 +199,7 @@ function _applyPopupWallpaper(wp, theme) {
         position:fixed;inset:0;z-index:-1;
         background:url(${wp.dataUrl}) center/cover no-repeat;
         filter:blur(${blurAmount}px);
-        transform:scale(1);
+        transform:scale(1.1);
         pointer-events:none;
     `;
     document.body.prepend(layer);
@@ -108,12 +212,13 @@ function _applyPopupWallpaper(wp, theme) {
             content:''; position:fixed; inset:0; z-index:0;
             background:${overlayColor}; pointer-events:none;
         }
-        .header, .tabs, .sel-mode-row, .footer, .search-bar, .sidebar-daynav, 
-        .tab-panel, .search-overlay {
+        .header, .tabs, .sel-mode-row, .footer, .search-bar,
+        .tab-panel, .search-overlay, .sidebar-daynav {
             background: ${isDark ? 'rgba(19,19,24,0.6)' : 'rgba(255,255,255,0.6)'} !important;
             backdrop-filter: blur(14px) saturate(1.3) !important;
             -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
             border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+            position: relative; z-index: 1;
         }
         .ritem {
             background: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'} !important;
@@ -141,18 +246,24 @@ function _applyPopupWallpaper(wp, theme) {
 
 // ── Header "Open" button ──────────────────────────────────────────────────────
 document.getElementById('openBtn').addEventListener('click', () => {
-    browser.tabs.create({ url: 'history.html' });
+    browser.tabs.create({ url: browser.runtime.getURL('html/history.html') });
+    // In sidebar mode, opening the full history page makes the sidebar redundant — close it.
+    // sidebarAction.close() is allowed here because this is a real click handler.
+    // (The regular popup closes by itself once the new tab takes focus.)
+    if (document.body.classList.contains('sidebar-mode')) {
+        try { browser.sidebarAction.close(); } catch (e) { console.warn('[EH] sidebarAction.close failed:', e); }
+    }
 });
 
 // ── Header "Store" button — save current tab to Tab Storage ──────────────────
 document.getElementById('storeBtn').addEventListener('click', () => {
-    browser.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    browser.tabs.query({ active: true, currentWindow: true }).catch(() => undefined).then((tabs) => {
         const tab = tabs[0];
         if (!tab || !tab.url) return;
-        if (['chrome://','chrome-extension://','moz-extension://','about:','data:','javascript:','edge://','brave://'].some(p => tab.url.startsWith(p))) {
+        if (['about:', 'moz-extension://', 'chrome://', 'resource:', 'view-source:', 'data:', 'javascript:'].some(p => tab.url.startsWith(p))) {
             const btn = document.getElementById('storeBtn');
             const orig = btn.textContent;
-            btn.textContent = "Can't store this page";
+            btn.textContent = tr('pop_cant_store', "Can't store this page");
             btn.style.background = '#c0392b';
             btn.style.color = 'var(--text1)';
             btn.style.fontSize = '0.62rem';
@@ -163,7 +274,7 @@ document.getElementById('storeBtn').addEventListener('click', () => {
             }, 2200);
             return;
         }
-        browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
+        browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }).catch(() => undefined).then((r) => {
             const stored = (r && r.entries) || [];
             if (stored.find(e => e.url === tab.url)) {
                 // Already stored — just close
@@ -178,11 +289,150 @@ document.getElementById('storeBtn').addEventListener('click', () => {
                 savedAt: Date.now(),
             };
             stored.push(entry);
-            browser.storage.local.set({ eh_tab_storage: stored }, () => {
+            browser.storage.local.set({ eh_tab_storage: stored }).catch(() => undefined).then(() => {
                 browser.tabs.remove(tab.id);
             });
         });
     });
+});
+
+// ── Quick Filters ("F") button ────────────────────────────────────────────────
+// Shows a dropdown of the named filters managed on the main history page
+// (Settings > Popup > "Quick filter button" turns this on). Picking one
+// narrows whatever's currently shown — Recent History and/or Search results —
+// client-side, the same "view only" way the main page's own quick-filter
+// dropdown works (see quick-filters.js's applyQuickFilterEntries). Search
+// still works normally on top of it. Nothing here is persisted: closing the
+// popup drops `_qfActiveId` back to '' (no filter) the next time it opens.
+function qfPopupFilter(entries) {
+    return (typeof applyQuickFilterEntries === 'function') ? applyQuickFilterEntries(entries) : entries;
+}
+
+function qfPopupRefreshBtn() {
+    const btn = document.getElementById('qfBtn');
+    if (!btn) return;
+    const list = (typeof _qfList !== 'undefined') ? _qfList : [];
+    const active = (typeof _qfActiveId !== 'undefined') ? _qfActiveId : '';
+    const activeFilter = active ? list.find(f => f.id === active) : null;
+    btn.classList.toggle('qf-active', !!activeFilter);
+    const label = tr('quick_filters', 'Quick Filters');
+    btn.title = activeFilter ? `${label}: ${activeFilter.name}` : label;
+}
+
+function qfPopupRenderDropdown() {
+    const dd = document.getElementById('qfDropdown');
+    if (!dd) return;
+    const list = (typeof _qfList !== 'undefined') ? _qfList : [];
+    const active = (typeof _qfActiveId !== 'undefined') ? _qfActiveId : '';
+
+    dd.innerHTML = '';
+
+    const noneItem = document.createElement('div');
+    noneItem.className = 'qf-item' + (!active ? ' qf-item-active' : '');
+    const noneCheck = document.createElement('span');
+    noneCheck.className = 'qf-item-check';
+    noneCheck.textContent = !active ? '✓' : '';
+    const noneLabel = document.createElement('span');
+    noneLabel.textContent = tr('quick_filters_none_short', 'None (no filter)');
+    noneItem.appendChild(noneCheck);
+    noneItem.appendChild(noneLabel);
+    noneItem.addEventListener('click', () => qfPopupSelect(''));
+    dd.appendChild(noneItem);
+
+    if (list.length) {
+        const divider = document.createElement('div');
+        divider.className = 'qf-divider';
+        dd.appendChild(divider);
+        for (const f of list) {
+            const item = document.createElement('div');
+            item.className = 'qf-item' + (active === f.id ? ' qf-item-active' : '');
+            const check = document.createElement('span');
+            check.className = 'qf-item-check';
+            check.textContent = active === f.id ? '✓' : '';
+            const label = document.createElement('span');
+            label.textContent = f.name;
+            item.appendChild(check);
+            item.appendChild(label);
+            item.addEventListener('click', () => qfPopupSelect(f.id));
+            dd.appendChild(item);
+        }
+    } else {
+        const empty = document.createElement('div');
+        empty.className = 'qf-empty';
+        empty.textContent = tr('no_qfilters', 'No quick filters yet');
+        dd.appendChild(empty);
+    }
+
+    const manage = document.createElement('div');
+    manage.className = 'qf-manage-link';
+    manage.textContent = '⚙ ' + tr('quick_filters', 'Quick Filters');
+    manage.addEventListener('click', () => {
+        qfPopupCloseDropdown();
+        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#quickfilters') });
+        if (document.body.classList.contains('sidebar-mode')) { try { browser.sidebarAction.close(); } catch (_) {} }
+    });
+    dd.appendChild(manage);
+}
+
+function qfPopupOpenDropdown() {
+    const dd = document.getElementById('qfDropdown');
+    if (!dd) return;
+    // Portal it out to <body>, position:fixed, so it's never subject to the header's
+    // own stacking/overflow (which is what was letting tabsRow paint over it, and
+    // clipping/cutting off long filter names past the popup's right edge) — it now
+    // paints above literally everything else and is positioned in JS below instead.
+    if (dd.parentNode !== document.body) document.body.appendChild(dd);
+    const afterLoad = () => { qfPopupRenderDropdown(); qfPopupRefreshBtn(); dd.classList.add('open'); qfPopupPositionDropdown(); };
+    if (typeof qfLoadList === 'function') qfLoadList().then(afterLoad).catch(afterLoad);
+    else afterLoad();
+}
+function qfPopupPositionDropdown() {
+    const btn = document.getElementById('qfBtn');
+    const dd  = document.getElementById('qfDropdown');
+    if (!btn || !dd) return;
+    const margin = 6;
+    const r = btn.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    const width = dd.offsetWidth || 220;
+    // Right-align to the button (it usually sits close to the popup's right edge) and
+    // grow leftward, then clamp both edges so it can never run off the (fixed-size) window.
+    let left = r.right - width;
+    left = Math.max(margin, Math.min(left, vw - width - margin));
+    let top = r.bottom + margin;
+    dd.style.left = left + 'px';
+    dd.style.top = top + 'px';
+    dd.style.maxHeight = Math.max(120, vh - top - margin) + 'px';
+}
+function qfPopupCloseDropdown() {
+    document.getElementById('qfDropdown')?.classList.remove('open');
+}
+function qfPopupSelect(id) {
+    _qfActiveId = id; // shared with quick-filters.js's applyQuickFilterEntries()
+    qfPopupRefreshBtn();
+    qfPopupCloseDropdown();
+    // Re-run whatever's currently visible with the new filter applied
+    refreshRecentHistoryView(false);
+    const q = document.getElementById('searchInput')?.value.trim();
+    if (q) performSearch(q);
+}
+
+document.getElementById('qfBtn')?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const dd = document.getElementById('qfDropdown');
+    if (dd && dd.classList.contains('open')) qfPopupCloseDropdown();
+    else qfPopupOpenDropdown();
+});
+document.addEventListener('click', (ev) => {
+    const wrap = document.getElementById('qfWrap');
+    const dd = document.getElementById('qfDropdown');
+    // dd lives outside qfWrap once portaled to <body> — check both so clicks inside
+    // the dropdown itself don't immediately close it.
+    if (wrap && !wrap.contains(ev.target) && !(dd && dd.contains(ev.target))) qfPopupCloseDropdown();
+});
+window.addEventListener('resize', () => {
+    const dd = document.getElementById('qfDropdown');
+    if (dd && dd.classList.contains('open')) qfPopupPositionDropdown();
 });
 
 // ── Tab switcher ──────────────────────────────────────────────────────────────
@@ -203,7 +453,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ── Footer panel buttons ──────────────────────────────────────────────────────
 document.querySelectorAll('.flink[data-panel]').forEach(btn => {
     btn.addEventListener('click', () => {
-        browser.tabs.create({ url: 'history.html#' + btn.dataset.panel });
+        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#' + btn.dataset.panel) });
     });
 });
 
@@ -226,7 +476,7 @@ function makeRow(url, title, timeText, onLeftClick) {
     const img = document.createElement('img');
     img.className = 'rfav';
     img.loading   = 'lazy';
-    img.src       = favUrl(dom);
+    setFavicon(img, dom);
     img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
     const body  = document.createElement('div');
@@ -235,9 +485,9 @@ function makeRow(url, title, timeText, onLeftClick) {
     const titleEl = document.createElement('div');
     titleEl.className   = 'rtitle';
     titleEl.textContent = title || url;
-
     body.appendChild(titleEl);
-        if (_popupShowUrl) {
+
+    if (_popupShowUrl) {
         const urlEl = document.createElement('div');
         urlEl.className   = 'rurl';
         urlEl.textContent = url;
@@ -268,7 +518,7 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
         return;
     }
 
-    document.getElementById('searchResults').innerHTML = '<div class="loading">Searching...</div>';
+    document.getElementById('searchResults').innerHTML = '<div class="loading">' + tr('pop_searching', 'Searching...') + '</div>';
     openSearchOverlay();
 
     _searchTimer = setTimeout(() => {
@@ -305,98 +555,187 @@ function closeSearchOverlay() {
     }
 }
 
-const SEARCH_PAGE_SIZE = 20;
-let _srchAllResults = [];
-let _srchOffset = 0;
-let _srchScrollAttached = false;
-
+const POP_CID = Math.random().toString(36).slice(2);
+let _popSearchGen = 0;
 function performSearch(query) {
     const resultsEl = document.getElementById('searchResults');
+    const gen = ++_popSearchGen;
+    // Same search as the main history page: the database filters the whole history (including the
+    // active quick filter), and a newer keystroke cancels the older query.
+    const qf = (typeof qfActivePatterns === 'function') ? qfActivePatterns() : null;
 
     browser.runtime.sendMessage({
         type: 'SEARCH',
         query: query,
         mode: 'all',
-        limit: 1000
-    }, (response) => {
-        if (browser.runtime.lastError) {
-            resultsEl.innerHTML = '<div class="empty">Search error</div>';
+        limit: 100,
+        noTotal: true,
+        qf,
+        cid: POP_CID,
+        token: gen
+    }).catch(() => undefined).then((response) => {
+        if (gen !== _popSearchGen) return;                       // a newer search replaced this one
+        if (!response) {
+            resultsEl.innerHTML = '<div class="empty">' + tr('pop_search_error', 'Search error') + '</div>';
+            return;
+        }
+        if (response && response.cancelled) return;
+        if (!response || response.error) {
+            // e.g. the history database is still starting / being upgraded — say so instead of "No results"
+            const msg = (response && response.error) || tr('pop_search_error', 'Search error');
+            resultsEl.innerHTML = '<div class="empty"></div>';
+            resultsEl.firstChild.textContent = msg;
+            if (response && response.migrating) setTimeout(() => { if (gen === _popSearchGen) performSearch(query); }, 2000);
             return;
         }
 
         const matches = response.entries || [];
         _srchEntries = matches;
-        _srchAllResults = matches;
-        _srchOffset = 0;
 
         if (!matches.length) {
-            resultsEl.innerHTML = '<div class="empty">No results found</div>';
+            resultsEl.innerHTML = '<div class="empty">' + tr('pop_no_results', 'No results found') + '</div>';
             return;
         }
 
         resultsEl.innerHTML = '';
-        appendSearchPage();
-        attachSearchScrollLazyLoad();
-    });
-}
+        for (const e of matches) {
+            const t = new Date(e.visitTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
-function appendSearchPage() {
-    const resultsEl = document.getElementById('searchResults');
-    if (!resultsEl) return;
-    const slice = _srchAllResults.slice(_srchOffset, _srchOffset + SEARCH_PAGE_SIZE);
-    if (!slice.length) return;
-    for (const e of slice) {
-        const t = new Date(e.visitTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
-        resultsEl.appendChild(createHistoryRow(e, 'search', t));
-    }
-    _srchOffset += slice.length;
-}
+            const row = document.createElement('a');
+            row.className = 'ritem' + (_srchSelMode ? ' sel-mode' : '') + (_srchSelItems.has(e.id) ? ' sel-checked' : '');
+            row.href = e.url;
+            row.title = (e.title || e.url) + '\n' + e.url;
 
-function attachSearchScrollLazyLoad() {
-    if (_srchScrollAttached) return;
-    _srchScrollAttached = true;
-    const el = document.getElementById('searchResults');
-    if (!el) return;
-    el.addEventListener('scroll', () => {
-        const { scrollTop, scrollHeight, clientHeight } = el;
-        if (scrollTop + clientHeight >= scrollHeight - 150) {
-            appendSearchPage();
+            const chk = document.createElement('div');
+            chk.className = 'ritem-check';
+            chk.textContent = '✓';
+
+            const img = document.createElement('img');
+            img.className = 'rfav';
+            img.loading = 'lazy';
+            setFavicon(img, tryDomain(e.url));
+            img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+
+            const body = document.createElement('div');
+            body.className = 'rbody';
+            const titleEl = document.createElement('div');
+            titleEl.className = 'rtitle';
+            titleEl.textContent = e.title || e.url;
+            body.appendChild(titleEl);
+
+            if (_popupShowUrl) {
+                const urlEl = document.createElement('div');
+                urlEl.className   = 'rurl';
+                urlEl.textContent = e.url;
+                body.appendChild(urlEl);
+            }
+
+            const time = document.createElement('div');
+            time.className = 'rtime';
+            time.textContent = t;
+
+            row.appendChild(chk);
+            row.appendChild(img);
+            row.appendChild(body);
+            row.appendChild(time);
+
+            // Long-press to enter selection mode
+            let _holdT = null;
+            let _suppressNextClick = false;
+            const startHold = () => {
+                _holdT = setTimeout(() => {
+                    _holdT = null;
+                    _suppressNextClick = true;
+                    if (!_srchSelMode) enterSrchSelMode();
+                    toggleSrchSelItem(e.id, row);
+                }, 500);
+            };
+            const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
+            row.addEventListener('mousedown', (ev) => {
+                if (ev.button !== 0) return; // only left click
+                startHold();
+            });
+            row.addEventListener('mouseup', (ev) => {
+                if (ev.button !== 0) return; // only left click
+                cancelHold();
+            });
+            row.addEventListener('mouseleave', cancelHold);
+            row.addEventListener('touchstart', () => {
+                _holdT = setTimeout(() => {
+                    _holdT = null;
+                    _suppressNextClick = true;
+                    if (!_srchSelMode) enterSrchSelMode();
+                    toggleSrchSelItem(e.id, row);
+                }, 500);
+            }, { passive: true });
+            row.addEventListener('touchend', cancelHold);
+            row.addEventListener('touchcancel', cancelHold);
+
+            row.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                if (_suppressNextClick) { _suppressNextClick = false; return; }
+                if (_srchSelMode) { toggleSrchSelItem(e.id, row); }
+                else { browser.tabs.create({ url: e.url, active: false }); }
+            });
+
+            resultsEl.appendChild(row);
         }
     });
 }
 
-// ── Recent history — read today's history live from the History API via background ──
-function loadTodayHistory() {
-    // Sidebar keeps calendar-day "Today" (its day-nav arrows step by calendar
-    // day). The plain popup instead uses a plain history.search() with no
-    // startTime — the browser's own rolling ~24h window.
-    const isSidebar = document.body.classList.contains('sidebar-mode');
-    const msgType = isSidebar ? 'GET_TODAY_HISTORY' : 'GET_RECENT_HISTORY';
-    browser.runtime.sendMessage({ type: msgType }, r => {
-        if (browser.runtime.lastError || !r) {
+// ── Recent history — read today's history live from the browser API via background ──
+function loadTodayHistory(preserveScroll) {
+    // "Today" — in both the plain popup and the sidebar's day-nav — shows a
+    // rolling last-24h window (GET_RECENT_HISTORY), not a calendar-day
+    // cutoff from midnight. The sidebar's day-nav arrows switch to genuine
+    // calendar-day scoping only once you step to a past date — that's
+    // handled separately by loadHistoryForSidebarDate().
+    browser.runtime.sendMessage({ type: 'GET_RECENT_HISTORY' }).catch(() => undefined).then(r => {
+        if (!r) {
             // Fallback: read directly from storage (handles SW not running yet)
-            browser.storage.local.get('eh_today_history', s => {
-                renderTodayHistory((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000));
+            browser.storage.local.get('eh_today_history').catch(() => undefined).then(s => {
+                const fallback = qfPopupFilter((s.eh_today_history || []).slice().sort((a, b) => b.visitTime - a.visitTime)).slice(0, 1000);
+                onSettingsReady(() => renderTodayHistory(fallback, preserveScroll));
             });
             return;
         }
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime).slice(0, 1000);
-        renderTodayHistory(entries);
+        const entries = qfPopupFilter((r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime)).slice(0, 1000);
+        onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
 }
 
-// ── Shared row builder for Recent History + Search results ────────────────────
-// mode: 'recent' uses _selMode/_selItems/toggleSelItem/enterSelMode
-//       'search' uses _srchSelMode/_srchSelItems/toggleSrchSelItem/enterSrchSelMode
-function createHistoryRow(e, mode, timeText) {
-    const isSearch = mode === 'search';
-    const selModeFlag = () => isSearch ? _srchSelMode : _selMode;
-    const selItems    = isSearch ? _srchSelItems : _selItems;
-    const toggleItem  = isSearch ? toggleSrchSelItem : toggleSelItem;
-    const enterMode   = isSearch ? enterSrchSelMode : enterSelMode;
+// ── Selection mode helpers ──────────────────────────────────────────────────
+function enterSelMode() {
+    _selMode = true;
+    _selItems.clear();
+    document.getElementById('tabsRow').classList.add('hidden');
+    document.getElementById('selModeRow').classList.remove('hidden');
+    updateSelModeBar();
+    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.add('sel-mode'));
+}
+function exitSelMode() {
+    _selMode = false;
+    _selItems.clear();
+    document.getElementById('tabsRow').classList.remove('hidden');
+    document.getElementById('selModeRow').classList.add('hidden');
+    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.remove('sel-mode', 'sel-checked'));
+}
+function updateSelModeBar() {
+    const delBtn = document.getElementById('selDelBtn');
+    if (delBtn) delBtn.textContent = _selItems.size > 0 ? `${tr('delete', 'Delete')} (${_selItems.size})` : tr('delete', 'Delete');
+}
+function toggleSelItem(id, row) {
+    if (_selItems.has(id)) { _selItems.delete(id); row.classList.remove('sel-checked'); }
+    else { _selItems.add(id); row.classList.add('sel-checked'); }
+    if (_selItems.size === 0) { exitSelMode(); return; }
+    updateSelModeBar();
+}
 
+// ── Shared row builder for Recent History (kept as its own function, same
+// shape as the search-result rows, so both can be styled/updated together) ──
+function createHistoryRow(e, timeText) {
     const row = document.createElement('a');
-    row.className = 'ritem' + (selModeFlag() ? ' sel-mode' : '') + (selItems.has(e.id) ? ' sel-checked' : '');
+    row.className = 'ritem' + (_selMode ? ' sel-mode' : '') + (_selItems.has(e.id) ? ' sel-checked' : '');
     row.href = e.url;
     row.title = (e.title || e.url) + '\n' + e.url;
 
@@ -407,7 +746,7 @@ function createHistoryRow(e, mode, timeText) {
     const img = document.createElement('img');
     img.className = 'rfav';
     img.loading = 'lazy';
-    img.src = favUrl(tryDomain(e.url));
+    setFavicon(img, tryDomain(e.url));
     img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
     const body = document.createElement('div');
@@ -416,6 +755,7 @@ function createHistoryRow(e, mode, timeText) {
     titleEl.className = 'rtitle';
     titleEl.textContent = e.title || e.url;
     body.appendChild(titleEl);
+
     if (_popupShowUrl) {
         const urlEl = document.createElement('div');
         urlEl.className   = 'rurl';
@@ -439,30 +779,49 @@ function createHistoryRow(e, mode, timeText) {
         _holdT = setTimeout(() => {
             _holdT = null;
             _suppressNextClick = true; // prevent the upcoming click from toggling it back off
-            if (!selModeFlag()) enterMode();
-            toggleItem(e.id, row);
+            if (!_selMode) enterSelMode();
+            toggleSelItem(e.id, row);
         }, 500);
     };
     const cancelHold = () => { clearTimeout(_holdT); _holdT = null; };
-    row.addEventListener('mousedown', startHold);
-    row.addEventListener('mouseup', cancelHold);
+    row.addEventListener('mousedown', (ev) => {
+        if (ev.button !== 0) return; // only left click
+        startHold(ev);
+    });
+
+    row.addEventListener('mouseup', (ev) => {
+        if (ev.button !== 0) return; // only left click
+        cancelHold(ev);
+    });
+
     row.addEventListener('mouseleave', cancelHold);
+
     row.addEventListener('touchstart', () => {
         _holdT = setTimeout(() => {
             _holdT = null;
             _suppressNextClick = true;
-            if (!selModeFlag()) enterMode();
-            toggleItem(e.id, row);
+            if (!_selMode) enterSelMode();
+            toggleSelItem(e.id, row);
         }, 500);
     }, { passive: true });
+
     row.addEventListener('touchend', cancelHold);
     row.addEventListener('touchcancel', cancelHold);
 
     row.addEventListener('click', (ev) => {
+        if (ev.button !== 0) return; // extra safety (click is usually left-only anyway)
+
         ev.preventDefault();
-        if (_suppressNextClick) { _suppressNextClick = false; return; }
-        if (selModeFlag()) { toggleItem(e.id, row); }
-        else { browser.tabs.create({ url: e.url, active: false }); }
+        if (_suppressNextClick) {
+            _suppressNextClick = false;
+            return;
+        }
+
+        if (_selMode) {
+            toggleSelItem(e.id, row);
+        } else {
+            browser.tabs.create({ url: e.url, active: false });
+        }
     });
 
     return row;
@@ -474,21 +833,48 @@ let _recentAll = [];
 let _recentOffset = 0;
 let _recentScrollAttached = false;
 
-function renderTodayHistory(entries) {
+function renderTodayHistory(entries, preserveScroll) {
     const el = document.getElementById('recent');
+    const container = document.getElementById('mainContent');
+    // Only trust a captured scroll depth when we're actually on the Recent
+    // History sub-view already — otherwise container.scrollTop belongs to
+    // whatever panel/tab is currently showing and has nothing to do with
+    // this list.
+    const isRecentActive = document.getElementById('h-recent')?.classList.contains('active');
+    const prevScrollTop = (preserveScroll && container && isRecentActive) ? container.scrollTop : 0;
+
     _recentAll = entries;
     _recentOffset = 0;
     el._entries = entries;
     if (!entries.length) {
         const msg = typeof isViewingToday === 'function' && !isViewingToday()
-            ? 'No history for this day'
-            : 'No history yet today';
+            ? tr('pop_no_history_day', 'No history for this day')
+            : tr('pop_no_history_today', 'No history yet today');
         el.innerHTML = `<div class="empty">${msg}</div>`;
+        if (container) container.scrollTop = 0;
         return;
     }
     el.innerHTML = '';
     appendRecentPage();
     attachRecentScrollLazyLoad();
+
+    if (!container) return;
+    if (preserveScroll && isRecentActive) {
+        // A live refresh (new visit, storage change, polling) rebuilt the
+        // list from scratch, which only renders the first page — refill
+        // enough additional pages to cover however far the user had already
+        // scrolled, then restore that exact position, instead of letting the
+        // browser clamp scrollTop to whatever (much shorter) content exists
+        // right after the rebuild, which is what caused the "random" jump.
+        while (_recentOffset < _recentAll.length && container.scrollHeight < prevScrollTop + container.clientHeight) {
+            appendRecentPage();
+        }
+        container.scrollTop = prevScrollTop;
+    } else {
+        // Explicit navigation (date change, tab switch, initial load) — always
+        // start at the top of the newly-selected view.
+        container.scrollTop = 0;
+    }
 }
 
 function appendRecentPage() {
@@ -498,7 +884,7 @@ function appendRecentPage() {
     if (!slice.length) return;
     for (const e of slice) {
         const t = new Date(e.visitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        el.appendChild(createHistoryRow(e, 'recent', t));
+        el.appendChild(createHistoryRow(e, t));
     }
     _recentOffset += slice.length;
 }
@@ -516,33 +902,6 @@ function attachRecentScrollLazyLoad() {
             appendRecentPage();
         }
     });
-}
-
-// ── Selection mode helpers ──────────────────────────────────────────────────
-function enterSelMode() {
-    _selMode = true;
-    _selItems.clear();
-    document.getElementById('tabsRow').classList.add('hidden');
-    document.getElementById('selModeRow').classList.remove('hidden');
-    updateSelModeBar();
-    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.add('sel-mode'));
-}
-function exitSelMode() {
-    _selMode = false;
-    _selItems.clear();
-    document.getElementById('tabsRow').classList.remove('hidden');
-    document.getElementById('selModeRow').classList.add('hidden');
-    document.querySelectorAll('#recent .ritem').forEach(r => r.classList.remove('sel-mode', 'sel-checked'));
-}
-function updateSelModeBar() {
-    const delBtn = document.getElementById('selDelBtn');
-    if (delBtn) delBtn.textContent = _selItems.size > 0 ? `Delete (${_selItems.size})` : 'Delete';
-}
-function toggleSelItem(id, row) {
-    if (_selItems.has(id)) { _selItems.delete(id); row.classList.remove('sel-checked'); }
-    else { _selItems.add(id); row.classList.add('sel-checked'); }
-    if (_selItems.size === 0) { exitSelMode(); return; }
-    updateSelModeBar();
 }
 
 // ── Ignore pattern matching (mirrors background.js logic) ────────────────────
@@ -571,68 +930,96 @@ function matchesIgnorePatternPopup(url, pattern, title) {
 }
 
 // ── Recent closed tabs ────────────────────────────────────────────────────────
+// Sequence token: several refresh triggers can overlap (tab close, window close,
+// sessions.onChanged, tab click...). Only the newest call is allowed to paint,
+// so a slow older response can never overwrite a fresher list.
+let _recentTabsSeq = 0;
+let _recentTabsTimer = null;
+function scheduleLoadRecentTabs(delay = 120) {
+    clearTimeout(_recentTabsTimer);
+    _recentTabsTimer = setTimeout(loadRecentTabs, delay);
+}
+
 function loadRecentTabs() {
-    const el = document.getElementById('recentTabs');
-    browser.sessions.getRecentlyClosed({ maxResults: 25 }).then(sessions => {
+    const mySeq = ++_recentTabsSeq;
+    let sessionsApi;
+    try { sessionsApi = browser.sessions; } catch { sessionsApi = null; }
+    if (!sessionsApi || !sessionsApi.getRecentlyClosed) return;
+    sessionsApi.getRecentlyClosed({ maxResults: 25 }).catch(() => undefined).then(sessions => {
+        if (mySeq !== _recentTabsSeq) return; // a newer refresh superseded this one
+        const el = document.getElementById('recentTabs');
 
         if (!sessions || !sessions.length) {
-            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
             return;
         }
 
+        // Firefox reports lastModified in milliseconds; the rest of this view works in seconds.
+        const toSeconds = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
         const tabs = [];
         for (const session of sessions) {
+            // Firefox keeps the sessionId on the session object itself (not on session.tab),
+            // and does not expose per-tab ids for closed windows.
             if (session.tab) {
                 tabs.push({
                     url: session.tab.url,
                     title: session.tab.title,
-                    // Firefox: sessionId lives on the session object, not session.tab
                     sessionId: session.sessionId || null,
-                    lastModified: session.lastModified
+                    lastModified: toSeconds(session.lastModified)
                 });
             } else if (session.window) {
-                for (const tab of (session.window.tabs || [])) {
+                for (const tab of session.window.tabs || []) {
                     tabs.push({
                         url: tab.url,
                         title: tab.title,
-                        // For window sessions Firefox doesn't expose per-tab sessionId
                         sessionId: session.sessionId || null,
-                        lastModified: session.lastModified
+                        lastModified: toSeconds(session.lastModified)
                     });
                 }
             }
         }
 
         if (!tabs.length) {
-            el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+            el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
             return;
         }
 
-       // Fetch ignore list and filter before rendering
-        browser.runtime.sendMessage({ type: 'GET_IGNORE_LIST' }, (ignoreResp) => {
-            const ignoreList = (ignoreResp && ignoreResp.list) || [];
-            const ignoreEnabled = ignoreResp && ignoreResp.enabled !== false;
+        // Read the ignore list straight from storage and filter before rendering.
+        // (Used to round-trip through the background service worker, which meant
+        // the list silently never repainted whenever that message got no reply.)
+        browser.storage.local.get(['eh_ignore_list', 'eh_settings']).catch(() => undefined).then((stored) => {
+            if (mySeq !== _recentTabsSeq) return;
+            stored = stored || {};
+            const ignoreList = Array.isArray(stored.eh_ignore_list) ? stored.eh_ignore_list : [];
+            const ignoreEnabled = !stored.eh_settings || stored.eh_settings.ignoreListEnabled !== false;
+            const ignoreInvert = !!(stored.eh_settings && stored.eh_settings.ignoreListInvert === true);   // allow-list mode
 
             const validTabs = tabs.filter(tab => {
-                if (!tab.url || tab.lastModified == null) return false;
-                // Firefox lastModified is already in milliseconds (not seconds like Chrome)
-                const ageInDays = (Date.now() - tab.lastModified) / (1000 * 60 * 60 * 24);
+                if (!tab.url || !tab.lastModified) return false;
+                const ageInDays = (Date.now() - tab.lastModified * 1000) / (1000 * 60 * 60 * 24);
                 if (ageInDays < 0 || ageInDays > 30) return false;
                 // Filter out ignored URLs
                 if (ignoreEnabled && ignoreList.length) {
-                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title))) return false;
+                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title)) !== ignoreInvert) return false;
                 }
                 return true;
             }).sort((a, b) => b.lastModified - a.lastModified);
 
             if (!validTabs.length) {
-                el.innerHTML = '<div class="empty">No recently closed tabs</div>';
+                el.dataset.sig = ''; el.innerHTML = '<div class="empty">' + tr('pop_no_closed', 'No recently closed tabs') + '</div>';
                 return;
             }
 
+            // Skip the rebuild when nothing changed (keeps scroll/hover stable
+            // while the polling fallback runs).
+            const shown = validTabs.slice(0, 20);
+            const sig = shown.map(t => (t.sessionId || t.url) + '@' + t.lastModified).join('|');
+            if (el.dataset.sig === sig && el.children.length) return;
+            el.dataset.sig = sig;
+
             el.innerHTML = '';
             for (const tab of validTabs.slice(0, 20)) {
-                const timeAgo = getTimeAgo(Math.floor(tab.lastModified / 1000));
+                const timeAgo = getTimeAgo(tab.lastModified);
                 const onLeftClick = tab.sessionId
                     ? () => browser.sessions.restore(tab.sessionId).catch(() => browser.tabs.create({ url: tab.url }))
                     : () => browser.tabs.create({ url: tab.url });
@@ -640,18 +1027,16 @@ function loadRecentTabs() {
                 el.appendChild(row);
             }
         });
-    }).catch(() => {
-        el.innerHTML = '<div class="empty">Could not load recently closed tabs</div>';
     });
 }
 
 // Helper: format time ago
 function getTimeAgo(timestamp) {
     const seconds = Math.floor((Date.now() - timestamp * 1000) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 60) return tr('pop_just_now', 'just now');
+    if (seconds < 3600) return tr('pop_min_ago', '{0}m ago', Math.floor(seconds / 60));
+    if (seconds < 86400) return tr('pop_hour_ago', '{0}h ago', Math.floor(seconds / 3600));
+    return tr('pop_day_ago', '{0}d ago', Math.floor(seconds / 86400));
 }
 
 // ── Tab Storage ───────────────────────────────────────────────────────────────
@@ -664,7 +1049,7 @@ function showTsStored() {
 
 function showTsStoredLabel() {
   const t = document.querySelector('.tab[data-tab="tabstorage"]');
-  if (t) t.textContent = 'Tab Storage';
+  if (t) t.textContent = tr('tab_storage', 'Tab Storage');
 }
 
 // Show quick-store sub-view (right-click)
@@ -677,22 +1062,22 @@ function showTsQuickStore() {
 function renderQuickStoreList() {
   const list = document.getElementById('ts-quickstore-list');
   if (!list) return;
-  list.innerHTML = '<div class="loading">Loading…</div>';
+  list.innerHTML = '<div class="loading">' + tr('loading', 'Loading…') + '</div>';
 
-  browser.tabs.query({ currentWindow: true }, (tabs) => {
-    browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (r) => {
+  browser.tabs.query({ currentWindow: true }).catch(() => undefined).then((tabs) => {
+    browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }).catch(() => undefined).then((r) => {
       const stored = new Set(((r && r.entries) || []).map(e => e.url));
       // Only show tabs that haven't been stored yet
       const validTabs = tabs.filter(t =>
         t.url &&
-        !['chrome://','chrome-extension://','moz-extension://','about:','data:','javascript:'].some(p => t.url.startsWith(p)) &&
+        !['about:', 'moz-extension://', 'chrome://', 'resource:', 'view-source:', 'data:', 'javascript:'].some(p => t.url.startsWith(p)) &&
         !stored.has(t.url)
       );
 
       list.innerHTML = '';
 
       if (!validTabs.length) {
-        list.innerHTML = '<div class="empty">No storable tabs open</div>';
+        list.innerHTML = '<div class="empty">' + tr('pop_no_storable', 'No storable tabs open') + '</div>';
         return;
       }
 
@@ -703,7 +1088,7 @@ function renderQuickStoreList() {
 
         const fav = document.createElement('img');
         fav.className = 'ts-quick-fav';
-        try { fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${new URL(tab.url).hostname}`; } catch {}
+        try { setFavicon(fav, new URL(tab.url).hostname); } catch {}
         fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
 
         const title = document.createElement('span');
@@ -721,15 +1106,15 @@ function renderQuickStoreList() {
             domain: (() => { try { return new URL(tab.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(),
             savedAt: Date.now(),
           };
-          browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (resp) => {
+          browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }).catch(() => undefined).then((resp) => {
             const existing = (resp && resp.entries) || [];
             if (!existing.find(x => x.url === tab.url)) existing.push(entry);
-            browser.storage.local.set({ eh_tab_storage: existing }, () => {
+            browser.storage.local.set({ eh_tab_storage: existing }).catch(() => undefined).then(() => {
               // Remove just this item from DOM — no full re-render, no scroll jump
               item.remove();
               browser.tabs.remove(tab.id);
               if (!list.querySelector('.ts-quick-item')) {
-                list.innerHTML = '<div class="empty">No storable tabs open</div>';
+                list.innerHTML = '<div class="empty">' + tr('pop_no_storable', 'No storable tabs open') + '</div>';
               }
             });
           });
@@ -759,7 +1144,7 @@ function exitTsSelMode() {
 }
 function updateTsModeBar() {
     const btn = document.getElementById('tsUnstoreBtn');
-    if (btn) btn.textContent = _tsSelItems.size > 0 ? `Unstore (${_tsSelItems.size})` : 'Unstore';
+    if (btn) btn.textContent = _tsSelItems.size > 0 ? `${tr('restore', 'Restore')} (${_tsSelItems.size})` : tr('restore', 'Restore');
 }
 function toggleTsSelItem(id, row) {
     if (_tsSelItems.has(id)) { _tsSelItems.delete(id); row.classList.remove('sel-checked'); }
@@ -773,9 +1158,9 @@ function loadTabStoragePopup() {
   if (!el) return;
   const prevScroll = el.scrollTop;
 
-  browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (response) => {
-    if (browser.runtime.lastError || !response) {
-      el.innerHTML = '<div class="empty">Error loading tab storage</div>';
+  browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }).catch(() => undefined).then((response) => {
+    if (!response) {
+      el.innerHTML = '<div class="empty">' + tr('pop_ts_error', 'Error loading tab storage') + '</div>';
       return;
     }
 
@@ -783,7 +1168,7 @@ function loadTabStoragePopup() {
     _tsEntries = entries;
 
     if (!entries.length) {
-      el.innerHTML = '<div class="empty" style="text-align:center">No stored tabs.<br><small style="opacity:0.6">Right-click this tab button to store open tabs</small></div>';
+      el.innerHTML = '<div class="empty" style="text-align:center">' + tr('pop_no_stored', 'No stored tabs.') + '<br><small style="opacity:0.6">' + tr('pop_no_stored_hint', 'Right-click this tab button to store open tabs') + '</small></div>';
       return;
     }
 
@@ -801,7 +1186,7 @@ function loadTabStoragePopup() {
       const img = document.createElement('img');
       img.className = 'rfav';
       img.loading = 'lazy';
-      img.src = favUrl(tryDomain(entry.url));
+      setFavicon(img, tryDomain(entry.url));
       img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
 
       const body = document.createElement('div');
@@ -827,20 +1212,32 @@ function loadTabStoragePopup() {
       row.appendChild(body);
       row.appendChild(time);
 
-      // Long-press to enter TS selection mode
+      // Long-press (800ms) to enter TS selection mode — longer threshold avoids
+      // accidental triggering during fast clicks
       let _tsHoldT = null;
       let _tsHoldFired = false;
+      let _tsMoved = false;
 
       row.addEventListener('pointerdown', (ev) => {
         if (ev.button !== 0 && ev.pointerType === 'mouse') return;
         _tsHoldFired = false;
+        _tsMoved = false;
         row.setPointerCapture(ev.pointerId);
         _tsHoldT = setTimeout(() => {
+          if (_tsMoved) return; // finger drifted — not a hold
           _tsHoldFired = true;
           _tsHoldT = null;
           if (!_tsSelMode) enterTsSelMode();
           toggleTsSelItem(entry.id, row);
-        }, 600);
+        }, 800);
+      });
+
+      row.addEventListener('pointermove', (ev) => {
+        // Cancel hold if pointer moves more than a few pixels (scroll intent)
+        if (Math.abs(ev.movementX) > 4 || Math.abs(ev.movementY) > 4) {
+          _tsMoved = true;
+          if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+        }
       });
 
       row.addEventListener('pointerup', () => {
@@ -848,6 +1245,7 @@ function loadTabStoragePopup() {
       });
       row.addEventListener('pointercancel', () => {
         if (_tsHoldT) { clearTimeout(_tsHoldT); _tsHoldT = null; }
+        _tsMoved = false;
       });
 
       row.addEventListener('click', (ev) => {
@@ -855,10 +1253,15 @@ function loadTabStoragePopup() {
         if (_tsHoldFired) { _tsHoldFired = false; return; }
         if (_tsSelMode) { toggleTsSelItem(entry.id, row); }
         else {
+          // Remove from DOM immediately so rapid clicks feel instant
+          row.remove();
+          const remaining = el.querySelectorAll('.ritem');
+          if (!remaining.length) {
+            el.innerHTML = '<div class="empty" style="text-align:center">' + tr('pop_no_stored', 'No stored tabs.') + '<br><small style="opacity:0.6">' + tr('pop_no_stored_hint', 'Right-click this tab button to store open tabs') + '</small></div>';
+          }
+          // Fire open + storage removal async — no need to wait
           browser.tabs.create({ url: entry.url, active: false });
-          browser.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id }, () => {
-            loadTabStoragePopup();
-          });
+          browser.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRY', id: entry.id });
         }
       });
 
@@ -873,7 +1276,7 @@ function showHistoryRecent() {
     document.getElementById('h-recent').classList.add('active');
     document.getElementById('h-mostvisited').classList.remove('active');
     const tab = document.getElementById('historyTab');
-    if (tab) tab.textContent = 'Recent History';
+    if (tab) tab.textContent = tr('pop_recent_history', 'Recent History');
     updateSidebarDayNavVisibility();
 }
 
@@ -881,7 +1284,7 @@ function showHistoryMostVisited() {
     document.getElementById('h-recent').classList.remove('active');
     document.getElementById('h-mostvisited').classList.add('active');
     const tab = document.getElementById('historyTab');
-    if (tab) tab.textContent = 'Most Visited';
+    if (tab) tab.textContent = tr('most_visited', 'Most Visited');
     loadMostVisitedPopup();
     updateSidebarDayNavVisibility();
 }
@@ -889,10 +1292,10 @@ function showHistoryMostVisited() {
 function loadMostVisitedPopup() {
     const el = document.getElementById('mvPopup');
     if (!el) return;
-    el.innerHTML = '<div class="loading">Loading…</div>';
-    browser.runtime.sendMessage({ type: 'GET_MOST_VISITED', viewType: 'domain', period: '10' }, (r) => {
-        if (browser.runtime.lastError || !r || !r.items || !r.items.length) {
-            el.innerHTML = '<div class="empty">No data yet</div>';
+    el.innerHTML = '<div class="loading">' + tr('loading', 'Loading…') + '</div>';
+    browser.runtime.sendMessage({ type: 'GET_MOST_VISITED', viewType: 'domain', period: '10' }).catch(() => undefined).then((r) => {
+        if (!r || !r.items || !r.items.length) {
+            el.innerHTML = '<div class="empty">' + tr('pop_no_data', 'No data yet') + '</div>';
             return;
         }
         el.innerHTML = '';
@@ -906,7 +1309,7 @@ function loadMostVisitedPopup() {
 
             const fav = document.createElement('img');
             fav.className = 'mv-fav';
-            fav.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(item.identifier)}`;
+            setFavicon(fav, item.identifier);
             fav.addEventListener('error', () => { fav.style.visibility = 'hidden'; });
 
             const domain = document.createElement('span');
@@ -938,7 +1341,7 @@ function loadMostVisitedPopup() {
   if (!tabStorageTab) return;
 
   tabStorageTab.addEventListener('click', () => {
-    tabStorageTab.textContent = 'Tab Storage';
+    tabStorageTab.textContent = tr('tab_storage', 'Tab Storage');
     showTsStored();
     loadTabStoragePopup();
   });
@@ -949,7 +1352,7 @@ function loadMostVisitedPopup() {
     tabStorageTab.classList.add('active');
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-tabstorage').classList.add('active');
-    tabStorageTab.textContent = 'Active Tabs';
+    tabStorageTab.textContent = tr('pop_active_tabs', 'Active Tabs');
     showTsQuickStore();
   });
 })();
@@ -994,9 +1397,9 @@ document.getElementById('selDelBtn').addEventListener('click', () => {
         }
     }
     const urls = [...urlSet];
-    browser.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }, () => {
+    browser.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }).catch(() => undefined).then(() => {
         exitSelMode();
-        refreshRecentHistoryView();
+        loadTodayHistory();
     });
 });
 
@@ -1008,7 +1411,22 @@ document.getElementById('tsUnselectBtn').addEventListener('click', () => {
 document.getElementById('tsUnstoreBtn').addEventListener('click', () => {
     if (!_tsSelItems.size) { exitTsSelMode(); return; }
     const ids = [..._tsSelItems];
-    browser.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRIES', ids }, () => {
+    const urlsToOpen = ids.map(id => {
+        const entry = _tsEntries.find(e => e.id === id);
+        return entry ? entry.url : null;
+    }).filter(Boolean);
+    // Hand off to background: removes from storage + opens tabs with staggered delay
+    // so the popup thread is never blocked by tab creation
+    browser.runtime.sendMessage({ type: 'RESTORE_TAB_STORAGE_ENTRIES', ids, urls: urlsToOpen }).catch(() => undefined).then(() => {
+        exitTsSelMode();
+        loadTabStoragePopup();
+    });
+});
+document.getElementById('tsDeleteBtn').addEventListener('click', () => {
+    if (!_tsSelItems.size) { exitTsSelMode(); return; }
+    const ids = [..._tsSelItems];
+    if (!confirm(tr('pop_remove_stored_confirm', 'Remove {0} stored tab(s) from Tab Storage?', ids.length))) return;
+    browser.runtime.sendMessage({ type: 'REMOVE_TAB_STORAGE_ENTRIES', ids }).catch(() => undefined).then(() => {
         exitTsSelMode();
         loadTabStoragePopup();
     });
@@ -1035,8 +1453,8 @@ function updateSrchModeBar() {
     const selBtn = document.getElementById('srchSelAllBtn');
     const delBtn = document.getElementById('srchDelBtn');
     const allSelected = _srchEntries.length > 0 && _srchSelItems.size === _srchEntries.length;
-    if (selBtn) selBtn.textContent = allSelected ? 'Unselect All' : 'Select All';
-    if (delBtn) delBtn.textContent = _srchSelItems.size > 0 ? `Delete (${_srchSelItems.size})` : 'Delete';
+    if (selBtn) selBtn.textContent = allSelected ? tr('pop_unselect_all', 'Unselect All') : tr('pop_select_all', 'Select All');
+    if (delBtn) delBtn.textContent = _srchSelItems.size > 0 ? `${tr('delete', 'Delete')} (${_srchSelItems.size})` : tr('delete', 'Delete');
 }
 function toggleSrchSelItem(id, row) {
     if (_srchSelItems.has(id)) { _srchSelItems.delete(id); row.classList.remove('sel-checked'); }
@@ -1072,7 +1490,7 @@ document.getElementById('srchDelBtn').addEventListener('click', () => {
         }
     }
     const urls = [...urlSet];
-    browser.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }, () => {
+    browser.runtime.sendMessage({ type: 'DELETE_IDS', ids, urls }).catch(() => undefined).then(() => {
         exitSrchSelMode();
         // Re-run current search to refresh results
         const query = document.getElementById('searchInput').value.trim();
@@ -1081,22 +1499,34 @@ document.getElementById('srchDelBtn').addEventListener('click', () => {
 });
 
 
-// Initial load for all panels
+// Initial load for all panels — wait for settings so favicon mode is known
+// PERF: ask for the history right now instead of after the settings read - the
+// background service worker may be asleep, and waking it + running
+// browser.history.search is the slowest part, so it now overlaps with the
+// settings read instead of following it. Rendering itself still waits for
+// settings (see onSettingsReady in loadTodayHistory) so favicon mode and
+// "show URL" are known when the rows are built.
+refreshRecentHistoryView();
+onSettingsReady(() => {
     loadRecentTabs();
-    refreshRecentHistoryView();
+});
 
 // Auto-refresh on storage change
 browser.storage.onChanged.addListener((changes, namespace) => {
     if (namespace !== 'local') return;
     if (changes.eh_today_history) {
-        if (!_selMode) refreshRecentHistoryView(); // don't disrupt selection mode
+        if (!_selMode) refreshRecentHistoryView(true); // don't disrupt selection mode or scroll position
     }
-    // Tab Storage — refresh live so newly stored/unstored tabs show up
-    // immediately without needing to re-click the panel. Matters most in
-    // sidebar mode, which stays open across navigations instead of
-    // reopening fresh like the popup does.
     if (changes.eh_tab_storage) {
-        if (!_tsSelMode) loadTabStoragePopup();
+        // Keep the Tab Storage view live — previously this only refreshed on
+        // next open/close of the sidebar, so pressing "Store" (or an
+        // auto-store/context-menu store elsewhere) left a stale list until
+        // the panel was closed and reopened.
+        const tsPanel = document.getElementById('panel-tabstorage');
+        const storedView = document.getElementById('ts-stored');
+        const isShowingStoredList = tsPanel && tsPanel.classList.contains('active')
+            && storedView && storedView.classList.contains('active');
+        if (isShowingStoredList && !_tsSelMode) loadTabStoragePopup();
     }
 });
 
@@ -1104,25 +1534,50 @@ browser.storage.onChanged.addListener((changes, namespace) => {
 // The popup normally just reopens fresh each time, but the sidebar stays
 // open across navigations, so we need to actively refresh it here rather
 // than relying on the (now-unused) eh_today_history storage key.
+// preserveScroll=true here specifically — without it, opening any link from
+// the sidebar fired this listener, which rebuilt the list from scratch and
+// let the browser snap your scroll position to fit the (now much shorter)
+// freshly-rendered content, which is what looked like a "random" jump.
 if (browser.history && browser.history.onVisited) {
     browser.history.onVisited.addListener(() => {
-        if (!_selMode) refreshRecentHistoryView();
+        if (!_selMode) refreshRecentHistoryView(true);
     });
 }
 
 // Refresh closed tabs list when a tab/window closes
-browser.tabs.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
-browser.windows.onRemoved.addListener(() => { setTimeout(loadRecentTabs, 100); });
+browser.tabs.onRemoved.addListener(() => { scheduleLoadRecentTabs(150); });
+browser.windows.onRemoved.addListener(() => { scheduleLoadRecentTabs(150); });
+// The sessions API announces every change to the recently-closed list itself -
+// the most reliable trigger, since browser may not have registered the closed
+// tab yet when tabs.onRemoved fires.
+try {
+    if (browser.sessions && browser.sessions.onChanged) {
+        browser.sessions.onChanged.addListener(() => scheduleLoadRecentTabs(80));
+    }
+} catch {}
+// Refresh whenever the user looks at the list: switching to the Closed Tabs tab,
+// or returning focus to the popup/side panel.
+document.querySelectorAll('.tab[data-tab="tabs"]').forEach(t =>
+    t.addEventListener('click', () => scheduleLoadRecentTabs(0)));
+window.addEventListener('focus', () => scheduleLoadRecentTabs(0));
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') scheduleLoadRecentTabs(0);
+});
+// Light polling fallback while the Closed Tabs panel is the visible one.
+setInterval(() => {
+    const panel = document.getElementById('panel-tabs');
+    if (panel && panel.classList.contains('active') && document.visibilityState === 'visible') loadRecentTabs();
+}, 3000);
 
 // Polling fallback — skip while in selection mode to avoid wiping checked state
 let lastCount = 0;
 setInterval(() => {
     if (_selMode) return;
-    browser.storage.local.get('eh_today_history', r => {
+    browser.storage.local.get('eh_today_history').catch(() => undefined).then(r => {
         const entries = r.eh_today_history || [];
         if (entries.length !== lastCount) {
             lastCount = entries.length;
-            refreshRecentHistoryView();
+            refreshRecentHistoryView(true);
         }
     });
 }, 2000);
@@ -1142,8 +1597,8 @@ function isViewingToday() {
 function sdnFormatLabel(date) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    if (date.getTime() === today.getTime()) return 'Today';
-    if (date.getTime() === yesterday.getTime()) return 'Yesterday';
+    if (date.getTime() === today.getTime()) return tr('today', 'Today');
+    if (date.getTime() === yesterday.getTime()) return tr('yesterday', 'Yesterday');
     const opts = { month: 'short', day: 'numeric' };
     if (date.getFullYear() !== today.getFullYear()) opts.year = 'numeric';
     return date.toLocaleDateString(undefined, opts);
@@ -1152,25 +1607,34 @@ function sdnFormatLabel(date) {
 // Recent History refresh — routes to the live "today" fetch when viewing
 // today (freshest, includes not-yet-flushed visits), or a plain SEARCH
 // bounded to the selected day otherwise.
-function refreshRecentHistoryView() {
+function refreshRecentHistoryView(preserveScroll) {
     if (isViewingToday()) {
-        loadTodayHistory();
+        loadTodayHistory(preserveScroll);
     } else {
-        loadHistoryForSidebarDate();
+        loadHistoryForSidebarDate(preserveScroll);
     }
 }
 
-function loadHistoryForSidebarDate() {
+function loadHistoryForSidebarDate(preserveScroll) {
     const start = new Date(_sidebarViewDate); start.setHours(0, 0, 0, 0);
     const end   = new Date(_sidebarViewDate); end.setHours(23, 59, 59, 999);
     browser.runtime.sendMessage({
         type: 'SEARCH', query: '', mode: 'all',
-        startDate: start.getTime(), endDate: end.getTime(), limit: 1000
-    }, r => {
-        if (browser.runtime.lastError || !r) return;
-        const entries = (r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime);
-        renderTodayHistory(entries);
+        startDate: start.getTime(), endDate: end.getTime(), limit: 1000,
+        qf: (typeof qfActivePatterns === 'function') ? qfActivePatterns() : null
+    }).catch(() => undefined).then(r => {
+        if (!r) return;
+        const entries = qfPopupFilter((r.entries || []).slice().sort((a, b) => b.visitTime - a.visitTime));
+        onSettingsReady(() => renderTodayHistory(entries, preserveScroll));
     });
+}
+
+function sdnGoToDate(date) {
+    _sidebarViewDate = date;
+    sdnUpdateUI();
+    refreshRecentHistoryView();
+    const container = document.getElementById('mainContent');
+    if (container) container.scrollTop = 0;
 }
 
 function sdnUpdateUI() {
@@ -1235,7 +1699,7 @@ function sdnRenderCalendar() {
     const weekdaysWrap = document.getElementById('sdnCalWeekdays');
     if (!title || !daysWrap || !monthsWrap) return;
 
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthNames = window._ehMonthNames();
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
     if (_calMode === 'months') {
@@ -1263,6 +1727,7 @@ function sdnRenderCalendar() {
 
     // Day-grid view
     weekdaysWrap.style.display = 'grid';
+    { const wd = window._ehWeekdayInitials(); [...weekdaysWrap.children].forEach((c, i) => { if (wd[i] !== undefined) c.textContent = wd[i]; }); }
     daysWrap.style.display = 'grid';
     monthsWrap.style.display = 'none';
     title.textContent = `${monthNames[_calViewMonth]} ${_calViewYear}`;
@@ -1290,9 +1755,7 @@ function sdnRenderCalendar() {
         if (cell.date.getTime() === _sidebarViewDate.getTime()) btn.classList.add('selected');
         if (cell.date.getTime() > today.getTime()) btn.disabled = true;
         btn.addEventListener('click', () => {
-            _sidebarViewDate = cell.date;
-            sdnUpdateUI();
-            refreshRecentHistoryView();
+            sdnGoToDate(cell.date);
             sdnCloseCalendar();
         });
         daysWrap.appendChild(btn);
@@ -1300,27 +1763,28 @@ function sdnRenderCalendar() {
 }
 
 if (document.body.classList.contains('sidebar-mode')) {
-    // Relocate Store/Open from the (now-hidden) header into the day-nav row
+    // Relocate Store/Open (and the Quick Filters button, if enabled) from the
+    // (now-hidden) header into the day-nav row
     const sdnRight = document.getElementById('sdnRight');
+    const qfWrap   = document.getElementById('qfWrap');
     const storeBtn = document.getElementById('storeBtn');
     const openBtn  = document.getElementById('openBtn');
+    if (sdnRight && qfWrap)   sdnRight.appendChild(qfWrap);
     if (sdnRight && storeBtn) sdnRight.appendChild(storeBtn);
     if (sdnRight && openBtn)  sdnRight.appendChild(openBtn);
 
     // Left arrow (‹) — forward toward today
     document.getElementById('sdnPrev')?.addEventListener('click', () => {
         if (isViewingToday()) return; // can't go past today
-        _sidebarViewDate = new Date(_sidebarViewDate);
-        _sidebarViewDate.setDate(_sidebarViewDate.getDate() + 1);
-        sdnUpdateUI();
-        refreshRecentHistoryView();
+        const d = new Date(_sidebarViewDate);
+        d.setDate(d.getDate() + 1);
+        sdnGoToDate(d);
     });
     // Right arrow (›) — back in time
     document.getElementById('sdnNext')?.addEventListener('click', () => {
-        _sidebarViewDate = new Date(_sidebarViewDate);
-        _sidebarViewDate.setDate(_sidebarViewDate.getDate() - 1);
-        sdnUpdateUI();
-        refreshRecentHistoryView();
+        const d = new Date(_sidebarViewDate);
+        d.setDate(d.getDate() - 1);
+        sdnGoToDate(d);
     });
     document.getElementById('sdnDateLabel')?.addEventListener('click', sdnOpenCalendar);
     // Clear button — resets any active search filter and jumps back to today
@@ -1332,9 +1796,7 @@ if (document.body.classList.contains('sidebar-mode')) {
             closeSearchOverlay();
         }
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        _sidebarViewDate = today;
-        sdnUpdateUI();
-        refreshRecentHistoryView();
+        sdnGoToDate(today);
     });
     document.getElementById('sdnCalPrev')?.addEventListener('click', () => {
         if (_calMode === 'months') { _calViewYear--; } else {
@@ -1507,17 +1969,17 @@ if (document.body.classList.contains('sidebar-mode')) {
 
   sessionsBtn.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
-    browser.runtime.sendMessage({ type: 'GET_SESSIONS' }, (sessResp) => {
-      if (browser.runtime.lastError || !sessResp) return;
+    browser.runtime.sendMessage({ type: 'GET_SESSIONS' }).catch(() => undefined).then((sessResp) => {
+      if (!sessResp) return;
       const { current } = sessResp;
       const tabs = current ? current.tabs.filter(t => t.url && t.closed === null) : null;
       if (!tabs || !tabs.length) {
-        browser.tabs.create({ url: 'history.html#sessions' });
+        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#sessions') });
         return;
       }
       const label = 'Current Session';
       // Fetch Tab Storage then build export
-      browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }, (tsResp) => {
+      browser.runtime.sendMessage({ type: 'GET_TAB_STORAGE' }).catch(() => undefined).then((tsResp) => {
         const tsEntries = (tsResp && tsResp.entries) || [];
         const html = buildExportHtml(label, tabs, tsEntries);
         Object.assign(document.createElement('a'), {

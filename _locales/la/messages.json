@@ -1,144 +1,1124 @@
 {
-  "ext_name": { "message": "Historia Extensa" },
-
-  "current_session": { "message": "Sessio Praesens" },
-  "active": { "message": "Activum" },
-  "all_fields": { "message": "Omnia Campi" },
-  "title": { "message": "Titulus" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Dominium" },
-  "ph_search_history": { "message": "Quaerere in historia…" },
-  "ph_search_bookmarks": { "message": "Quaerere in signis…" },
-
-  "most_visited": {"message": "Frequentissime Visitata"},
-  "tabs": {"message": "schedae"},
-  "since": {"message": "ab"},
-  "most_visited_URLS_all_time": {"message": "URL Frequentissime Visitata — Omne Tempus"},
-  "urls": {"message": "URL"},
-  "domains": {"message": "Dominii"},
-  "enable_ignore": {"message": "Indicem Ignorandum Activa"},
-  "filter_urls": {"message": "Filtra URL quae formis infra congruunt"},
-
-  "reading_mode": {"message": "Modus Lectionis"},
-  "tab_storage": {"message": "Repositio Schedae"},
-  "load_exported_history_read": {"message": "Onus fasciculi historiae exportati (.json) ad eum inspiciendum sine importatione. Interfacies eadem est ac tabula Historiae — dies, quaerere, omnia."},
-  "choose_file": {"message": "Elige fasciculum…"},
-  "choose_file_hint": {"message": "aut trahe fasciculum .json huc"},
-  "leave_reading_mode": {"message": "✕ Relinque modum lectionis"},
-  "reading": {"message": "Lectio:"},
-
-
-  "browse": { "message": "Perlustrare" },
-  "history": { "message": "Historia" },
-  "sessions": { "message": "Sessiones" },
-  "devices": { "message": "Machinae" },
-  "insights": { "message": "Statistica" },
-  "activity": { "message": "Actio" },
-  "time_spent": { "message": "Tempus Consumptum" },
-  "library": { "message": "Bibliotheca" },
-  "bookmarks": { "message": "Signa" },
-  "system": { "message": "Systema" },
-  "delete_history": { "message": "Historiam Delere" },
-  "ignore_list": { "message": "Index Neglectorum" },
-  "settings": { "message": "Optiones" },
-  "more": { "message": "Plus" },
-  "light": { "message": "Clarum" },
-  "dark": { "message": "Obscurum" },
-  "all_time": { "message": "Ab Initio" },
-  "delete_results": { "message": "Eventus Delere" },
-  "selected_lower": { "message": "selecta" },
-  "select_all_visible": { "message": "Omnia Visibilia Selige" },
-  "deselect_all": { "message": "Omnia Deselige" },
-  "delete_selected": { "message": "Selecta Delere" },
-  "loading": { "message": "Onus…" },
-  "daily_visits_90": { "message": "Visitationes Quotidianae — 90 Dies" },
-  "daily_visits_30": { "message": "Visitationes Quotidianae — 30 Dies" },
-  "hours": { "message": "horae" },
-  "days": { "message": "dies" },
-  "clear_time_data": { "message": "Data Temporis Delere" },
-  "daily_browsing_time": { "message": "Tempus Navigationis Quotidianum" },
-  "top_sites_by_time_spent": { "message": "Loci Maximi per Tempus" },
-  "export": { "message": "Exportare" },
-  "import": { "message": "Importare" },
-  "history_retention": { "message": "Conservatio Historiae" },
-  "keep_history_for": { "message": "Historiam Servare Per" },
-  "older_enteries_are_pruned": { "message": "Entratae Antiquae Automate Delentur" },
-  "months": { "message": "menses" },
-  "year": { "message": "annus" },
-  "years": { "message": "anni" },
-  "forever": { "message": "In Perpetuum" },
-  "appearance": { "message": "Aspectus" },
-  "language": { "message": "Lingua" },
-  "select_pref_language": { "message": "Linguam Praelatam Selige" },
-  "font_family": { "message": "Familia Fontis" },
-  "font_size": { "message": "Magnitudo Fontis" },
-  "base_ui_text_size": { "message": "Magnitudo Textus Fundamentalis" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Colores Accentus" },
-  "primary": { "message": "Primarius" },
-  "secondary": { "message": "Secundarius" },
-  "data": { "message": "Data" },
-  "export_history": { "message": "Historiam Exportare" },
-  "full_json_backup": { "message": "Copia Plena JSON Historiae et Temporis" },
-  "export_json": { "message": "JSON Exportare" },
-  "import_history": { "message": "Historiam Importare" },
-  "merge_entries_json": { "message": "Entratas ex JSON Priore Coniungere" },
-  "import_json": { "message": "JSON Importare" },
-  "sessions_to_keep": { "message": "Sessiones Servandae" },
-  "how_many_past_sessions": { "message": "Quot Sessiones Praeteritae Servandae (1–20)" },
-  "auto_save_session": { "message": "Sessionem Praesentem Automate Servare" },
-  "save_open_tabs_to": { "message": "Tabulas Apertas in extended-history-session.html Servat." },
-  "min": { "message": "min" },
-  "save_now": { "message": "Nunc Servare" },
-  "save_settings": { "message": "Optiones Servare" },
-  "danger_zone": { "message": "Zona Periculosa" },
-  "reimport_chrome_history": { "message": "Historiam Chrome Reimportare" },
-  "pull_all_chrome_history": { "message": "Totam Historiam Chrome Recuperare" },
-  "reimport": { "message": "Reimportare" },
-  "clear_all_history": { "message": "Omnem Historiam Delere" },
-  "permanently_delete_all_stored": { "message": "Omnem Historiam Conditam In Perpetuum Delere" },
-  "clear_all": { "message": "Omnia Delere" },
-  "about": { "message": "De Extensione" },
-  "created_by": { "message": "Creatum a Bane Kondić quia limitatio 90 dierum in Chromium displicuit." },
-  "github_profile": { "message": "Profilum Github" },
-  "feedback": { "message": "Responsa" },
-  "link_to_discord": { "message": "Nexus ad Discord pro responsis" },
-  "discord_server": { "message": "Servus Discord" },
-  "rate_extension": { "message": "Extensionem Aestimare" },
-  "link_to_chrome_webstore": { "message": "Nexus ad Chrome Web Store" },
-  "click_to_rate": { "message": "Preme ut Aestimes" },
-  "ignored_domains": { "message": "Dominii Neglecti" },
-  "domains_added_will_not_be": { "message": "Dominii hic additi non servantur in historia." },
-  "add_patern": { "message": "Formam Addere" },
-  "pattern_guide": { "message": "Dux Formarum" },
-  "basic_domain": { "message": "Dominium Fundamentale" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Totum example.com Obstruit" },
-  "all_subdomains": { "message": "Omnia Subdominia" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Subdominia Omnia Obstruit" },
-  "specific_subdomain": { "message": "Subdominium Specificum" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Solum blog.example.com Obstruit" },
-  "specific_path": { "message": "Iter Specificum" },
-  "specific_file": { "message": "Lima Specifica" },
-  "no_patterns_added": { "message": "Nullae Formae Additae" },
-  "open_in_new_tab": { "message": "In Nova Tabula Aperire" },
-  "open_in_incognito": { "message": "In Incognito Aperire" },
-  "copy_url": { "message": "URL Exscribere" },
-  "copy_title": { "message": "Titulum Exscribere" },
-  "delete_from_history": { "message": "Ex Historia Delere" },
-  "new_subfolder": { "message": "Novum Subdirectorium" },
-  "rename_folder": { "message": "Directorium Renominare" },
-  "delete_folder": { "message": "Directorium Delere" },
-  "cancel": { "message": "Annullare" },
-  "delete": { "message": "Delere" },
-  "choose_a_time_range": { "message": "Tempus ad delendum elige." },
-  "last_1_hour": { "message": "Ultima Hora" },
-  "last_24_hours": { "message": "Ultimae 24 Horae" },
-  "last_7_days": { "message": "Ultimi 7 Dies" },
-  "last_30_days": { "message": "Ultimi 30 Dies" },
-  "last_5_months": { "message": "Ultimi 5 Menses" },
-  "clear_cookies_local_storage": { "message": "Cookies et Data Localia Delere" },
-  "clear_cache": { "message": "Cache Delere" }
+  "ext_name": {
+    "message": "Historia Extensa"
+  },
+  "jump_to_date": {"message": "Ad diem salire"},
+  "more_from_domain": {"message": "Plura ex dominio"},
+  "ignore_domain": {"message": "Dominum ignora"},
+    "edit": {
+    "message": "Emenda"
+  },
+  "avg_time_per_weekday": {"message": "Tempus medium per diem hebdomadis (omni tempore)"},
+  "jan": {"message": "Ian"},
+  "feb": {"message": "Feb"},
+  "mar": {"message": "Mar"},
+  "apr": {"message": "Apr"},
+  "may": {"message": "Mai"},
+  "jun": {"message": "Iun"},
+  "jul": {"message": "Iul"},
+  "aug": {"message": "Aug"},
+  "sep": {"message": "Sep"},
+  "oct": {"message": "Oct"},
+  "nov": {"message": "Nov"},
+  "dec": {"message": "Dec"},
+  "discard": {"message": "Abicere"},
+  "ignore_invert_note": {"message": "Si index vacuus est, nulla situs ignoratur. Cum hanc optionem activas, historia exsistens non mutatur."},
+  "ignore_invert_clean": {"message": "Nunc inscriptiones exsistentes ex aliis sitibus remove"},
+  "enc_incremental": {"message": "Exportationes incrementales tessera secreta encryptare"},
+  "enc_change_pw": {"message": "Tesseram secretam mutare"},
+  "allow_list_mode": {"message": "Modus indicis permissorum (filtrum inversum)"},
+  "allow_list_mode_desc": {"message": "Omnia situs praeter eos in indice infra ignora — soli situs indicati in historia servantur"},
+  "unlock_keep_most_visited_out": {"message": "Post reserationem, situs frequentissime visitatos in historiam navigatoris ne restitue"},
+  "history_encrypted_enter_password": {"message": "Historia tua encrypta est. Tesseram inscribe ut eam reseres."},
+  "keep_most_visited_out": {"message": "Situs frequentissime visitatos in historiam navigatoris ne restitue"},
+  "redownload_last_incremental_backup": {"message": "Novissimum exemplar incrementale iterum recipe"},
+  "no_incremental_backup_yet": {"message": "Nullum exemplar incrementale adhuc creatum est"},
+  "export_results": {"message": "Eventus exportare"},
+  "export_results_title": {"message": "Solum inscriptiones exportare quae investigationi, filtris et temporibus hodiernis respondent"},
+  "avg_time_per_weekday_range": {"message": "Tempus medium per diem hebdomadis (ultimis {0} diebus)"},
+  "follow_system_theme": {"message": "Thema systematis sequi"},
+  "follow_system_theme_desc": {"message": "Automatice inter modum lucidum et obscurum secundum systema operativum commutare. Bullae Lucidus / Obscurus in parte laterali occultantur dum haec optio activa est."},
+  "disabled": {"message": "Inhabilitatum"},
+  "dh_now": {"message": "Nunc"},
+  "no_history_found": {"message": "Historia non inventa"},
+  "avg_visits_per_hour": {"message": "Visitationes mediae per horam diei"},
+  "lock_big_warning": {"message": "Historia tua nimis magna est ad encryptandam"},
+  "lock_big_limit": {"message": "limes"},
+  "lock_big_warning2": {"message": "Nihil encryptabitur (ut clausura celeris maneat), sed interfacies adhuc clausa erit."},
+  "dh_from_newest": {"message": "ex recentissima inscriptione tua computatum, {0}"},
+  "new_entries_added": {"message": "novae inscriptiones additae"},
+  "import_finished": {"message": "Importatio perfecta — "},
+  "skipped": {"message": "omissae"},
+  "cant_update_ret": {"message": "Tempus retentionis renovari non potuit"},
+  "cant_remove_old": {"message": "Inscriptiones veteres removeri non potuerunt"},
+  "re_import_all": {"message": "Omnem historiam nativam Browser praesto iterum importare? Novae inscriptiones miscebuntur."},
+  "importing_from_chrome": {"message": "Historia ex Browser importatur…"},
+  "delete_all_confirm": {"message": "OMNEM historiam in perpetuum delere? Hoc revocari non potest."},
+  "all_cleared": {"message": "Omnis historia deleta est"},
+  "time_data_cleared": {"message": "Data temporis deleta sunt"},
+  "cant_update_retention": {"message": "Tempus retentionis renovari non potuit"},
+  "no_entries_file": {"message": "Nullae inscriptiones in fasciculo inventae sunt"},
+  "sun": {"message": "Sol"},
+  "mon": {"message": "Lun"},
+  "tue": {"message": "Mar"},
+  "wed": {"message": "Mer"},
+  "thu": {"message": "Iov"},
+  "fri": {"message": "Ven"},
+  "sat": {"message": "Sat"},
+  "merging_imported": {"message": "Historia importata miscetur…"},
+  "building_search_index": {"message": "Index quaestionis construitur…"},
+  "reparing_database": {"message": "Datorum basis historiae reparatur…"},
+  "rescuing": {"message": "Historia legibilis recuperatur…"},
+  "rebuilding_database": {"message": "Datorum basis reficitur…"},
+  "freeing_disk_space": {"message": "Spatium disci liberatur…"},
+    "preparing_database": {"message": "Datorum basis historiae paratur…"},
+  "can_take_long": {"message": " secunda — magnae datorum bases complura minuta requirere possunt"},
+  "stuck_delete": {"message": "Haesit? Datorum basim dele et ab initio incipe"},
+  "this_deletes_history": {"message": "Hoc datorum basim historiae servatae in perpetuum delet (historia propria navigatoris tui non afficitur). Pergere?"},
+  "preparing": {"message": "Paratur…"},
+  "reading_history": {"message": "Historia tua legitur…"},
+  "moving_to_sqlite": {"message": "Historia tua ad SQLite transfertur…"},
+  "checking_copy": {"message": "Exemplar inspicitur…"},
+  "finishing_up": {"message": "Perficiuntur…"},
+  "history_too_big": {"message": "Historia tua magna est, itaque ad datorum basim celeriorem transfertur. Hoc semel tantum fit; pagina denuo onerabitur cum opus perfectum erit."},
+  "starting_database": {"message": "Datorum basis incipitur…"},
+  "upgrading_database": {"message": "Datorum basis historiae renovatur…"},
+  "building_indexes": {"message": "Indices construuntur…"},
+  "repairing_database": {"message": "Datorum basis historiae reparatur…"},
+  "load_exported_history_read2": {"message": "Fasciculum historiae exportatum (.json vel .tsv) onerā ut eum inspiciās sine importatione. Interfacies prorsus sicut tabula Historiae operatur — tesserae dierum, inquisitio, cetera omnia."},
+  "choose_file_hint2": {"message": "vel fasciculum .json aut .tsv huc quocumque trahe et depone"},
+  "selected": {"message": "selecta"},
+  "open": {"message": "Aperi"},
+  "move_to": {"message": "Movere ad…"},
+  "copy_links": {"message": "Nexus copia"},
+  "move": {"message": "Movere"},
+  "move_to_folder": {"message": "📁 Ad folder movēre"},
+  "sel_dest_folder": {"message": "Folder destinatum elige:"},
+  "enter_url_first": {"message": "Primum URL servientis inscribe."},
+  "permission_server_none": {"message": "Permissio ad hunc servientem non concessa est."},
+  "uploading_test": {"message": "Fasciculus probationis imponitur…"},
+  "webdav_works": {"message": "Impositio per WebDAV operatur"},
+  "webdav_test_fail": {"message": "Probatio WebDAV defecit"},
+  "webdav_permission_none": {"message": "Permissio ad servientem WebDAV non concessa est"},
+  "invalid_webdav_url": {"message": "URL WebDAV invalidum"},
+  "webdav_test": {"message": "Impositionem proba"},
+  "webdav_server": {"message": "URL servientis"},
+  "webdav_username": {"message": "Nomen usoris"},
+  "webdav_password": {"message": "Tessera"},
+    "auto_export_interval_desc3": {"message": "Historiam tuam automatice in fasciculum .json singulis N mensibus exporta. Exportatio plena omnem historiam singulis vicibus includit; incrementalis tantum nova post exportationem priorem includit. Nihil deletur. Ad deaktivandum 0 constitue."},
+  "last_export": {"message": "Exportatio ultima:"},
+  "next_export": {"message": "Exportatio proxima:"},
+  "compress_as_zip": {"message": "Ut .zip comprime"},
+  "download_locally": {"message": "Loco depone"},
+  "upload_to_webdav": {"message": "Ad WebDAV mitte"},
+  "local_plus_webdav": {"message": "Locus + WebDAV"},
+  "full": {"message": "Plena"},
+  "incremental": {"message": "Incrementalis"},
+  "import_file": {"message": "Fasciculum importa"},
+  "import_file_desc": {"message": "Ingressus ex fasciculo JSON vel .TSV antea exportato coniunge"},
+  "import_organizing": {"message": "Historia ordinatur et indices construuntur…"},
+  "import_finishing": {"message": "Finiens…"},
+  "import_indexing": {"message": "Index quaestionis construitur…"},
+  "quick_filter_button": {"message": "Bulla colationis celeris"},
+  "quick_filter_button_desc": {"message": "Bulla colationis in fenestra pop-up, ad sinistram Serva, cum indice descensivo colationum celerium tuarum ostende. Unam eligere Historiam recentem et inquisitionem fenestrae pop-up ad sola illa dominia/verba clavium/URL restringit — inquisitio tamen super eam normaliter operatur. Quotiens fenestra pop-up reaperitur, ad nullam colationem reponitur."},
+  "fade_in_list_on_date_change": {"message": "Indicem paulatim ostende cum dies mutatur"},
+  "fade_in_list_on_date_change_desc": {"message": "Cum diem mutas — per taeniam pilularum, calendarium, aut sagittas dierum Temporis adhibiti — index historiae dum oneratur paulatim apparet, potius quam statim appareat."},
+  "auto_export_confirm_incr": {"message": "Omnia post ultimam exportationem tuae relata exportabuntur. Nihil deletur. Pergere?"},
+  "auto_export_confirm_full": {"message": "Tota historia tua exportabitur. Nihil deletur. Pergere?"},
+  "auto_export_due": {"message": "Debitum — in proxima inspectione exsequetur"},
+  "auto_export_next": {"message": "Proxima exportatio: {0}"},
+  "auto_export_done": {"message": "{0} inscriptiones exportatae"},
+  "auto_export_nothing_new": {"message": "Nihil novi exportandum ab ultima exportatione"},
+  "auto_export_failed": {"message": "Fasciculus exportationis servari non potuit. Iterum tenta."},
+  "running": {"message": "Exsequitur…"},
+  "keep_saving_history_while_locked": {
+    "message": "Historiam servare perge dum clausa est (cum reseraveris, rursus adiungitur potius quam deleatur)"
+  },
+  "restore_all": {
+    "message": "Omnia restitue"
+  },
+   "total_visits": {"message": "Visitationes totales"},
+  "storage": {"message": "Repositio"},
+    "unique_tabs": {
+    "message": "Schedae unicae"
+  },
+    "no_stored_tabs": {"message": "Nondum ulla schedae servatae sunt."},
+  "store_tab_hint": {"message": "In quavis pagina dextrorsum preme → Extended History → Hanc schedam serva"},
+  "no_synced_devices": {"message": "Nulla instrumenta synchronizata inventa sunt."},
+  "chrome_sync_hint": {"message": "In Browser ini et Synchronizationem activa."},
+  "run_now": {"message": "Nunc exsequi"},
+  "select": {"message": "Selige"},
+  "please_enter_password": {"message": "Tesseram insere."},
+  "master_password": {"message": "Tessera magistra"},
+  "ignore_list_setup": {
+    "message": "🔒 Indicem ignorandorum constitue"
+  },
+  "ignore_list_setup_desc": {
+    "message": "Nondum ulla tessera constituta est. Tesseram magistram crea ad indicem ignorandorum tuendum."
+  },
+  "ignore_list_access_desc": {
+    "message": "Tesseram magistram tuam insere ut indicem ignorandorum videas."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Indicem ignorandorum repone"
+  },
+  "reset_ignore_list_desc": {
+    "message": "Index ignorandorum deletus est. Novam tesseram magistram insere ut pergas."
+  },
+  "set_new_password": {
+    "message": "Novam tesseram constitue"
+  },
+    "quick_filters_none": {
+    "message": "Filtra celeria: nulla"
+  },
+  "auto_hide_sidebar": {
+    "message": "Laterale sponte cela cum musca exit"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Laterale sponte claude cum cursor extra ipsum exit, simili modo quo fenestra pop-up sponte se claudit. Destrue ut apertum maneat donec illud manu claudas."
+  },
+  "auto_export_interval": {
+    "message": "Intervallum exportationis automaticae"
+  },
+  "auto_export_interval_desc": {
+    "message": "Historiam vetustissimam automatice exporta et dele ut fasciculum .json singulis N mensibus. Tres menses recentissimi semper servantur, quocumque intervallo statueris. Pone 0 ut disabletur."
+  },
+  "high_contrast_mode": {
+    "message": "Modus magni discriminis"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Colore textus principali utitur ubique ubi color textus secundarius/tertiarius (obscurior) adhiberi solet, ad meliorem legibilitatem"
+  },
+  "create_password": {
+    "message": "Tesseram crea"
+  },
+  "quick_filters": {
+    "message": "Filtra celeria"
+  },
+    "lock_warning_title": {
+    "message": "Historiam obstruere?"
+  },
+  "lock_warning_body": {
+    "message": "Obstructio omnem historiam intra extensionem encryptabit. Omnis historia intra ipsum navigatrum delebita erit, exemplum autem proprium extensionis encryptum servabitur. Fac ut historiam tuam prius exportando serves, ne quid ob interruptionem electricitatis amittatur. Post obstructionem historiam tuam tessera intrata reserare poteris, et historia intra extensionem restituetur, sed non historia nativa navigatoris. Id significat nonnulla suggestiones completionis automaticae in vecte inscriptionis defuturas esse; tantum URL et dominia saepissime visitata apparebunt. Si tesseram oblivisceris, historia recuperari non poterit."
+  },
+  "lock_logout_everywhere": {
+    "message": "Ex omnibus locis exi (etiam crustula et data situs dele)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Signacula cela (a navigatro removebuntur donec reseres)"
+  },
+  "lock_password": {
+    "message": "Tessera"
+  },
+  "lock_confirm_password": {
+    "message": "Tesseram confirma"
+  },
+  "lock_btn": {
+    "message": "Obstrue"
+  },
+  "lock_password_short": {
+    "message": "Tessera quattuor saltem characteres habere debet"
+  },
+  "lock_password_mismatch": {
+    "message": "Tesserae non congruunt"
+  },
+  "lock_locking": {
+    "message": "Encryptio…"
+  },
+  "rename_bookmark": {
+  "message": "✏️ बुकमार्क का नाम बदलें"
+},
+ "remove_bookmark": {
+    "message": "🗑 Signaculum remove"
+  },
+  "quick_filter_desc": {
+    "message": "Serva gregem nominatum ditionum, verborum clavium vel URL (exempli gratia \"Media socialia\" → facebook.com, instagram.com, pinterest.com). Elige eum ex indice iuxta capsam quaerendi in pagina Historiae ut statim tantum illa elementa filtres."
+  },
+  "filter_name": {
+    "message": "Nomen filtri (ex. Media socialia)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "Una dition, verbum clavis vel URL in unaquaque linea — ex.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Serva mutationes"
+  },
+  "add_filter": {
+    "message": "Adde filtrum"
+  },
+  "no_qfilters": {
+    "message": "Nondum sunt filtra celeria"
+  },
+  "scroll_sensitivity": {
+    "message": "Sensibilitas volutationis"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "Quot pittacia dierum singulus motus volutionis movet"
+  },
+  "scroll_date": {
+    "message": "Pittacia dierum rota muris voluta"
+  },
+  "scroll_date_desc": {
+    "message": "Permittit rotam muris ordinariam (quae tantum perpendiculariter volvitur) vectem dierum ad latera movere — utile in computatro, ubi rota sola horizontaliter volvere non potest."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Accessus ad indicem ignoratorum"
+  },
+  "ignore_list_enter_password": {
+    "message": "Tesseram magistralem tuam insere ut indicem ignoratorum videas."
+  },
+  "reset": {
+    "message": "Restitue"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "current_session": {
+    "message": "Sessio Praesens"
+  },
+  "active": {
+    "message": "Activum"
+  },
+  "all_fields": {
+    "message": "Omnia Campi"
+  },
+  "title": {
+    "message": "Titulus"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Dominium"
+  },
+  "ph_search_history": {
+    "message": "Quaerere in historia…"
+  },
+  "ph_search_bookmarks": {
+    "message": "Quaerere in signis…"
+  },
+  "most_visited": {
+    "message": "Frequentissime Visitata"
+  },
+  "tabs": {
+    "message": "schedae"
+  },
+  "since": {
+    "message": "ab"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "URL Frequentissime Visitata — Omne Tempus"
+  },
+  "urls": {
+    "message": "URL"
+  },
+  "domains": {
+    "message": "Dominii"
+  },
+  "enable_ignore": {
+    "message": "Indicem Ignorandum Activa"
+  },
+  "filter_urls": {
+    "message": "Filtra URL quae formis infra congruunt"
+  },
+  "popup_show_url": {
+    "message": "URL"
+  },
+  "popup_show_url_desc": {
+    "message": "Ostendere URL paginae sub titulo in indice popup"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Tabs otiosos automatice servare"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Tabs automatice moventur ad repositum cum per tempus definitum non sunt activi. Tab clauditur et servatur — nihil amittitur."
+  },
+  "idle_threshold": {
+    "message": "Limen otiositatis"
+  },
+  "idle_threshold_desc": {
+    "message": "Serva tab post tot horas sine usu. Praedefinitum: 6."
+  },
+  "history_storage": {
+    "message": "Machina historiae reponendae"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB celerior est pro magnis historiis (100k+ entries) et minus memoriae utitur. Migratio omnia data transfert — redire potes quovis tempore. Praesens: "
+  },
+  "apply_migrate": {
+    "message": "Adhibe et migra"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 Modus imaginis fundi"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Imaginem fundi propriam constitue. Effectum vitri opaci in interfacie permittit."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Imago propria"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Fortuito ex Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Trahe imaginem hic aut clicca ad eligendum"
+  },
+  "wallpaper_fetch": {
+    "message": "Imaginem fortuitam altae resolutionis accipit (quoties mutatur)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Fortuitum"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Automatice fortuitum omni apertione"
+  },
+  "wallpaper_current": {
+    "message": "Imago fundi currentis:"
+  },
+  "overlay_opacity": {
+    "message": "Opacitas superpositionis"
+  },
+  "overlay_control_desc": {
+    "message": "Regit superpositionem obscuram (modus obscurus) vel albam (modus clarus) supra imaginem."
+  },
+  "wallpaper_blur": {
+    "message": "Obscuratio fundi"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Remove imaginem"
+  },
+  "reading_mode": {
+    "message": "Modus Lectionis"
+  },
+  "tab_storage": {
+    "message": "Repositio Schedae"
+  },
+  "load_exported_history_read": {
+    "message": "Onus fasciculi historiae exportati (.json) ad eum inspiciendum sine importatione. Interfacies eadem est ac tabula Historiae — dies, quaerere, omnia."
+  },
+  "choose_file": {
+    "message": "Elige fasciculum…"
+  },
+  "choose_file_hint": {
+    "message": "aut trahe fasciculum .json huc"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Relinque modum lectionis"
+  },
+  "reading": {
+    "message": "Lectio:"
+  },
+  "browse": {
+    "message": "Perlustrare"
+  },
+  "history": {
+    "message": "Historia"
+  },
+  "sessions": {
+    "message": "Sessiones"
+  },
+  "devices": {
+    "message": "Machinae"
+  },
+  "insights": {
+    "message": "Statistica"
+  },
+  "activity": {
+    "message": "Actio"
+  },
+  "time_spent": {
+    "message": "Tempus Consumptum"
+  },
+  "library": {
+    "message": "Bibliotheca"
+  },
+  "bookmarks": {
+    "message": "Signa"
+  },
+  "system": {
+    "message": "Systema"
+  },
+  "delete_history": {
+    "message": "Historiam Delere"
+  },
+  "ignore_list": {
+    "message": "Index Neglectorum"
+  },
+  "settings": {
+    "message": "Optiones"
+  },
+  "more": {
+    "message": "Plus"
+  },
+  "light": {
+    "message": "Clarum"
+  },
+  "dark": {
+    "message": "Obscurum"
+  },
+  "all_time": {
+    "message": "Ab Initio"
+  },
+  "delete_results": {
+    "message": "Eventus Delere"
+  },
+  "selected_lower": {
+    "message": "selecta"
+  },
+  "select_all_visible": {
+    "message": "Omnia Visibilia Selige"
+  },
+  "deselect_all": {
+    "message": "Omnia Deselige"
+  },
+  "delete_selected": {
+    "message": "Selecta Delere"
+  },
+  "loading": {
+    "message": "Onus…"
+  },
+  "daily_visits_90": {
+    "message": "Visitationes Quotidianae — 90 Dies"
+  },
+  "daily_visits_30": {
+    "message": "Visitationes Quotidianae — 30 Dies"
+  },
+  "hours": {
+    "message": "horae"
+  },
+  "days": {
+    "message": "dies"
+  },
+  "clear_time_data": {
+    "message": "Data Temporis Delere"
+  },
+  "daily_browsing_time": {
+    "message": "Tempus Navigationis Quotidianum"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Loci Maximi per Tempus"
+  },
+  "export": {
+    "message": "Exportare"
+  },
+  "import": {
+    "message": "Importare"
+  },
+  "history_retention": {
+    "message": "Conservatio Historiae"
+  },
+  "keep_history_for": {
+    "message": "Historiam Servare Per"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Entratae Antiquae Automate Delentur"
+  },
+  "months": {
+    "message": "menses"
+  },
+  "year": {
+    "message": "annus"
+  },
+  "years": {
+    "message": "anni"
+  },
+  "forever": {
+    "message": "In Perpetuum"
+  },
+  "appearance": {
+    "message": "Aspectus"
+  },
+  "language": {
+    "message": "Lingua"
+  },
+  "select_pref_language": {
+    "message": "Linguam Praelatam Selige"
+  },
+  "font_family": {
+    "message": "Familia Fontis"
+  },
+  "font_size": {
+    "message": "Magnitudo Fontis"
+  },
+  "base_ui_text_size": {
+    "message": "Magnitudo Textus Fundamentalis"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Colores Accentus"
+  },
+  "primary": {
+    "message": "Primarius"
+  },
+  "secondary": {
+    "message": "Secundarius"
+  },
+  "data": {
+    "message": "Data"
+  },
+  "export_history": {
+    "message": "Historiam Exportare"
+  },
+  "full_json_backup": {
+    "message": "Copia Plena JSON Historiae et Temporis"
+  },
+  "export_json": {
+    "message": "JSON Exportare"
+  },
+  "import_history": {
+    "message": "Historiam Importare"
+  },
+  "merge_entries_json": {
+    "message": "Entratas ex JSON Priore Coniungere"
+  },
+  "import_json": {
+    "message": "JSON Importare"
+  },
+  "sessions_to_keep": {
+    "message": "Sessiones Servandae"
+  },
+  "how_many_past_sessions": {
+    "message": "Quot Sessiones Praeteritae Servandae (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Sessionem Praesentem Automate Servare"
+  },
+  "save_open_tabs_to": {
+    "message": "Tabulas Apertas in extended-history-session.html Servat."
+  },
+  "min": {
+    "message": "min"
+  },
+  "save_now": {
+    "message": "Nunc Servare"
+  },
+  "save_settings": {
+    "message": "Optiones Servare"
+  },
+  "danger_zone": {
+    "message": "Zona Periculosa"
+  },
+  "reimport_chrome_history": {
+    "message": "Historiam Browser Reimportare"
+  },
+  "pull_all_chrome_history": {
+    "message": "Totam Historiam Browser Recuperare"
+  },
+  "reimport": {
+    "message": "Reimportare"
+  },
+  "clear_all_history": {
+    "message": "Omnem Historiam Delere"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Omnem Historiam Conditam In Perpetuum Delere"
+  },
+  "clear_all": {
+    "message": "Omnia Delere"
+  },
+  "about": {
+    "message": "De Extensione"
+  },
+  "created_by": {
+    "message": "Creatum a Bane Kondić quia limitatio 90 dierum in Chromium displicuit."
+  },
+  "github_profile": {
+    "message": "Profilum Github"
+  },
+  "feedback": {
+    "message": "Responsa"
+  },
+  "link_to_discord": {
+    "message": "Nexus ad Discord pro responsis"
+  },
+  "discord_server": {
+    "message": "Servus Discord"
+  },
+  "rate_extension": {
+    "message": "Extensionem Aestimare"
+  },
+  "confirm_ignore_invert": {"message": "Modus indicis permissorum: ex hoc tempore NIHIL in historia servabitur praeter situs in indice tuo. Pergere?"},
+  "enc_prompt_pw": {"message": "Tessera secreta ad exportationes incrementales encryptandas (iterum requiretur ad eas importandas):"},
+  "link_to_chrome_webstore": {"message": "Nexus ad paginam extensionum"},
+  "click_to_rate": {
+    "message": "Preme ut Aestimes"
+  },
+  "confirm_ignore_invert_clean": {"message": "Haec omnia historiae servatae (et historiae navigatoris) indicia quorum situs in indice NON est, perpetuo delet. Hoc revocari non potest. Pergere?"},
+  "toast_ignore_invert_off": {"message": "Modus indicis permissorum disactivatus: situs in indice ignorantur"},
+  "toast_ignore_invert_on": {"message": "Modus indicis permissorum activatus: soli situs in indice servantur"},
+  "ignored_domains": {
+    "message": "Dominii Neglecti"
+  },
+  "domains_added_will_not_be": {
+    "message": "Dominii hic additi non servantur in historia."
+  },
+  "add_patern": {
+    "message": "Formam Addere"
+  },
+  "pattern_guide": {
+    "message": "Dux Formarum"
+  },
+  "basic_domain": {
+    "message": "Dominium Fundamentale"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Totum example.com Obstruit"
+  },
+  "all_subdomains": {
+    "message": "Omnia Subdominia"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Subdominia Omnia Obstruit"
+  },
+  "specific_subdomain": {
+    "message": "Subdominium Specificum"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Solum blog.example.com Obstruit"
+  },
+  "specific_path": {
+    "message": "Iter Specificum"
+  },
+  "specific_file": {
+    "message": "Lima Specifica"
+  },
+  "no_patterns_added": {
+    "message": "Nullae Formae Additae"
+  },
+  "open_in_new_tab": {
+    "message": "In Nova Tabula Aperire"
+  },
+  "open_in_incognito": {
+    "message": "In Incognito Aperire"
+  },
+  "copy_url": {
+    "message": "URL Exscribere"
+  },
+  "copy_title": {
+    "message": "Titulum Exscribere"
+  },
+  "delete_from_history": {
+    "message": "Ex Historia Delere"
+  },
+  "new_subfolder": {
+    "message": "Novum Subdirectorium"
+  },
+  "rename_folder": {
+    "message": "Directorium Renominare"
+  },
+  "delete_folder": {
+    "message": "Directorium Delere"
+  },
+  "cancel": {
+    "message": "Annullare"
+  },
+  "delete": {
+    "message": "Delere"
+  },
+  "choose_a_time_range": {
+    "message": "Tempus ad delendum elige."
+  },
+  "last_1_hour": {
+    "message": "Ultima Hora"
+  },
+  "last_24_hours": {
+    "message": "Ultimae 24 Horae"
+  },
+  "last_7_days": {
+    "message": "Ultimi 7 Dies"
+  },
+  "last_30_days": {
+    "message": "Ultimi 30 Dies"
+  },
+  "last_5_months": {
+    "message": "Ultimi 5 Menses"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Cookies et Data Localia Delere"
+  },
+  "clear_cache": {
+    "message": "Cache Delere"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Modum Developpatoris Aperire"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 Tabulas apertas et tempus otii enumerare"
+  },
+  "cal_all_time": {
+    "message": "Omne tempus"
+  },
+  "prev_day": {
+    "message": "‹ Dies prior"
+  },
+  "next_day": {
+    "message": "Dies sequens ›"
+  },
+  "previous_month": {
+    "message": "Mensis prior"
+  },
+  "next_month": {
+    "message": "Mensis sequens"
+  },
+  "clear": {
+    "message": "Purgare"
+  },
+  "ui_rounded_corners": {
+    "message": "Anguli rotundati interfaciei"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Angulos lateris et tabulae principalis rotundat (et parvum spatium circum servat). Exstingue ut dispositio angulis acutis et ad margines pertinens habeatur."
+  },
+  "ui_calendar_mode": {
+    "message": "Modus calendarii"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Navigationem dierum et horarum in pagina Historiae calendario in latere dextro substituit — dies, menses et annos elige et ad quamlibet horam statim transili."
+  },
+  "developer": {
+    "message": "Developpator"
+  },
+  "dev_mode": {
+    "message": "Modus developpatoris"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Modus developpatoris"
+  },
+  "dev_mode_desc": {
+    "message": "Diagnosis interna: data viva de otio tabularum ad repositionem automaticam adhibita, et statistica horologiorum in tergo. Ad errores investigandos tantum."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Diagnosis interna — horologia in tergo et status vivus otii tabularum ad repositionem automaticam adhibitus."
+  },
+  "close": {
+    "message": "Claudere"
+  },
+  "hour": {
+    "message": "Hora"
+  },
+  "all_hours": {
+    "message": "Omnes horae"
+  },
+  "ph_search_devices": {
+    "message": "Tabulas machinarum per titulum vel URL quaerere…"
+  },
+  "add": {
+    "message": "Addere"
+  },
+  "domain_exceptions": {
+    "message": "Exceptiones dominiorum"
+  },
+  "domain_exceptions_desc": {
+    "message": "Dominia in hoc indice omittuntur cum historia deletur: eorum ingressus historiae, crustula et data situs servantur. Subdominia includuntur."
+  },
+  "no_exceptions_yet": {
+    "message": "Nullae exceptiones adhuc"
+  },
+  "remove": {
+    "message": "Removere"
+  },
+  "invalid_domain": {
+    "message": "Dominium validum insere, e.g. example.com"
+  },
+  "domain_already_added": {
+    "message": "Hoc dominium iam in indice est"
+  },
+  "dh_confirm_warn": {
+    "message": "Hoc historiam in perpetuum delebit pro: $N1$. Iterum Delere preme ad confirmandum.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "Dominia in indice exceptionum tuarum ($N1$) servabuntur.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "Delens…"
+  },
+  "deleted_history_entries": {
+    "message": "$N1$ ingressus historiae deleti",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "crustula"
+  },
+  "word_cache": {
+    "message": "cache"
+  },
+  "confirm_restore_tabs": {
+    "message": "$N1$ tabulas restituere?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "$N1$ tabulae in $N2$ fenestris restitutae",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "$N1$ tabulae in nova fenestra restitutae",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "Forma remota"
+  },
+  "toast_enter_pattern": {
+    "message": "Formam insere"
+  },
+  "toast_pattern_added": {
+    "message": "Forma addita: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "Index neglectorum activatus"
+  },
+  "toast_ignore_disabled": {
+    "message": "Index neglectorum deactivatus"
+  },
+  "toast_ts_hidden": {
+    "message": "Dominia neglecta nunc a Tempore consumpto celantur"
+  },
+  "toast_ts_shown": {
+    "message": "Dominia neglecta iam a Tempore consumpto non celantur"
+  },
+  "hide_from_time_spent": {
+    "message": "A Tempore consumpto celare"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Dominia formis infra positis congruentia a conspectu Temporis consumpti celat — nulla data temporis notata delet"
+  },
+  "url_pattern_guide": {
+    "message": "Ductus formarum URL"
+  },
+  "ignore_keywords_note": {
+    "message": "Verba sine puncto pro verbis clavibus habentur — omnibus URL vel titulis paginarum qui illud verbum continent congruunt."
+  },
+  "toast_cleaning": {
+    "message": "URL neglecta ex historia purgantur…"
+  },
+  "toast_removed_ignored": {
+    "message": "$N1$ URL neglecta ex historia remota",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "Nulla URL neglecta in historia inventa"
+  },
+  "keyword_prefix": {
+    "message": "verbum clavis: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "In cache (locale)"
+  },
+  "context_menu_on_pages": {
+    "message": "Menu dextrum in paginis interretialibus"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Ingressum \"Extended History\" ostendit cum in pagina interretiali dextrum premis"
+  },
+  "no_sessions_yet": {
+    "message": "Nullae sessiones adhuc notatae"
+  },
+  "popup_as_sidebar": {
+    "message": "Ut latus adhibere"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Extended History in tabula laterali Browser aperit loco fenestrae emergentis, ut per totam paginam extendi possit"
+  },
+  "toolbar_icon": {
+    "message": "Icon instrumentorum"
+  },
+  "toolbar_icon_desc": {
+    "message": "Icon in instrumentis navigatri ostensum elige"
+  },
+  "wallpaper_opacity": {
+    "message": "Opacitas imaginis tergi"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Ipsam imaginem tergi debilitat — a colore tabulae vitreae infra separatum."
+  },
+  "refresh": {
+    "message": "↻ Renovare"
+  },
+  "back": {
+    "message": "← Retro"
+  },
+  "yesterday": {
+    "message": "Heri"
+  },
+  "today": {
+    "message": "Hodie"
+  },
+  "language_auto": {
+    "message": "Automaticum (lingua navigatri)"
+  },
+  "nav_icons": {
+    "message": "Icones navigationis"
+  },
+  "nav_icons_desc": {
+    "message": "Icones iuxta res in menu laterali ostendit. Exstingue ut menu solis verbis habeatur."
+  },
+  "match_ui_colors": {
+    "message": "Colores interfaciei aequare"
+  },
+  "match_ui_colors_desc": {
+    "message": "Indicem historiae eodem colore facit quo cetera interfaciei (latus, calendarium lateris et tabulae), non colore distincto."
+  },
+  "pop_store": {
+    "message": "Reponere"
+  },
+  "pop_open": {
+    "message": "Aperire"
+  },
+  "pop_prev_day": {
+    "message": "Dies prior"
+  },
+  "pop_next_day": {
+    "message": "Dies sequens"
+  },
+  "pop_clear_search": {
+    "message": "Quaestionem purgare et ad hodie redire"
+  },
+  "pop_recent_history": {
+    "message": "Historia recens"
+  },
+  "pop_closed_tabs": {
+    "message": "Tabulae clausae"
+  },
+  "pop_active_tabs": {
+    "message": "Tabulae activae"
+  },
+  "pop_unselect_all": {
+    "message": "Omnia deselegere"
+  },
+  "pop_select_all": {
+    "message": "Omnia eligere"
+  },
+  "pop_search_results": {
+    "message": "Eventus quaestionis"
+  },
+  "pop_start_typing": {
+    "message": "Incipe scribere ad quaerendum..."
+  },
+  "pop_export_session_title": {
+    "message": "Dextrum preme ad novissimam sessionem exportandam"
+  },
+  "pop_searching": {
+    "message": "Quaerens..."
+  },
+  "pop_search_error": {
+    "message": "Error quaestionis"
+  },
+  "pop_no_results": {
+    "message": "Nihil inventum"
+  },
+  "pop_no_closed": {
+    "message": "Nullae tabulae nuper clausae"
+  },
+  "pop_no_storable": {
+    "message": "Nullae tabulae apertae quae reponi possint"
+  },
+  "pop_ts_error": {
+    "message": "Error in tabulis repositis onerandis"
+  },
+  "pop_no_stored": {
+    "message": "Nullae tabulae repositae."
+  },
+  "pop_no_stored_hint": {
+    "message": "Dextrum preme in hoc bullo ad tabulas apertas reponendas"
+  },
+  "pop_no_data": {
+    "message": "Nulla data adhuc"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "$N1$ tabulas repositas ex repositorio removere?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Haec pagina reponi non potest"
+  },
+  "pop_no_history_day": {
+    "message": "Nulla historia huius diei"
+  },
+  "pop_no_history_today": {
+    "message": "Nulla historia hodie adhuc"
+  },
+  "pop_just_now": {
+    "message": "modo"
+  },
+  "pop_min_ago": {
+    "message": "ante $N1$ min",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "ante $N1$ h",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "ante $N1$ d",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }

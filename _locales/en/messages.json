@@ -1,8 +1,364 @@
 {
-  "ext_name": { "message": "Extended History" },
-
-
-  
+  "ext_name": {
+    "message": "Extended History"
+  },
+  "jan": {"message": "Jan"},
+  "feb": {"message": "Feb"},
+  "mar": {"message": "Mar"},
+  "apr": {"message": "Apr"},
+  "may": {"message": "May"},
+  "jun": {"message": "Jun"},
+  "jul": {"message": "Jul"},
+  "aug": {"message": "Aug"},
+  "sep": {"message": "Sep"},
+  "oct": {"message": "Oct"},
+  "nov": {"message": "Nov"},
+  "dec": {"message": "Dec"},
+  "discard": {"message": "Discard"},
+  "ignore_invert_note": {"message": "With an empty list nothing is ignored. Existing history is not touched when you switch this on."},
+  "ignore_invert_clean": {"message": "Remove existing entries from other sites now"},
+  "enc_incremental": {"message": "Encrypt incremental exports with a password"},
+  "enc_change_pw": {"message": "Change password"},
+  "allow_list_mode": {"message": "Allow-list mode (reverse filter)"},
+  "allow_list_mode_desc": {"message": "Ignore every site EXCEPT the ones in the list below — only listed sites are saved to history"},
+  "unlock_keep_most_visited_out": {"message": "After unlocking, do not put the most visited sites back into the browser history"},
+  "history_encrypted_enter_password": {"message": "Your history is encrypted. Enter your password to unlock it."},
+  "keep_most_visited_out": {"message": "Do not put the most visited sites back into the browser history"},
+  "redownload_last_incremental_backup": {"message": "Re-download last incremental backup"},
+  "no_incremental_backup_yet": {"message": "No incremental backup made yet"},
+  "export_results": {"message": "Export results"},
+  "export_results_title": {"message": "Export only the entries matching the current search, filters and dates"},
+  "avg_time_per_weekday_range": {"message": "Average time per weekday (last {0} days)"},
+  "follow_system_theme": {"message": "Follow system theme"},
+  "follow_system_theme_desc": {"message": "Automatically switch between light and dark mode with your operating system. The Light / Dark buttons in the sidebar are hidden while this is on."},
+  "no_history_found": {"message": "No history found"},
+  "lock_big_warning": {"message": "Your history is too big to encrypt"},
+  "lock_big_limit": {"message": "limit"},
+  "lock_big_warning2": {"message": "Nothing will be encrypted (to keep locking fast), but the interface will still be locked."},
+  "dh_from_newest": {"message": "counted from your newest entry, {0}"},
+  "new_entries_added": {"message": "new entries added"},
+  "import_finished": {"message": "Import finished — "},
+  "skipped": {"message": "skipped"},
+  "cant_update_ret": {"message": "Could not update retention"},
+  "cant_remove_old": {"message": "Could not remove old entries"},
+  "re_import_all": {"message": "Re-import all available Browser native history? New entries will be merged in."},
+  "importing_from_chrome": {"message": "Importing from Browser history…"},
+  "delete_all_confirm": {"message": "Delete ALL history permanently? Cannot be undone."},
+  "all_cleared": {"message": "All history cleared"},
+  "time_data_cleared": {"message": "Time data cleared"},
+  "cant_update_retention": {"message": "Could not update retention"},
+  "no_entries_file": {"message": "No entries found in file"},
+  "sun": {"message": "Sun"},
+  "mon": {"message": "Mon"},
+  "tue": {"message": "Tue"},
+  "wed": {"message": "Wed"},
+  "thu": {"message": "Thu"},
+  "fri": {"message": "Fri"},
+  "sat": {"message": "Sat"},
+  "merging_imported": {"message": "Merging imported history…"},
+  "building_search_index": {"message": "Building search index…"},
+  "reparing_database": {"message": "Repairing the history database…"},
+  "rescuing": {"message": "Rescuing readable history…"},
+  "rebuilding_database": {"message": "Rebuilding the database…"},
+  "freeing_disk_space": {"message": "Freeing disk space…"},
+  "selected": {"message": "selected"},
+  "open": {"message": "Open"},
+  "move_to": {"message": "Move to…"},
+  "copy_links": {"message": "Copy Links"},
+  "move": {"message": "Move"},
+  "move_to_folder": {"message": "📁 Move to folder"},
+  "sel_dest_folder": {"message": "Select destination folder:"},
+  "enter_url_first": {"message": "Enter the server URL first."},
+  "permission_server_none": {"message": "Permission for this server was not granted."},
+  "uploading_test": {"message": "Uploading a test file…"},
+  "webdav_works": {"message": "WebDAV upload works"},
+  "webdav_test_fail": {"message": "WebDAV test failed"},
+  "webdav_permission_none": {"message": "WebDAV server permission was not granted"},
+  "invalid_webdav_url": {"message": "Invalid WebDAV URL"},
+  "webdav_test": {"message": "Test upload"},
+  "webdav_server": {"message": "Server URL"},
+  "webdav_username": {"message": "Username"},
+  "webdav_password": {"message": "Password"},
+  "auto_export_interval_desc3": {"message": "Automatically export your history as a .json file every N months. Full exports all history each time; Incremental exports only what is new since the previous export. Nothing is deleted. Set to 0 to disable."},
+  "last_export": {"message": "Last export:"},
+  "next_export": {"message": "Next export:"},
+  "compress_as_zip": {"message": "Compress as .zip"},
+  "download_locally": {"message": "Download locally"},
+  "upload_to_webdav": {"message": "Upload to WebDAV"},
+  "local_plus_webdav": {"message": "Local + WebDAV"},
+  "full": {"message": "Full"},
+  "incremental": {"message": "Incremental"},
+  "import_file": {"message": "Import file"},
+  "import_file_desc": {"message": "Merge entries from a previously exported JSON or .TSV file"},
+  "import_organizing": {"message": "Organizing history & building indexes…"},
+  "import_finishing": {"message": "Finishing…"},
+  "import_indexing": {"message": "Building search index…"},
+    "jump_to_date": {
+    "message": "Jump to date"
+  },
+    "auto_export_confirm_incr": {"message": "This will export everything recorded since your last export. Nothing is deleted. Continue?"},
+  "auto_export_confirm_full": {"message": "This will export your full history. Nothing is deleted. Continue?"},
+  "auto_export_due": {"message": "Due — will run on next check"},
+  "auto_export_next": {"message": "Next export: {0}"},
+  "auto_export_done": {"message": "Exported {0} entries"},
+  "auto_export_nothing_new": {"message": "Nothing new to export since the last export"},
+  "auto_export_failed": {"message": "Could not save the export file. Try again."},
+  "running": {"message": "Running…"},
+  "delete_start_empty": {"message": "Delete it and start empty"},
+  "entries_were_saved": {"message": "entries were saved to your downloads. Check that the file was saved, then delete the damaged database now? You can import the file afterwards."},
+  "history_damaged": {"message": "The history database is damaged"},
+  "explain_damage": {"message": "This can happen when the browser was closed or ran out of memory in the middle of a big write. Repair can take a few minutes. You can also export what is readable to a .json file first, delete the database and import that file again."},
+  "try_repair": {"message": "Try to repair"},
+  "export_then_delete": {"message": "Export what can be read (.json), then delete"},
+  "exporting": {"message": "Exporting..."},
+  "entries": {"message": "entries"},
+  "saved": {"message": "Saved "},
+  "no_readable_entries": {"message": "No readable entries were found."},
+  "confirm_history_drop": {"message": "This permanently deletes the stored history database (your browser's own history is not touched). Continue?"},
+  "preparing_database": {"message": "Preparing the history database…"},
+  "can_take_long": {"message": " seconds — large databases can take several minutes"},
+  "stuck_delete": {"message": "Stuck? Delete the database and start empty"},
+  "this_deletes_history": {"message": "This permanently deletes the stored history database (your browser's own history is not touched). Continue?"},
+  "preparing": {"message": "Preparing…"},
+  "reading_history": {"message": "Reading your history…"},
+  "moving_to_sqlite": {"message": "Moving your history to SQLite…"},
+  "checking_copy": {"message": "Checking the copy…"},
+  "finishing_up": {"message": "Finishing up…"},
+  "history_too_big": {"message": "Your history is big, so it is being moved to a faster database. This happens once; the page reloads when it is done."},
+  "starting_database": {"message": "Starting the database…"},
+  "upgrading_database": {"message": "Upgrading the history database…"},
+  "building_indexes": {"message": "Building indexes…"},
+  "repairing_database": {"message": "Repairing the history database…"},
+  "more_from_domain": {
+    "message": "More from domain"
+  },
+  "ignore_domain": {
+    "message": "Ignore domain"
+  },
+   "quick_filter_button": {
+    "message": "Quick filter button"
+  },
+  "quick_filter_button_desc": {
+    "message": "Show a filter button in the popup, left of Store, with a dropdown of your Quick Filters. Picking one narrows the popup's Recent History and Search to just those domains/keywords/URLs — search still works normally on top of it. Resets to no filter each time the popup is reopened."
+  },
+  "fade_in_list_on_date_change": {
+    "message": "Fade in list on date change"
+  },
+  "fade_in_list_on_date_change_desc": {
+    "message": "When switching dates — pill bar, calendar, or the Time Spent date arrows — the history list fades in as it loads instead of just appearing instantly."
+  },
+   "keep_saving_history_while_locked": {
+    "message": "Keep saving history while locked (merged back in when you unlock, instead of deleted)"
+  },
+  "restore_all": {
+    "message": "Restore all"
+  },
+    "unique_tabs": {
+    "message": "Unique tabs"
+  },
+    "no_stored_tabs": {"message": "No stored tabs yet."},
+  "store_tab_hint": {"message": "Right-click any page → Extended History → Store this tab"},
+  "no_synced_devices": {"message": "No synced devices found."},
+  "chrome_sync_hint": {"message": "Sign in to Browser and enable Sync."},
+  "run_now": {"message": "Run now"},
+  "edit": {
+    "message": "Edit"
+  },
+    "please_enter_password": {
+    "message": "Please enter a password."
+  },
+  "master_password": {
+    "message": "Master password"
+  },
+  "ignore_list_setup": {
+    "message": "🔒 Set Up Ignore List"
+  },
+  "ignore_list_setup_desc": {
+    "message": "No password is set yet. Create a master password to protect your ignore list."
+  },
+  "ignore_list_access_desc": {
+    "message": "Enter your master password to view the ignore list."
+  },
+  "reset_ignore_list": {
+    "message": "🔑 Reset Ignore List"
+  },
+  "reset_ignore_list_desc": {
+    "message": "Ignore list has been cleared. Enter a new master password to continue."
+  },
+  "set_new_password": {
+    "message": "Set New Password"
+  },
+  "auto_hide_sidebar": {
+    "message": "Auto-hide sidebar on mouse leave"
+  },
+  "auto_hide_sidebar_desc": {
+    "message": "Close the sidebar automatically once your cursor leaves it, similar to how a popup dismisses itself. Turn off to keep it open until you close it manually."
+  },
+   "auto_export_interval": {
+    "message": "Auto export interval"
+  },
+  "auto_export_interval_desc": {
+    "message": "Automatically export & delete the oldest history as a .json file every N months. The most recent 3 months are always kept, no matter what interval you set. Set to 0 to disable."
+  },
+  "high_contrast_mode": {
+    "message": "High contrast mode"
+  },
+  "high_contrast_mode_desc": {
+    "message": "Uses the primary text color everywhere secondary/tertiary (dimmer) text color would normally be used, for better readability"
+  },
+  "create_password": {
+    "message": "Create password"
+  },
+  "rename_bookmark": {
+  "message": "✏️ Rename bookmark"
+},
+ "lock_warning_title": {
+    "message": "Lock history?"
+  },
+  "lock_warning_body": {
+    "message": "Locking will encrypt all history inside the extension. All history inside the browser itself will be deleted, the extension's own copy is kept, encrypted. Make sure you back up your history by exporting it first, just in case of a power failure. After locking you can unlock by entering your password and history inside extension will be returned, but not browser native one. Meaning there will be missing autocomplete suggestions in address bar, only most visited urls and domains will show up. If you forget the password, the history cannot be recovered."
+  },
+  "lock_logout_everywhere": {
+    "message": "Logout everywhere (also clear cookies and site data)"
+  },
+  "lock_hide_bookmarks": {
+    "message": "Hide bookmarks (removed from the browser until you unlock)"
+  },
+  "lock_password": {
+    "message": "Password"
+  },
+  "lock_confirm_password": {
+    "message": "Confirm password"
+  },
+  "lock_btn": {
+    "message": "Lock"
+  },
+  "lock_password_short": {
+    "message": "Password must be at least 4 characters"
+  },
+  "lock_password_mismatch": {
+    "message": "Passwords do not match"
+  },
+  "lock_locking": {
+    "message": "Encrypting…"
+  },
+  "remove_bookmark": {
+    "message": "🗑 Remove bookmark"
+  },
+   "select": {
+    "message": "Select"
+  },
+  "quick_filters_none": {
+    "message": "Quick Filters: None"
+  },
+  "quick_filter_desc": {
+    "message": "Save a named group of domains, keywords, or URLs (e.g. \"Social Media\" → facebook.com, instagram.com, pinterest.com). Pick it from the dropdown next to the search box on the History page to instantly filter to just those entries."
+  },
+  "filter_name": {
+    "message": "Filter name (e.g. Social Media)"
+  },
+  "quick_filter_patterns_placeholder": {
+    "message": "One domain, keyword, or URL per line — e.g.\nfacebook.com\ninstagram.com\npinterest.com"
+  },
+  "save_changes": {
+    "message": "Save changes"
+  },
+    "add_filter": {
+      "message": "Add Filter"
+    },
+  "no_qfilters": {
+    "message": "No quick filters yet"
+  },
+  "scroll_sensitivity": {
+    "message": "Scroll sensitivity"
+  },
+  "scroll_sensitivity_desc": {
+    "message": "How many day pills each scroll click moves"
+  },
+  "scroll_date": {
+    "message": "Scroll date pills with mouse wheel"
+  },
+  "scroll_date_desc": {
+    "message": "Lets a regular mouse wheel (which only scrolls vertically) move the date pill bar sideways — handy on desktop, where the wheel can't scroll horizontally on its own."
+  },
+  "ignore_list_access": {
+    "message": "🔒 Ignore List Access"
+  },
+  "ignore_list_enter_password": {
+    "message": "Enter your master password to view the ignore list."
+  },
+  "reset": {
+    "message": "Reset"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "popup_show_url": {
+    "message": "URLs"
+  },
+  "popup_show_url_desc": {
+    "message": "Display the page URL below the title in the popup list"
+  },
+  "auto_store_idle_tabs": {
+    "message": "Auto-store idle tabs"
+  },
+  "auto_store_idle_tabs_desc": {
+    "message": "Automatically move tabs to Tab Storage when they haven't been focused for a set amount of time. The tab is closed and saved for later — nothing is lost."
+  },
+  "idle_threshold": {
+    "message": "Idle threshold"
+  },
+  "idle_threshold_desc": {
+    "message": "Store a tab after this many hours without it being focused. Default: 6."
+  },
+  "history_storage": {
+    "message": "History storage engine"
+  },
+  "history_storage_desc": {
+    "message": "IndexedDB is faster for large histories (100k+ entries) and uses less memory. Migration copies all data — you can switch back any time. Current: "
+  },
+  "apply_migrate": {
+    "message": "Apply & Migrate"
+  },
+  "wallpaper_mode": {
+    "message": "🖼 Wallpaper Mode"
+  },
+  "wallpaper_mode_desc": {
+    "message": "Set a custom background image. Enables a frosted-glass UI look."
+  },
+  "wallpaper_mode_custom_image": {
+    "message": "📁 Custom Image"
+  },
+  "wallpaper_random_unsplash": {
+    "message": "🎲 Random from Unsplash"
+  },
+  "wallpaper_drop_image": {
+    "message": "Drop image here or click to browse"
+  },
+  "wallpaper_fetch": {
+    "message": "Fetches a random high-res photo (changes each time)"
+  },
+  "wallpaper_randomize": {
+    "message": "🎲 Randomize"
+  },
+  "wallpaper_auto_randomize": {
+    "message": "Auto-randomize on every open"
+  },
+  "wallpaper_current": {
+    "message": "Current wallpaper:"
+  },
+  "overlay_opacity": {
+    "message": "Overlay opacity"
+  },
+  "overlay_control_desc": {
+    "message": "Controls the dark (dark mode) or white (light mode) overlay on top of the wallpaper."
+  },
+  "wallpaper_blur": {
+    "message": "Background blur"
+  },
+  "wallpaper_remove": {
+    "message": "✕ Remove wallpaper"
+  },
   "all": {
     "message": "All"
   },
@@ -16,7 +372,7 @@
     "message": "← Back"
   },
   "background_tint": {
-    "message": "Background Tint"
+    "message": "Wallpaper Tint"
   },
   "browser_cache": {
     "message": "Browser cache"
@@ -25,7 +381,7 @@
     "message": "Delete history & reset password"
   },
   "enable_bg_tint": {
-    "message": "Enable background tint"
+    "message": "Enable wallpaper tint (works only if wallpaper mode is on)"
   },
   "enable_lock": {
     "message": "Enable Lock"
@@ -40,7 +396,7 @@
     "message": "Favicon resolver"
   },
   "favicon_resolver_desc": {
-    "message": "How site icons are fetched. \"Browser cache\" uses Chrome's built-in cache (faster, private). \"Google\" fetches from Google's CDN (better coverage)."
+    "message": "How site icons are fetched. \"Browser cache\" uses Browser's built-in cache (faster, private). \"Google\" fetches from Google's CDN (better coverage)."
   },
   "for_password_reset": {
     "message": "(for password reset)"
@@ -141,168 +497,834 @@
   "example_com_6": {
     "message": "example"
   },
-
-  "current_session": { "message": "Current Session" },
-  "active": { "message": "Active" },
-  "all_fields": { "message": "All fields" },
-  "yesterday": { "message": "Yesterday" },
-  "today": { "message": "Today" },
-  "title": { "message": "Title" },
-  "url": { "message": "URL" },
-  "domain": { "message": "Domain" },
-  "ph_search_history": { "message": "Search history..." },
-  "ph_search_bookmarks": { "message": "Search bookmarks..." },
-  "most_visited": {"message": "Most Visited"},
-  "tabs": {"message": "tabs"},
-  "since": {"message": "since"},
-  "most_visited_URLS_all_time": {"message": "Most Visited URLs — All Time"},
-  "urls": {"message": "URLs"},
-  "domains": {"message": "Domains"},
-  "enable_ignore": {"message": "Enable Ignore List"},
-  "filter_urls": {"message": "Filter URLs matching patterns below"},
-  
-  "reading_mode": {"message": "Reading Mode"},
-  "tab_storage": {"message": "Tab Storage"},
-  "load_exported_history_read": {"message": "Load an exported history file (.json) to browse it without importing it. The UI works exactly like the History tab — date pills, search, everything."},
-  "choose_file": {"message": "Choose file…"},
-  "choose_file_hint": {"message": "or drag & drop a .json file anywhere here"},
-  "leave_reading_mode": {"message": "✕ Leave reading mode"},
-  "reading": {"message": "Reading:"},
-
+  "current_session": {
+    "message": "Current Session"
+  },
+  "active": {
+    "message": "Active"
+  },
+  "all_fields": {
+    "message": "All fields"
+  },
+  "yesterday": {
+    "message": "Yesterday"
+  },
+  "today": {
+    "message": "Today"
+  },
+  "title": {
+    "message": "Title"
+  },
+  "url": {
+    "message": "URL"
+  },
+  "domain": {
+    "message": "Domain"
+  },
+  "ph_search_history": {
+    "message": "Search history..."
+  },
+  "ph_search_bookmarks": {
+    "message": "Search bookmarks..."
+  },
+  "most_visited": {
+    "message": "Most Visited"
+  },
+  "tabs": {
+    "message": "tabs"
+  },
+  "since": {
+    "message": "since"
+  },
+  "most_visited_URLS_all_time": {
+    "message": "Most Visited URLs — All Time"
+  },
+  "urls": {
+    "message": "URLs"
+  },
+  "domains": {
+    "message": "Domains"
+  },
+  "enable_ignore": {
+    "message": "Enable Ignore List"
+  },
+  "filter_urls": {
+    "message": "Filter URLs matching patterns below"
+  },
+  "reading_mode": {
+    "message": "Reading Mode"
+  },
+  "tab_storage": {
+    "message": "Tab Storage"
+  },
+  "load_exported_history_read": {
+    "message": "Load an exported history file (.json) to browse it without importing it. The UI works exactly like the History tab — date pills, search, everything."
+  },
+  "choose_file": {
+    "message": "Choose file…"
+  },
+  "choose_file_hint": {
+    "message": "or drag & drop a .json file anywhere here"
+  },
+  "leave_reading_mode": {
+    "message": "✕ Leave reading mode"
+  },
+  "reading": {
+    "message": "Reading:"
+  },
+  "load_exported_history_read2": {"message": "Load an exported history file (.json or .tsv) to browse it without importing it. The UI works exactly like the History tab — date pills, search, everything."},
+  "choose_file_hint2": {"message": "or drag & drop a .json or .tsv file anywhere here"},
   "confirm_delete_all_time": {
     "message": "⚠️ Confirm deleting results for all time\n\nThis will delete all $COUNT$ matching results from your entire history.\n\nAre you sure?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "confirm_delete_filtered": {
     "message": "Delete all $COUNT$ matching results?",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
   "deleted_items": {
     "message": "Deleted $COUNT$ items",
-    "placeholders": { "count": { "content": "$1" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   },
-
-  "storage": { "message": "Storage" },
-  "total_visits": { "message": "Total visits" },
-  "restore": { "message": "Restore" },
-  "most_visited_URLS": { "message": "Most visited URLs" },
-  
-
-  "browse": { "message": "Browse" },
-  "history": { "message": "History" },
-  "sessions": { "message": "Sessions" },
-  "devices": { "message": "Devices" },
-  "insights": { "message": "Insights" },
-  "activity": { "message": "Activity" },
-  "time_spent": { "message": "Time Spent" },
-  "library": { "message": "Library" },
-  "bookmarks": { "message": "Bookmarks" },
-  "system": { "message": "System" },
-  "delete_history": { "message": "Delete History" },
-  "ignore_list": { "message": "Ignore List" },
-  "settings": { "message": "Settings" },
-  "more": { "message": "More" },
-  "light": { "message": "Light" },
-  "dark": { "message": "Dark" },
-  "all_time": { "message": "All time" },
-  "delete_results": { "message": "Delete results" },
-  "selected_lower": { "message": "selected" },
-  "select_all_visible": { "message": "Select all visible" },
-  "deselect_all": { "message": "Deselect all" },
-  "delete_selected": { "message": "Delete selected" },
-  "loading": { "message": "Loading…" },
-  "daily_visits_90": { "message": "Daily visits — 90 days" },
-  "daily_visits_30": { "message": "Daily visits — 30 days" },
-  "hours": { "message": "hours" },
-  "days": { "message": "days" },
-  "clear_time_data": { "message": "Clear time data" },
-  "daily_browsing_time": { "message": "Daily browsing time" },
-  "top_sites_by_time_spent": { "message": "Top sites by time spent" },
-  "export": { "message": "Export" },
-  "import": { "message": "Import" },
-  "history_retention": { "message": "History Retention" },
-  "keep_history_for": { "message": "Keep history for" },
-  "older_enteries_are_pruned": { "message": "Older entries are automatically pruned" },
-  "months": { "message": "months" },
-  "year": { "message": "year" },
-  "years": { "message": "years" },
-  "forever": { "message": "Forever" },
-  "appearance": { "message": "Appearance" },
-  "language": { "message": "Language" },
-  "select_pref_language": { "message": "Select your preferred language" },
-  "font_family": { "message": "Font family" },
-  "font_size": { "message": "Font size" },
-  "base_ui_text_size": { "message": "Base UI text size" },
-  "pixels": { "message": "px" },
-  "accent_colors": { "message": "Accent colors" },
-  "primary": { "message": "Primary" },
-  "secondary": { "message": "Secondary" },
-  "data": { "message": "Data" },
-  "export_history": { "message": "Export history" },
-  "full_json_backup": { "message": "Full JSON backup of all history + time data" },
-  "export_json": { "message": "Export JSON" },
-  "import_history": { "message": "Import history" },
-  "merge_entries_json": { "message": "Merge entries from a previously exported JSON file" },
-  "import_json": { "message": "Import JSON" },
-  "sessions_to_keep": { "message": "Sessions to keep" },
-  "how_many_past_sessions": { "message": "How many past sessions are stored (1–20)" },
-  "auto_save_session": { "message": "Auto-save current session" },
-  "save_open_tabs_to": { "message": "Saves open tabs to extended-history-session.html in your downloads folder. Set to 0 to disable." },
-  "min": { "message": "min" },
-  "save_now": { "message": "Save now" },
-  "save_settings": { "message": "Save Settings" },
-  "danger_zone": { "message": "Danger Zone" },
-  "reimport_chrome_history": { "message": "Re-import Chrome history" },
-  "pull_all_chrome_history": { "message": "Pull all available Chrome native history again (merges, no duplicates)" },
-  "reimport": { "message": "Re-import" },
-  "clear_all_history": { "message": "Clear all history" },
-  "permanently_delete_all_stored": { "message": "Permanently deletes all stored history. Cannot be undone." },
-  "clear_all": { "message": "Clear All" },
-  "about": { "message": "About" },
-  "created_by": { "message": "Created by Bane Kondić, cause he didn't like 90days history limit in Chromium. This extension does not send data and is completely open source, code is available on creators Github profile" },
-  "github_profile": { "message": "Github Profile" },
-  "feedback": { "message": "Feedback" },
-  "link_to_discord": { "message": "Link to Discord server for feedbacks (or just leave review in chrome store)" },
-  "discord_server": { "message": "Discord server" },
-  "rate_extension": { "message": "Rate this extension" },
-  "link_to_chrome_webstore": { "message": "Link to Chrome Web Store extensions page" },
-  "click_to_rate": { "message": "Click to Rate" },
-  "ignored_domains": { "message": "Ignored Domains" },
-  "domains_added_will_not_be": { "message": "Domains added here will not be saved in history. Existing entries will be removed automatically." },
-  "add_patern": { "message": "Add Pattern" },
-  "pattern_guide": { "message": "Pattern Guide" },
-  "basic_domain": { "message": "Basic domain" },
-  "example_com_1": { "message": "example.com" },
-  "block_all_example_1": { "message": "Blocks all of example.com" },
-  "all_subdomains": { "message": "All subdomains" },
-  "example_com_2": { "message": "*.example.com" },
-  "block_all_example_2": { "message": "Blocks blog.example.com, shop.example.com, etc." },
-  "specific_subdomain": { "message": "Specific subdomain" },
-  "example_com_3": { "message": "blog.example.com" },
-  "block_all_example_3": { "message": "Only blocks blog.example.com" },
-  "specific_path": { "message": "Specific path" },
-  "example_com_4": { "message": "example.com/private" },
-  "block_all_example_4": { "message": "Only blocks URLs under /private" },
-  "specific_file": { "message": "Specific file" },
-  "example_com_5": { "message": "example.com/file.html" },
-  "block_all_example_5": { "message": "Only blocks that specific file" },
-  "no_patterns_added": { "message": "No patterns added yet" },
-  "open_in_new_tab": { "message": "Open in new tab" },
-  "open_in_incognito": { "message": "Open in incognito" },
-  "copy_url": { "message": "Copy URL" },
-  "copy_title": { "message": "Copy title" },
-  "delete_from_history": { "message": "Delete from history" },
-  "new_subfolder": { "message": "New subfolder" },
-  "rename_folder": { "message": "Rename folder" },
-  "delete_folder": { "message": "Delete folder" },
-  "cancel": { "message": "Cancel" },
-  "delete": { "message": "Delete" },
-  "choose_a_time_range": { "message": "Choose a time range to delete. This will remove entries from both this extension and Chrome's native history." },
-  "last_1_hour": { "message": "Last 1 hour" },
-  "last_24_hours": { "message": "Last 24 hours" },
-  "last_7_days": { "message": "Last 7 days" },
-  "last_30_days": { "message": "Last 30 days (month)" },
-  "last_5_months": { "message": "Last 5 months" },
-  "clear_cookies_local_storage": { "message": "Clear cookies & local storage" },
-  "clear_cache": { "message": "Clear cache" }
+  "storage": {
+    "message": "Storage"
+  },
+  "total_visits": {
+    "message": "Total visits"
+  },
+  "restore": {
+    "message": "Restore"
+  },
+  "most_visited_URLS": {
+    "message": "Most visited URLs"
+  },
+  "browse": {
+    "message": "Browse"
+  },
+  "history": {
+    "message": "History"
+  },
+  "sessions": {
+    "message": "Sessions"
+  },
+  "devices": {
+    "message": "Devices"
+  },
+  "insights": {
+    "message": "Insights"
+  },
+  "activity": {
+    "message": "Activity"
+  },
+  "time_spent": {
+    "message": "Time Spent"
+  },
+  "library": {
+    "message": "Library"
+  },
+  "bookmarks": {
+    "message": "Bookmarks"
+  },
+  "system": {
+    "message": "System"
+  },
+  "delete_history": {
+    "message": "Delete History"
+  },
+  "ignore_list": {
+    "message": "Ignore List"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "more": {
+    "message": "More"
+  },
+  "light": {
+    "message": "Light"
+  },
+  "dark": {
+    "message": "Dark"
+  },
+  "all_time": {
+    "message": "All time"
+  },
+  "delete_results": {
+    "message": "Delete results"
+  },
+  "selected_lower": {
+    "message": "selected"
+  },
+  "select_all_visible": {
+    "message": "Select all visible"
+  },
+  "deselect_all": {
+    "message": "Deselect all"
+  },
+  "delete_selected": {
+    "message": "Delete selected"
+  },
+  "loading": {
+    "message": "Loading…"
+  },
+  "daily_visits_90": {
+    "message": "Daily visits — 90 days"
+  },
+  "daily_visits_30": {
+    "message": "Daily visits — 30 days"
+  },
+  "hours": {
+    "message": "hours"
+  },
+  "days": {
+    "message": "days"
+  },
+  "clear_time_data": {
+    "message": "Clear time data"
+  },
+  "daily_browsing_time": {
+    "message": "Daily browsing time"
+  },
+  "top_sites_by_time_spent": {
+    "message": "Top sites by time spent"
+  },
+  "export": {
+    "message": "Export"
+  },
+  "import": {
+    "message": "Import"
+  },
+  "history_retention": {
+    "message": "History Retention"
+  },
+  "keep_history_for": {
+    "message": "Keep history for"
+  },
+  "older_enteries_are_pruned": {
+    "message": "Older entries are automatically pruned"
+  },
+  "months": {
+    "message": "months"
+  },
+  "year": {
+    "message": "year"
+  },
+  "years": {
+    "message": "years"
+  },
+  "forever": {
+    "message": "Forever"
+  },
+  "appearance": {
+    "message": "Appearance"
+  },
+  "language": {
+    "message": "Language"
+  },
+  "select_pref_language": {
+    "message": "Select your preferred language"
+  },
+  "font_family": {
+    "message": "Font family"
+  },
+  "font_size": {
+    "message": "Font size"
+  },
+  "base_ui_text_size": {
+    "message": "Base UI text size"
+  },
+  "pixels": {
+    "message": "px"
+  },
+  "accent_colors": {
+    "message": "Accent colors"
+  },
+  "primary": {
+    "message": "Primary"
+  },
+  "secondary": {
+    "message": "Secondary"
+  },
+  "data": {
+    "message": "Data"
+  },
+  "export_history": {
+    "message": "Export history"
+  },
+  "full_json_backup": {
+    "message": "Full JSON backup of all history + time data"
+  },
+  "export_json": {
+    "message": "Export JSON"
+  },
+  "import_history": {
+    "message": "Import history"
+  },
+  "merge_entries_json": {
+    "message": "Merge entries from a previously exported JSON file"
+  },
+  "import_json": {
+    "message": "Import JSON"
+  },
+  "sessions_to_keep": {
+    "message": "Sessions to keep"
+  },
+  "disabled": {"message": "Disabled"},
+  "dh_now": {"message": "Now"},
+  "how_many_past_sessions": {
+    "message": "How many past sessions are stored (1–20)"
+  },
+  "auto_save_session": {
+    "message": "Auto-save current session"
+  },
+  "save_open_tabs_to": {
+    "message": "Saves open tabs to extended-history-session.html in your downloads folder. Set to 0 to disable."
+  },
+  "min": {
+    "message": "min"
+  },
+  "save_now": {
+    "message": "Save now"
+  },
+  "avg_time_per_weekday": {"message": "Average time per weekday (all time)"},
+  "avg_visits_per_hour": {"message": "Average visits by hour of day"},
+  "save_settings": {
+    "message": "Save Settings"
+  },
+  "danger_zone": {
+    "message": "Danger Zone"
+  },
+  "reimport_chrome_history": {
+    "message": "Re-import Browser history"
+  },
+  "pull_all_chrome_history": {
+    "message": "Pull all available Browser native history again (merges, no duplicates)"
+  },
+  "reimport": {
+    "message": "Re-import"
+  },
+  "clear_all_history": {
+    "message": "Clear all history"
+  },
+  "permanently_delete_all_stored": {
+    "message": "Permanently deletes all stored history. Cannot be undone."
+  },
+  "clear_all": {
+    "message": "Clear All"
+  },
+  "about": {
+    "message": "About"
+  },
+  "created_by": {
+    "message": "Created by Bane Kondić, cause he didn't like 90days history limit in Chromium. This extension does not send data and is completely open source, code is available on creators Github profile"
+  },
+  "github_profile": {
+    "message": "Github Profile"
+  },
+  "feedback": {
+    "message": "Feedback"
+  },
+  "link_to_discord": {
+    "message": "Link to Discord server for feedbacks (or just leave review in chrome store)"
+  },
+  "discord_server": {
+    "message": "Discord server"
+  },
+  "rate_extension": {
+    "message": "Rate this extension"
+  },
+  "confirm_ignore_invert": {"message": "Allow-list mode: from now on NOTHING is saved to history except the sites in your list. Continue?"},
+  "enc_prompt_pw": {"message": "Password for encrypting incremental exports (needed again to import them):"},
+  "link_to_chrome_webstore": {"message": "Link to extensions page"},
+  "click_to_rate": {
+    "message": "Click to Rate"
+  },
+  "ignored_domains": {
+    "message": "Ignored Domains"
+  },
+  "confirm_ignore_invert_clean": {"message": "This permanently removes every entry from your stored history (and the browser history) whose site is NOT in the list. This cannot be undone. Continue?"},
+  "toast_ignore_invert_off": {"message": "Allow-list mode off: listed sites are ignored"},
+  "toast_ignore_invert_on": {"message": "Allow-list mode on: only the listed sites are kept"},
+  "domains_added_will_not_be": {
+    "message": "Domains added here will not be saved in history. Existing entries will be removed automatically."
+  },
+  "add_patern": {
+    "message": "Add Pattern"
+  },
+  "pattern_guide": {
+    "message": "Pattern Guide"
+  },
+  "basic_domain": {
+    "message": "Basic domain"
+  },
+  "example_com_1": {
+    "message": "example.com"
+  },
+  "block_all_example_1": {
+    "message": "Blocks all of example.com"
+  },
+  "all_subdomains": {
+    "message": "All subdomains"
+  },
+  "example_com_2": {
+    "message": "*.example.com"
+  },
+  "block_all_example_2": {
+    "message": "Blocks blog.example.com, shop.example.com, etc."
+  },
+  "specific_subdomain": {
+    "message": "Specific subdomain"
+  },
+  "example_com_3": {
+    "message": "blog.example.com"
+  },
+  "block_all_example_3": {
+    "message": "Only blocks blog.example.com"
+  },
+  "specific_path": {
+    "message": "Specific path"
+  },
+  "example_com_4": {
+    "message": "example.com/private"
+  },
+  "block_all_example_4": {
+    "message": "Only blocks URLs under /private"
+  },
+  "specific_file": {
+    "message": "Specific file"
+  },
+  "example_com_5": {
+    "message": "example.com/file.html"
+  },
+  "block_all_example_5": {
+    "message": "Only blocks that specific file"
+  },
+  "no_patterns_added": {
+    "message": "No patterns added yet"
+  },
+  "open_in_new_tab": {
+    "message": "Open in new tab"
+  },
+  "open_in_incognito": {
+    "message": "Open in incognito"
+  },
+  "copy_url": {
+    "message": "Copy URL"
+  },
+  "copy_title": {
+    "message": "Copy title"
+  },
+  "delete_from_history": {
+    "message": "Delete from history"
+  },
+  "new_subfolder": {
+    "message": "New subfolder"
+  },
+  "rename_folder": {
+    "message": "Rename folder"
+  },
+  "delete_folder": {
+    "message": "Delete folder"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "delete": {
+    "message": "Delete"
+  },
+  "choose_a_time_range": {
+    "message": "Choose a time range to delete. This will remove entries from both this extension and Browser's native history."
+  },
+  "last_1_hour": {
+    "message": "Last 1 hour"
+  },
+  "last_24_hours": {
+    "message": "Last 24 hours"
+  },
+  "last_7_days": {
+    "message": "Last 7 days"
+  },
+  "last_30_days": {
+    "message": "Last 30 days (month)"
+  },
+  "last_5_months": {
+    "message": "Last 5 months"
+  },
+  "clear_cookies_local_storage": {
+    "message": "Clear cookies & local storage"
+  },
+  "clear_cache": {
+    "message": "Clear cache"
+  },
+  "open_dev_mode": {
+    "message": "🛠 Open Dev Mode"
+  },
+  "dev_list_tabs": {
+    "message": "🗂 List open tabs & idle time"
+  },
+  "close": {
+    "message": "Close"
+  },
+  "cal_all_time": {
+    "message": "All Time"
+  },
+  "prev_day": {
+    "message": "‹ Prev day"
+  },
+  "next_day": {
+    "message": "Next day ›"
+  },
+  "previous_month": {
+    "message": "Previous month"
+  },
+  "next_month": {
+    "message": "Next month"
+  },
+  "clear": {
+    "message": "Clear"
+  },
+  "ui_rounded_corners": {
+    "message": "UI rounded corners"
+  },
+  "ui_rounded_corners_desc": {
+    "message": "Rounds the corners of the sidebar and main panel (and keeps the small gap around them). Turn off for a sharp-edged, flush, edge-to-edge layout."
+  },
+  "ui_calendar_mode": {
+    "message": "UI calendar mode"
+  },
+  "ui_calendar_mode_desc": {
+    "message": "Replaces the date/hour pill navigation on the History page with a right-side calendar sidebar — pick dates, months and years, and jump straight to any hour."
+  },
+  "dev_mode": {
+    "message": "Dev Mode"
+  },
+  "dev_mode_desc": {
+    "message": "Internal diagnostics: live tab idle-tracking data used for auto-store, and background timer stats. For troubleshooting only."
+  },
+  "dev_mode_modal_sub": {
+    "message": "Internal diagnostics — background timers and the live tab idle-tracking state used for auto-store."
+  },
+  "hour": {
+    "message": "Hour"
+  },
+  "developer": {
+    "message": "Developer"
+  },
+  "developer_mode_title": {
+    "message": "🛠 Developer Mode"
+  },
+  "ignore_keywords_note": {
+    "message": "Words without a dot are treated as keywords — they match any URL or page title containing that word."
+  },
+  "hide_from_time_spent": {
+    "message": "Hide from Time Spent"
+  },
+  "hide_from_time_spent_desc": {
+    "message": "Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data"
+  },
+  "url_pattern_guide": {
+    "message": "URL Pattern Guide"
+  },
+  "all_hours": {
+    "message": "All hours"
+  },
+  "ph_search_devices": {
+    "message": "Search device tabs by title or URL…"
+  },
+  "add": {
+    "message": "Add"
+  },
+  "domain_exceptions": {
+    "message": "Domain exceptions"
+  },
+  "domain_exceptions_desc": {
+    "message": "Domains on this list are skipped when you delete history: their history entries, cookies and site data are kept. Subdomains are included."
+  },
+  "no_exceptions_yet": {
+    "message": "No exceptions yet"
+  },
+  "remove": {
+    "message": "Remove"
+  },
+  "invalid_domain": {
+    "message": "Enter a valid domain, e.g. example.com"
+  },
+  "domain_already_added": {
+    "message": "That domain is already on the list"
+  },
+  "dh_confirm_warn": {
+    "message": "This will permanently delete history for: $N1$. Click Delete again to confirm.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "dh_confirm_exceptions": {
+    "message": "Domains on your exceptions list ($N1$) will be kept.",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "deleting": {
+    "message": "Deleting…"
+  },
+  "deleted_history_entries": {
+    "message": "Deleted $N1$ history entries",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "word_cookies": {
+    "message": "cookies"
+  },
+  "word_cache": {
+    "message": "cache"
+  },
+  "confirm_restore_tabs": {
+    "message": "Restore $N1$ tabs?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "restored_tabs_windows": {
+    "message": "Restored $N1$ tabs in $N2$ windows",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      },
+      "n2": {
+        "content": "$2"
+      }
+    }
+  },
+  "restored_tabs_window": {
+    "message": "Restored $N1$ tabs in a new window",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_pattern_removed": {
+    "message": "Pattern removed"
+  },
+  "toast_enter_pattern": {
+    "message": "Please enter a pattern"
+  },
+  "toast_pattern_added": {
+    "message": "Pattern added: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_ignore_enabled": {
+    "message": "Ignore list enabled"
+  },
+  "toast_ignore_disabled": {
+    "message": "Ignore list disabled"
+  },
+  "toast_ts_hidden": {
+    "message": "Ignored domains are now hidden from Time Spent"
+  },
+  "toast_ts_shown": {
+    "message": "Ignored domains are no longer hidden from Time Spent"
+  },
+  "toast_cleaning": {
+    "message": "Cleaning ignored URLs from history…"
+  },
+  "toast_removed_ignored": {
+    "message": "Removed $N1$ ignored URLs from history",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toast_no_ignored": {
+    "message": "No ignored URLs found in history"
+  },
+  "keyword_prefix": {
+    "message": "keyword: $N1$",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cached_resolver": {
+    "message": "Cached (local)"
+  },
+  "context_menu_on_pages": {
+    "message": "Right-click menu on websites"
+  },
+  "context_menu_on_pages_desc": {
+    "message": "Show the \"Extended History\" entry when you right-click on a webpage"
+  },
+  "no_sessions_yet": {
+    "message": "No sessions recorded yet"
+  },
+  "popup_as_sidebar": {
+    "message": "Use as sidebar"
+  },
+  "popup_as_sidebar_desc": {
+    "message": "Open Extended History in Browser's side panel instead of a popup, so it can extend over the whole page"
+  },
+  "toolbar_icon": {
+    "message": "Toolbar icon"
+  },
+  "toolbar_icon_desc": {
+    "message": "Choose the icon shown in your browser's toolbar"
+  },
+  "wallpaper_opacity": {
+    "message": "Wallpaper opacity"
+  },
+  "wallpaper_opacity_desc": {
+    "message": "Fades the background image itself — separate from the glass panel tint below."
+  },
+  "language_auto": {
+    "message": "Auto (browser language)"
+  },
+  "nav_icons": {
+    "message": "Navigation icons"
+  },
+  "nav_icons_desc": {
+    "message": "Show the icons next to the items in the sidebar navigation. Turn off for a text-only menu."
+  },
+  "match_ui_colors": {
+    "message": "Match UI colors"
+  },
+  "match_ui_colors_desc": {
+    "message": "Makes the history list the same color as the rest of the interface (sidebar, calendar sidebar and panels) instead of a distinct shade."
+  },
+  "pop_store": {
+    "message": "Store"
+  },
+  "pop_open": {
+    "message": "Open"
+  },
+  "pop_prev_day": {
+    "message": "Previous day"
+  },
+  "pop_next_day": {
+    "message": "Next day"
+  },
+  "pop_clear_search": {
+    "message": "Clear search & reset to today"
+  },
+  "pop_recent_history": {
+    "message": "Recent History"
+  },
+  "pop_closed_tabs": {
+    "message": "Closed Tabs"
+  },
+  "pop_active_tabs": {
+    "message": "Active Tabs"
+  },
+  "pop_unselect_all": {
+    "message": "Unselect All"
+  },
+  "pop_select_all": {
+    "message": "Select All"
+  },
+  "pop_search_results": {
+    "message": "Search Results"
+  },
+  "pop_start_typing": {
+    "message": "Start typing to search..."
+  },
+  "pop_export_session_title": {
+    "message": "Right-click to export latest session"
+  },
+  "pop_searching": {
+    "message": "Searching..."
+  },
+  "pop_search_error": {
+    "message": "Search error"
+  },
+  "pop_no_results": {
+    "message": "No results found"
+  },
+  "pop_no_closed": {
+    "message": "No recently closed tabs"
+  },
+  "pop_no_storable": {
+    "message": "No storable tabs open"
+  },
+  "pop_ts_error": {
+    "message": "Error loading tab storage"
+  },
+  "pop_no_stored": {
+    "message": "No stored tabs."
+  },
+  "pop_no_stored_hint": {
+    "message": "Right-click this tab button to store open tabs"
+  },
+  "pop_no_data": {
+    "message": "No data yet"
+  },
+  "pop_remove_stored_confirm": {
+    "message": "Remove $N1$ stored tab(s) from Tab Storage?",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_cant_store": {
+    "message": "Can't store this page"
+  },
+  "pop_no_history_day": {
+    "message": "No history for this day"
+  },
+  "pop_no_history_today": {
+    "message": "No history yet today"
+  },
+  "pop_just_now": {
+    "message": "just now"
+  },
+  "pop_min_ago": {
+    "message": "$N1$m ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_hour_ago": {
+    "message": "$N1$h ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  },
+  "pop_day_ago": {
+    "message": "$N1$d ago",
+    "placeholders": {
+      "n1": {
+        "content": "$1"
+      }
+    }
+  }
 }
