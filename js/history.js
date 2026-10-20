@@ -1486,7 +1486,7 @@ async function exportMatching() {
     const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}.json` });
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);
-    toast(tr('export_results_done', 'Exported {0} matching entries', fmtNum(n)), 'ok');
+    toast(tr('export_results_done', 'Exported {0} matching entries').replace('{0}',fmtNum(n)), 'ok');
   } catch (err) {
     toast('Export failed: ' + (err.message || err), 'err');
   } finally {
@@ -4418,7 +4418,7 @@ function ehInitBackupExtras(s) {
       b.disabled = true; b.textContent = tr('redownloading', 'Preparing…');
       try {
         const r = await sendLong('REDOWNLOAD_LAST_INCREMENTAL');
-        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)', fmtNum(r.exported)) + (r.encrypted ? ' 🔒' : ''), 'ok');
+        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)').replace('{0}',fmtNum(r.exported)) + (r.encrypted ? ' 🔒' : ''), 'ok');
       } catch (err) { toast(err.message || String(err), 'err'); }
       b.disabled = false; b.textContent = orig;
     });
@@ -4436,7 +4436,7 @@ function ehInitBackupExtras(s) {
   const rb = document.getElementById('ehRedownloadBtn');
   rb.disabled = !(last && last.until);
   document.getElementById('ehRedownloadNote').textContent = last && last.until
-    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries', new Date(last.until).toLocaleString(), fmtNum(last.count || 0))
+    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries').replace('{0}',new Date(last.until).toLocaleString()).replace('{1}',fmtNum(last.count || 0))
     : tr('no_incremental_backup_yet', 'No incremental backup made yet');
 }
 
@@ -4499,7 +4499,7 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
     const r = await sendLong('TRIGGER_AUTO_EXPORT');
     if (r.success) {
       const target = r.uploaded && !r.downloaded ? ' to WebDAV' : (r.uploaded ? ' + WebDAV' : '');
-      toast(tr('auto_export_done', 'Exported {0} entries', fmtNum(r.exported)) + target, 'ok');
+      toast(tr('auto_export_done', 'Exported {0} entries').replace('{0}',fmtNum(r.exported)) + target, 'ok');
     } else if (r.reason === 'empty' || r.reason === 'nothing_new') {
       toast(tr('auto_export_nothing_new', 'Nothing new to export since the last export'), 'ok');
     } else if (r.reason === 'download_failed') {
