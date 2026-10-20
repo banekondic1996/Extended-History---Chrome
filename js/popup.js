@@ -53,30 +53,6 @@ function setFavicon(img, domain) {
     }
 }
 
-//Fast history page open function
-(async () => {
-  const now = Date.now();
-  
-  // 1. Retrieve the last recorded open time from local storage
-  const storage = await browser.storage.local.get("lastOpenTime");
-  const lastOpenTime = storage.lastOpenTime || 0;
-  
-  // 2. Immediately update storage with the current open timestamp
-  await browser.storage.local.set({ lastOpenTime: now });
-
-  // 3. Check if the gap matches a double-click threshold (e.g., 500ms)
-  if (now - lastOpenTime < 500) {
-     console.log("Ab-Normal single-click popup open.");
-    browser.runtime.sendMessage({ action: "open_history_page" });
-    
-    // Optional: Close the popup immediately so it doesn't linger
-    window.close();
-  } else {
-    // Normal single-click behavior goes here
-    console.log("Normal single-click popup open.");
-  }
-})();
-
 // ── Toolbar icon variants (kept in sync with background.js TOOLBAR_ICON_FILES) ─
 const ICON_VARIANT_FILES = {
     default: '/icons/icon128.png',
@@ -96,7 +72,17 @@ function applyIconVariant(variant) {
     if (img) img.src = file;
 }
 
+// Closes the sidebar. Used by the "Open" buttons and by the auto-hide below.
+// NOTE: Firefox only allows sidebarAction.close() while handling a user action (e.g. a click); outside of one the call is refused.
+function closeSidebarPanel() {
+    try {
+        const r = browser.sidebarAction.close();
+        if (r && r.catch) r.catch((e) => console.warn('[EH] sidebarAction.close refused:', e && e.message));
+    } catch (e) { console.warn('[EH] sidebarAction.close failed:', e && e.message); }
+}
+
 // ── Sidebar-mode detection (loaded via browser.sidebarAction as popup.html?sidebar=1) ─
+let _sidebarAutoHideEnabled = true; // default on; synced from settings below once loaded
 if (new URLSearchParams(location.search).get('sidebar') === '1') {
     document.body.classList.add('sidebar-mode');
 
@@ -162,6 +148,7 @@ browser.storage.local.get('eh_settings').catch(() => undefined).then(r => {
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
     _popupShowUrl = s.popupShowUrl !== false;
+    _sidebarAutoHideEnabled = s.sidebarAutoHide !== false;
     if (s.faviconResolver) _popupFavMode = s.faviconResolver;
 
     // Quick Filters ("F") button — off by default, opt-in per Settings > Popup
@@ -244,16 +231,19 @@ function _applyPopupWallpaper(wp, theme) {
     document.head.appendChild(style);
 }
 
-// ── Header "Open" button ──────────────────────────────────────────────────────
-document.getElementById('openBtn').addEventListener('click', () => {
-    browser.tabs.create({ url: browser.runtime.getURL('html/history.html') });
-    // In sidebar mode, opening the full history page makes the sidebar redundant — close it.
-    // sidebarAction.close() is allowed here because this is a real click handler.
-    // (The regular popup closes by itself once the new tab takes focus.)
+// Opens a page of the extension in a new tab and closes the popup / sidebar it was opened from.
+// (sidebarAction.close() only works inside a user-input handler, so call this straight from the click.)
+function openExtPage(hash) {
+    browser.tabs.create({ url: browser.runtime.getURL('html/history.html' + (hash ? '#' + hash : '')) });
     if (document.body.classList.contains('sidebar-mode')) {
-        try { browser.sidebarAction.close(); } catch (e) { console.warn('[EH] sidebarAction.close failed:', e); }
+        closeSidebarPanel();
+    } else {
+        try { window.close(); } catch (_) {}
     }
-});
+}
+
+// ── Header "Open" button ──────────────────────────────────────────────────────
+document.getElementById('openBtn').addEventListener('click', () => openExtPage(''));
 
 // ── Header "Store" button — save current tab to Tab Storage ──────────────────
 document.getElementById('storeBtn').addEventListener('click', () => {
@@ -368,8 +358,7 @@ function qfPopupRenderDropdown() {
     manage.textContent = '⚙ ' + tr('quick_filters', 'Quick Filters');
     manage.addEventListener('click', () => {
         qfPopupCloseDropdown();
-        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#quickfilters') });
-        if (document.body.classList.contains('sidebar-mode')) { try { browser.sidebarAction.close(); } catch (_) {} }
+        openExtPage('quickfilters');
     });
     dd.appendChild(manage);
 }
@@ -453,7 +442,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ── Footer panel buttons ──────────────────────────────────────────────────────
 document.querySelectorAll('.flink[data-panel]').forEach(btn => {
     btn.addEventListener('click', () => {
-        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#' + btn.dataset.panel) });
+        openExtPage(btn.dataset.panel);
     });
 });
 
@@ -505,6 +494,8 @@ function makeRow(url, title, timeText, onLeftClick) {
 }
 
 // ── Search Functionality ──────────────────────────────────────────────────────
+// Right-click the search box → Expression mode on/off (see EhExpr in i18n-core.js)
+if (window.EhExpr) window.EhExpr.attach(document.getElementById('searchInput'), () => { const q = document.getElementById('searchInput').value.trim(); if (q) performSearch(q); });
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const query = e.target.value.trim();
     const clearBtn = document.getElementById('searchClear');
@@ -571,6 +562,7 @@ function performSearch(query) {
         limit: 100,
         noTotal: true,
         qf,
+        expr: !!(window.EhExpr && window.EhExpr.on()),
         cid: POP_CID,
         token: gen
     }).catch(() => undefined).then((response) => {
@@ -1514,6 +1506,7 @@ onSettingsReady(() => {
 // Auto-refresh on storage change
 browser.storage.onChanged.addListener((changes, namespace) => {
     if (namespace !== 'local') return;
+    if (changes.eh_settings && changes.eh_settings.newValue) _sidebarAutoHideEnabled = changes.eh_settings.newValue.sidebarAutoHide !== false;
     if (changes.eh_today_history) {
         if (!_selMode) refreshRecentHistoryView(true); // don't disrupt selection mode or scroll position
     }
@@ -1974,7 +1967,7 @@ if (document.body.classList.contains('sidebar-mode')) {
       const { current } = sessResp;
       const tabs = current ? current.tabs.filter(t => t.url && t.closed === null) : null;
       if (!tabs || !tabs.length) {
-        browser.tabs.create({ url: browser.runtime.getURL('html/history.html#sessions') });
+        openExtPage('sessions');
         return;
       }
       const label = 'Current Session';

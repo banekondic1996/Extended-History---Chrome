@@ -91,11 +91,35 @@ function createSchema(d) {
       PRIMARY KEY(visit_time, seq)
     ) WITHOUT ROWID;
   `);
+  // ehexpr(query, text): the search box's "Expression mode" (see exprTerms) — every word of the query must match
+  d.createFunction('ehexpr', (cx, q, v) => { const t = v == null ? '' : String(v); return exprFor(String(q)).every(r => r.test(t)) ? 1 : 0; }, { arity: 2, deterministic: true });
   d.createFunction('jslower', (cx, v) => lc(v), { arity: 1, deterministic: true });   // Unicode-aware, like JS toLowerCase()
   // qfkw(text, keyword, flags): whole-word keyword test for quick filters. flags: 1 = "*" before the keyword (no left boundary), 2 = "*" after it
   d.createFunction('qfkw', (cx, v, w, f) => qfKwRe(String(w), f | 0).test(v == null ? '' : String(v)), { arity: 3, deterministic: true });
 }
 
+// Expression mode (search box): every word is a WHOLE word — "cat" matches cat9, /cat/, #cat$ but not "catalog" or "bobcat";
+// "*" opens a side up: cat* = starts with cat, *cat = ends with cat, *cat* = contains cat. Only LETTERS count as word characters.
+const _exprCache = new Map();
+function exprTerms(q) {
+  const L = '\\p{L}', out = [];
+  for (const term of String(q).split(/\s+/).filter(Boolean)) {
+    let p = term, openL = false, openR = false;
+    if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+    if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+    if (!p) continue;
+    const esc = p.split('*').map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+    const left  = (!openL && /^\p{L}/u.test(p)) ? '(?<!' + L + ')' : '';
+    const right = (!openR && /\p{L}$/u.test(p)) ? '(?!' + L + ')' : '';
+    out.push(new RegExp(left + esc + right, 'iu'));
+  }
+  return out;
+}
+function exprFor(q) {
+  let t = _exprCache.get(q);
+  if (!t) { t = exprTerms(q); if (_exprCache.size > 20) _exprCache.clear(); _exprCache.set(q, t); }
+  return t;
+}
 function hasTable(n) { return db.selectValue("SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table','virtual table') AND name=?", [n]) > 0; }
 function createFtsObjects() {
   db.exec(`
@@ -454,6 +478,10 @@ function rangeWhere(a) {
 }
 function wordWhere(a) {
   const c = [], b = [];
+  if (a.expr) {                                       // expression mode: whole words with * wildcards, tested on the chosen field(s)
+    const col = a.mode === 'title' ? "ifnull(title,'')" : a.mode === 'url' ? 'url' : a.mode === 'domain' ? "ifnull(domain,'')" : "(url || ' ' || ifnull(title,'') || ' ' || ifnull(domain,''))";
+    c.push(`ehexpr(?, ${col})`); b.push(a.expr);
+  }
   // ASCII words use LIKE (case-insensitive for ASCII, no per-row string copy → several times faster than
   // lower()+instr()). Words with non-ASCII letters use the Unicode-aware jslower(), like JS toLowerCase().
   const L = (w) => '%' + w.replace(/[\\%_]/g, '\\$&') + '%';
@@ -703,7 +731,7 @@ async function searchPage(a) {
   if (cid && tok) { await tick(); if (stale()) return { cancelled: true, total: null, entries: [] }; }
   const limit = a.limit || 0;
   const offset = a.offset || 0;
-  const fq = ftsQuery(a.words, a.mode);
+  const fq = a.expr ? null : ftsQuery(a.words, a.mode);
   if (fq) {
     if (stale()) return { cancelled: true, total: null, entries: [] };
     const rw = rangeWhere(a);
@@ -893,7 +921,7 @@ const Ops = {
   },
   // One page of results (newest first by default) + the total matching count.
   page(a) {
-    if ((a.words && a.words.length) || (a.qf && a.qf.length)) return searchPage(a);
+    if ((a.words && a.words.length) || a.expr || (a.qf && a.qf.length)) return searchPage(a);
     const rw = rangeWhere(a), w = whereOf(rw.c);
     const total = a.needTotal === false ? null : db.selectValue('SELECT COUNT(*) FROM entries' + w, bnd(rw.b));
     const dir = a.asc ? 'ASC' : 'DESC';

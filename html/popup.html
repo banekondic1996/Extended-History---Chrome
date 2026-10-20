@@ -158,9 +158,20 @@ body.sidebar-mode .search-bar { flex-shrink:0; }
 .mv-fav { width:14px; height:14px; border-radius:3px; flex-shrink:0; }
 .mv-domain { flex:1; font-size:0.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mv-count { font-size:0.65rem; color:var(--text3); flex-shrink:0; font-family:monospace; }
+#leftHoverLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100%;
+  background: transparent;
+  z-index: 9999;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
+<div id="leftHoverLine"></div>
 <div class="header">
   <img src="/icons/icon128.png" class="hico">
   <div class="htitle">Extended History</div>

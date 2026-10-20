@@ -930,8 +930,13 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   color: #fff; font-weight: 600;
 }
 .action-btn.primary:hover { opacity: 0.88; }
-.action-btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.action-btn.danger { color: var(--danger) !important; border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 .action-btn.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+
+.action-btn[aria-checked="true"] {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
 
 /* ═══ BOOKMARKS — split pane ════════════════════════════════════════════════ */
 

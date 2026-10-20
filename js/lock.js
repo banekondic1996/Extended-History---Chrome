@@ -84,7 +84,7 @@
       '<div class="eh-lk-err" id="ehUnlockErr"></div>' +
       '<div class="eh-lk-btns"><button class="eh-lk-btn primary" id="ehUnlockBtn"></button></div>');
     var $ = function (s) { return ov.querySelector(s); };
-    $('.eh-lk-title').textContent = T('lock_locked_title', 'Locked');
+    $('.eh-lk-title').textContent = T('ext_locked', 'Locked');
     $('.eh-lk-text').textContent  = T('history_encrypted_enter_password', 'Your history is encrypted. Enter your password to unlock it.');
     var pw = $('#ehUnlockPw'), btn = $('#ehUnlockBtn'), err = $('#ehUnlockErr');
     pw.placeholder = T('lock_password', 'Password');

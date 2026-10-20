@@ -185,26 +185,10 @@ async function toggleIgnoreList() {
   
   const enabled = toggle.checked;
   //console.log('[IgnoreList] Toggling ignore list to:', enabled);
-  
+
   try {
     const result = await send('TOGGLE_IGNORE_LIST');
     showToast(result.enabled ? tr('toast_ignore_enabled', 'Ignore list enabled') : tr('toast_ignore_disabled', 'Ignore list disabled'), 'ok');
-    
-    // If just enabled, clean history immediately
-    if (result.enabled) {
-      showToast(tr('toast_cleaning', 'Cleaning ignored URLs from history…'), 'ok');
-      // The toast above fades on its own; the bubble (driven by CLEANUP_PROGRESS
-      // broadcasts from background.js) stays visible for the whole operation,
-      // including if this panel gets closed and reopened before it finishes.
-      const cleanResult = await send('CLEAN_IGNORED_HISTORY');
-      const count = cleanResult.removed || 0;
-      if (cleanResult.skipped) { /* allow-list mode: never auto-cleaned */ }
-      else if (count > 0) {
-        showToast(tr('toast_removed_ignored', 'Removed {0} ignored URLs from history', count), 'ok');
-      } else {
-        showToast(tr('toast_no_ignored', 'No ignored URLs found in history'), 'ok');
-      }
-    }
   } catch (err) {
     //console.error('[IgnoreList] Toggle failed:', err);
     showToast('Error: ' + err.message, 'err');
@@ -213,34 +197,51 @@ async function toggleIgnoreList() {
   }
 }
 
-// ══ ALLOW-LIST MODE (reverse the filter) ════════════════════════════════════
-// Off: sites matching the list are ignored. On: EVERY site is ignored except the ones in the list.
-function syncIgnoreInvertUi(invert) {
-  const t = document.getElementById('ignoreInvertToggle');
-  if (t) t.checked = invert;
-  const row = document.getElementById('ignoreInvertCleanRow');
-  if (row) row.style.display = invert ? 'flex' : 'none';
-  const note = document.getElementById('ignoreInvertNote');
-  if (note) note.style.display = invert ? 'block' : 'none';
+// ══ WHITELIST / BLACKLIST MODE ══════════════════════════════════════════════
+// Blacklist (default): sites matching the list are ignored.
+// Whitelist: EVERY site is ignored except the ones in the list. Storage key: ignoreListInvert (true = whitelist).
+function syncIgnoreInvertUi(white) {
+  const on = (el, v) => {
+    if (!el) return;
+    el.setAttribute('aria-checked', v ? 'true' : 'false');
+    el.style.borderColor = v ? 'var(--accent, #3b9eff)' : 'var(--border, #444)';
+    el.style.color = v ? 'var(--accent, #3b9eff)' : '';
+    el.style.fontWeight = v ? '700' : '';
+    el.style.background = 'transparent';
+  };
+  on(document.getElementById('ignoreModeBlack'), !white);
+  on(document.getElementById('ignoreModeWhite'), white);
+  const d = document.getElementById('ignoreModeDesc');
+  if (d) d.textContent = white
+    ? tr('ignore_mode_desc_white', 'Whitelist: ONLY the sites in the list below are saved; everything else is ignored. With an empty list nothing is ignored.')
+    : tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored');
+  const b = document.getElementById('ignoreCleanBtn');
+  if (b) b.textContent = white
+    ? tr('ignore_clean_white', 'Remove existing entries from sites that are not in the whitelist')
+    : tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist');
 }
-async function toggleIgnoreInvert() {
-  const t = document.getElementById('ignoreInvertToggle');
-  if (!t) return;
-  const want = t.checked;
-  if (want && !confirm(tr('confirm_ignore_invert', 'Allow-list mode: from now on NOTHING is saved to history except the sites in your list. Continue?'))) { t.checked = false; return; }
+async function setIgnoreMode(white) {
+  const cur = document.getElementById('ignoreModeWhite')?.getAttribute('aria-checked') === 'true';
+  if (cur === white) return;
   try {
-    await send('SET_IGNORE_INVERT', { value: want });
-    syncIgnoreInvertUi(want);
-    showToast(want ? tr('toast_ignore_invert_on', 'Allow-list mode on: only the listed sites are kept')
-                   : tr('toast_ignore_invert_off', 'Allow-list mode off: listed sites are ignored'), 'ok');
+    await send('SET_IGNORE_INVERT', { value: white });
+    syncIgnoreInvertUi(white);
+    showToast(white ? tr('toast_ignore_white_on', 'Whitelist mode on: only the listed sites are kept')
+                    : tr('toast_ignore_black_on', 'Blacklist mode on: listed sites are ignored'), 'ok');
   } catch (err) {
     showToast('Error: ' + err.message, 'err');
-    t.checked = !want;
   }
 }
 async function cleanOutsideAllowList() {
-  if (!confirm(tr('confirm_ignore_invert_clean', 'This permanently removes every entry from your stored history (and the browser history) whose site is NOT in the list. This cannot be undone. Continue?'))) return;
+  const white = document.getElementById('ignoreModeWhite')?.getAttribute('aria-checked') === 'true';
+  let count = '?';
+  try { count = ((await send('GET_IGNORE_LIST')).list || []).length; } catch {}
+  const msg = white
+    ? tr('confirm_clean_white', 'This permanently removes every stored history entry (and the browser\'s own history entry) whose site is NOT in your whitelist ({0} patterns). This cannot be undone. Continue?').replace("{0}",count)
+    : tr('confirm_clean_black', 'This permanently removes every stored history entry (and the browser\'s own history entry) that matches your blacklist ({0} patterns). This cannot be undone. Continue?').replace("{0}",count);
+  if (!confirm(msg)) return;
   try {
+    showToast(tr('toast_cleaning', 'Cleaning ignored URLs from history…'), 'ok');
     const r = await send('CLEAN_IGNORED_HISTORY', { force: true });
     showToast(r.removed ? tr('toast_removed_ignored', 'Removed {0} ignored URLs from history', r.removed) : tr('toast_no_ignored', 'No ignored URLs found in history'), 'ok');
   } catch (err) { showToast('Error: ' + err.message, 'err'); }
@@ -392,7 +393,7 @@ window.IgnoreList = {
   add: addIgnorePattern,
   toggle: toggleIgnoreList,
   toggleTimeSpent: toggleHideTimeSpent,
-  toggleInvert: toggleIgnoreInvert,
+  setMode: setIgnoreMode,
   cleanOutside: cleanOutsideAllowList,
   toggleGuide: togglePatternGuide,
   open: openIgnorePanel,

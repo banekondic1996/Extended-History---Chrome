@@ -90,14 +90,6 @@ function applyToolbarIcon(variant) {
   //refreshActiveTabIcons();   // tabs on ignored sites keep the "filtered" icon
 }
 
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "open_history_page") {
-    browser.tabs.create({
-      url: "moz-extension://866ee41c-05ab-4a86-8e73-6c77811b0c3d/html/history.html"
-    });
-  }
-});
-
 // ── "Filtered" toolbar icon ──────────────────────────────────────────────────
 // While the current tab is on a site that the Ignore List would skip (domain,
 // URL-path or kw: keyword pattern, same matcher as history saving), the toolbar
@@ -429,7 +421,7 @@ function setCleanupBadge(active, done, total) {
 // when the user explicitly asks for it (force) — never as a side effect of adding a pattern or switching the list on.
 async function cleanIgnoredFromHistory(force) {
   const enabled = await isIgnoreListEnabled();
-  if (!enabled) return { removed: 0 };
+  if (!enabled && force !== true) return { removed: 0 };
   const invert = await isIgnoreInvert();
   if (invert && force !== true) return { removed: 0, skipped: 'allowlist' };
   const ignoreList = await getIgnoreList();
@@ -1830,11 +1822,26 @@ browser.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
+function exprTerms(q) {
+  const L = '\\p{L}', out = [];
+  for (const term of String(q).split(/\s+/).filter(Boolean)) {
+    let p = term, openL = false, openR = false;
+    if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+    if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+    if (!p) continue;
+    const esc = p.split('*').map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+    const left  = (!openL && /^\p{L}/u.test(p)) ? '(?<!' + L + ')' : '';
+    const right = (!openR && /\p{L}$/u.test(p)) ? '(?!' + L + ')' : '';
+    out.push(new RegExp(left + esc + right, 'iu'));
+  }
+  return out;
+}
+
 async function ensureContextMenus() {
   const settings = await getSettings();
   if (settings.contextMenuEnabled === false || await isLocked()) {
     // Right-click menu disabled by the user, or the extension is locked — just clear it out.
-    browser.contextMenus.removeAll();
+    await browser.contextMenus.removeAll().catch(() => {});
     return;
   }
   await browser.contextMenus.removeAll().catch(() => {});
@@ -2515,14 +2522,7 @@ async function saveSettings(newSettings) {
   const merged = { ...current, ...newSettings };
   await browser.storage.local.set({ [SETTINGS_KEY]: merged });
   
-  // NEW: If ignore list was just enabled/disabled, clean history immediately if enabled
-  if (newSettings.hasOwnProperty('ignoreListEnabled')) {
-    if (newSettings.ignoreListEnabled) {
-      // Just enabled - clean ignored URLs from history
-      await cleanIgnoredFromHistory();
-    }
-    // If disabled, we don't need to do anything - URLs will just be allowed
-  }
+  // Enabling the ignore list never deletes anything by itself: existing entries are only removed by the explicit "Remove existing entries" button (CLEAN_IGNORED_HISTORY).
   if (newSettings.hasOwnProperty('toolbarIcon')) {
     applyToolbarIcon(merged.toolbarIcon);
   }
@@ -2862,13 +2862,18 @@ async function handle(msg) {
       const todayStart = new Date(); todayStart.setHours(0,0,0,0);
       const todayMs = todayStart.getTime();
 
-      const qWords = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
+      // Expression mode (search box context menu): whole words with * wildcards (see exprTerms) instead of plain substrings
+      const qExpr = (msg.expr === true && query) ? exprTerms(query) : null;
+      const qRe = qExpr && qExpr.length ? qExpr : null;
+      const qWords = (query && !qRe) ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
+      const hasQuery = qWords.length > 0 || !!qRe;
+      const exprHit = (txt) => qRe.every(r => r.test(txt));
       const qMatch = (e) => {
         const hay = (mode==='title')  ? (e.title||'').toLowerCase()
                   : (mode==='url')    ? e.url.toLowerCase()
                   : (mode==='domain') ? (e.domain||'').toLowerCase()
                   : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
-        return qWords.every(w => hay.includes(w));
+        return qRe ? exprHit(mode === 'title' ? (e.title || '') : mode === 'url' ? e.url : mode === 'domain' ? (e.domain || '') : (e.url + ' ' + (e.title || '') + ' ' + (e.domain || ''))) : qWords.every(w => hay.includes(w));
       };
 
       // Past days come from local storage. When the whole history is NOT in memory, ask the
@@ -2887,12 +2892,12 @@ async function handle(msg) {
           const restoredToday = await restoredEntriesSince(todayMs, todayEntries);
           top = [...todayEntries, ...restoredToday]
             .filter(e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate))
-            .filter(e => !qWords.length || qMatch(e))
+            .filter(e => !hasQuery || qMatch(e))
             .filter(e => !qfMatch || qfMatch(e))
             .sort((a, b) => b.visitTime - a.visitTime);
         }
         const topPart = Math.max(0, Math.min(limit, top.length - offset));
-        const past = await EhStore.page({ lo: startDate || null, hi: hiCap, hiOpen, words: qWords, mode,
+        const past = await EhStore.page({ lo: startDate || null, hi: hiCap, hiOpen, words: qWords, mode, expr: qRe ? query : null,
                                           offset: Math.max(0, offset - top.length), limit: limit - topPart,
                                           qf: qfPatterns, needTotal: !msg.noTotal, cid: msg.cid, token: msg.token });
         if (past.cancelled) return { cancelled: true, total: 0, entries: [] };     // a newer keystroke superseded this search
@@ -2916,7 +2921,7 @@ async function handle(msg) {
             pastEntries = [];
           } else if (dayRange) {                       // a day / week / month: one index range read
             pastEntries = (await EhStore.getRange(lo, hi)).filter(e => e.visitTime < todayMs);
-          } else if (qWords.length) {                  // wide text search: stream through, keep only matches
+          } else if (hasQuery) {                       // wide text search: stream through, keep only matches
             pastEntries = await EhStore.filterAll(e => e.visitTime < todayMs && e.visitTime >= lo && e.visitTime <= hi && qMatch(e));
           } else {                                     // wide, no query: just the requested page, newest first
             const pastCount = await EhStore.countRange(lo, hi, hi >= todayMs);
@@ -2937,16 +2942,7 @@ async function handle(msg) {
 
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
       if (endDate)   entries=entries.filter(e=>e.visitTime<=endDate);
-      if (query) {
-        const words=query.toLowerCase().split(/\s+/).filter(Boolean);
-        entries=entries.filter(e=>{
-          const hay = (mode==='title')  ? (e.title||'').toLowerCase()
-                    : (mode==='url')    ? e.url.toLowerCase()
-                    : (mode==='domain') ? (e.domain||'').toLowerCase()
-                    : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
-          return words.every(w => hay.includes(w));
-        });
-      }
+      if (hasQuery) entries = entries.filter(qMatch);
       if (qfMatch) entries = entries.filter(qfMatch);
       entries.sort((a,b)=>b.visitTime-a.visitTime);
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
@@ -3718,15 +3714,7 @@ async function handle(msg) {
     case 'ADD_IGNORE_PATTERN': {
       const result = await addIgnorePattern(msg.pattern);
       if (!result.success) return result;
-      // Clean history in background (don't wait for it)
-      const enabled = await isIgnoreListEnabled();
-      if (enabled) {
-        cleanIgnoredFromHistory().then(() => {
-          //console.log('[EH] Cleaned ignored URLs from history for pattern:', result.pattern);
-        }).catch(err => {
-          //console.error('[EH] Error cleaning ignored history:', err);
-        });
-      }
+      // Existing entries are only removed by the explicit "Remove existing entries" button.
       return result;
     }
     case 'SET_IGNORE_LIST': {

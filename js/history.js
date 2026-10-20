@@ -594,7 +594,7 @@ function getFilters() {
     if (fv) fromTs = new Date(fv).getTime();
     if (tv) toTs   = new Date(tv + 'T23:59:59').getTime();
   }
-  return { query: q, mode, startDate: fromTs, endDate: toTs };
+  return { query: q, mode, startDate: fromTs, endDate: toTs, expr: !!(window.EhExpr && window.EhExpr.on()) };
 }
 
 // NOTE: date/search switching is fast because background.js now keeps history
@@ -606,7 +606,7 @@ function getFilters() {
 const EH_CID = Math.random().toString(36).slice(2);
 let _searchGen = 0;
 async function doSearch() {
-  const { query, mode, startDate, endDate } = getFilters();
+  const { query, mode, startDate, endDate, expr } = getFilters();
   const gen = ++_searchGen;
   selected.clear(); selMode = false; updateSelBar();
 
@@ -617,7 +617,7 @@ async function doSearch() {
     // scanning as soon as it has that many matches — then the rest of the list is appended behind it.
     const FIRST = 600, MAX = 20000, STEP = 4000;
     const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;   // applied by the database over the whole history
-    const r = await sendLong('SEARCH', { query, mode, startDate, endDate, limit: FIRST, qf, noTotal: true, cid: EH_CID, token: gen });
+    const r = await sendLong('SEARCH', { query, mode, startDate, endDate, limit: FIRST, qf, expr, noTotal: true, cid: EH_CID, token: gen });
     if (gen !== _searchGen || r.cancelled) return;      // a newer search (next keystroke) replaced this one
     allResults = applyQuickFilterEntries(r.entries);
     buildVirtualList();
@@ -627,7 +627,7 @@ async function doSearch() {
       // between steps instead of finishing a huge superseded query first — that is what made typing slow down.
       let offset = FIRST;
       while (offset < MAX) {
-        const r2 = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: Math.min(STEP, MAX - offset), qf, noTotal: true, cid: EH_CID, token: gen });
+        const r2 = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: Math.min(STEP, MAX - offset), qf, expr, noTotal: true, cid: EH_CID, token: gen });
         if (gen !== _searchGen || r2.cancelled) return;
         const had = allResults.length;
         allResults = allResults.concat(applyQuickFilterEntries(r2.entries));
@@ -644,6 +644,9 @@ async function doSearch() {
 }
 
 function historyEntryMatches(e, query, mode) {
+  if (query && window.EhExpr && window.EhExpr.on()) {
+    return window.EhExpr.test(query, mode === 'title' ? (e.title || '') : mode === 'url' ? String(e.url || '') : mode === 'domain' ? (e.domain || '') : ((e.url || '') + ' ' + (e.title || '') + ' ' + (e.domain || '')));
+  }
   const words = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
   if (!words.length) return true;
   const hay = (mode === 'title')  ? (e.title || '').toLowerCase()
@@ -1386,6 +1389,7 @@ function wireCalendarSidebar() {
 function setupToolbar() {
   const si       = document.getElementById('searchInput');
   const clearBtn = document.getElementById('searchClearBtn');
+  if (window.EhExpr) window.EhExpr.attach(si, () => doSearch());     // right-click the search box → Expression mode on/off
 
   function updateClearBtn() {
     clearBtn?.classList.toggle('visible', si.value.length > 0);
@@ -1451,7 +1455,7 @@ function setupToolbar() {
 async function exportMatching() {
   const btn = document.getElementById('exportResultsBtn');
   if (!allResults.length) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
-  const { query, mode, startDate, endDate } = getFilters();
+  const { query, mode, startDate, endDate, expr } = getFilters();
   const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;
   const orig = btn ? btn.textContent : '';
   if (btn) btn.disabled = true;
@@ -1465,7 +1469,7 @@ async function exportMatching() {
     let expTok = 0;
     for (let offset = 0; ; ) {
       if (btn) btn.textContent = '⬇ ' + fmtNum(n);
-      const r = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: STEP, qf, noTotal: true, cid: expCid, token: ++expTok });
+      const r = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: STEP, qf, expr, noTotal: true, cid: expCid, token: ++expTok });
       const list = applyQuickFilterEntries(r.entries || []);
       for (const e of list) add(e);
       offset += (r.entries || []).length;
@@ -4791,6 +4795,17 @@ async function ehRunImport(file, allowRetentionPrompt) {
   }
 
   const st = r.stats || {};
+  // Integrity check: every entry read from the file must be accounted for as imported / duplicate / too old / invalid.
+  // If not, part of the file never reached the database — importing the same file again is safe (duplicates are skipped).
+  const processed = (st.imported || 0) + (st.dup || 0) + (st.old || 0) + (st.invalid || 0);
+  if (total && processed < total) {
+    toastLong(tr('import_incomplete', 'Only {0} of {1} entries from {2} were processed.', fmtNum(processed), fmtNum(total), file.name), 'err');
+    if (confirm(tr('import_incomplete_retry', 'The import of "{0}" looks incomplete ({1} of {2} entries processed).\n\nRun it again now? Entries that were already imported are skipped, nothing is duplicated.', file.name, fmtNum(processed), fmtNum(total)))) {
+      invalidateHistCache();
+      await ehRunImport(file, false);
+      return;
+    }
+  }
   const notes = [];
   if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
   if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
@@ -5794,7 +5809,7 @@ function _showIgnorePanel() {
       <div class="panel-scroll">
         <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
         <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
-          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Existing entries will be removed automatically.</span>
+          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Use the button below to remove entries that are already stored.</span>
           <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
         <div class="ignore-toggle-wrapper">
@@ -5811,20 +5826,6 @@ function _showIgnorePanel() {
         </div>
         <div class="ignore-toggle-wrapper">
           <label class="toggle-switch">
-            <input type="checkbox" id="ignoreInvertToggle">
-            <span class="toggle-slider"></span>
-          </label>
-          <label class="ignore-toggle-label" for="ignoreInvertToggle">
-            <div class="ignore-toggle-text">
-              <div class="ignore-toggle-title" data-i18n-key="allow_list_mode">Allow-list mode (reverse filter)</div>
-              <div class="ignore-toggle-subtitle" data-i18n-key="allow_list_mode_desc">Ignore every site EXCEPT the ones in the list below — only listed sites are saved to history</div>
-            </div>
-          </label>
-        </div>
-        <div id="ignoreInvertNote" style="display:none;color:var(--text2);font-size:0.8rem;margin:-8px 0 14px;max-width:600px">${tr('ignore_invert_note', 'With an empty list nothing is ignored. Existing history is not touched when you switch this on.')}</div>
-        <div id="ignoreInvertCleanRow" style="display:none;margin:-4px 0 16px"><button class="action-btn" id="ignoreInvertCleanBtn" style="font-size:0.78rem;padding:5px 12px">${tr('ignore_invert_clean', 'Remove existing entries from other sites now')}</button></div>
-        <div class="ignore-toggle-wrapper">
-          <label class="toggle-switch">
             <input type="checkbox" id="hideTimeSpentToggle">
             <span class="toggle-slider"></span>
           </label>
@@ -5834,6 +5835,17 @@ function _showIgnorePanel() {
               <div class="ignore-toggle-subtitle" data-i18n-key="hide_from_time_spent_desc">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
             </div>
           </label>
+        </div>
+        <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="ignore-toggle-text">
+            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode')}</div>
+            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored')}</div>
+          </div>
+          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
+            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
+            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
+          </div>
+          <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
         </div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
@@ -5892,8 +5904,9 @@ function _showIgnorePanel() {
       if (toggle) toggle.addEventListener('change', window.IgnoreList.toggle);
       const tsToggle = document.getElementById('hideTimeSpentToggle');
       if (tsToggle) tsToggle.addEventListener('change', window.IgnoreList.toggleTimeSpent);
-      document.getElementById('ignoreInvertToggle')?.addEventListener('change', window.IgnoreList.toggleInvert);
-      document.getElementById('ignoreInvertCleanBtn')?.addEventListener('click', window.IgnoreList.cleanOutside);
+      document.getElementById('ignoreModeBlack')?.addEventListener('click', () => window.IgnoreList.setMode(false));
+      document.getElementById('ignoreModeWhite')?.addEventListener('click', () => window.IgnoreList.setMode(true));
+      document.getElementById('ignoreCleanBtn')?.addEventListener('click', window.IgnoreList.cleanOutside);
       const guideToggle = document.getElementById('patternGuideToggle');
       if (guideToggle) guideToggle.addEventListener('click', window.IgnoreList.toggleGuide);
       const input = document.getElementById('ignorePatternInput');
