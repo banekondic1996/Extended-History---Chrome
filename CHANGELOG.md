@@ -171,6 +171,7 @@ Fixed/changed in version 4.2.2:
 -"Average time per weekday" chart is now based on "All time" or 7,15,30,90 days based on selection
 -Added changed settings confirmation dialog
 -Fixed quick filters keyword working even if keyword is contained in words, now only if * is used at the beginning or end of word (regex)
+-Added option to search using * wildcard by right clicking and enabling "expression mode"
 
 Fixed/changed in version 4.2.3 (in Firefox):
 -Added support to encrypt incremental auto export
