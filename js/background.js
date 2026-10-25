@@ -34,7 +34,8 @@ const DEFAULT_SETTINGS = {
   theme:         'dark',
   language:      'en', // Default language
   ignoreListEnabled: true, // Toggle for ignore list
-  syncInterval: 30,        // Minutes between flushing today's Chrome history → local storage (0 = every visit)
+  ignoreListInvert: false, // Allow-list mode: ignore EVERY site except the ones in the list
+  syncInterval: 30,        // Minutes between flushing today's browser history → local storage (0 = every visit)
   timeTrackingEnabled: true, // Whether to track time spent per domain
   autoStoreEnabled: false,   // Auto-store tabs idle for too long
   autoStoreHours: 6,         // Hours of no focus before a tab is auto-stored
@@ -61,6 +62,10 @@ const DEFAULT_SETTINGS = {
   autoExportLastRunAt: 0,      // timestamp of the last successful auto-export
   autoSwitchSqlite: true,      // a history too big for Local Storage/IndexedDB moves itself to SQLite automatically
   autoExportLastCoveredTo: 0,  // visitTime watermark: the next export only contains entries newer than this
+  autoExportEncrypt: false,    // incremental auto exports are encrypted with a password (see encryptExportParts)
+  autoExportEncKey: '',        // base64 of the DOUBLE-HASHED password (PBKDF2 → SHA-256) = the AES key; the password itself is never stored
+  autoExportEncSalt: '',       // base64 salt of that PBKDF2 (also written into every encrypted file so import can derive the key)
+  autoExportLastIncremental: null, // {since, until, at, count} of the last incremental export → "Re-download last incremental backup"
 };
 const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
 
@@ -244,6 +249,17 @@ async function isIgnoreListEnabled() {
   const settings = r[SETTINGS_KEY] || DEFAULT_SETTINGS;
   return settings.ignoreListEnabled !== false; // Default to true if not set
 }
+// Allow-list mode (setting ignoreListInvert): the list names the sites to KEEP and everything else is ignored.
+async function isIgnoreInvert() {
+  const r = await chrome.storage.local.get(SETTINGS_KEY);
+  return !!(r[SETTINGS_KEY] && r[SETTINGS_KEY].ignoreListInvert === true);
+}
+// Is this URL ignored? An empty list never ignores anything (in allow-list mode that would otherwise ignore the whole web).
+function ignoredBy(list, url, title, invert) {
+  if (!list || !list.length) return false;
+  const hit = list.some(p => matchesIgnorePattern(url, p, title));
+  return invert ? !hit : hit;
+}
 // Check if URL matches any ignore pattern
 function matchesIgnorePattern(url, pattern, title) {
   try {
@@ -277,7 +293,7 @@ async function shouldIgnoreUrl(url, title) {
   const enabled = await isIgnoreListEnabled();
   if (!enabled) return false;
   const ignoreList = await getIgnoreList();
-  return ignoreList.some(pattern => matchesIgnorePattern(url, pattern, title));
+  return ignoredBy(ignoreList, url, title, await isIgnoreInvert());
 }
 
 // Time Spent data is stored aggregated per-domain (no per-page path), so this
@@ -340,6 +356,7 @@ async function cleanupIgnoredUrlFromNativeHistory(url) {
   if (!host) return;
   try {
     const ignoreList = await getIgnoreList();
+    const invert = await isIgnoreInvert();
     const recent = await chrome.history.search({
       text: host,
       startTime: Date.now() - 10 * 60 * 1000,
@@ -348,7 +365,7 @@ async function cleanupIgnoredUrlFromNativeHistory(url) {
 
     for (const item of recent) {
       if (!item.url || !isTrackable(item.url)) continue;
-      if (!ignoreList.some(pattern => matchesIgnorePattern(item.url, pattern))) continue;
+      if (!ignoredBy(ignoreList, item.url, item.title, invert)) continue;
       await deleteUrlFromNativeHistory(item.url);
     }
   } catch {}
@@ -389,16 +406,20 @@ function setCleanupBadge(active, done, total) {
 }
 
 // Clean all ignored URLs from history
-async function cleanIgnoredFromHistory() {
+// In allow-list mode "ignored" means "not on the list", so cleaning would delete everything else: it only runs
+// when the user explicitly asks for it (force) — never as a side effect of adding a pattern or switching the list on.
+async function cleanIgnoredFromHistory(force) {
   const enabled = await isIgnoreListEnabled();
-  if (!enabled) return { removed: 0 };
+  if (!enabled && force !== true) return { removed: 0 };
+  const invert = await isIgnoreInvert();
+  if (invert && force !== true) return { removed: 0, skipped: 'allowlist' };
   const ignoreList = await getIgnoreList();
   if (!ignoreList.length) return { removed: 0 };
   
   const sqlMode = await _useSql();
   const toKeep = [];
   const toDelete = [];
-  const isIgnored = (e) => ignoreList.some(pattern => matchesIgnorePattern(e.url, pattern, e.title));
+  const isIgnored = (e) => ignoredBy(ignoreList, e.url, e.title, invert);
   if (sqlMode) {                                  // scan in slices, keep only the matches
     await EhStore.forEachSlice(rows => { for (const e of rows) if (isIgnored(e)) toDelete.push(e); });
   } else {
@@ -528,6 +549,7 @@ async function _liveHistoryEntries(searchParams) {
 
     const ignoreEnabled = await isIgnoreListEnabled();
     const ignoreList = ignoreEnabled ? await getIgnoreList() : [];
+    const ignoreInvert = ignoreEnabled && ignoreList.length ? await isIgnoreInvert() : false;
     const seed = await getSeedWindow();
 
     const entries = [];
@@ -536,7 +558,7 @@ async function _liveHistoryEntries(searchParams) {
       // Skip visits we synthesised ourselves when unlocking (see unlockHistory)
       if (seed && item.lastVisitTime >= seed.start && (seed.end == null || item.lastVisitTime <= seed.end)
           && seed.urls.has(normalizeUrl(item.url))) continue;
-      if (ignoreList.some(p => matchesIgnorePattern(item.url, p, item.title))) continue;
+      if (ignoredBy(ignoreList, item.url, item.title, ignoreInvert)) continue;
       entries.push({
         id: `live_${item.lastVisitTime}_${Math.random().toString(36).slice(2, 6)}`,
         url: normalizeUrl(item.url),
@@ -940,6 +962,74 @@ async function uploadWebDavExport(content, filename, mime, settings) {
   }
 }
 
+// ── Encrypted auto exports ───────────────────────────────────────────────────
+// Format "v2 / kdf dh" — the same chunked text format as encrypted manual exports (history.js reads it), plus "kdf":"dh":
+// the AES-256-GCM key is the double hash SHA-256(PBKDF2-SHA256(password, salt)) of the password. The background stores that
+// key (autoExportEncKey) so unattended exports can be encrypted without the password; importing asks for the password
+// and derives the very same key from it and the salt in the file header.
+function _u8b64(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function _b64u8(b) { const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+const EXPORT_ENC_CHUNK = 8e6;                          // characters of plain text per encrypted piece
+async function* encryptExportParts(source, keyB64, saltB64) {
+  const key = await crypto.subtle.importKey('raw', _b64u8(keyB64), 'AES-GCM', false, ['encrypt']);
+  const seal = async (text) => {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text)));
+    return JSON.stringify({ iv: _u8b64(iv), ct: _u8b64(ct) });
+  };
+  yield '{"__eh_encrypted":true,"v":2,"kdf":"dh","salt":"' + saltB64 + '",\n"chunks":[\n';
+  let acc = '', pending = null;
+  const push = async (text) => { const line = await seal(text); const out = pending === null ? null : pending + ',\n'; pending = line; return out; };
+  const feed = async function* (str) {
+    acc += str;
+    while (acc.length >= EXPORT_ENC_CHUNK) {
+      const out = await push(acc.slice(0, EXPORT_ENC_CHUNK)); acc = acc.slice(EXPORT_ENC_CHUNK);
+      if (out !== null) yield out;
+    }
+  };
+  if (source && source.lazy) { for await (const part of source.lazy) yield* feed(part); }
+  else for (const part of (Array.isArray(source) ? source : [String(source || '')])) yield* feed(part);
+  if (acc || pending === null) { const out = await push(acc); if (out !== null) yield out; }
+  yield pending + '\n]}\n';
+}
+// → content in the same shape makeJson() returns, encrypted when the settings ask for it (incremental exports only)
+function maybeEncryptExport(content, settings, mode) {
+  if (mode !== 'incremental' || settings.autoExportEncrypt !== true || !settings.autoExportEncKey || !settings.autoExportEncSalt) return { content, encrypted: false };
+  return { content: { lazy: encryptExportParts(content, settings.autoExportEncKey, settings.autoExportEncSalt) }, encrypted: true };
+}
+
+// Settings → "Re-download last incremental backup": rebuilds the file of the last incremental export — everything
+// recorded in (since, until] of that run — and saves it again (encrypted too when that is switched on).
+async function redownloadLastIncremental() {
+  if (_autoExportRunning) return { error: 'An export is already running — try again in a moment' };
+  const settings = await getSettings();
+  const last = settings.autoExportLastIncremental;
+  if (!last || !last.until) return { error: 'No incremental backup has been made yet' };
+  _autoExportRunning = true;
+  try {
+    const sqlMode = await _useSql();
+    const filter = { lo: Number(last.since) || 0, loOpen: true, hi: last.until };
+    const entries = sqlMode ? null : (await getAll()).filter(e => e.visitTime > filter.lo && e.visitTime <= filter.hi);
+    const count = sqlMode ? (await EhStore.page({ ...filter, limit: 0 })).total : entries.length;
+    if (!count) return { error: 'The last incremental backup contained no entries any more (they were deleted since)' };
+    const meta = { exportedAt: new Date(last.until).toISOString(), totalEntries: count, auto: true, autoExportMode: 'incremental', redownload: true };
+    const raw = sqlMode ? { lazy: sqlExportParts(meta, '', filter) } : buildExportParts(meta, entries.map(slimEntry));
+    const { content, encrypted } = maybeEncryptExport(raw, settings, 'incremental');
+    const useZip = settings.autoExportZip === true;
+    const baseName = `extended-history-auto_incremental_${new Date(last.until).toISOString().slice(0, 10)}${encrypted ? '_enc' : ''}`;
+    const ok = useZip
+      ? await downloadViaPage(content, `${baseName}.zip`, 'application/zip', { zipEntryName: `${baseName}.json` })
+      : await downloadViaPage(content, `${baseName}.json`, 'application/json');
+    return ok ? { success: true, exported: count, encrypted } : { error: 'Could not save the file. Try again.' };
+  } finally {
+    _autoExportRunning = false;
+  }
+}
+
 const _swStartedAt = Date.now();
 async function checkAutoExport(force) {
   if (_autoExportRunning) return { skipped: true };
@@ -993,10 +1083,14 @@ async function checkAutoExport(force) {
     // briefly-opened) history.html tab pulls the data in chunks and saves it via
     // a Blob + <a download> click. Avoids needing the "downloads" permission.
     const { entries: _omit, ...meta } = exportData;
-    const makeJson = () => sqlMode
-      ? { lazy: sqlExportParts(meta, '', exportFilter) }          // SQLite: streamed slice by slice
-      : buildExportParts(meta, toExport.map(slimEntry));          // array of string parts, not one big string
-    const baseName = `extended-history-auto_${mode === 'incremental' ? 'incremental' : 'full'}_${new Date(now).toISOString().slice(0, 10)}`;
+    const encryptThis = mode === 'incremental' && settings.autoExportEncrypt === true && !!settings.autoExportEncKey && !!settings.autoExportEncSalt;
+    const makeJson = () => {
+      const raw = sqlMode
+        ? { lazy: sqlExportParts(meta, '', exportFilter) }        // SQLite: streamed slice by slice
+        : buildExportParts(meta, toExport.map(slimEntry));        // array of string parts, not one big string
+      return maybeEncryptExport(raw, settings, mode).content;
+    };
+    const baseName = `extended-history-auto_${mode === 'incremental' ? 'incremental' : 'full'}_${new Date(now).toISOString().slice(0, 10)}${encryptThis ? '_enc' : ''}`;
     const filename = useZip ? `${baseName}.zip` : `${baseName}.json`;
     let downloaded = false;
     let uploaded = false;
@@ -1013,8 +1107,9 @@ async function checkAutoExport(force) {
       uploaded = true;
     }
 
-    await saveSettings({ autoExportLastRunAt: now, autoExportLastCoveredTo: now - AUTO_EXPORT_OVERLAP_MS });
-    return { success: true, exported: exportCount, filename, uploaded, downloaded };
+    await saveSettings({ autoExportLastRunAt: now, autoExportLastCoveredTo: now - AUTO_EXPORT_OVERLAP_MS,
+                         ...(mode === 'incremental' ? { autoExportLastIncremental: { since, until: now, at: now, count: exportCount } } : {}) });
+    return { success: true, exported: exportCount, filename, uploaded, downloaded, encrypted: encryptThis };
   } finally {
     _autoExportRunning = false;
   }
@@ -1700,6 +1795,21 @@ chrome.tabs.onRemoved.addListener(async tabId => {
   }
 });
 
+function exprTerms(q) {
+  const L = '\\p{L}', out = [];
+  for (const term of String(q).split(/\s+/).filter(Boolean)) {
+    let p = term, openL = false, openR = false;
+    if (p.startsWith('*')) { openL = true; p = p.replace(/^\*+/, ''); }
+    if (p.endsWith('*'))   { openR = true; p = p.replace(/\*+$/, ''); }
+    if (!p) continue;
+    const esc = p.split('*').map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+    const left  = (!openL && /^\p{L}/u.test(p)) ? '(?<!' + L + ')' : '';
+    const right = (!openR && /\p{L}$/u.test(p)) ? '(?!' + L + ')' : '';
+    out.push(new RegExp(left + esc + right, 'iu'));
+  }
+  return out;
+}
+
 async function ensureContextMenus() {
   const settings = await getSettings();
   if (settings.contextMenuEnabled === false || await isLocked()) {
@@ -1841,6 +1951,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 const LOCK_STATE_KEY  = 'eh_locked';        // true while locked
 const LOCK_BLOB_KEY   = 'eh_locked_blob';   // { __eh_encrypted, salt, iv, ct, lockedAt, totalEntries }
 const LOCK_KEEP_SAVING_KEY = 'eh_lock_keep_saving'; // true if "Keep saving history while locked" was ticked
+const LOCK_SKIP_SEED_KEY = 'eh_lock_skip_seed'; // true → after unlocking, don't put the most visited URLs/domains back into the browser's history
 const SEED_WINDOW_KEY = 'eh_seed_window';   // URLs we re-added to native history on unlock
 const RESTORED_AT_KEY = 'eh_restored_at';   // time of the last unlock; only used so the Today views can show pre-lock visits (see restoredEntriesSince)
 // How much native history to re-create on unlock (chrome.history.addUrl is one
@@ -2130,7 +2241,7 @@ async function lockHistory(password, clearSiteData, hideBookmarks, keepSaving, a
   } finally { _lockBusy = false; }
 }
 
-async function unlockHistory(password) {
+async function unlockHistory(password, skipSeedArg) {
   if (_lockBusy) throw new Error('Busy — try again in a moment');
   if (!(await isLocked())) return { success: true, alreadyUnlocked: true };
   _lockBusy = true;
@@ -2182,26 +2293,30 @@ async function unlockHistory(password) {
     if (!keepSaving) {
       try { await chrome.history.deleteAll(); } catch (e) { console.error('[EH] unlock: history.deleteAll', e); }
     }
-    let seed;
-    if (kept) {          // history is still in the database: pick the most-visited from there
-      seed = new Map();
+    const skipSeed = typeof skipSeedArg === 'boolean' ? skipSeedArg : (await chrome.storage.local.get(LOCK_SKIP_SEED_KEY))[LOCK_SKIP_SEED_KEY] === true;
+    let seed = new Map();
+    if (skipSeed) {
+      // "Don't put the most visited sites back into the browser history": the browser's own history stays empty.
+    } else if (kept) {          // history is still in the database: pick the most-visited from there
       if (await _useSql()) {
         for (const x of await EhStore.topBy({ column: 'url', limit: RESTORE_TOP_URLS })) if (x.identifier && isTrackable(x.identifier)) seed.set(normalizeUrl(x.identifier), x.identifier);
         for (const x of await EhStore.topBy({ column: 'domain', limit: RESTORE_TOP_DOMAINS })) { const u = `https://${x.identifier}/`; if (!seed.has(normalizeUrl(u))) seed.set(normalizeUrl(u), u); }
       }
     } else seed = pickRestoreUrls(entries);
-    await setSeedWindow({ start: Date.now() - 1000, end: null, urls: [...seed.keys()] });
     const list = [...seed.values()];
-    for (let i = 0; i < list.length; i += RESTORE_BATCH_SIZE) {
-      await Promise.all(list.slice(i, i + RESTORE_BATCH_SIZE).map(addUrlSafe));
+    if (list.length) {
+      await setSeedWindow({ start: Date.now() - 1000, end: null, urls: [...seed.keys()] });
+      for (let i = 0; i < list.length; i += RESTORE_BATCH_SIZE) {
+        await Promise.all(list.slice(i, i + RESTORE_BATCH_SIZE).map(addUrlSafe));
+      }
+      await setSeedWindow({ start: _seedWin.start, end: Date.now() + 1000, urls: [...seed.keys()] });
     }
-    await setSeedWindow({ start: _seedWin.start, end: Date.now() + 1000, urls: [...seed.keys()] });
 
     // Now unlock the UI. The ciphertext is removed only after everything is restored.
     await chrome.storage.local.set({ [LOCK_STATE_KEY]: false });
     _lockedCache = false;
     _keepSavingCache = null;
-    await chrome.storage.local.remove([LOCK_BLOB_KEY, LOCK_KEEP_SAVING_KEY]);
+    await chrome.storage.local.remove([LOCK_BLOB_KEY, LOCK_KEEP_SAVING_KEY, LOCK_SKIP_SEED_KEY]);
     await ensureContextMenus();
 
     try { await beginSession(); } catch {}
@@ -2390,14 +2505,7 @@ async function saveSettings(newSettings) {
   const merged = { ...current, ...newSettings };
   await chrome.storage.local.set({ [SETTINGS_KEY]: merged });
   
-  // NEW: If ignore list was just enabled/disabled, clean history immediately if enabled
-  if (newSettings.hasOwnProperty('ignoreListEnabled')) {
-    if (newSettings.ignoreListEnabled) {
-      // Just enabled - clean ignored URLs from history
-      await cleanIgnoredFromHistory();
-    }
-    // If disabled, we don't need to do anything - URLs will just be allowed
-  }
+  // Enabling the ignore list never deletes anything by itself: existing entries are only removed by the explicit "Remove existing entries" button (CLEAN_IGNORED_HISTORY).
   if (newSettings.hasOwnProperty('toolbarIcon')) {
     applyToolbarIcon(merged.toolbarIcon);
   }
@@ -2714,11 +2822,13 @@ async function handle(msg) {
     case 'GET_LOCK_STATUS': {
       const locked = await isLocked();
       const blob = locked ? (await chrome.storage.local.get(LOCK_BLOB_KEY))[LOCK_BLOB_KEY] : null;
-      return { locked, lockedAt: blob?.lockedAt || null, totalEntries: blob?.totalEntries ?? null };
+      const skipSeed = locked ? (await chrome.storage.local.get(LOCK_SKIP_SEED_KEY))[LOCK_SKIP_SEED_KEY] === true : false;
+      return { locked, lockedAt: blob?.lockedAt || null, totalEntries: blob?.totalEntries ?? null, skipSeed };
     }
     case 'GET_LOCK_PLAN':  return await lockPlan();
-    case 'LOCK_HISTORY':   return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true, msg.keepSaving === true, msg.acceptUnencrypted === true);
-    case 'UNLOCK_HISTORY': return await unlockHistory(msg.password);
+    case 'LOCK_HISTORY':   await chrome.storage.local.set({ [LOCK_SKIP_SEED_KEY]: msg.skipSeed === true });
+                           return await lockHistory(msg.password, msg.clearSiteData === true, msg.hideBookmarks === true, msg.keepSaving === true, msg.acceptUnencrypted === true);
+    case 'UNLOCK_HISTORY': return await unlockHistory(msg.password, msg.skipSeed);
     case 'SEARCH': {
       const {query='',mode='all',startDate,endDate,limit=5000,offset=0}=msg;
       const qfPatterns = Array.isArray(msg.qf) && msg.qf.length ? msg.qf : null;
@@ -2727,13 +2837,18 @@ async function handle(msg) {
       const todayStart = new Date(); todayStart.setHours(0,0,0,0);
       const todayMs = todayStart.getTime();
 
-      const qWords = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
+      // Expression mode (search box context menu): whole words with * wildcards (see exprTerms) instead of plain substrings
+      const qExpr = (msg.expr === true && query) ? exprTerms(query) : null;
+      const qRe = qExpr && qExpr.length ? qExpr : null;
+      const qWords = (query && !qRe) ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
+      const hasQuery = qWords.length > 0 || !!qRe;
+      const exprHit = (txt) => qRe.every(r => r.test(txt));
       const qMatch = (e) => {
         const hay = (mode==='title')  ? (e.title||'').toLowerCase()
                   : (mode==='url')    ? e.url.toLowerCase()
                   : (mode==='domain') ? (e.domain||'').toLowerCase()
                   : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
-        return qWords.every(w => hay.includes(w));
+        return qRe ? exprHit(mode === 'title' ? (e.title || '') : mode === 'url' ? e.url : mode === 'domain' ? (e.domain || '') : (e.url + ' ' + (e.title || '') + ' ' + (e.domain || ''))) : qWords.every(w => hay.includes(w));
       };
 
       // Past days come from local storage. When the whole history is NOT in memory, ask the
@@ -2752,12 +2867,12 @@ async function handle(msg) {
           const restoredToday = await restoredEntriesSince(todayMs, todayEntries);
           top = [...todayEntries, ...restoredToday]
             .filter(e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate))
-            .filter(e => !qWords.length || qMatch(e))
+            .filter(e => !hasQuery || qMatch(e))
             .filter(e => !qfMatch || qfMatch(e))
             .sort((a, b) => b.visitTime - a.visitTime);
         }
         const topPart = Math.max(0, Math.min(limit, top.length - offset));
-        const past = await EhStore.page({ lo: startDate || null, hi: hiCap, hiOpen, words: qWords, mode,
+        const past = await EhStore.page({ lo: startDate || null, hi: hiCap, hiOpen, words: qWords, mode, expr: qRe ? query : null,
                                           offset: Math.max(0, offset - top.length), limit: limit - topPart,
                                           qf: qfPatterns, needTotal: !msg.noTotal, cid: msg.cid, token: msg.token });
         if (past.cancelled) return { cancelled: true, total: 0, entries: [] };     // a newer keystroke superseded this search
@@ -2781,7 +2896,7 @@ async function handle(msg) {
             pastEntries = [];
           } else if (dayRange) {                       // a day / week / month: one index range read
             pastEntries = (await EhStore.getRange(lo, hi)).filter(e => e.visitTime < todayMs);
-          } else if (qWords.length) {                  // wide text search: stream through, keep only matches
+          } else if (hasQuery) {                       // wide text search: stream through, keep only matches
             pastEntries = await EhStore.filterAll(e => e.visitTime < todayMs && e.visitTime >= lo && e.visitTime <= hi && qMatch(e));
           } else {                                     // wide, no query: just the requested page, newest first
             const pastCount = await EhStore.countRange(lo, hi, hi >= todayMs);
@@ -2802,16 +2917,7 @@ async function handle(msg) {
 
       if (startDate) entries=entries.filter(e=>e.visitTime>=startDate);
       if (endDate)   entries=entries.filter(e=>e.visitTime<=endDate);
-      if (query) {
-        const words=query.toLowerCase().split(/\s+/).filter(Boolean);
-        entries=entries.filter(e=>{
-          const hay = (mode==='title')  ? (e.title||'').toLowerCase()
-                    : (mode==='url')    ? e.url.toLowerCase()
-                    : (mode==='domain') ? (e.domain||'').toLowerCase()
-                    : (e.url+' '+(e.title||'')+' '+(e.domain||'')).toLowerCase();
-          return words.every(w => hay.includes(w));
-        });
-      }
+      if (hasQuery) entries = entries.filter(qMatch);
       if (qfMatch) entries = entries.filter(qfMatch);
       entries.sort((a,b)=>b.visitTime-a.visitTime);
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
@@ -3023,8 +3129,9 @@ async function handle(msg) {
       // touches the underlying eh_time storage. A domain is excluded here
       // purely based on whether it currently matches an ignore pattern.
       const hideList = await getTimeSpentIgnoreList();
+      const hideInvert = hideList ? await isIgnoreInvert() : false;
       const isHidden = hideList
-        ? (domain) => hideList.some(p => domainMatchesIgnorePattern(domain, p))
+        ? (domain) => hideList.some(p => domainMatchesIgnorePattern(domain, p)) !== hideInvert
         : () => false;
 
       const totals={};
@@ -3283,6 +3390,7 @@ async function handle(msg) {
       return { success: true, windows, restored };
     }
     case 'GET_SETTINGS': { return await getSettings(); }
+    case 'REDOWNLOAD_LAST_INCREMENTAL': return await redownloadLastIncremental();
     case 'TRIGGER_AUTO_EXPORT': {
       const r = await checkAutoExport(true);
       return r;
@@ -3578,21 +3686,14 @@ async function handle(msg) {
       return {
         list: await getIgnoreList(),
         enabled: await isIgnoreListEnabled(),
+        invert: settings.ignoreListInvert === true,
         hideInTimeSpent: settings.hideIgnoredInTimeSpent === true,
       };
     }
     case 'ADD_IGNORE_PATTERN': {
       const result = await addIgnorePattern(msg.pattern);
       if (!result.success) return result;
-      // Clean history in background (don't wait for it)
-      const enabled = await isIgnoreListEnabled();
-      if (enabled) {
-        cleanIgnoredFromHistory().then(() => {
-          //console.log('[EH] Cleaned ignored URLs from history for pattern:', result.pattern);
-        }).catch(err => {
-          //console.error('[EH] Error cleaning ignored history:', err);
-        });
-      }
+      // Existing entries are only removed by the explicit "Remove existing entries" button.
       return result;
     }
     case 'SET_IGNORE_LIST': {
@@ -3609,8 +3710,8 @@ async function handle(msg) {
       return { success: true };
     }
     case 'CLEAN_IGNORED_HISTORY': {
-      const res = await cleanIgnoredFromHistory();
-      return { success: true, removed: res.removed || 0 };
+      const res = await cleanIgnoredFromHistory(msg.force === true);
+      return { success: true, removed: res.removed || 0, skipped: res.skipped || null };
     }
     case 'GET_NEWEST_VISIT': {
       const now = Date.now();
@@ -3634,6 +3735,10 @@ async function handle(msg) {
       const newEnabled = !settings.ignoreListEnabled;
       await saveSettings({ ignoreListEnabled: newEnabled });
       return { success: true, enabled: newEnabled };
+    }
+    case 'SET_IGNORE_INVERT': {
+      await saveSettings({ ignoreListInvert: msg.value === true });
+      return { success: true, invert: msg.value === true };
     }
     case 'TOGGLE_HIDE_IGNORED_TIMESPENT': {
       const settings = await getSettings();

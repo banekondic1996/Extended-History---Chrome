@@ -14,6 +14,36 @@
   "oct": {"message": "10月"},
   "nov": {"message": "11月"},
   "dec": {"message": "12月"},
+  "discard": {"message": "丢弃"},
+  "expr_mode": {"message": "表达式模式"},
+  "ctx_cut": {"message": "剪切"},
+  "ctx_copy": {"message": "复制"},
+  "ctx_paste": {"message": "粘贴"},
+  "ctx_select_all": {"message": "全选"},
+  "ignore_mode_black": {"message": "黑名单模式"},
+  "ignore_mode_white": {"message": "白名单模式"},
+  "ignore_clean_black": {"message": "删除黑名单中网站的现有记录"},
+  "ignore_mode_desc_white": {"message": "白名单：仅保存下方列表中的网站；其他所有网站都会被忽略。列表为空时，不会忽略任何网站。"},
+  "ignore_mode_desc_black": {"message": "黑名单：忽略下方列表中的网站"},
+  "ignore_clean_white": {"message": "删除不在白名单中的网站的现有记录"},
+  "toast_ignore_white_on": {"message": "白名单模式已开启：仅保留列表中的网站"},
+  "toast_ignore_black_on": {"message": "黑名单模式已开启：忽略列表中的网站"},
+  "confirm_clean_white": {"message": "这将永久删除已保存的历史记录（以及浏览器自身的历史记录）中所有网站不在白名单内的条目（{0} 个匹配模式）。此操作无法撤销。是否继续？"},
+  "confirm_clean_black": {"message": "这将永久删除已保存的历史记录（以及浏览器自身的历史记录）中所有符合黑名单的条目（{0} 个匹配模式）。此操作无法撤销。是否继续？"},
+  "ignore_invert_note": {"message": "列表为空时，不会忽略任何网站。启用此选项不会更改现有历史记录。"},
+  "ignore_invert_clean": {"message": "立即删除其他网站的现有记录"},
+  "enc_incremental": {"message": "使用密码加密增量导出文件"},
+  "enc_change_pw": {"message": "更改密码"},
+  "allow_list_mode": {"message": "允许列表模式（反向筛选）"},
+  "allow_list_mode_desc": {"message": "忽略除下方列表中网站以外的所有网站 — 只有列表中的网站会保存到历史记录"},
+  "ignore_mode_title": {"message": "列表模式"},
+  "unlock_keep_most_visited_out": {"message": "解锁后，不要将访问次数最多的网站重新添加到浏览器历史记录"},
+  "history_encrypted_enter_password": {"message": "你的历史记录已加密。请输入密码以解锁。"},
+  "keep_most_visited_out": {"message": "不要将访问次数最多的网站重新添加到浏览器历史记录"},
+  "redownload_last_incremental_backup": {"message": "重新下载最近一次增量备份"},
+  "no_incremental_backup_yet": {"message": "尚未创建增量备份"},
+  "export_results": {"message": "导出结果"},
+  "export_results_title": {"message": "仅导出符合当前搜索、筛选条件和日期范围的条目"},
   "dh_now": {"message": "现在"},
   "disabled": {"message": "已禁用"},
   "no_history_found": {"message": "未找到历史记录"},
@@ -26,8 +56,8 @@
   "skipped": {"message": "已跳过"},
   "cant_update_ret": {"message": "无法更新保留期限"},
   "cant_remove_old": {"message": "无法删除旧记录"},
-  "re_import_all": {"message": "重新导入 Chrome 中所有可用的原生历史记录？新记录将合并到现有记录中。"},
-  "importing_from_chrome": {"message": "正在从 Chrome 历史记录导入…"},
+  "re_import_all": {"message": "重新导入 Browser 中所有可用的原生历史记录？新记录将合并到现有记录中。"},
+  "importing_from_chrome": {"message": "正在从 Browser 历史记录导入…"},
   "delete_all_confirm": {"message": "确定永久删除全部历史记录吗？此操作无法撤销。"},
   "all_cleared": {"message": "所有历史记录已清除"},
   "time_data_cleared": {"message": "时间数据已清除"},
@@ -124,7 +154,7 @@
     "no_stored_tabs": {"message": "尚未存储任何标签页。"},
   "store_tab_hint": {"message": "右键点击任意页面 → Extended History → 存储此标签页"},
   "no_synced_devices": {"message": "未找到已同步的设备。"},
-  "chrome_sync_hint": {"message": "登录 Chrome 并启用同步功能。"},
+  "chrome_sync_hint": {"message": "登录 Browser 并启用同步功能。"},
   "run_now": {"message": "立即运行"},
   "select": {"message": "选择"},
    "please_enter_password": {"message": "请输入密码。"},
@@ -757,10 +787,10 @@
     "message": "危险区域"
   },
   "reimport_chrome_history": {
-    "message": "重新导入 Chrome 历史"
+    "message": "重新导入 Browser 历史"
   },
   "pull_all_chrome_history": {
-    "message": "重新提取所有可用 Chrome 原生历史（合并，无重复）"
+    "message": "重新提取所有可用 Browser 原生历史（合并，无重复）"
   },
   "reimport": {
     "message": "重新导入"
@@ -787,7 +817,7 @@
     "message": "反馈"
   },
   "link_to_discord": {
-    "message": "Discord 反馈服务器链接（或仅在 Chrome 商店留下评论）"
+    "message": "Discord 反馈服务器链接（或仅在 Browser 商店留下评论）"
   },
   "discord_server": {
     "message": "Discord 服务器"
@@ -795,9 +825,12 @@
   "rate_extension": {
     "message": "评价此扩展"
   },
-  "link_to_chrome_webstore": {
-    "message": "Chrome 网上应用店 扩展页面链接"
-  },
+  "confirm_ignore_invert_clean": {"message": "这将永久删除已保存的历史记录（以及浏览器历史记录）中所有网站不在列表中的条目。此操作无法撤销。是否继续？"},
+  "toast_ignore_invert_off": {"message": "允许列表模式已关闭：列表中的网站将被忽略"},
+  "toast_ignore_invert_on": {"message": "允许列表模式已开启：仅保留列表中的网站"},
+  "confirm_ignore_invert": {"message": "允许列表模式：从现在起，除了列表中的网站，其他任何内容都不会保存到历史记录中。是否继续？"},
+  "enc_prompt_pw": {"message": "用于加密增量导出文件的密码（再次导入时需要）："},
+  "link_to_chrome_webstore": {"message": "扩展程序页面链接"},
   "click_to_rate": {
     "message": "点击评价"
   },
@@ -892,7 +925,7 @@
     "message": "删除"
   },
   "choose_a_time_range": {
-    "message": "选择要删除的时间范围。这将从此扩展和 Chrome 本地历史记录中删除条目。"
+    "message": "选择要删除的时间范围。这将从此扩展和 Browser 本地历史记录中删除条目。"
   },
   "last_1_hour": {
     "message": "过去 1 小时"
@@ -1135,7 +1168,7 @@
     "message": "用作侧边栏"
   },
   "popup_as_sidebar_desc": {
-    "message": "在 Chrome 侧边栏而非弹出窗口中打开 Extended History，使其可以占满整个页面"
+    "message": "在 Browser 侧边栏而非弹出窗口中打开 Extended History，使其可以占满整个页面"
   },
   "toolbar_icon": {
     "message": "工具栏图标"

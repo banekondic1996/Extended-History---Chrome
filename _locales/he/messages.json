@@ -16,6 +16,30 @@
   "oct": {"message": "אוק׳"},
   "nov": {"message": "נוב׳"},
   "dec": {"message": "דצמ׳"},
+    "ignore_mode_black": {"message": "מצב רשימה שחורה"},
+  "ignore_mode_white": {"message": "מצב רשימה לבנה"},
+  "ignore_clean_black": {"message": "הסרת רשומות קיימות מאתרים שברשימה השחורה"},
+  "ignore_mode_desc_white": {"message": "רשימה לבנה: רק האתרים שברשימה שלמטה נשמרים; כל השאר מתעלמים. אם הרשימה ריקה, לא מתעלמים מכלום."},
+  "ignore_mode_desc_black": {"message": "רשימה שחורה: מתעלמים מהאתרים שברשימה שלמטה"},
+  "ignore_clean_white": {"message": "הסרת רשומות קיימות מאתרים שאינם ברשימה הלבנה"},
+  "toast_ignore_white_on": {"message": "מצב רשימה לבנה מופעל: נשמרים רק האתרים שברשימה"},
+  "toast_ignore_black_on": {"message": "מצב רשימה שחורה מופעל: מתעלמים מהאתרים שברשימה"},
+  "confirm_clean_white": {"message": "פעולה זו תמחק לצמיתות את כל רשומות ההיסטוריה השמורות (וגם את הרשומות בהיסטוריית הדפדפן) שהאתר שלהן אינו ברשימה הלבנה שלך ({0} תבניות). אי אפשר לבטל את הפעולה. להמשיך?"},
+  "confirm_clean_black": {"message": "פעולה זו תמחק לצמיתות את כל רשומות ההיסטוריה השמורות (וגם את הרשומות בהיסטוריית הדפדפן) שתואמות לרשימה השחורה שלך ({0} תבניות). אי אפשר לבטל את הפעולה. להמשיך?"},
+  "discard": {"message": "ביטול"},
+  "ignore_invert_note": {"message": "כשהרשימה ריקה, לא מתעלמים מאף אתר. הפעלת האפשרות הזו לא משנה את ההיסטוריה הקיימת."},
+  "ignore_invert_clean": {"message": "הסרת רשומות קיימות מאתרים אחרים עכשיו"},
+  "enc_incremental": {"message": "הצפנת ייצואים מצטברים באמצעות סיסמה"},
+  "enc_change_pw": {"message": "שינוי סיסמה"},
+  "allow_list_mode": {"message": "מצב רשימת היתר (מסנן הפוך)"},
+  "allow_list_mode_desc": {"message": "התעלמות מכל האתרים מלבד אלה שברשימה למטה — רק אתרים מהרשימה יישמרו בהיסטוריה"},
+  "unlock_keep_most_visited_out": {"message": "לאחר ביטול הנעילה, אין להחזיר את האתרים שבהם ביקרת הכי הרבה להיסטוריית הדפדפן"},
+  "history_encrypted_enter_password": {"message": "ההיסטוריה שלך מוצפנת. הזן את הסיסמה כדי לבטל את הנעילה."},
+  "keep_most_visited_out": {"message": "אין להחזיר את האתרים שבהם ביקרת הכי הרבה להיסטוריית הדפדפן"},
+  "redownload_last_incremental_backup": {"message": "הורד מחדש את הגיבוי המצטבר האחרון"},
+  "no_incremental_backup_yet": {"message": "עדיין לא נוצר גיבוי מצטבר"},
+  "export_results": {"message": "ייצוא התוצאות"},
+  "export_results_title": {"message": "ייצוא רק של הרשומות התואמות לחיפוש, למסננים ולתאריכים הנוכחיים"},
   "avg_time_per_weekday_range": {"message": "זמן ממוצע לפי יום בשבוע (ב-{0} הימים האחרונים)"},
   "follow_system_theme": {"message": "התאמה לערכת הנושא של המערכת"},
   "follow_system_theme_desc": {"message": "מעבר אוטומטי בין מצב בהיר לכהה בהתאם למערכת ההפעלה. הלחצנים בהיר / כהה בסרגל הצד מוסתרים כשהאפשרות הזו מופעלת."},
@@ -31,8 +55,8 @@
   "skipped": {"message": "דולגו"},
   "cant_update_ret": {"message": "לא ניתן לעדכן את תקופת השמירה"},
   "cant_remove_old": {"message": "לא ניתן להסיר רשומות ישנות"},
-  "re_import_all": {"message": "לייבא מחדש את כל ההיסטוריה המקורית הזמינה של Chrome? רשומות חדשות ימוזגו פנימה."},
-  "importing_from_chrome": {"message": "מייבא מההיסטוריה של Chrome…"},
+  "re_import_all": {"message": "לייבא מחדש את כל ההיסטוריה המקורית הזמינה של Browser? רשומות חדשות ימוזגו פנימה."},
+  "importing_from_chrome": {"message": "מייבא מההיסטוריה של Browser…"},
   "delete_all_confirm": {"message": "למחוק לצמיתות את כל ההיסטוריה? אי אפשר לבטל פעולה זו."},
   "all_cleared": {"message": "כל ההיסטוריה נמחקה"},
   "time_data_cleared": {"message": "נתוני זמן השימוש נמחקו"},
@@ -131,7 +155,7 @@
     "no_stored_tabs": {"message": "אין עדיין כרטיסיות שמורות."},
   "store_tab_hint": {"message": "לחץ לחיצה ימנית על כל דף → Extended History → שמור כרטיסייה זו"},
   "no_synced_devices": {"message": "לא נמצאו מכשירים מסונכרנים."},
-  "chrome_sync_hint": {"message": "היכנס ל-Chrome והפעל את הסנכרון."},
+  "chrome_sync_hint": {"message": "היכנס ל-Browser והפעל את הסנכרון."},
   "run_now": {"message": "הרץ עכשיו"},
   "select": {"message": "בחר"},
    "please_enter_password": {"message": "נא להזין סיסמה."},
@@ -431,7 +455,7 @@
     "message": "פתרון favicon"
   },
   "favicon_resolver_desc": {
-    "message": "איך סמלי האתר נטענים. \"מטמון הדפדפן\" משתמש במטמון של Chrome. \"Google\" משתמש ב-CDN של Google."
+    "message": "איך סמלי האתר נטענים. \"מטמון הדפדפן\" משתמש במטמון של Browser. \"Google\" משתמש ב-CDN של Google."
   },
   "for_password_reset": {
     "message": "(לאיפוס סיסמה)"
@@ -763,9 +787,18 @@
   "rate_extension": {
     "message": "דרג את התוסף"
   },
-  "link_to_chrome_webstore": {
-    "message": "קישור לדף התוסף בחנות כרום"
-  },
+   "expr_mode": {"message": "מצב ביטויים"},
+  "ctx_cut": {"message": "גזירה"},
+  "ctx_copy": {"message": "העתקה"},
+  "ctx_paste": {"message": "הדבקה"},
+  "ctx_select_all": {"message": "בחירת הכול"},
+   "ignore_mode_title": {"message": "מצב רשימה"},
+  "confirm_ignore_invert_clean": {"message": "פעולה זו תמחק לצמיתות מההיסטוריה השמורה שלך (ומהיסטוריית הדפדפן) כל רשומה שהאתר שלה אינו ברשימה. אי אפשר לבטל את הפעולה. להמשיך?"},
+  "toast_ignore_invert_off": {"message": "מצב רשימת היתר כבוי: מתעלמים מהאתרים שברשימה"},
+  "toast_ignore_invert_on": {"message": "מצב רשימת היתר מופעל: נשמרים רק האתרים שברשימה"},
+  "confirm_ignore_invert": {"message": "מצב רשימת היתר: מעכשיו שום דבר לא יישמר בהיסטוריה מלבד האתרים שברשימה שלך. להמשיך?"},
+  "enc_prompt_pw": {"message": "סיסמה להצפנת ייצואים מצטברים (תידרש שוב כדי לייבא אותם):"},
+  "link_to_chrome_webstore": {"message": "קישור לדף התוספים"},
   "click_to_rate": {
     "message": "לחץ לדרוג"
   },
@@ -1103,7 +1136,7 @@
     "message": "שימוש כסרגל צד"
   },
   "popup_as_sidebar_desc": {
-    "message": "פותח את Extended History בחלונית הצד של Chrome במקום בחלון קופץ, כך שיוכל לתפוס את כל הדף"
+    "message": "פותח את Extended History בחלונית הצד של Browser במקום בחלון קופץ, כך שיוכל לתפוס את כל הדף"
   },
   "toolbar_icon": {
     "message": "סמל סרגל הכלים"

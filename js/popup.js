@@ -499,6 +499,8 @@ function makeRow(url, title, timeText, onLeftClick) {
 }
 
 // ── Search Functionality ──────────────────────────────────────────────────────
+// Right-click the search box → Expression mode on/off (see EhExpr in i18n-core.js)
+if (window.EhExpr) window.EhExpr.attach(document.getElementById('searchInput'), () => { const q = document.getElementById('searchInput').value.trim(); if (q) performSearch(q); });
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const query = e.target.value.trim();
     const clearBtn = document.getElementById('searchClear');
@@ -565,6 +567,7 @@ function performSearch(query) {
         limit: 100,
         noTotal: true,
         qf,
+        expr: !!(window.EhExpr && window.EhExpr.on()),
         cid: POP_CID,
         token: gen
     }, (response) => {
@@ -983,6 +986,7 @@ function loadRecentTabs() {
             stored = stored || {};
             const ignoreList = Array.isArray(stored.eh_ignore_list) ? stored.eh_ignore_list : [];
             const ignoreEnabled = !stored.eh_settings || stored.eh_settings.ignoreListEnabled !== false;
+            const ignoreInvert = !!(stored.eh_settings && stored.eh_settings.ignoreListInvert === true);   // allow-list mode
 
             const validTabs = tabs.filter(tab => {
                 if (!tab.url || !tab.lastModified) return false;
@@ -990,7 +994,7 @@ function loadRecentTabs() {
                 if (ageInDays < 0 || ageInDays > 30) return false;
                 // Filter out ignored URLs
                 if (ignoreEnabled && ignoreList.length) {
-                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title))) return false;
+                    if (ignoreList.some(pattern => matchesIgnorePatternPopup(tab.url, pattern, tab.title)) !== ignoreInvert) return false;
                 }
                 return true;
             }).sort((a, b) => b.lastModified - a.lastModified);

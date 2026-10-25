@@ -229,6 +229,17 @@ async function ehDeriveKey(password, salt, usage) {
   const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, [usage]);
 }
+// "Double hash" key (encrypted auto exports): key = SHA-256( PBKDF2-SHA256(password, salt) ). background.js stores that key
+// (never the password) so scheduled exports can be encrypted unattended; importing re-derives it from the typed password.
+const EH_DH_ITER = 200000;
+async function ehDoubleHashBytes(password, salt) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const h1 = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: EH_DH_ITER, hash: 'SHA-256' }, km, 256);
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', h1));
+}
+async function ehDoubleHashKey(password, salt, usage) {
+  return crypto.subtle.importKey('raw', await ehDoubleHashBytes(password, salt), 'AES-GCM', false, [usage]);
+}
 async function ehEncryptChunk(key, text) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text));
@@ -580,7 +591,7 @@ function getFilters() {
     if (fv) fromTs = new Date(fv).getTime();
     if (tv) toTs   = new Date(tv + 'T23:59:59').getTime();
   }
-  return { query: q, mode, startDate: fromTs, endDate: toTs };
+  return { query: q, mode, startDate: fromTs, endDate: toTs, expr: !!(window.EhExpr && window.EhExpr.on()) };
 }
 
 // NOTE: date/search switching is fast because background.js now keeps history
@@ -592,7 +603,7 @@ function getFilters() {
 const EH_CID = Math.random().toString(36).slice(2);
 let _searchGen = 0;
 async function doSearch() {
-  const { query, mode, startDate, endDate } = getFilters();
+  const { query, mode, startDate, endDate, expr } = getFilters();
   const gen = ++_searchGen;
   selected.clear(); selMode = false; updateSelBar();
 
@@ -603,7 +614,7 @@ async function doSearch() {
     // scanning as soon as it has that many matches — then the rest of the list is appended behind it.
     const FIRST = 600, MAX = 20000, STEP = 4000;
     const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;   // applied by the database over the whole history
-    const r = await sendLong('SEARCH', { query, mode, startDate, endDate, limit: FIRST, qf, noTotal: true, cid: EH_CID, token: gen });
+    const r = await sendLong('SEARCH', { query, mode, startDate, endDate, limit: FIRST, qf, expr, noTotal: true, cid: EH_CID, token: gen });
     if (gen !== _searchGen || r.cancelled) return;      // a newer search (next keystroke) replaced this one
     allResults = applyQuickFilterEntries(r.entries);
     buildVirtualList();
@@ -613,7 +624,7 @@ async function doSearch() {
       // between steps instead of finishing a huge superseded query first — that is what made typing slow down.
       let offset = FIRST;
       while (offset < MAX) {
-        const r2 = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: Math.min(STEP, MAX - offset), qf, noTotal: true, cid: EH_CID, token: gen });
+        const r2 = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: Math.min(STEP, MAX - offset), qf, expr, noTotal: true, cid: EH_CID, token: gen });
         if (gen !== _searchGen || r2.cancelled) return;
         const had = allResults.length;
         allResults = allResults.concat(applyQuickFilterEntries(r2.entries));
@@ -630,6 +641,9 @@ async function doSearch() {
 }
 
 function historyEntryMatches(e, query, mode) {
+  if (query && window.EhExpr && window.EhExpr.on()) {
+    return window.EhExpr.test(query, mode === 'title' ? (e.title || '') : mode === 'url' ? String(e.url || '') : mode === 'domain' ? (e.domain || '') : ((e.url || '') + ' ' + (e.title || '') + ' ' + (e.domain || '')));
+  }
   const words = query ? query.toLowerCase().split(/\s+/).filter(Boolean) : [];
   if (!words.length) return true;
   const hay = (mode === 'title')  ? (e.title || '').toLowerCase()
@@ -1372,6 +1386,7 @@ function wireCalendarSidebar() {
 function setupToolbar() {
   const si       = document.getElementById('searchInput');
   const clearBtn = document.getElementById('searchClearBtn');
+  if (window.EhExpr) window.EhExpr.attach(si, () => doSearch());     // right-click the search box → Expression mode on/off
 
   function updateClearBtn() {
     clearBtn?.classList.toggle('visible', si.value.length > 0);
@@ -1419,6 +1434,61 @@ function setupToolbar() {
   });
 
   document.getElementById('deleteResultsBtn').addEventListener('click', deleteMatching);
+
+  // "Export results": saves only what the current search / filters / date range match (built here, markup untouched).
+  const delBtn = document.getElementById('deleteResultsBtn');
+  if (delBtn && !document.getElementById('exportResultsBtn')) {
+    const b = document.createElement('button');
+    b.className = 'tb-btn'; b.id = 'exportResultsBtn';
+    b.textContent = tr('export_results', 'Export results');
+    b.title = tr('export_results_tip', 'Export only the entries matching the current search, filters and dates');
+    delBtn.parentNode.insertBefore(b, delBtn);
+    b.addEventListener('click', exportMatching);
+  }
+}
+
+// Exports ONLY the entries the current search/filters match (all of them, not just the part loaded on screen),
+// as the same .json format the normal export and Import use.
+async function exportMatching() {
+  const btn = document.getElementById('exportResultsBtn');
+  if (!allResults.length) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
+  const { query, mode, startDate, endDate, expr } = getFilters();
+  const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;
+  const orig = btn ? btn.textContent : '';
+  if (btn) btn.disabled = true;
+  try {
+    const slim = (e) => { const o = { url: e.url, title: e.title || '', visitTime: e.visitTime, domain: e.domain }; if (e.rawUrl && e.rawUrl !== e.url) o.rawUrl = e.rawUrl; return o; };
+    const seen = new Set(), blobs = [];
+    let batch = [], n = 0;
+    const add = (e) => { const k = historyDupKey(e); if (seen.has(k)) return; seen.add(k); batch.push(JSON.stringify(slim(e))); n++; if (batch.length >= 5000) { blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')])); batch = []; } };
+    // everything the database holds for this search, page by page…
+    const STEP = 4000, expCid = EH_CID + '_export';
+    let expTok = 0;
+    for (let offset = 0; ; ) {
+      if (btn) btn.textContent = '⬇ ' + fmtNum(n);
+      const r = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: STEP, qf, expr, noTotal: true, cid: expCid, token: ++expTok });
+      const list = applyQuickFilterEntries(r.entries || []);
+      for (const e of list) add(e);
+      offset += (r.entries || []).length;
+      if ((r.entries || []).length < STEP) break;
+    }
+    // …plus what is on screen but not in the database yet (today's live visits)
+    for (const e of allResults) add(e);
+    if (batch.length) blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')]));
+    if (!n) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
+    const meta = { exportedAt: new Date().toISOString(), totalEntries: n, search: { query, mode, from: startDate ? new Date(startDate).toISOString() : null, to: endDate ? new Date(endDate).toISOString() : null } };
+    const head = JSON.stringify(meta).slice(0, -1) + ',"entries":[';
+    const blob = new Blob([head, ...blobs, ']}'], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}.json` });
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);
+    toast(tr('export_results_done', 'Exported {0} matching entries', fmtNum(n)), 'ok');
+  } catch (err) {
+    toast('Export failed: ' + (err.message || err), 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
 }
 
 // ── Selection actions ────────────────────────────────────────────────────────
@@ -3961,6 +4031,7 @@ function populateSettings(s) {
   const autoExportWebDavPassword = document.getElementById('autoExportWebDavPassword');
   if (autoExportWebDavPassword) autoExportWebDavPassword.value = s.autoExportWebDavPassword || '';
   updateAutoExportDestinationUi();
+  ehInitBackupExtras(s);
   refreshAutoExportStatus();
 
   // Populate toolbar icon picker
@@ -4240,6 +4311,8 @@ async function ensureWebDavPermission(rawUrl) {
   }
 }
 
+// The "Compress as .zip" checkbox is markup-named compress_as_zip, but the settings code looks for autoExportZip.
+{ const z = document.getElementById('compress_as_zip'); if (z && !document.getElementById('autoExportZip')) z.id = 'autoExportZip'; }
 document.getElementById('autoExportDestination')?.addEventListener('change', updateAutoExportDestinationUi);
 
 // Delegated (capture) so nothing around the field can swallow the click.
@@ -4274,6 +4347,93 @@ document.getElementById('testWebDavBtn')?.addEventListener('click', async () => 
   } catch (e) { show('✗ ' + e.message, 'err'); }
   btn.disabled = false; btn.textContent = orig;
 });
+
+// ── Incremental backup extras (built here, the page markup is untouched) ─────────────────────────────────
+// • "Encrypt incremental exports with a password": the stored AES key is the double hash of the password (see
+//   ehDoubleHashBytes); importing such a file asks for the password.
+// • "Re-download last incremental backup": rebuilds the file of the last incremental export.
+function ehInitBackupExtras(s) {
+  const status = document.getElementById('autoExportStatus');
+  if (!status || !status.parentElement) return;
+  let box = document.getElementById('ehIncExtras');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ehIncExtras';
+    box.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:6px';
+    box.innerHTML =
+      '<div id="ehEncBox" style="display:none;flex-direction:column;align-items:flex-end;gap:4px">' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer"><input type="checkbox" id="ehEncChk"/> <span id="ehEncLbl"></span></label>' +
+        '<button type="button" class="action-btn" id="ehEncChangeBtn" style="font-size:0.72rem;padding:3px 8px;display:none"></button>' +
+        '<div id="ehEncNote" style="font-size:0.7rem;color:var(--text3);text-align:right;max-width:240px;line-height:1.4"></div>' +
+      '</div>' +
+      '<button type="button" class="action-btn" id="ehRedownloadBtn" style="font-size:0.75rem;padding:4px 10px"></button>' +
+      '<div id="ehRedownloadNote" style="font-size:0.7rem;color:var(--text3);text-align:right;max-width:240px"></div>';
+    status.parentElement.insertBefore(box, status);
+    document.getElementById('ehEncLbl').textContent = tr('enc_incremental', 'Encrypt incremental exports with a password');
+    document.getElementById('ehEncChangeBtn').textContent = tr('enc_change_pw', 'Change password');
+    document.getElementById('ehRedownloadBtn').textContent = '⬇ ' + tr('redownload_last_incremental_backup', 'Re-download last incremental backup');
+
+    const saveEnc = async (settings) => {
+      const r = await send('SAVE_SETTINGS', { settings });
+      _curSettings = Object.assign(_curSettings || {}, r.settings || settings);
+      ehInitBackupExtras(_curSettings);
+    };
+    const askNewPassword = async () => {
+      const pw = prompt(tr('enc_prompt_pw', 'Password for encrypting incremental exports (needed again to import them):'));
+      if (!pw) return null;
+      if (pw.length < 4) { toast(tr('lock_password_short', 'Password must be at least 4 characters'), 'err'); return null; }
+      if (pw !== prompt(tr('lock_confirm_password', 'Confirm password'))) { toast(tr('lock_password_mismatch', 'Passwords do not match'), 'err'); return null; }
+      return pw;
+    };
+    const setPassword = async () => {
+      const pw = await askNewPassword();
+      if (!pw) return false;
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const key = await ehDoubleHashBytes(pw, salt);
+      await saveEnc({ autoExportEncrypt: true, autoExportEncKey: _u8toB64(key), autoExportEncSalt: _u8toB64(salt) });
+      toast(tr('enc_on', 'Incremental exports will be encrypted'), 'ok');
+      return true;
+    };
+    document.getElementById('ehEncChk').addEventListener('change', async (ev) => {
+      const chk = ev.target;
+      try {
+        if (chk.checked) { if (!(await setPassword())) chk.checked = false; }
+        else {
+          if (!confirm(tr('enc_off_confirm', 'Stop encrypting incremental exports? Already created encrypted files still need the password.'))) { chk.checked = true; return; }
+          await saveEnc({ autoExportEncrypt: false, autoExportEncKey: '', autoExportEncSalt: '' });
+          toast(tr('enc_off', 'Incremental exports are no longer encrypted'), 'ok');
+        }
+      } catch (err) { toast(err.message || String(err), 'err'); chk.checked = !chk.checked; }
+    });
+    document.getElementById('ehEncChangeBtn').addEventListener('click', async () => {
+      try { await setPassword(); } catch (err) { toast(err.message || String(err), 'err'); }
+    });
+    document.getElementById('ehRedownloadBtn').addEventListener('click', async (ev) => {
+      const b = ev.currentTarget, orig = b.textContent;
+      b.disabled = true; b.textContent = tr('redownloading', 'Preparing…');
+      try {
+        const r = await sendLong('REDOWNLOAD_LAST_INCREMENTAL');
+        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)', fmtNum(r.exported)) + (r.encrypted ? ' 🔒' : ''), 'ok');
+      } catch (err) { toast(err.message || String(err), 'err'); }
+      b.disabled = false; b.textContent = orig;
+    });
+    document.getElementById('autoExportMode')?.addEventListener('change', () => ehInitBackupExtras(_curSettings || {}));
+  }
+  const incr = document.getElementById('autoExportMode')?.value === 'incremental';
+  const encOn = s.autoExportEncrypt === true && !!s.autoExportEncKey;
+  document.getElementById('ehEncBox').style.display = incr ? 'flex' : 'none';
+  document.getElementById('ehEncChk').checked = encOn;
+  document.getElementById('ehEncChangeBtn').style.display = encOn ? '' : 'none';
+  document.getElementById('ehEncNote').textContent = encOn
+    ? tr('enc_note_on', 'Encrypted with AES-256. The key (a double hash of your password, not the password) is kept in this extension so exports can run on their own. Keep your password: importing asks for it.')
+    : '';
+  const last = s.autoExportLastIncremental;
+  const rb = document.getElementById('ehRedownloadBtn');
+  rb.disabled = !(last && last.until);
+  document.getElementById('ehRedownloadNote').textContent = last && last.until
+    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries', new Date(last.until).toLocaleString(), fmtNum(last.count || 0))
+    : tr('no_incremental_backup_yet', 'No incremental backup made yet');
+}
 
 async function refreshAutoExportStatus() {
   const el = document.getElementById('autoExportStatus');
@@ -4345,6 +4505,7 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
       toast('Nothing to export yet', 'err');
     }
     refreshAutoExportStatus();
+    send('GET_SETTINGS').then(st => { _curSettings = Object.assign(_curSettings || {}, st); ehInitBackupExtras(_curSettings); }).catch(() => {});
   } catch (err) { toast(err.message, 'err'); }
   btn.disabled = false; btn.textContent = orig;
 });
@@ -4499,10 +4660,21 @@ document.getElementById('exportDataBtn').addEventListener('click', async () => {
 document.getElementById('importDataBtn')?.addEventListener('click', () => {
   document.getElementById('importDataFile')?.click();
 });
+// Several .json / .tsv files can be picked at once; they are imported one after the other, each as soon as the previous one is done.
+{ const f = document.getElementById('importDataFile'); if (f) f.multiple = true; }
+let _ehImportQueueBusy = false;
 document.getElementById('importDataFile')?.addEventListener('change', async ev => {
-  const file = ev.target.files[0];
+  const files = [...ev.target.files];
   ev.target.value = '';
-  if (file) ehRunImport(file, true);
+  if (!files.length || _ehImportQueueBusy) return;
+  _ehImportQueueBusy = true;
+  try {
+    for (let i = 0; i < files.length; i++) {
+      if (files.length > 1) toast(tr('import_file_n_of_m', 'Importing file {0} of {1}: {2}', i + 1, files.length, files[i].name), 'ok');
+      try { await ehRunImport(files[i], true); }
+      catch (err) { toastLong('Import failed (' + files[i].name + '): ' + (err.message || err), 'err'); }
+    }
+  } finally { _ehImportQueueBusy = false; }
 });
 
 // Files at least this big (≈130k+ entries) are imported into SQLite: IndexedDB / Local Storage
@@ -4532,7 +4704,9 @@ async function ehEnsureSqliteForLargeImport(file, btn) {
 
 async function ehRunImport(file, allowRetentionPrompt) {
   const btn = document.getElementById('importDataBtn');
-  const btnHtml = btn ? btn.innerHTML : '';
+  // (several files are imported one after the other: remember the ORIGINAL label, not a previous file's "Done" text)
+  const btnHtml = btn ? (window.__ehImportBtnHtml = window.__ehImportBtnHtml || btn.innerHTML) : '';
+  clearTimeout(window.__ehImportBtnTimer);
   const setBtn = (t) => { if (btn) btn.textContent = t; };
   if (btn) btn.disabled = true;
   if (!(await ehEnsureSqliteForLargeImport(file, btn))) {
@@ -4613,10 +4787,21 @@ async function ehRunImport(file, allowRetentionPrompt) {
   if (btn) {
     btn.textContent = `✔ ${tr('import_done', 'Done')} · ${fmtNum(r.imported)}`;
     btn.disabled = false;
-    setTimeout(() => { btn.innerHTML = btnHtml; }, 10000);
+    window.__ehImportBtnTimer = setTimeout(() => { btn.innerHTML = btnHtml; }, 10000);
   }
 
   const st = r.stats || {};
+  // Integrity check: every entry read from the file must be accounted for as imported / duplicate / too old / invalid.
+  // If not, part of the file never reached the database — importing the same file again is safe (duplicates are skipped).
+  const processed = (st.imported || 0) + (st.dup || 0) + (st.old || 0) + (st.invalid || 0);
+  if (total && processed < total) {
+    toastLong(tr('import_incomplete', 'Only {0} of {1} entries from {2} were processed.', fmtNum(processed), fmtNum(total), file.name), 'err');
+    if (confirm(tr('import_incomplete_retry', 'The import of "{0}" looks incomplete ({1} of {2} entries processed).\n\nRun it again now? Entries that were already imported are skipped, nothing is duplicated.', file.name, fmtNum(processed), fmtNum(total)))) {
+      invalidateHistCache();
+      await ehRunImport(file, false);
+      return;
+    }
+  }
   const notes = [];
   if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
   if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
@@ -5115,7 +5300,7 @@ async function ehReadEntries(file, { onBatch, onProgress, batchSize = 10000, ret
       if (!line) return;
       if (!key) {                                          // header line(s) until the salt is known
         const m = /"salt"\s*:\s*"([^"]+)"/.exec(line);
-        if (m) key = await ehDeriveKey(pw, _b64toU8(m[1]), 'decrypt');
+        if (m) key = /"kdf"\s*:\s*"dh"/.test(line) ? await ehDoubleHashKey(pw, _b64toU8(m[1]), 'decrypt') : await ehDeriveKey(pw, _b64toU8(m[1]), 'decrypt');
         return;
       }
       if (!line.startsWith('{')) return;                   // "chunks":[ / ]}
@@ -5621,7 +5806,7 @@ function _showIgnorePanel() {
       <div class="panel-scroll">
         <div class="panel-heading">🚫 <span data-i18n-key="ignored_domains">Ignored Domains</span></div>
         <p style="color:var(--text2);font-size:0.9rem;margin-bottom:20px;line-height:1.5;max-width:600px">
-          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Existing entries will be removed automatically.</span>
+          <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Use the button below to remove entries that are already stored.</span>
           <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
         <div class="ignore-toggle-wrapper">
@@ -5647,6 +5832,17 @@ function _showIgnorePanel() {
               <div class="ignore-toggle-subtitle" data-i18n-key="hide_from_time_spent_desc">Hides domains matching the patterns below from the Time Spent view — doesn't delete any tracked time data</div>
             </div>
           </label>
+        </div>
+        <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="ignore-toggle-text">
+            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode')}</div>
+            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored')}</div>
+          </div>
+          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
+            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
+            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
+          </div>
+          <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
         </div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
@@ -5705,6 +5901,9 @@ function _showIgnorePanel() {
       if (toggle) toggle.addEventListener('change', window.IgnoreList.toggle);
       const tsToggle = document.getElementById('hideTimeSpentToggle');
       if (tsToggle) tsToggle.addEventListener('change', window.IgnoreList.toggleTimeSpent);
+      document.getElementById('ignoreModeBlack')?.addEventListener('click', () => window.IgnoreList.setMode(false));
+      document.getElementById('ignoreModeWhite')?.addEventListener('click', () => window.IgnoreList.setMode(true));
+      document.getElementById('ignoreCleanBtn')?.addEventListener('click', window.IgnoreList.cleanOutside);
       const guideToggle = document.getElementById('patternGuideToggle');
       if (guideToggle) guideToggle.addEventListener('click', window.IgnoreList.toggleGuide);
       const input = document.getElementById('ignorePatternInput');

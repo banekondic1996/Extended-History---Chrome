@@ -14,8 +14,8 @@
   "skipped": {"message": "hoppet over"},
   "cant_update_ret": {"message": "Kunne ikke oppdatere oppbevaringstiden"},
   "cant_remove_old": {"message": "Kunne ikke fjerne gamle oppføringer"},
-  "re_import_all": {"message": "Importere all tilgjengelig opprinnelig Chrome-historikk på nytt? Nye oppføringer blir slått sammen."},
-  "importing_from_chrome": {"message": "Importerer fra Chrome-historikken…"},
+  "re_import_all": {"message": "Importere all tilgjengelig opprinnelig Browser-historikk på nytt? Nye oppføringer blir slått sammen."},
+  "importing_from_chrome": {"message": "Importerer fra Browser-historikken…"},
   "delete_all_confirm": {"message": "Slette ALL historikk permanent? Dette kan ikke angres."},
   "all_cleared": {"message": "All historikk er slettet"},
   "time_data_cleared": {"message": "Tidsdata er slettet"},
@@ -28,6 +28,30 @@
   "thu": {"message": "Tor"},
   "fri": {"message": "Fre"},
   "sat": {"message": "Lør"},
+  "discard": {"message": "Forkast"},
+  "ignore_mode_black": {"message": "Svartelistemodus"},
+  "ignore_mode_white": {"message": "Hvitelistemodus"},
+  "ignore_clean_black": {"message": "Fjern eksisterende oppføringer fra nettsteder på svartelisten"},
+  "ignore_mode_desc_white": {"message": "Hviteliste: BARE nettstedene i listen nedenfor lagres; alt annet ignoreres. Hvis listen er tom, ignoreres ingenting."},
+  "ignore_mode_desc_black": {"message": "Svarteliste: nettsteder i listen nedenfor ignoreres"},
+  "ignore_clean_white": {"message": "Fjern eksisterende oppføringer fra nettsteder som ikke står på hvitelisten"},
+  "toast_ignore_white_on": {"message": "Hvitelistemodus på: bare nettstedene på listen beholdes"},
+  "toast_ignore_black_on": {"message": "Svartelistemodus på: nettsteder på listen ignoreres"},
+  "confirm_clean_white": {"message": "Dette sletter permanent alle lagrede historikkoppføringer (og oppføringer i nettleserens egen historikk) der nettstedet IKKE står på hvitelisten din ({0} mønstre). Dette kan ikke angres. Vil du fortsette?"},
+  "confirm_clean_black": {"message": "Dette sletter permanent alle lagrede historikkoppføringer (og oppføringer i nettleserens egen historikk) som samsvarer med svartelisten din ({0} mønstre). Dette kan ikke angres. Vil du fortsette?"},
+  "enc_incremental": {"message": "Krypter trinnvise eksporter med et passord"},
+  "enc_change_pw": {"message": "Endre passord"},
+  "allow_list_mode": {"message": "Tillatelseslistemodus (omvendt filter)"},
+  "ignore_invert_note": {"message": "Når listen er tom, ignoreres ingen nettsteder. Eksisterende historikk påvirkes ikke når du slår på dette."},
+  "ignore_invert_clean": {"message": "Fjern eksisterende oppføringer fra andre nettsteder nå"},
+  "allow_list_mode_desc": {"message": "Ignorer alle nettsteder UNNTATT dem i listen nedenfor — bare oppførte nettsteder lagres i historikken"},
+  "unlock_keep_most_visited_out": {"message": "Etter opplåsing skal de mest besøkte nettstedene ikke legges tilbake i nettleserhistorikken"},
+  "history_encrypted_enter_password": {"message": "Historikken din er kryptert. Skriv inn passordet for å låse den opp."},
+  "keep_most_visited_out": {"message": "Ikke legg de mest besøkte nettstedene tilbake i nettleserhistorikken"},
+  "redownload_last_incremental_backup": {"message": "Last ned siste inkrementelle sikkerhetskopi på nytt"},
+  "no_incremental_backup_yet": {"message": "Ingen inkrementell sikkerhetskopi er opprettet ennå"},
+  "export_results": {"message": "Eksporter resultater"},
+  "export_results_title": {"message": "Eksporter bare oppføringene som samsvarer med gjeldende søk, filtre og datoer"},
   "avg_time_per_weekday_range": {"message": "Gjennomsnittlig tid per ukedag (siste {0} dager)"},
   "follow_system_theme": {"message": "Følg systemtema"},
   "follow_system_theme_desc": {"message": "Bytt automatisk mellom lys og mørk modus i tråd med operativsystemet ditt. Lys / Mørk-knappene i sidepanelet skjules mens dette er aktivert."},
@@ -129,7 +153,7 @@
     "no_stored_tabs": {"message": "Ingen lagrede faner ennå."},
   "store_tab_hint": {"message": "Høyreklikk på en side → Extended History → Lagre denne fanen"},
   "no_synced_devices": {"message": "Ingen synkroniserte enheter funnet."},
-  "chrome_sync_hint": {"message": "Logg inn i Chrome og aktiver synkronisering."},
+  "chrome_sync_hint": {"message": "Logg inn i Browser og aktiver synkronisering."},
   "run_now": {"message": "Kjør nå"},
   "select": {"message": "Velg"},
   "please_enter_password": {"message": "Skriv inn et passord."},
@@ -762,10 +786,10 @@
     "message": "Faresone"
   },
   "reimport_chrome_history": {
-    "message": "Importer Chrome-historikk på nytt"
+    "message": "Importer Browser-historikk på nytt"
   },
   "pull_all_chrome_history": {
-    "message": "Hent all lokal Chrome-historikk på nytt (uten duplikater)"
+    "message": "Hent all lokal Browser-historikk på nytt (uten duplikater)"
   },
   "reimport": {
     "message": "Importer på nytt"
@@ -800,9 +824,18 @@
   "rate_extension": {
     "message": "Vurder utvidelsen"
   },
-  "link_to_chrome_webstore": {
-    "message": "Lenke til Chrome Web Store"
-  },
+  "expr_mode": {"message": "Uttrykksmodus"},
+  "ctx_cut": {"message": "Klipp ut"},
+  "ctx_copy": {"message": "Kopier"},
+  "ctx_paste": {"message": "Lim inn"},
+  "ctx_select_all": {"message": "Velg alle"},
+  "ignore_mode_title": {"message": "Listemodus"},
+  "confirm_ignore_invert_clean": {"message": "Dette sletter permanent alle oppføringer fra den lagrede historikken din (og nettleserhistorikken) der nettstedet IKKE står på listen. Dette kan ikke angres. Vil du fortsette?"},
+  "toast_ignore_invert_off": {"message": "Tillatelseslistemodus av: nettsteder på listen ignoreres"},
+  "toast_ignore_invert_on": {"message": "Tillatelseslistemodus på: bare nettsteder på listen beholdes"},
+  "confirm_ignore_invert": {"message": "Tillatelseslistemodus: Fra nå av lagres INGENTING i historikken bortsett fra nettstedene på listen din. Vil du fortsette?"},
+  "enc_prompt_pw": {"message": "Passord for å kryptere trinnvise eksporter (trengs igjen for å importere dem):"},
+  "link_to_chrome_webstore": {"message": "Lenke til utvidelsessiden"},
   "click_to_rate": {
     "message": "Klikk for å vurdere"
   },
@@ -1128,7 +1161,7 @@
     "message": "Bruk som sidefelt"
   },
   "popup_as_sidebar_desc": {
-    "message": "Åpner Extended History i Chromes sidepanel i stedet for en popup, slik at den kan strekke seg over hele siden"
+    "message": "Åpner Extended History i Browsers sidepanel i stedet for en popup, slik at den kan strekke seg over hele siden"
   },
   "toolbar_icon": {
     "message": "Verktøylinjeikon"

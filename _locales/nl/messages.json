@@ -11,13 +11,23 @@
   "skipped": {"message": "overgeslagen"},
   "cant_update_ret": {"message": "Bewaartermijn kon niet worden bijgewerkt"},
   "cant_remove_old": {"message": "Oude items konden niet worden verwijderd"},
-  "re_import_all": {"message": "Alle beschikbare oorspronkelijke Chrome-geschiedenis opnieuw importeren? Nieuwe items worden samengevoegd."},
-  "importing_from_chrome": {"message": "Geschiedenis uit Chrome importeren…"},
+  "re_import_all": {"message": "Alle beschikbare oorspronkelijke Browser-geschiedenis opnieuw importeren? Nieuwe items worden samengevoegd."},
+  "importing_from_chrome": {"message": "Geschiedenis uit Browser importeren…"},
   "delete_all_confirm": {"message": "ALLE geschiedenis permanent verwijderen? Dit kan niet ongedaan worden gemaakt."},
   "all_cleared": {"message": "Alle geschiedenis gewist"},
   "time_data_cleared": {"message": "Tijdgegevens gewist"},
   "cant_update_retention": {"message": "Bewaartermijn kon niet worden bijgewerkt"},
   "no_entries_file": {"message": "Geen items gevonden in het bestand"},
+    "ignore_mode_black": {"message": "Zwarte lijst-modus"},
+  "ignore_mode_white": {"message": "Witte lijst-modus"},
+  "ignore_clean_black": {"message": "Bestaande vermeldingen verwijderen van sites op de zwarte lijst"},
+  "ignore_mode_desc_white": {"message": "Witte lijst: ALLEEN de sites in de onderstaande lijst worden opgeslagen; al het andere wordt genegeerd. Bij een lege lijst wordt niets genegeerd."},
+  "ignore_mode_desc_black": {"message": "Zwarte lijst: sites in de onderstaande lijst worden genegeerd"},
+  "ignore_clean_white": {"message": "Bestaande vermeldingen verwijderen van sites die niet op de witte lijst staan"},
+  "toast_ignore_white_on": {"message": "Witte lijst-modus aan: alleen sites op de lijst worden behouden"},
+  "toast_ignore_black_on": {"message": "Zwarte lijst-modus aan: sites op de lijst worden genegeerd"},
+  "confirm_clean_white": {"message": "Hiermee worden alle opgeslagen geschiedenisvermeldingen (en vermeldingen uit de browsergeschiedenis) waarvan de site NIET op je witte lijst staat ({0} patronen) permanent verwijderd. Dit kan niet ongedaan worden gemaakt. Doorgaan?"},
+  "confirm_clean_black": {"message": "Hiermee worden alle opgeslagen geschiedenisvermeldingen (en vermeldingen uit de browsergeschiedenis) die overeenkomen met je zwarte lijst ({0} patronen) permanent verwijderd. Dit kan niet ongedaan worden gemaakt. Doorgaan?"},
   "sun": {"message": "Zo"},
   "mon": {"message": "Ma"},
   "tue": {"message": "Di"},
@@ -38,6 +48,20 @@
   "oct": {"message": "Okt"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
+  "discard": {"message": "Verwerpen"},
+  "ignore_invert_note": {"message": "Bij een lege lijst wordt geen enkele site genegeerd. Als je deze optie inschakelt, blijft de bestaande geschiedenis ongewijzigd."},
+  "ignore_invert_clean": {"message": "Bestaande vermeldingen van andere sites nu verwijderen"},
+  "enc_incremental": {"message": "Incrementele exports versleutelen met een wachtwoord"},
+  "enc_change_pw": {"message": "Wachtwoord wijzigen"},
+  "allow_list_mode": {"message": "Modus voor toegestane lijst (omgekeerd filter)"},
+  "allow_list_mode_desc": {"message": "Negeer alle websites BEHALVE de websites in de onderstaande lijst — alleen vermelde websites worden in de geschiedenis opgeslagen"},
+  "unlock_keep_most_visited_out": {"message": "Voeg na het ontgrendelen de meest bezochte websites niet opnieuw toe aan de browsergeschiedenis"},
+  "history_encrypted_enter_password": {"message": "Je geschiedenis is versleuteld. Voer je wachtwoord in om deze te ontgrendelen."},
+  "keep_most_visited_out": {"message": "Voeg de meest bezochte websites niet opnieuw toe aan de browsergeschiedenis"},
+  "redownload_last_incremental_backup": {"message": "Laatste incrementele back-up opnieuw downloaden"},
+  "no_incremental_backup_yet": {"message": "Er is nog geen incrementele back-up gemaakt"},
+  "export_results": {"message": "Resultaten exporteren"},
+  "export_results_title": {"message": "Exporteer alleen items die overeenkomen met de huidige zoekopdracht, filters en datums"},
   "avg_time_per_weekday_range": {"message": "Gemiddelde tijd per weekdag (laatste {0} dagen)"},
   "follow_system_theme": {"message": "Systeemthema volgen"},
   "follow_system_theme_desc": {"message": "Automatisch wisselen tussen de lichte en donkere modus op basis van je besturingssysteem. De knoppen Licht / Donker in de zijbalk zijn verborgen zolang dit is ingeschakeld."},
@@ -129,7 +153,7 @@
     "no_stored_tabs": {"message": "Nog geen opgeslagen tabbladen."},
   "store_tab_hint": {"message": "Klik met de rechtermuisknop op een pagina → Extended History → Dit tabblad opslaan"},
   "no_synced_devices": {"message": "Geen gesynchroniseerde apparaten gevonden."},
-  "chrome_sync_hint": {"message": "Log in bij Chrome en schakel synchronisatie in."},
+  "chrome_sync_hint": {"message": "Log in bij Browser en schakel synchronisatie in."},
   "run_now": {"message": "Nu uitvoeren"},
   "select": {"message": "Selecteren"},
     "edit": {
@@ -468,7 +492,7 @@
     "message": "Favicon resolver"
   },
   "favicon_resolver_desc": {
-    "message": "Hoe site-iconen worden opgehaald. \"Browsercache\" gebruikt Chrome's cache (sneller, privé). \"Google\" haalt iconen van Google's CDN (betere dekking)."
+    "message": "Hoe site-iconen worden opgehaald. \"Browsercache\" gebruikt Browser's cache (sneller, privé). \"Google\" haalt iconen van Google's CDN (betere dekking)."
   },
   "for_password_reset": {
     "message": "(voor wachtwoord reset)"
@@ -762,10 +786,10 @@
     "message": "Gevarenzone"
   },
   "reimport_chrome_history": {
-    "message": "Chrome geschiedenis opnieuw importeren"
+    "message": "Browser geschiedenis opnieuw importeren"
   },
   "pull_all_chrome_history": {
-    "message": "Haal alle beschikbare Chrome-native geschiedenis opnieuw op (merges, geen duplicaten)"
+    "message": "Haal alle beschikbare Browser-native geschiedenis opnieuw op (merges, geen duplicaten)"
   },
   "reimport": {
     "message": "Opnieuw importeren"
@@ -792,7 +816,7 @@
     "message": "Feedback"
   },
   "link_to_discord": {
-    "message": "Link naar Discord-server voor feedback (of laat gewoon een review achter in de Chrome Store)"
+    "message": "Link naar Discord-server voor feedback (of laat gewoon een review achter in de Browser Store)"
   },
   "discord_server": {
     "message": "Discord-server"
@@ -800,9 +824,18 @@
   "rate_extension": {
     "message": "Beoordeel deze extensie"
   },
-  "link_to_chrome_webstore": {
-    "message": "Link naar Chrome Web Store extensiepagina"
-  },
+  "expr_mode": {"message": "Expressiemodus"},
+  "ctx_cut": {"message": "Knippen"},
+  "ctx_copy": {"message": "Kopiëren"},
+  "ctx_paste": {"message": "Plakken"},
+  "ctx_select_all": {"message": "Alles selecteren"},
+  "ignore_mode_title": {"message": "Lijstmodus"},
+  "confirm_ignore_invert_clean": {"message": "Hiermee worden alle vermeldingen uit je opgeslagen geschiedenis (en de browsergeschiedenis) waarvan de site NIET op de lijst staat permanent verwijderd. Dit kan niet ongedaan worden gemaakt. Doorgaan?"},
+  "toast_ignore_invert_off": {"message": "Toegestane-sitemodus uit: sites op de lijst worden genegeerd"},
+  "toast_ignore_invert_on": {"message": "Toegestane-sitemodus aan: alleen sites op de lijst worden behouden"},
+  "confirm_ignore_invert": {"message": "Modus voor toegestane sites: vanaf nu wordt er NIETS in de geschiedenis opgeslagen, behalve de sites op je lijst. Doorgaan?"},
+  "enc_prompt_pw": {"message": "Wachtwoord om incrementele exports te versleutelen (opnieuw nodig om ze te importeren):"},
+  "link_to_chrome_webstore": {"message": "Link naar de extensiepagina"},
   "click_to_rate": {
     "message": "Klik om te beoordelen"
   },
@@ -897,7 +930,7 @@
     "message": "Verwijderen"
   },
   "choose_a_time_range": {
-    "message": "Kies een tijdsbereik om te verwijderen. Dit verwijdert items zowel uit deze extensie als uit de native Chrome-geschiedenis."
+    "message": "Kies een tijdsbereik om te verwijderen. Dit verwijdert items zowel uit deze extensie als uit de native Browser-geschiedenis."
   },
   "last_1_hour": {
     "message": "Laatste 1 uur"
@@ -1140,7 +1173,7 @@
     "message": "Als zijbalk gebruiken"
   },
   "popup_as_sidebar_desc": {
-    "message": "Opent Extended History in het zijpaneel van Chrome in plaats van een popup, zodat het de hele pagina kan beslaan"
+    "message": "Opent Extended History in het zijpaneel van Browser in plaats van een popup, zodat het de hele pagina kan beslaan"
   },
   "toolbar_icon": {
     "message": "Werkbalkpictogram"

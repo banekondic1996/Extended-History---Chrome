@@ -21,6 +21,30 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
+    "ignore_mode_black": {"message": "Modus indicis nigri"},
+  "ignore_mode_white": {"message": "Modus indicis albi"},
+  "ignore_clean_black": {"message": "Inscriptiones exsistentes ex sitibus in indice nigro positis remove"},
+  "ignore_mode_desc_white": {"message": "Index albus: SOLI situs in indice infra posito servantur; omnia alia ignorantur. Si index vacuus est, nihil ignoratur."},
+  "ignore_mode_desc_black": {"message": "Index niger: situs in indice infra posito ignorantur"},
+  "ignore_clean_white": {"message": "Inscriptiones exsistentes ex sitibus qui in indice albo non sunt remove"},
+  "toast_ignore_white_on": {"message": "Modus indicis albi activus: soli situs in indice servantur"},
+  "toast_ignore_black_on": {"message": "Modus indicis nigri activus: situs in indice ignorantur"},
+  "confirm_clean_white": {"message": "Haec omnes inscriptiones historiae servatae (et historiae ipsius navigatoris) quarum situs in indice albo tuo non est ({0} exemplaria) perpetuo delet. Hoc revocari non potest. Pergere?"},
+  "confirm_clean_black": {"message": "Haec omnes inscriptiones historiae servatae (et historiae ipsius navigatoris) quae indice nigro tuo congruunt ({0} exemplaria) perpetuo delet. Hoc revocari non potest. Pergere?"},
+  "discard": {"message": "Abicere"},
+  "ignore_invert_note": {"message": "Si index vacuus est, nulla situs ignoratur. Cum hanc optionem activas, historia exsistens non mutatur."},
+  "ignore_invert_clean": {"message": "Nunc inscriptiones exsistentes ex aliis sitibus remove"},
+  "enc_incremental": {"message": "Exportationes incrementales tessera secreta encryptare"},
+  "enc_change_pw": {"message": "Tesseram secretam mutare"},
+  "allow_list_mode": {"message": "Modus indicis permissorum (filtrum inversum)"},
+  "allow_list_mode_desc": {"message": "Omnia situs praeter eos in indice infra ignora — soli situs indicati in historia servantur"},
+  "unlock_keep_most_visited_out": {"message": "Post reserationem, situs frequentissime visitatos in historiam navigatoris ne restitue"},
+  "history_encrypted_enter_password": {"message": "Historia tua encrypta est. Tesseram inscribe ut eam reseres."},
+  "keep_most_visited_out": {"message": "Situs frequentissime visitatos in historiam navigatoris ne restitue"},
+  "redownload_last_incremental_backup": {"message": "Novissimum exemplar incrementale iterum recipe"},
+  "no_incremental_backup_yet": {"message": "Nullum exemplar incrementale adhuc creatum est"},
+  "export_results": {"message": "Eventus exportare"},
+  "export_results_title": {"message": "Solum inscriptiones exportare quae investigationi, filtris et temporibus hodiernis respondent"},
   "avg_time_per_weekday_range": {"message": "Tempus medium per diem hebdomadis (ultimis {0} diebus)"},
   "follow_system_theme": {"message": "Thema systematis sequi"},
   "follow_system_theme_desc": {"message": "Automatice inter modum lucidum et obscurum secundum systema operativum commutare. Bullae Lucidus / Obscurus in parte laterali occultantur dum haec optio activa est."},
@@ -37,8 +61,8 @@
   "skipped": {"message": "omissae"},
   "cant_update_ret": {"message": "Tempus retentionis renovari non potuit"},
   "cant_remove_old": {"message": "Inscriptiones veteres removeri non potuerunt"},
-  "re_import_all": {"message": "Omnem historiam nativam Chrome praesto iterum importare? Novae inscriptiones miscebuntur."},
-  "importing_from_chrome": {"message": "Historia ex Chrome importatur…"},
+  "re_import_all": {"message": "Omnem historiam nativam Browser praesto iterum importare? Novae inscriptiones miscebuntur."},
+  "importing_from_chrome": {"message": "Historia ex Browser importatur…"},
   "delete_all_confirm": {"message": "OMNEM historiam in perpetuum delere? Hoc revocari non potest."},
   "all_cleared": {"message": "Omnis historia deleta est"},
   "time_data_cleared": {"message": "Data temporis deleta sunt"},
@@ -131,7 +155,7 @@
     "no_stored_tabs": {"message": "Nondum ulla schedae servatae sunt."},
   "store_tab_hint": {"message": "In quavis pagina dextrorsum preme → Extended History → Hanc schedam serva"},
   "no_synced_devices": {"message": "Nulla instrumenta synchronizata inventa sunt."},
-  "chrome_sync_hint": {"message": "In Chrome ini et Synchronizationem activa."},
+  "chrome_sync_hint": {"message": "In Browser ini et Synchronizationem activa."},
   "run_now": {"message": "Nunc exsequi"},
   "select": {"message": "Selige"},
   "please_enter_password": {"message": "Tesseram insere."},
@@ -587,10 +611,10 @@
     "message": "Zona Periculosa"
   },
   "reimport_chrome_history": {
-    "message": "Historiam Chrome Reimportare"
+    "message": "Historiam Browser Reimportare"
   },
   "pull_all_chrome_history": {
-    "message": "Totam Historiam Chrome Recuperare"
+    "message": "Totam Historiam Browser Recuperare"
   },
   "reimport": {
     "message": "Reimportare"
@@ -625,12 +649,21 @@
   "rate_extension": {
     "message": "Extensionem Aestimare"
   },
-  "link_to_chrome_webstore": {
-    "message": "Nexus ad Chrome Web Store"
-  },
+  "expr_mode": {"message": "Modus expressionum"},
+  "ctx_cut": {"message": "Exscinde"},
+  "ctx_copy": {"message": "Copia"},
+  "ctx_paste": {"message": "Colla"},
+  "ctx_select_all": {"message": "Omnia selige"},
+  "ignore_mode_title": {"message": "Modus indicis"},
+  "confirm_ignore_invert": {"message": "Modus indicis permissorum: ex hoc tempore NIHIL in historia servabitur praeter situs in indice tuo. Pergere?"},
+  "enc_prompt_pw": {"message": "Tessera secreta ad exportationes incrementales encryptandas (iterum requiretur ad eas importandas):"},
+  "link_to_chrome_webstore": {"message": "Nexus ad paginam extensionum"},
   "click_to_rate": {
     "message": "Preme ut Aestimes"
   },
+  "confirm_ignore_invert_clean": {"message": "Haec omnia historiae servatae (et historiae navigatoris) indicia quorum situs in indice NON est, perpetuo delet. Hoc revocari non potest. Pergere?"},
+  "toast_ignore_invert_off": {"message": "Modus indicis permissorum disactivatus: situs in indice ignorantur"},
+  "toast_ignore_invert_on": {"message": "Modus indicis permissorum activatus: soli situs in indice servantur"},
   "ignored_domains": {
     "message": "Dominii Neglecti"
   },
@@ -953,7 +986,7 @@
     "message": "Ut latus adhibere"
   },
   "popup_as_sidebar_desc": {
-    "message": "Extended History in tabula laterali Chrome aperit loco fenestrae emergentis, ut per totam paginam extendi possit"
+    "message": "Extended History in tabula laterali Browser aperit loco fenestrae emergentis, ut per totam paginam extendi possit"
   },
   "toolbar_icon": {
     "message": "Icon instrumentorum"

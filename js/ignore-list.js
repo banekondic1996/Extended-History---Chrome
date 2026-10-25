@@ -84,7 +84,7 @@ async function syncCleanupBubbleOnLoad() {
 async function loadIgnoreList() {
   //console.log('[IgnoreList] Loading ignore list...');
   try {
-    const { list, enabled, hideInTimeSpent } = await send('GET_IGNORE_LIST');
+    const { list, enabled, hideInTimeSpent, invert } = await send('GET_IGNORE_LIST');
     //console.log('[IgnoreList] Loaded patterns:', list, 'Enabled:', enabled);
     
     // Update toggle state
@@ -96,6 +96,7 @@ async function loadIgnoreList() {
     if (tsToggle) {
       tsToggle.checked = hideInTimeSpent === true; // Default to false (opt-in)
     }
+    syncIgnoreInvertUi(invert === true);
     
     const container = document.getElementById('ignoreList');
     
@@ -184,31 +185,66 @@ async function toggleIgnoreList() {
   
   const enabled = toggle.checked;
   //console.log('[IgnoreList] Toggling ignore list to:', enabled);
-  
+
   try {
     const result = await send('TOGGLE_IGNORE_LIST');
     showToast(result.enabled ? tr('toast_ignore_enabled', 'Ignore list enabled') : tr('toast_ignore_disabled', 'Ignore list disabled'), 'ok');
-    
-    // If just enabled, clean history immediately
-    if (result.enabled) {
-      showToast(tr('toast_cleaning', 'Cleaning ignored URLs from history…'), 'ok');
-      // The toast above fades on its own; the bubble (driven by CLEANUP_PROGRESS
-      // broadcasts from background.js) stays visible for the whole operation,
-      // including if this panel gets closed and reopened before it finishes.
-      const cleanResult = await send('CLEAN_IGNORED_HISTORY');
-      const count = cleanResult.removed || 0;
-      if (count > 0) {
-        showToast(tr('toast_removed_ignored', 'Removed {0} ignored URLs from history', count), 'ok');
-      } else {
-        showToast(tr('toast_no_ignored', 'No ignored URLs found in history'), 'ok');
-      }
-    }
   } catch (err) {
     //console.error('[IgnoreList] Toggle failed:', err);
     showToast('Error: ' + err.message, 'err');
     // Revert toggle state on error
     toggle.checked = !enabled;
   }
+}
+
+// ══ WHITELIST / BLACKLIST MODE ══════════════════════════════════════════════
+// Blacklist (default): sites matching the list are ignored.
+// Whitelist: EVERY site is ignored except the ones in the list. Storage key: ignoreListInvert (true = whitelist).
+function syncIgnoreInvertUi(white) {
+  const on = (el, v) => {
+    if (!el) return;
+    el.setAttribute('aria-checked', v ? 'true' : 'false');
+    el.style.borderColor = v ? 'var(--accent, #3b9eff)' : 'var(--border, #444)';
+    el.style.color = v ? 'var(--accent, #3b9eff)' : '';
+    el.style.fontWeight = v ? '700' : '';
+    el.style.background = 'transparent';
+  };
+  on(document.getElementById('ignoreModeBlack'), !white);
+  on(document.getElementById('ignoreModeWhite'), white);
+  const d = document.getElementById('ignoreModeDesc');
+  if (d) d.textContent = white
+    ? tr('ignore_mode_desc_white', 'Whitelist: ONLY the sites in the list below are saved; everything else is ignored. With an empty list nothing is ignored.')
+    : tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored');
+  const b = document.getElementById('ignoreCleanBtn');
+  if (b) b.textContent = white
+    ? tr('ignore_clean_white', 'Remove existing entries from sites that are not in the whitelist')
+    : tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist');
+}
+async function setIgnoreMode(white) {
+  const cur = document.getElementById('ignoreModeWhite')?.getAttribute('aria-checked') === 'true';
+  if (cur === white) return;
+  try {
+    await send('SET_IGNORE_INVERT', { value: white });
+    syncIgnoreInvertUi(white);
+    showToast(white ? tr('toast_ignore_white_on', 'Whitelist mode on: only the listed sites are kept')
+                    : tr('toast_ignore_black_on', 'Blacklist mode on: listed sites are ignored'), 'ok');
+  } catch (err) {
+    showToast('Error: ' + err.message, 'err');
+  }
+}
+async function cleanOutsideAllowList() {
+  const white = document.getElementById('ignoreModeWhite')?.getAttribute('aria-checked') === 'true';
+  let count = '?';
+  try { count = ((await send('GET_IGNORE_LIST')).list || []).length; } catch {}
+  const msg = white
+    ? tr('confirm_clean_white', 'This permanently removes every stored history entry (and the browser\'s own history entry) whose site is NOT in your whitelist ({0} patterns). This cannot be undone. Continue?', count)
+    : tr('confirm_clean_black', 'This permanently removes every stored history entry (and the browser\'s own history entry) that matches your blacklist ({0} patterns). This cannot be undone. Continue?', count);
+  if (!confirm(msg)) return;
+  try {
+    showToast(tr('toast_cleaning', 'Cleaning ignored URLs from history…'), 'ok');
+    const r = await send('CLEAN_IGNORED_HISTORY', { force: true });
+    showToast(r.removed ? tr('toast_removed_ignored', 'Removed {0} ignored URLs from history', r.removed) : tr('toast_no_ignored', 'No ignored URLs found in history'), 'ok');
+  } catch (err) { showToast('Error: ' + err.message, 'err'); }
 }
 
 // ══ TOGGLE HIDE-FROM-TIME-SPENT ═════════════════════════════════════════════
@@ -357,6 +393,8 @@ window.IgnoreList = {
   add: addIgnorePattern,
   toggle: toggleIgnoreList,
   toggleTimeSpent: toggleHideTimeSpent,
+  setMode: setIgnoreMode,
+  cleanOutside: cleanOutsideAllowList,
   toggleGuide: togglePatternGuide,
   open: openIgnorePanel,
   close: closeIgnorePanel

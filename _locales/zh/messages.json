@@ -507,10 +507,10 @@
     "message": "危险区域"
   },
   "reimport_chrome_history": {
-    "message": "重新导入 Chrome 历史"
+    "message": "重新导入 Browser 历史"
   },
   "pull_all_chrome_history": {
-    "message": "重新提取所有可用 Chrome 原生历史（合并，无重复）"
+    "message": "重新提取所有可用 Browser 原生历史（合并，无重复）"
   },
   "reimport": {
     "message": "重新导入"
@@ -537,7 +537,7 @@
     "message": "反馈"
   },
   "link_to_discord": {
-    "message": "Discord 反馈服务器链接（或仅在 Chrome 商店留下评论）"
+    "message": "Discord 反馈服务器链接（或仅在 Browser 商店留下评论）"
   },
   "discord_server": {
     "message": "Discord 服务器"
@@ -546,7 +546,7 @@
     "message": "评价此扩展"
   },
   "link_to_chrome_webstore": {
-    "message": "Chrome 网上应用店 扩展页面链接"
+    "message": "Browser 网上应用店 扩展页面链接"
   },
   "click_to_rate": {
     "message": "点击评价"
@@ -642,7 +642,7 @@
     "message": "删除"
   },
   "choose_a_time_range": {
-    "message": "选择要删除的时间范围。这将从此扩展和 Chrome 本地历史记录中删除条目。"
+    "message": "选择要删除的时间范围。这将从此扩展和 Browser 本地历史记录中删除条目。"
   },
   "last_1_hour": {
     "message": "过去 1 小时"
@@ -837,7 +837,7 @@
     "message": "用作侧边栏"
   },
   "popup_as_sidebar_desc": {
-    "message": "在 Chrome 侧边栏而非弹出窗口中打开 Extended History，使其可以占满整个页面"
+    "message": "在 Browser 侧边栏而非弹出窗口中打开 Extended History，使其可以占满整个页面"
   },
   "toolbar_icon": {
     "message": "工具栏图标"

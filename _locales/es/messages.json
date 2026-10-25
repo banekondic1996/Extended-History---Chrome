@@ -14,6 +14,34 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dic"},
+  "expr_mode": {"message": "Modo de expresión"},
+  "ctx_cut": {"message": "Cortar"},
+  "ctx_copy": {"message": "Copiar"},
+  "ctx_paste": {"message": "Pegar"},
+  "ctx_select_all": {"message": "Seleccionar todo"},
+  "ignore_mode_title": {"message": "Modo de lista"},
+  "ignore_mode_black": {"message": "Modo de lista negra"},
+  "ignore_mode_white": {"message": "Modo de lista blanca"},
+  "ignore_clean_black": {"message": "Eliminar las entradas existentes de los sitios incluidos en la lista negra"},
+  "ignore_mode_desc_white": {"message": "Lista blanca: SOLO se guardan los sitios de la lista siguiente; todo lo demás se ignora. Si la lista está vacía, no se ignora nada."},
+  "ignore_mode_desc_black": {"message": "Lista negra: se ignoran los sitios de la lista siguiente"},
+  "ignore_clean_white": {"message": "Eliminar las entradas existentes de los sitios que no están en la lista blanca"},
+  "toast_ignore_white_on": {"message": "Lista blanca activada: solo se conservan los sitios de la lista"},
+  "toast_ignore_black_on": {"message": "Lista negra activada: se ignoran los sitios de la lista"},
+  "confirm_clean_white": {"message": "Esto eliminará permanentemente todas las entradas del historial guardado (y del historial del navegador) cuyos sitios NO estén en tu lista blanca ({0} patrones). Esta acción no se puede deshacer. ¿Continuar?"},
+  "confirm_clean_black": {"message": "Esto eliminará permanentemente todas las entradas del historial guardado (y del historial del navegador) que coincidan con tu lista negra ({0} patrones). Esta acción no se puede deshacer. ¿Continuar?"},
+  "discard": {"message": "Descartar"},
+  "enc_incremental": {"message": "Cifrar las exportaciones incrementales con una contraseña"},
+  "enc_change_pw": {"message": "Cambiar contraseña"},
+  "allow_list_mode": {"message": "Modo de lista permitida (filtro inverso)"},
+  "allow_list_mode_desc": {"message": "Ignorar todos los sitios EXCEPTO los de la lista siguiente; solo los sitios incluidos se guardan en el historial"},
+  "unlock_keep_most_visited_out": {"message": "Después de desbloquear, no volver a añadir los sitios más visitados al historial del navegador"},
+  "history_encrypted_enter_password": {"message": "Tu historial está cifrado. Introduce tu contraseña para desbloquearlo."},
+  "keep_most_visited_out": {"message": "No volver a añadir los sitios más visitados al historial del navegador"},
+  "redownload_last_incremental_backup": {"message": "Volver a descargar la última copia de seguridad incremental"},
+  "no_incremental_backup_yet": {"message": "Todavía no se ha creado ninguna copia de seguridad incremental"},
+  "export_results": {"message": "Exportar resultados"},
+  "export_results_title": {"message": "Exportar solo las entradas que coinciden con la búsqueda, los filtros y las fechas actuales"},
    "no_history_found": {"message": "No se encontró historial"},
   "lock_big_warning": {"message": "Tu historial es demasiado grande para cifrarlo"},
   "lock_big_limit": {"message": "límite"},
@@ -24,8 +52,8 @@
   "skipped": {"message": "omitidas"},
   "cant_update_ret": {"message": "No se pudo actualizar la retención"},
   "cant_remove_old": {"message": "No se pudieron eliminar las entradas antiguas"},
-  "re_import_all": {"message": "¿Volver a importar todo el historial nativo disponible de Chrome? Las entradas nuevas se combinarán."},
-  "importing_from_chrome": {"message": "Importando desde el historial de Chrome…"},
+  "re_import_all": {"message": "¿Volver a importar todo el historial nativo disponible de Browser? Las entradas nuevas se combinarán."},
+  "importing_from_chrome": {"message": "Importando desde el historial de Browser…"},
   "delete_all_confirm": {"message": "¿Eliminar TODO el historial permanentemente? Esta acción no se puede deshacer."},
   "all_cleared": {"message": "Se ha borrado todo el historial"},
   "cant_update_retention": {"message": "No se pudo actualizar la retención"},
@@ -129,10 +157,12 @@
     "unique_tabs": {
     "message": "Pestañas únicas"
   },
-    "no_stored_tabs": {"message": "Aún no hay pestañas guardadas."},
+  "ignore_invert_note": {"message": "Si la lista está vacía, no se ignora ningún sitio. Al activar esta opción, el historial existente no se modifica."},
+  "ignore_invert_clean": {"message": "Eliminar ahora las entradas existentes de otros sitios"},
+  "no_stored_tabs": {"message": "Aún no hay pestañas guardadas."},
   "store_tab_hint": {"message": "Haz clic derecho en cualquier página → Extended History → Guardar esta pestaña"},
   "no_synced_devices": {"message": "No se encontraron dispositivos sincronizados."},
-  "chrome_sync_hint": {"message": "Inicia sesión en Chrome y activa la sincronización."},
+  "chrome_sync_hint": {"message": "Inicia sesión en Browser y activa la sincronización."},
   "run_now": {"message": "Ejecutar ahora"},
   "select": {"message": "Seleccionar"},
   "please_enter_password": {"message": "Introduce una contraseña."},
@@ -471,7 +501,7 @@
     "message": "Resolución de favicon"
   },
   "favicon_resolver_desc": {
-    "message": "Cómo se obtienen los iconos. \"Caché del navegador\" usa la caché de Chrome (más rápido). \"Google\" usa el CDN de Google."
+    "message": "Cómo se obtienen los iconos. \"Caché del navegador\" usa la caché de Browser (más rápido). \"Google\" usa el CDN de Google."
   },
   "for_password_reset": {
     "message": "(para restablecer contraseña)"
@@ -765,10 +795,10 @@
     "message": "Zona de peligro"
   },
   "reimport_chrome_history": {
-    "message": "Reimportar historial de Chrome"
+    "message": "Reimportar historial de Browser"
   },
   "pull_all_chrome_history": {
-    "message": "Volver a obtener todo el historial local de Chrome (sin duplicados)"
+    "message": "Volver a obtener todo el historial local de Browser (sin duplicados)"
   },
   "reimport": {
     "message": "Reimportar"
@@ -791,6 +821,9 @@
   "github_profile": {
     "message": "Perfil de Github"
   },
+  "confirm_ignore_invert_clean": {"message": "Esto elimina permanentemente del historial guardado (y del historial del navegador) todas las entradas cuyos sitios NO estén en la lista. Esta acción no se puede deshacer. ¿Continuar?"},
+  "toast_ignore_invert_off": {"message": "Modo de lista de permitidos desactivado: se ignoran los sitios de la lista"},
+  "toast_ignore_invert_on": {"message": "Modo de lista de permitidos activado: solo se conservan los sitios de la lista"},
   "feedback": {
     "message": "Comentarios"
   },
@@ -803,9 +836,9 @@
   "rate_extension": {
     "message": "Calificar extensión"
   },
-  "link_to_chrome_webstore": {
-    "message": "Enlace a la página de Chrome Web Store"
-  },
+  "confirm_ignore_invert": {"message": "Modo de lista de permitidos: a partir de ahora, NO se guardará nada en el historial excepto los sitios de tu lista. ¿Continuar?"},
+  "enc_prompt_pw": {"message": "Contraseña para cifrar las exportaciones incrementales (se necesitará de nuevo para importarlas):"},
+  "link_to_chrome_webstore": {"message": "Enlace a la página de extensiones"},
   "click_to_rate": {
     "message": "Haz clic para calificar"
   },
@@ -1143,7 +1176,7 @@
     "message": "Usar como barra lateral"
   },
   "popup_as_sidebar_desc": {
-    "message": "Abre Extended History en el panel lateral de Chrome en lugar de un popup, para que pueda ocupar toda la página"
+    "message": "Abre Extended History en el panel lateral de Browser en lugar de un popup, para que pueda ocupar toda la página"
   },
   "toolbar_icon": {
     "message": "Icono de la barra de herramientas"

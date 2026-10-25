@@ -16,6 +16,30 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Déc"},
+  "ignore_mode_black": {"message": "Mode liste noire"},
+  "ignore_mode_white": {"message": "Mode liste blanche"},
+  "ignore_clean_black": {"message": "Supprimer les entrées existantes des sites figurant dans la liste noire"},
+  "ignore_mode_desc_white": {"message": "Liste blanche : SEULS les sites de la liste ci-dessous sont enregistrés ; tout le reste est ignoré. Si la liste est vide, rien n’est ignoré."},
+  "ignore_mode_desc_black": {"message": "Liste noire : les sites de la liste ci-dessous sont ignorés"},
+  "ignore_clean_white": {"message": "Supprimer les entrées existantes des sites qui ne figurent pas dans la liste blanche"},
+  "toast_ignore_white_on": {"message": "Liste blanche activée : seuls les sites de la liste sont conservés"},
+  "toast_ignore_black_on": {"message": "Liste noire activée : les sites de la liste sont ignorés"},
+  "confirm_clean_white": {"message": "Cela supprimera définitivement toutes les entrées de l’historique enregistré (et de l’historique du navigateur) dont le site ne figure PAS dans votre liste blanche ({0} motifs). Cette action est irréversible. Continuer ?"},
+  "confirm_clean_black": {"message": "Cela supprimera définitivement toutes les entrées de l’historique enregistré (et de l’historique du navigateur) correspondant à votre liste noire ({0} motifs). Cette action est irréversible. Continuer ?"},
+  "discard": {"message": "Abandonner"},
+  "ignore_invert_note": {"message": "Si la liste est vide, aucun site n’est ignoré. L’historique existant n’est pas modifié lorsque vous activez cette option."},
+  "ignore_invert_clean": {"message": "Supprimer maintenant les entrées existantes des autres sites"},
+  "enc_incremental": {"message": "Chiffrer les exportations incrémentielles avec un mot de passe"},
+  "enc_change_pw": {"message": "Changer le mot de passe"},
+  "allow_list_mode": {"message": "Mode liste d’autorisation (filtre inversé)"},
+  "allow_list_mode_desc": {"message": "Ignorer tous les sites SAUF ceux de la liste ci-dessous — seuls les sites listés sont enregistrés dans l’historique"},
+  "unlock_keep_most_visited_out": {"message": "Après le déverrouillage, ne pas réinsérer les sites les plus visités dans l’historique du navigateur"},
+  "history_encrypted_enter_password": {"message": "Votre historique est chiffré. Saisissez votre mot de passe pour le déverrouiller."},
+  "keep_most_visited_out": {"message": "Ne pas réinsérer les sites les plus visités dans l’historique du navigateur"},
+  "redownload_last_incremental_backup": {"message": "Télécharger à nouveau la dernière sauvegarde incrémentielle"},
+  "no_incremental_backup_yet": {"message": "Aucune sauvegarde incrémentielle n’a encore été créée"},
+  "export_results": {"message": "Exporter les résultats"},
+  "export_results_title": {"message": "Exporter uniquement les entrées correspondant à la recherche, aux filtres et aux dates actuels"},
   "avg_time_per_weekday_range": {"message": "Durée moyenne par jour de la semaine (sur les {0} derniers jours)"},
   "follow_system_theme": {"message": "Suivre le thème du système"},
   "follow_system_theme_desc": {"message": "Basculer automatiquement entre le mode clair et le mode sombre selon votre système d’exploitation. Les boutons Clair / Sombre de la barre latérale sont masqués lorsque cette option est activée."},
@@ -31,8 +55,8 @@
   "skipped": {"message": "ignorées"},
   "cant_update_ret": {"message": "Impossible de mettre à jour la durée de conservation"},
   "cant_remove_old": {"message": "Impossible de supprimer les anciennes entrées"},
-  "re_import_all": {"message": "Réimporter tout l’historique natif Chrome disponible ? Les nouvelles entrées seront fusionnées."},
-  "importing_from_chrome": {"message": "Importation depuis l’historique Chrome…"},
+  "re_import_all": {"message": "Réimporter tout l’historique natif Browser disponible ? Les nouvelles entrées seront fusionnées."},
+  "importing_from_chrome": {"message": "Importation depuis l’historique Browser…"},
   "delete_all_confirm": {"message": "Supprimer définitivement TOUT l’historique ? Cette action est irréversible."},
   "all_cleared": {"message": "Tout l’historique a été effacé"},
   "time_data_cleared": {"message": "Les données de temps ont été effacées"},
@@ -129,7 +153,7 @@
    "no_stored_tabs": {"message": "Aucun onglet enregistré pour le moment."},
   "store_tab_hint": {"message": "Faites un clic droit sur une page → Extended History → Enregistrer cet onglet"},
   "no_synced_devices": {"message": "Aucun appareil synchronisé trouvé."},
-  "chrome_sync_hint": {"message": "Connectez-vous à Chrome et activez la synchronisation."},
+  "chrome_sync_hint": {"message": "Connectez-vous à Browser et activez la synchronisation."},
   "run_now": {"message": "Exécuter maintenant"},
   "select": {"message": "Sélectionner"},
   "please_enter_password": {"message": "Veuillez saisir un mot de passe."},
@@ -762,10 +786,10 @@
     "message": "Zone dangereuse"
   },
   "reimport_chrome_history": {
-    "message": "Réimporter l’historique Chrome"
+    "message": "Réimporter l’historique Browser"
   },
   "pull_all_chrome_history": {
-    "message": "Récupérer tout l’historique Chrome local (fusion sans doublons)"
+    "message": "Récupérer tout l’historique Browser local (fusion sans doublons)"
   },
   "reimport": {
     "message": "Réimporter"
@@ -791,6 +815,15 @@
   "feedback": {
     "message": "Retour"
   },
+  "expr_mode": {"message": "Mode expression"},
+  "ctx_cut": {"message": "Couper"},
+  "ctx_copy": {"message": "Copier"},
+  "ctx_paste": {"message": "Coller"},
+  "ctx_select_all": {"message": "Tout sélectionner"},
+  "ignore_mode_title": {"message": "Mode liste"},
+  "confirm_ignore_invert_clean": {"message": "Cela supprime définitivement de votre historique enregistré (et de l’historique du navigateur) toutes les entrées dont le site ne figure PAS dans la liste. Cette action est irréversible. Continuer ?"},
+  "toast_ignore_invert_off": {"message": "Mode liste d’autorisation désactivé : les sites de la liste sont ignorés"},
+  "toast_ignore_invert_on": {"message": "Mode liste d’autorisation activé : seuls les sites de la liste sont conservés"},
   "link_to_discord": {
     "message": "Lien vers le serveur Discord pour les retours"
   },
@@ -800,9 +833,9 @@
   "rate_extension": {
     "message": "Évaluer l’extension"
   },
-  "link_to_chrome_webstore": {
-    "message": "Lien vers la page Chrome Web Store"
-  },
+  "confirm_ignore_invert": {"message": "Mode liste d’autorisation : désormais, RIEN ne sera enregistré dans l’historique, sauf les sites de votre liste. Continuer ?"},
+  "enc_prompt_pw": {"message": "Mot de passe pour chiffrer les exportations incrémentielles (nécessaire à nouveau pour les importer) :"},
+  "link_to_chrome_webstore": {"message": "Lien vers la page des extensions"},
   "click_to_rate": {
     "message": "Cliquez pour évaluer"
   },
@@ -1140,7 +1173,7 @@
     "message": "Utiliser comme barre latérale"
   },
   "popup_as_sidebar_desc": {
-    "message": "Ouvre Extended History dans le panneau latéral de Chrome au lieu d'un popup, pour qu'il occupe toute la hauteur de la page"
+    "message": "Ouvre Extended History dans le panneau latéral de Browser au lieu d'un popup, pour qu'il occupe toute la hauteur de la page"
   },
   "toolbar_icon": {
     "message": "Icône de la barre d'outils"

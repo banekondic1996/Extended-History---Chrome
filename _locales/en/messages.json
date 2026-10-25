@@ -14,6 +14,36 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
+  "expr_mode": {"message": "Expression mode"},
+  "ctx_cut": {"message": "Cut"},
+  "ctx_copy": {"message": "Copy"},
+  "ctx_paste": {"message": "Paste"},
+  "ctx_select_all": {"message": "Select all"},
+  "ignore_mode_title": {"message": "List mode"},
+  "ignore_mode_black": {"message": "Blacklist mode"},
+  "ignore_mode_white": {"message": "Whitelist mode"},
+  "ignore_clean_black": {"message": "Remove existing entries from sites that are in the blacklist"},
+  "ignore_mode_desc_white": {"message": "Whitelist: ONLY the sites in the list below are saved; everything else is ignored. With an empty list nothing is ignored."},
+  "ignore_mode_desc_black": {"message": "Blacklist: sites in the list below are ignored"},
+  "ignore_clean_white": {"message": "Remove existing entries from sites that are not in the whitelist"},
+  "toast_ignore_white_on": {"message": "Whitelist mode on: only the listed sites are kept"},
+  "toast_ignore_black_on": {"message": "Blacklist mode on: listed sites are ignored"},
+  "confirm_clean_white": {"message": "This permanently removes every stored history entry (and the browser's own history entry) whose site is NOT in your whitelist ({0} patterns). This cannot be undone. Continue?"},
+  "confirm_clean_black": {"message": "This permanently removes every stored history entry (and the browser's own history entry) that matches your blacklist ({0} patterns). This cannot be undone. Continue?"},
+  "discard": {"message": "Discard"},
+  "ignore_invert_note": {"message": "With an empty list nothing is ignored. Existing history is not touched when you switch this on."},
+  "ignore_invert_clean": {"message": "Remove existing entries from other sites now"},
+  "enc_incremental": {"message": "Encrypt incremental exports with a password"},
+  "enc_change_pw": {"message": "Change password"},
+  "allow_list_mode": {"message": "Allow-list mode (reverse filter)"},
+  "allow_list_mode_desc": {"message": "Ignore every site EXCEPT the ones in the list below — only listed sites are saved to history"},
+  "unlock_keep_most_visited_out": {"message": "After unlocking, do not put the most visited sites back into the browser history"},
+  "history_encrypted_enter_password": {"message": "Your history is encrypted. Enter your password to unlock it."},
+  "keep_most_visited_out": {"message": "Do not put the most visited sites back into the browser history"},
+  "redownload_last_incremental_backup": {"message": "Re-download last incremental backup"},
+  "no_incremental_backup_yet": {"message": "No incremental backup made yet"},
+  "export_results": {"message": "Export results"},
+  "export_results_title": {"message": "Export only the entries matching the current search, filters and dates"},
   "avg_time_per_weekday_range": {"message": "Average time per weekday (last {0} days)"},
   "follow_system_theme": {"message": "Follow system theme"},
   "follow_system_theme_desc": {"message": "Automatically switch between light and dark mode with your operating system. The Light / Dark buttons in the sidebar are hidden while this is on."},
@@ -27,8 +57,8 @@
   "skipped": {"message": "skipped"},
   "cant_update_ret": {"message": "Could not update retention"},
   "cant_remove_old": {"message": "Could not remove old entries"},
-  "re_import_all": {"message": "Re-import all available Chrome native history? New entries will be merged in."},
-  "importing_from_chrome": {"message": "Importing from Chrome history…"},
+  "re_import_all": {"message": "Re-import all available Browser native history? New entries will be merged in."},
+  "importing_from_chrome": {"message": "Importing from Browser history…"},
   "delete_all_confirm": {"message": "Delete ALL history permanently? Cannot be undone."},
   "all_cleared": {"message": "All history cleared"},
   "time_data_cleared": {"message": "Time data cleared"},
@@ -145,7 +175,7 @@
     "no_stored_tabs": {"message": "No stored tabs yet."},
   "store_tab_hint": {"message": "Right-click any page → Extended History → Store this tab"},
   "no_synced_devices": {"message": "No synced devices found."},
-  "chrome_sync_hint": {"message": "Sign in to Chrome and enable Sync."},
+  "chrome_sync_hint": {"message": "Sign in to Browser and enable Sync."},
   "run_now": {"message": "Run now"},
   "edit": {
     "message": "Edit"
@@ -382,7 +412,7 @@
     "message": "Favicon resolver"
   },
   "favicon_resolver_desc": {
-    "message": "How site icons are fetched. \"Browser cache\" uses Chrome's built-in cache (faster, private). \"Google\" fetches from Google's CDN (better coverage)."
+    "message": "How site icons are fetched. \"Browser cache\" uses Browser's built-in cache (faster, private). \"Google\" fetches from Google's CDN (better coverage)."
   },
   "for_password_reset": {
     "message": "(for password reset)"
@@ -793,10 +823,10 @@
     "message": "Danger Zone"
   },
   "reimport_chrome_history": {
-    "message": "Re-import Chrome history"
+    "message": "Re-import Browser history"
   },
   "pull_all_chrome_history": {
-    "message": "Pull all available Chrome native history again (merges, no duplicates)"
+    "message": "Pull all available Browser native history again (merges, no duplicates)"
   },
   "reimport": {
     "message": "Re-import"
@@ -831,15 +861,18 @@
   "rate_extension": {
     "message": "Rate this extension"
   },
-  "link_to_chrome_webstore": {
-    "message": "Link to Chrome Web Store extensions page"
-  },
+  "confirm_ignore_invert": {"message": "Allow-list mode: from now on NOTHING is saved to history except the sites in your list. Continue?"},
+  "enc_prompt_pw": {"message": "Password for encrypting incremental exports (needed again to import them):"},
+  "link_to_chrome_webstore": {"message": "Link to extensions page"},
   "click_to_rate": {
     "message": "Click to Rate"
   },
   "ignored_domains": {
     "message": "Ignored Domains"
   },
+  "confirm_ignore_invert_clean": {"message": "This permanently removes every entry from your stored history (and the browser history) whose site is NOT in the list. This cannot be undone. Continue?"},
+  "toast_ignore_invert_off": {"message": "Allow-list mode off: listed sites are ignored"},
+  "toast_ignore_invert_on": {"message": "Allow-list mode on: only the listed sites are kept"},
   "domains_added_will_not_be": {
     "message": "Domains added here will not be saved in history. Existing entries will be removed automatically."
   },
@@ -928,7 +961,7 @@
     "message": "Delete"
   },
   "choose_a_time_range": {
-    "message": "Choose a time range to delete. This will remove entries from both this extension and Chrome's native history."
+    "message": "Choose a time range to delete. This will remove entries from both this extension and Browser's native history."
   },
   "last_1_hour": {
     "message": "Last 1 hour"
@@ -1171,7 +1204,7 @@
     "message": "Use as sidebar"
   },
   "popup_as_sidebar_desc": {
-    "message": "Open Extended History in Chrome's side panel instead of a popup, so it can extend over the whole page"
+    "message": "Open Extended History in Browser's side panel instead of a popup, so it can extend over the whole page"
   },
   "toolbar_icon": {
     "message": "Toolbar icon"
