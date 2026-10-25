@@ -1270,15 +1270,6 @@ function buildCalHourGrid() {
   updateCalHourGridState();
 }
 
-// ── Scroll-spy: while browsing "All time", highlight the date of whatever's
-// currently at the top of the visible list, without touching filterDate. ──
-// NOTE: this used to scan every rendered `.entry` row (data-date lives on each
-// entry) to find the one at the top. Since the list is append-only infinite
-// scroll — old rows are never removed from the DOM — that scan grew with
-// however far you'd scrolled, and ran on every animation frame while
-// scrolling, which is what made scrolling feel like it was doing work.
-// `.day-label` headers carry the same date and there are orders of magnitude
-// fewer of them (one per day vs. one per visit), so scan those instead.
 let _calScrollSpyPending = false;
 function calScrollSpyCheck(area) {
   if (filterDate) return; // only meaningful in All-time mode
@@ -1419,32 +1410,10 @@ function setupToolbar() {
   document.getElementById('dateFromBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateFrom')));
   document.getElementById('dateToBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateTo')));
 
-  // "All time" — clears only date/hour filters, NOT the search text
-  document.getElementById('clearFiltersBtn').addEventListener('click', () => {
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value   = '';
-    filterDate = null; filterHour = null;
-    vpSetActive(null);
-    document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
-    const allPill = document.getElementById('dnAllPill');
-    if (allPill) allPill.classList.add('active');
-    document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
-    updateHourPillsState();
-    doSearch();
-  });
-
   document.getElementById('deleteResultsBtn').addEventListener('click', deleteMatching);
 
-  // "Export results": saves only what the current search / filters / date range match (built here, markup untouched).
-  const delBtn = document.getElementById('deleteResultsBtn');
-  if (delBtn && !document.getElementById('exportResultsBtn')) {
-    const b = document.createElement('button');
-    b.className = 'tb-btn'; b.id = 'exportResultsBtn';
-    b.textContent = tr('export_results', 'Export results');
-    b.title = tr('export_results_tip', 'Export only the entries matching the current search, filters and dates');
-    delBtn.parentNode.insertBefore(b, delBtn);
-    b.addEventListener('click', exportMatching);
-  }
+  // "Export": saves only what the current search / filters / date range match
+  document.getElementById('exportResultsBtn')?.addEventListener('click', exportMatching);
 }
 
 // Exports ONLY the entries the current search/filters match (all of them, not just the part loaded on screen),
@@ -4642,8 +4611,16 @@ document.getElementById('exportDataBtn').addEventListener('click', async () => {
     const blob = await ehExportToBlob(begin, pw, (chars) => {
       toastProgress(`${useEncrypt ? tr('export_encrypting', 'Exporting & encrypting…') : tr('export_exporting', 'Exporting…')} ${Math.round(chars / 1048576)} MB`, null);
     });
-    const filename = `extended-history_${new Date().toISOString().slice(0,10)}${useEncrypt ? '_enc' : ''}.json`;
-    const url = URL.createObjectURL(blob);
+    let filename = `extended-history_${new Date().toISOString().slice(0,10)}${useEncrypt ? '_enc' : ''}.json`;
+    let outBlob = blob;
+    if (document.getElementById('exportDataZip')?.checked) {       // "Compress as .zip"
+      toastProgress(tr('export_compressing', 'Compressing…'), null);
+      try {
+        outBlob  = await ehMakeZip(filename, blob);
+        filename = filename.replace(/\.json$/, '.zip');
+      } catch (_) { outBlob = blob; }                               // zipping failed → still deliver the plain .json
+    }
+    const url = URL.createObjectURL(outBlob);
     const a = Object.assign(document.createElement('a'), { href: url, download: filename });
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);     // a big file is still being saved for a while
@@ -4876,6 +4853,33 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
     allResults = []; invalidateHistCache(); exitSelMode(); buildVirtualList();
     toast(tr('all_cleared','All history cleared'), 'ok');
   } catch (err) { toast(err.message, 'err'); }
+});
+
+// Time Spent → Export: every tracked day as .csv — date, website, time spent (hh:mm:ss)
+document.getElementById('exportTimeBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('exportTimeBtn');
+  if (btn) btn.disabled = true;
+  try {
+    await send('FLUSH_TIME');
+    const r = await send('EXPORT_TIME_DATA');
+    const rows = r.rows || [];
+    if (!rows.length) { toast(tr('no_time_data_export', 'No time data to export'), 'err'); return; }
+    const q = (v) => /[",\r\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+    const hms = (ms) => {
+      const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    };
+    const lines = ['Date,Website,Timespent(hh:mm:ss)'];
+    for (const [date, site, ms] of rows) lines.push([date, q(site), hms(ms)].join(','));
+    const blob = new Blob(['\ufeff' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });   // BOM: Excel reads it as UTF-8
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_time-spent_${new Date().toISOString().slice(0,10)}.csv` });
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 60000);
+    toast(tr('time_exported', 'Exported {0} rows', fmtNum(rows.length)), 'ok');
+  } catch (err) {
+    toast('Export failed: ' + (err.message || err), 'err');
+  } finally { if (btn) btn.disabled = false; }
 });
 
 document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
@@ -5809,6 +5813,16 @@ function _showIgnorePanel() {
           <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Use the button below to remove entries that are already stored.</span>
           <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
+         <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="ignore-toggle-text">
+            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode:')}</div>
+            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist (sites in the list below are ignored)')}</div>
+          </div>
+          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
+            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
+            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
+          </div>
+        </div>
         <div class="ignore-toggle-wrapper">
           <label class="toggle-switch">
             <input type="checkbox" id="ignoreListToggle" checked>
@@ -5833,17 +5847,7 @@ function _showIgnorePanel() {
             </div>
           </label>
         </div>
-        <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
-          <div class="ignore-toggle-text">
-            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode')}</div>
-            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored')}</div>
-          </div>
-          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
-            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
-            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
-          </div>
-          <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
-        </div>
+       <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px;margin-bottom:20px;">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
           <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
@@ -6540,9 +6544,9 @@ function applyWallpaper(wp) {
        glass as the sidebar / calendar sidebar / main panel behind it. */
     html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
     html.wallpaper-mode .list-area .day-label {
-      background: transparent !important;
+      background:  ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)'} !important;
       text-shadow: 0px 0px 9px var(--day);
-      backdrop-filter: blur(10px) !important;
+
       -webkit-backdrop-filter: blur(10px) !important;
     }
     html.wallpaper-mode #ctxMenu {
@@ -6562,7 +6566,6 @@ function applyWallpaper(wp) {
     backdrop-filter: blur(50px);
     }
     html.wallpaper-mode  .state-msg{
-    background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
     height:100%
     }
     /* .topbar has a solid background in the base stylesheet — let .main's

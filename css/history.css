@@ -396,9 +396,9 @@ input[type="date"]:focus { border-color: var(--accent); }
   flex-shrink: 0;
   transition: all 0.1s;
 }
-.tb-btn:hover { background: var(--surf2); color: var(--text); }
-.tb-btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
-.tb-btn.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.tb-btn:hover { background: var(--surf2) !important; color: var(--text) !important; }
+.tb-btn.danger { color: var(--danger) !important; border-color: color-mix(in srgb, var(--danger) 30%, transparent) !important; }
+.tb-btn.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent) !important; }
 
 /* ═══ SELECTION BAR ══════════════════════════════════════════════════════════ */
 .sel-bar {
@@ -453,7 +453,7 @@ html.wallpaper-mode .list-area { background: transparent; }
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text3);
-  background: var(--list-bg); /* must match .list-area so the sticky header blends in */
+  background: var(--list-bg);
   position: sticky; top: 0; z-index: 4;
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid var(--border);
@@ -1173,7 +1173,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .dn-pill.active .dn-pill-day { color:rgba(255,255,255,0.65); }
 
 /* ── Context menu ── */
-.ctx-item  { padding:7px 14px;border-radius:5px;cursor:pointer;color:var(--text);transition:background .08s;white-space:nowrap }
+.ctx-item  { padding:7px 14px;border-radius:5px;cursor:pointer;color:var(--text);white-space:nowrap }
 .ctx-item:hover { background:var(--surf3) }
 .ctx-item.danger { color:var(--danger) }
 .ctx-sep   { height:1px;background:var(--border);margin:3px 8px }
@@ -1788,7 +1788,9 @@ span {
 
 /* Settings > Navigation icons (off): hide the icon in front of every sidebar item. */
 html.hide-nav-icons .nav-item .ni-icon,
-html.hide-nav-icons .nav-icon { display: none; }
+html.hide-nav-icons .nav-icon,
+html.hide-nav-icons .ctx-icon { display: none; }
+.ctx-icon { display: inline-block; min-width: 1.2em; text-align: center; margin-right: 2px; }
 
 /* Settings > Match UI colors: the history list uses the same surface colour as the
    sidebar, calendar sidebar and panels (--surf0) instead of its own shade. Set on

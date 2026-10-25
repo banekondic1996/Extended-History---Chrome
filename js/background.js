@@ -3113,6 +3113,19 @@ async function handle(msg) {
       if (oldest !== null && oldest < hi) { const d0 = new Date(oldest); d0.setHours(0, 0, 0, 0); days = Math.max(1, Math.round((hi - d0.getTime()) / 86400000)); }
       return { avg: counts.map(c => days ? c / days : 0), counts, days };
     }
+    case 'EXPORT_TIME_DATA': {
+      // Every tracked day, one row per date + website: [date, domain, ms], oldest first (honours "hide ignored domains")
+      const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
+      const hideList = await getTimeSpentIgnoreList();
+      const hideInvert = hideList ? await isIgnoreInvert() : false;
+      const rows=[];
+      for(const [domain,dayMap] of Object.entries(map)){
+        if (hideList && (hideList.some(p => domainMatchesIgnorePattern(domain, p)) !== hideInvert)) continue;
+        for(const [date,ms] of Object.entries(dayMap)) if (ms>0) rows.push([date,domain,ms]);
+      }
+      rows.sort((a,b)=> a[0]<b[0]?-1 : a[0]>b[0]?1 : b[2]-a[2]);
+      return { rows };
+    }
     case 'GET_TIME_DATA': {
       const {days=30, date}=msg; const r=await chrome.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
       const dateSet=new Set();
