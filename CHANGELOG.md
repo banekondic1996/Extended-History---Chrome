@@ -179,6 +179,14 @@ Fixed/changed in version 4.2.3 (in Firefox):
 -Added option to export searched results
 -Added option to not return some sites back into history after unlocking UI, that's used so auto complete works in address bar based on history
 -Added support to import multiple .json .tsv files at once
+
+Fixed/changed in version 4.2.4:
+-Added option to compress history export
+-Added option to export time spent on sites as .csv
+-Ignore list tab element positioning changes
+-Disabling emojis in navigation menu, disables them in context menu too now
+-Bug fixes regarding export time displaying as "{0}"
+-Added Changelog and Tutorial button in "More" tab
 </pre>
 
 
