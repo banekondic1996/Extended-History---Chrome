@@ -71,8 +71,7 @@
 
   <div class="sidebar-actions">
     <button class="sa-btn" id="lockBtn" data-i18n-title="lock_btn_hint" title="Encrypt history and lock the extension">🔒 <span data-i18n-key="lock_btn">Lock</span></button>
-    <button class="sa-btn" id="themeLight">☀ <span data-i18n-key="light">Light</span></button>
-    <button class="sa-btn" id="themeDark">🌙 <span data-i18n-key="dark">Dark</span></button>
+    <button class="sa-btn" id="themeToggle"><span id="themeToggleIcon">☀</span> <span id="themeToggleLbl" data-i18n-key="light">Light</span></button>
   </div>
 </nav>
 <!-- ══ MAIN ══════════════════════════════════════════════════════════════════ -->
@@ -95,7 +94,7 @@
       <!-- Search + controls -->
       <div class="search-row">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Search history…"/>
+          <input type="text" id="searchInput" placeholder="Search history…" autocomplete="off"/>
           <button class="search-clear-btn" id="searchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
         </div>
         <select class="mode-sel" id="quickFilterSelect" title="Quick Filters">
@@ -124,6 +123,7 @@
       </div>
     </div>
 
+    <div class="day-label-bar" id="dayLabelBar"></div>
     <div class="list-area" id="listArea"></div>
       <button class="scroll-to-bottom" id="histScrollBottom" title="Scroll to bottom">↓</button>
   </div>
@@ -186,6 +186,7 @@
           <input type="date" id="rmDateTo" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer;margin-right: 100px;"/>
         </div>
       </div>
+      <div class="day-label-bar" id="rmDayLabelBar"></div>
       <div class="list-area" id="rmListArea"></div>
     </div>
   </div>

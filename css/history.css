@@ -11,7 +11,7 @@
 }
 
 [data-theme="dark"] {
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a09eb0' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23a09eb0' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --bg:      #0d0d10;
   --list-bg: #0d0d10; /* dark mode: the list is a step darker than the UI panels (--surf0) */
   --surf0:   #131318;
@@ -23,6 +23,7 @@
   --text:    #f0eee8;
   --text2:   #a09eb0;
   --text3:   #5a5870;
+  --text4: #787885;
   --day: #000000;
   --danger:  #f06060;
   --green:   #4dd890;
@@ -42,6 +43,7 @@
   --text:    #111118;
   --text2:   #555568;
   --text3:   #7e7e8d;
+  --text4: #787885;
   --day: #ffffff;
   --danger:  #d94040;
   --green:   #22a860;
@@ -174,8 +176,7 @@ a { color: inherit; text-decoration: none; }
 .sa-btn:hover { background: var(--surf2); color: var(--text); }
 /* "Follow system theme" is on: the manual Light / Dark buttons go away and the
    Lock button (flex:1) stretches across the whole sidebar footer. */
-html[data-follow-theme="true"] #themeLight,
-html[data-follow-theme="true"] #themeDark { display: none; }
+html[data-follow-theme="true"] #themeToggle { display: none; }
 .sa-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 
 /* ── Main + Panels ── */
@@ -205,6 +206,7 @@ html[data-follow-theme="true"] #themeDark { display: none; }
   padding: 14px 32px;
   border-top: 1px solid var(--border);
   background: var(--surf1);
+  backdrop-filter: opacity (0.3);
   box-shadow: 0 -6px 16px rgba(0,0,0,0.15);
 }
 
@@ -219,9 +221,12 @@ html[data-follow-theme="true"] #themeDark { display: none; }
 /* ═══ TOPBAR (History) ══════════════════════════════════════════════════════ */
 .topbar {
   background: var(--surf0);
-  border-bottom: 1px solid var(--border);
+  /* border-bottom: 1px solid var(--border); */
   padding: 14px 18px 12px;
   flex-shrink: 0;
+}
+html.wallpaper-mode .topbar {
+  border-bottom: 1px solid var(--border);
 }
 
 /* Date nav */
@@ -396,9 +401,9 @@ input[type="date"]:focus { border-color: var(--accent); }
   flex-shrink: 0;
   transition: all 0.1s;
 }
-.tb-btn:hover { background: var(--surf2) !important; color: var(--text) !important; }
+.tb-btn:hover { background: var(--surf2); color: var(--text); }
 .tb-btn.danger { color: var(--danger) !important; border-color: color-mix(in srgb, var(--danger) 30%, transparent) !important; }
-.tb-btn.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent) !important; }
+.tb-btn.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
 
 /* ═══ SELECTION BAR ══════════════════════════════════════════════════════════ */
 .sel-bar {
@@ -436,10 +441,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   position: relative;
   scrollbar-width: auto;
   scrollbar-color: var(--surf3) transparent;
-  background: var(--list-bg);
 }
-/* Wallpaper mode draws its own glass surface behind the list - keep it clear. */
-html.wallpaper-mode .list-area { background: transparent; }
 .list-area::-webkit-scrollbar { width: 10px; }
 .list-area::-webkit-scrollbar-thumb { background: var(--surf3); border-radius: 5px; }
 
@@ -452,14 +454,24 @@ html.wallpaper-mode .list-area { background: transparent; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text3);
+  color: var(--text4);
   background: var(--list-bg);
   position: sticky; top: 0; z-index: 4;
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid var(--border);
+  /* border-top: 1px solid var(--border); */
 }
-.day-label:first-child { border-top: none; }
-.day-visits { font-weight: 400; opacity: 0.6; }
+/* bar above the list showing the current day (wallpaper mode only) */
+.day-label-bar {
+  display: none;
+  flex-shrink: 0;
+  padding: 7px 18px 5px;
+  font-size: 0.68rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text4);
+}
+/* a header stacked under the one currently stuck at the top (see dayLabelStickyCheck) */
+.day-label.dl-covered { visibility: hidden; }
 
 /* ENTRY - click opens, checkbox selects */
 .entry {
@@ -1170,7 +1182,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .dn-pill.no-day { justify-content:center; }
 .dn-pill-label  { font-size:0.82rem; font-weight:500; line-height:1.2; }
 .dn-pill-day    { font-size:0.6rem; font-weight:400; color:var(--text3); line-height:1; }
-.dn-pill.active .dn-pill-day { color:rgba(255,255,255,0.65); }
+.dn-pill.active .dn-pill-day { color:#fff; }
 
 /* ── Context menu ── */
 .ctx-item  { padding:7px 14px;border-radius:5px;cursor:pointer;color:var(--text);white-space:nowrap }
@@ -1556,6 +1568,7 @@ span {
     padding: 2px;
     margin-bottom: 20px;
     place-items: center;
+    color: var(--text2);
 }
 .ignore-toggle-label{
     margin-left: 20px;

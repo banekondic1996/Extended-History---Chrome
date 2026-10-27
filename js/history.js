@@ -394,8 +394,14 @@ chrome.runtime.onMessage.addListener((m) => {
 function applyTheme() {
   const t = window.EhTheme ? EhTheme.effective() : (document.documentElement.getAttribute('data-theme') || 'dark');
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeLight')?.classList.toggle('active', t === 'light');
-  document.getElementById('themeDark')?.classList.toggle('active', t === 'dark');
+  // One button: it offers the other mode (dark now → "☀ Light", light now → "🌙 Dark")
+  const tt = document.getElementById('themeToggle');
+  if (tt) {
+    const next = t === 'dark' ? 'light' : 'dark';
+    const ic = document.getElementById('themeToggleIcon'), lb = document.getElementById('themeToggleLbl');
+    if (ic) ic.textContent = next === 'light' ? '☀' : '🌙';
+    if (lb) { lb.setAttribute('data-i18n-key', next); lb.textContent = tr(next, next === 'light' ? 'Light' : 'Dark'); }
+  }
   // Re-apply wallpaper so overlay color adapts to new theme
   chrome.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
@@ -467,6 +473,7 @@ function buildVirtualList() {
   appendPage();          // render first page immediately
   setupScrollObserver(area);
   calScrollSpyCheck(area);
+  dayLabelStickyCheck(area);
 }
 
 function appendPage() {
@@ -490,7 +497,7 @@ function appendPage() {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
       hdr.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
-      hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
+      hdr.innerHTML = esc(dl);
       area.appendChild(hdr);
       prevDay = dl;
     }
@@ -562,6 +569,7 @@ function setupScrollObserver(area) {
       appendPage();
     }
     calScrollSpyCheck(area);
+    dayLabelStickyCheck(area);
   };
 }
 
@@ -1270,6 +1278,38 @@ function buildCalHourGrid() {
   updateCalHourGridState();
 }
 
+function dayLabelStickyCheck(area) {
+  if (!area || area._dlPending) return;
+  area._dlPending = true;
+  requestAnimationFrame(() => {
+    area._dlPending = false;
+    const labels = area.getElementsByClassName('day-label');
+    const n = labels.length;
+    const bar = area.id === 'listArea' ? document.getElementById('dayLabelBar')
+              : area.id === 'rmListArea' ? document.getElementById('rmDayLabelBar') : null;
+    if (!n) { area._dlN = 0; area._dlLen = 0; if (bar) bar.textContent = ''; return; }
+    const limit = area.getBoundingClientRect().top + 1;
+    let lo = 0, hi = n - 1, cur = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (labels[mid].getBoundingClientRect().top <= limit) { cur = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    const want = Math.max(cur, 0);                       // labels [0, want) are covered
+    if (bar) {                                           // wallpaper mode: bar above the list shows the current day
+      const t = labels[want].textContent;
+      if (bar.textContent !== t) bar.textContent = t;
+      labels[0].classList.add('dl-top');
+    }
+    if (n !== area._dlLen || labels[0] !== area._dlFirst) {
+      for (let i = 0; i < n; i++) labels[i].classList.toggle('dl-covered', i < want);   // list changed: redo all
+    } else if (want !== area._dlN) {
+      const a = Math.min(want, area._dlN), b = Math.max(want, area._dlN);
+      for (let i = a; i < b && i < n; i++) labels[i].classList.toggle('dl-covered', i < want);
+    }
+    area._dlN = want; area._dlLen = n; area._dlFirst = labels[0];
+  });
+}
+
 let _calScrollSpyPending = false;
 function calScrollSpyCheck(area) {
   if (filterDate) return; // only meaningful in All-time mode
@@ -1511,6 +1551,7 @@ function removeEntryFromView(id) {
   // If that was the last entry for this date, drop the now-empty day header too.
   if (date && !area.querySelector(`.entry[data-date="${CSS.escape(date)}"]`)) {
     area.querySelector(`.day-label[data-date="${CSS.escape(date)}"]`)?.remove();
+    dayLabelStickyCheck(area);
   }
 
   if (!allResults.length) {
@@ -4411,10 +4452,11 @@ async function refreshAutoExportStatus() {
     const r = await send('GET_AUTO_EXPORT_STATUS');
     if (!r.enabled) { el.textContent = tr('disabled', 'Disabled'); return; }
     const parts = [];
-    if (r.lastRunAt) parts.push(tr('auto_export_last', 'Last export: {0}', new Date(r.lastRunAt).toLocaleDateString()));
+    if (r.lastRunAt) parts.push(tr('auto_export_last', 'Last export: {0}').replace('{0}', new Date(r.lastRunAt).toLocaleDateString()));
     parts.push(Date.now() >= r.nextDueAt
       ? tr('auto_export_due', 'Due — will run on next check')
-      : tr('auto_export_next', 'Next export: {0}', new Date(r.nextDueAt).toLocaleDateString()));
+      : tr('auto_export_next', 'Next export: {0}').replace('{0}',new Date(r.nextDueAt).toLocaleDateString())
+              );
     el.textContent = parts.join(' · ');
   } catch {
     el.textContent = '';
@@ -5457,6 +5499,7 @@ function rmUnload() {
   document.getElementById('rm-reader').style.display   = 'none';
   document.getElementById('rmDateScroll').innerHTML    = '';
   if (rmListArea()) rmListArea().innerHTML             = '';
+  const _rmBar = document.getElementById('rmDayLabelBar'); if (_rmBar) _rmBar.textContent = '';
 }
 
 // ── Date nav ─────────────────────────────────────────────────────────────────
@@ -5553,12 +5596,15 @@ function rmDoFilter() {
   const area = rmListArea();
   if (!_rmFiltered.length) {
     area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No entries found</div>`;
+    dayLabelStickyCheck(area);
     return;
   }
   area.innerHTML = '';
   rmAppendPage();
+  dayLabelStickyCheck(area);
   area.onscroll = () => {
     if (area.scrollTop + area.clientHeight >= area.scrollHeight - 400) rmAppendPage();
+    dayLabelStickyCheck(area);
   };
 }
 
@@ -5577,7 +5623,7 @@ function rmAppendPage() {
     if (dl !== prevDay) {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
-      hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
+      hdr.innerHTML = esc(dl);
       area.appendChild(hdr);
       prevDay = dl;
     }
@@ -5602,6 +5648,7 @@ function rmAppendPage() {
 
   _rmVsOffset += slice.length;
   _rmVsLoading = false;
+  dayLabelStickyCheck(area);
 }
 
 // ── Wire up drop zone + file input ───────────────────────────────────────────
@@ -6507,7 +6554,7 @@ function applyWallpaper(wp) {
       background: ${glassRgba(overlayOpacity)} !important;
       backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
       -webkit-backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
-      border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+      border-color: var(--border) !important;
     }
 
     html.wallpaper-mode .modal-box,
@@ -6516,39 +6563,38 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .ctxMenu,
     html.wallpaper-mode .kpi-card,
     html.wallpaper-mode .modal-inner,
-    html.wallpaper-mode .ignore-add,
     html.wallpaper-mode .ignore-item,
     html.wallpaper-mode .session-card,
     html.wallpaper-mode .device-card,
     html.wallpaper-mode .ts-card,
     html.wallpaper-mode .bm-item,
     html.wallpaper-mode .mv-item,
-    html.wallpaper-mode .day-label, .bm-tree-pane, .bm-toolbar, .sel-bar.on{
+    html.wallpaper-mode .settings-save-bar,
+    .bm-tree-pane, .bm-toolbar, .sel-bar.on{
       background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
       color:var(--text2);
     }
-    /* The history list gets its own glass layer stacked on top of .main's
-       (which carries the same tint as the sidebar): a faint white lift over
-       the dark glass (list lighter than the UI in dark mode), and a faint
-       black shade over the light glass (list darker than the UI in light
-       mode). */
+
+    /* Day label bar sits ABOVE the list (outside the scroll area) so it never overlaps entries.
+       The in-list labels become plain, non-sticky separators; the first one is redundant with the bar. */
+    html.wallpaper-mode .day-label-bar { display: block !important; }
+    html.wallpaper-mode .day-label-bar:empty { display: none !important; }
+    html.wallpaper-mode .day-label{ background:none !important; }
+    html.wallpaper-mode #listArea .day-label { position: static !important; }
+    html.wallpaper-mode #rmListArea .day-label { position: static !important; }
+    html.wallpaper-mode #listArea .day-label.dl-top { display: none !important; border:none !important }
+    html.wallpaper-mode #rmListArea .day-label.dl-top { display: none !important; border:none !important }
+
     html.wallpaper-mode .list-area {
       background: ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'} !important;
     }
-    /* Sticky date headers must blend into that list surface: no tint of their
-       own (a second layer would show as a lighter band), just a blur so rows
-       scrolling underneath stay legible. */
     /* Settings > Match UI colors: no tint of its own - the list shows the same
        glass as the sidebar / calendar sidebar / main panel behind it. */
     html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
-    html.wallpaper-mode .list-area .day-label {
-      background:  ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)'} !important;
-      text-shadow: 0px 0px 9px var(--day);
 
-      -webkit-backdrop-filter: blur(10px) !important;
-    }
+
     html.wallpaper-mode #ctxMenu {
       background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
       backdrop-filter: blur(20px) saturate(1.6) !important;
@@ -6573,13 +6619,7 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .topbar {
       background: transparent !important;
     }
-    /* .entry rows tile edge-to-edge across .list-area, so giving each one
-       its own glass layer (like the card elements above) stacked another
-       ~55% opaque layer on every row across the whole list — compounding
-       with .main's glass until the list read as solid instead of frosted.
-       Keep just the border for row separation; .main's glass carries the
-       actual background here. Hover/selected states still get their own
-       solid highlight from the base stylesheet. */
+
     html.wallpaper-mode .entry {
       background: transparent !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} !important;
@@ -6592,7 +6632,7 @@ function applyWallpaper(wp) {
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
   
     }
-    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
+    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .chip, .wp-src-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
       background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
       color:var(--text2) !important;
@@ -6944,8 +6984,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {}
 
   // Theme buttons
-  document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
-  document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    setTheme((window.EhTheme ? EhTheme.effective() : document.documentElement.getAttribute('data-theme')) === 'dark' ? 'light' : 'dark');
+  });
   // Follow-system toggle: previews immediately, saved with "Save Settings" (or reverted on discard)
   document.getElementById('followSystemThemeToggle')?.addEventListener('change', ev => {
     if (window.EhTheme) EhTheme.set(ev.target.checked, _curSettings.theme === 'light' ? 'light' : 'dark', false);
