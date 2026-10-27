@@ -189,6 +189,10 @@ Fixed/changed in version 4.2.4:
 -Bug fixes regarding export time displaying as "{0}"
 -Added Changelog and Tutorial button in "More" tab
 -CSS fixes 
+
+ Fixed/changed in version 4.2.5:
+-CSS fixes for bookmarks, UI and link highlighting
+-Duplicate icon in bookmark context menu fix
 </pre>
 
 
