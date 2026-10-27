@@ -25,7 +25,7 @@
 
 (function () {
   var track   = document.getElementById('track');
-  var cards   = 6;
+  var cards   = 7;
   var dotsEl  = document.getElementById('dots');
   var prevBtn = document.getElementById('prevBtn');
   var nextBtn = document.getElementById('nextBtn');
@@ -34,7 +34,7 @@
   for (let idx = 0; idx < cards; idx++) {
     var d = document.createElement('button');
     d.className = 'dot' + (idx === 0 ? ' active' : '');
-    d.setAttribute('aria-label', 'Go to tip ' + (idx + 1) + ' of ' + cards.length);
+    d.setAttribute('aria-label', 'Go to tip ' + (idx + 1) + ' of ' + cards);
     d.addEventListener('click', function () { go(idx); });
     dotsEl.appendChild(d);
   }
