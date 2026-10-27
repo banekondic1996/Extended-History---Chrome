@@ -796,13 +796,13 @@
 
         <div class="s-card">
           <div class="s-card-title" data-i18n-key="ui">UI</div>
-          <div class="s-row">
+          <div class="s-row" style="opacity: 0.4;">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="favicon_resolver">Favicon resolver</div>
               <div class="s-row-desc" data-i18n-key="favicon_resolver_desc">How site icons are fetched. "Google" fetches live from Google's CDN each time. "Cached" fetches from Google once then stores icons locally — fastest after first load, works offline.</div>
             </div>
             <div class="s-ctrl">
-              <select id="faviconResolverSel">
+              <select id="faviconResolverSel" disabled>
                 <option value="google" data-i18n-key="google_resolver">Google resolver</option>
                 <option value="cached" data-i18n-key="cached_resolver">Cached (local)</option>
               </select>

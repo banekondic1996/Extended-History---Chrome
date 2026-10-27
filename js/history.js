@@ -466,6 +466,18 @@ function buildVirtualList() {
 
   if (!allResults.length) {
     area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
+    // No day-label elements exist, so dayLabelStickyCheck can't update the bar: set it from the selected date
+    // (otherwise it keeps showing the previous day).
+    const _bar = document.getElementById('dayLabelBar');
+    if (_bar) {
+      let t = '';
+      if (filterDate) {
+        const [y, m, d] = filterDate.split('-').map(Number);
+        if (y && m && d) t = dayLabel(new Date(y, m - 1, d).getTime());
+      }
+      _bar.textContent = t;
+    }
+    area._dlN = 0; area._dlLen = 0;
     return;
   }
 
