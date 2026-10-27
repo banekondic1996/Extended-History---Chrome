@@ -4452,7 +4452,7 @@ async function refreshAutoExportStatus() {
     const r = await send('GET_AUTO_EXPORT_STATUS');
     if (!r.enabled) { el.textContent = tr('disabled', 'Disabled'); return; }
     const parts = [];
-    if (r.lastRunAt) parts.push(tr('auto_export_last', 'Last export: {0}').replace('{0}', new Date(r.lastRunAt).toLocaleDateString()));
+    if (r.lastRunAt) parts.push(tr('last_export', 'Last export:')+('{0}').replace('{0}', new Date(r.lastRunAt).toLocaleDateString()));
     parts.push(Date.now() >= r.nextDueAt
       ? tr('auto_export_due', 'Due — will run on next check')
       : tr('auto_export_next', 'Next export: {0}').replace('{0}',new Date(r.nextDueAt).toLocaleDateString())
