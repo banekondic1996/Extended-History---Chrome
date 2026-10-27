@@ -194,6 +194,7 @@ Fixed/changed in version 4.2.4:
 Fixed/changed in version 4.2.5:
 -CSS fixes for bookmarks, UI and link highlighting
 -Duplicate icon in bookmark context menu fix
+-Disabled favicon resolver option, until fixed for local cache
 </pre>
 
 
