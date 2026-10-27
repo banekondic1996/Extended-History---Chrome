@@ -188,6 +188,7 @@ Fixed/changed in version 4.2.4:
 -Disabling emojis in navigation menu, disables them in context menu too now
 -Bug fixes regarding export time displaying as "{0}"
 -Added Changelog and Tutorial button in "More" tab
+-CSS fixes 
 </pre>
 
 
