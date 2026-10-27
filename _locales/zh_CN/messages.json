@@ -241,7 +241,7 @@
   "message": "✏️ 重命名书签"
 },
 "remove_bookmark": {
-    "message": "🗑 删除书签"
+    "message": "删除书签"
   },
    "quick_filters": {
     "message": "快速筛选"

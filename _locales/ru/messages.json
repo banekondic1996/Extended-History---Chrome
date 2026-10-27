@@ -241,7 +241,7 @@
   "message": "✏️ Переименовать закладку"
 },
   "remove_bookmark": {
-    "message": "🗑 Удалить закладку"
+    "message": "Удалить закладку"
   },
   "quick_filters": {
     "message": "Быстрые фильтры"

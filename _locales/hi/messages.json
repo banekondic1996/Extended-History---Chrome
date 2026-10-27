@@ -242,7 +242,7 @@
   "message": "✏️ बुकमार्क का नाम बदलें"
 },
  "remove_bookmark": {
-    "message": "🗑 बुकमार्क हटाएँ"
+    "message": "बुकमार्क हटाएँ"
   },
   "quick_filters": {
     "message": "त्वरित फ़िल्टर"

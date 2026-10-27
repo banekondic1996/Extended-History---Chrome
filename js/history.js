@@ -6543,6 +6543,7 @@ function applyWallpaper(wp) {
   const style = document.createElement('style');
   style.id = 'eh-wallpaper-style';
   style.textContent = `
+    .bm-tree-pane, .bm-toolbar { background: transparent;}
     html.wallpaper-mode body { background: transparent !important; }
 
     /* Primary glass surfaces — blur amount and tint come straight from the
@@ -6567,10 +6568,9 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .session-card,
     html.wallpaper-mode .device-card,
     html.wallpaper-mode .ts-card,
-    html.wallpaper-mode .bm-item,
     html.wallpaper-mode .mv-item,
     html.wallpaper-mode .settings-save-bar,
-    .bm-tree-pane, .bm-toolbar, .sel-bar.on{
+    .sel-bar.on{
       background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
@@ -6621,7 +6621,6 @@ function applyWallpaper(wp) {
     }
 
     html.wallpaper-mode .entry {
-      background: transparent !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} !important;
     }
     html.wallpaper-mode .action-btn,
@@ -6632,7 +6631,7 @@ function applyWallpaper(wp) {
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
   
     }
-    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .chip, .wp-src-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
+    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .chip, .wp-src-btn, .nav-arrow, .bm-sel-btn, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
       background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
       color:var(--text2) !important;

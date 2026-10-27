@@ -245,7 +245,7 @@
   "message": "✏️ बुकमार्क का नाम बदलें"
 },
  "remove_bookmark": {
-    "message": "🗑 Signaculum remove"
+    "message": "Signaculum remove"
   },
   "quick_filter_desc": {
     "message": "Serva gregem nominatum ditionum, verborum clavium vel URL (exempli gratia \"Media socialia\" → facebook.com, instagram.com, pinterest.com). Elige eum ex indice iuxta capsam quaerendi in pagina Historiae ut statim tantum illa elementa filtres."

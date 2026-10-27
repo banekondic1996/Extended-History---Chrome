@@ -240,7 +240,7 @@
   "message": "✏️ Gi bokmerket nytt navn"
 },
   "remove_bookmark": {
-    "message": "🗑 Fjern bokmerke"
+    "message": "Fjern bokmerke"
   },
   "quick_filters": {
     "message": "Hurtigfiltre"
