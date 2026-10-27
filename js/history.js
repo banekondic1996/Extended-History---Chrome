@@ -4441,7 +4441,7 @@ function ehInitBackupExtras(s) {
   const rb = document.getElementById('ehRedownloadBtn');
   rb.disabled = !(last && last.until);
   document.getElementById('ehRedownloadNote').textContent = last && last.until
-    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries', new Date(last.until).toLocaleString(), fmtNum(last.count || 0))
+    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries').replace('{0}', new Date(last.until).toLocaleString()).replace('{1}', fmtNum(last.count || 0))
     : tr('no_incremental_backup_yet', 'No incremental backup made yet');
 }
 
