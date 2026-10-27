@@ -24,7 +24,6 @@ Originally made just because of 90 days limit in chromium,<br>instead of rebuild
 **To do (ordered by importance):**
 <pre>
 -Added regex support to search
--Add button to re-download last made incremental backup
 -Add support to import from Google Takeout
 -Popup/sidebar deleting in progress modal is missing
 -Fix browser cache based favicon resolver, by saving small favicons as base64 in localstorage
