@@ -4825,7 +4825,7 @@ async function ehRunImport(file, allowRetentionPrompt) {
   if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
   if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
   if (st.invalid) notes.push(`${fmtNum(st.invalid)} invalid`);
-  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)}`+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
+  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)} `+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
   invalidateHistCache();
   doSearch();
 
