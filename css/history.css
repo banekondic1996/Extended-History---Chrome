@@ -170,7 +170,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--text2);
   font-size: 0.75rem;
   text-align: center;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
   overflow-wrap: anywhere;
 }
 .sa-btn:hover { background: var(--surf2); color: var(--text); }
@@ -245,7 +245,7 @@ html.wallpaper-mode .topbar {
   display: flex; align-items: center; justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
 }
 .nav-arrow:hover { background: var(--surf2); color: var(--text); border-color: var(--accent); }
 
@@ -266,7 +266,7 @@ html.wallpaper-mode .topbar {
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.12s;
+  /* transition: all 0.12s; */
   cursor: pointer;
 }
 .dn-pill:hover { border-color: var(--accent); color: var(--text); background: var(--surf2); }
@@ -298,7 +298,7 @@ html.wallpaper-mode .topbar {
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
   font-family: var(--font-mono);
   cursor: pointer;
 }
@@ -399,7 +399,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
 }
 .tb-btn:hover { background: var(--surf2); color: var(--text); }
 .tb-btn.danger { color: var(--danger) !important; border-color: color-mix(in srgb, var(--danger) 30%, transparent) !important; }
@@ -428,7 +428,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   color: var(--text2);
   font-size: 0.75rem;
   font-weight: 500;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
 }
 .sel-action-btn:hover { background: var(--surf2); color: var(--text); }
 .sel-action-btn.del { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
@@ -498,7 +498,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   border-radius: 5px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
   background: none;
   opacity: 0;
   cursor: pointer;
@@ -541,7 +541,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   background: none; color: transparent;
   font-size: 14px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
 }
 .entry:hover .e-del-btn { color: var(--text3); }
 .e-del-btn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger) !important; }
@@ -666,7 +666,7 @@ input[type="date"]:focus { border-color: var(--accent); }
   border: 1.5px solid var(--border2);
   background: var(--surf1); color: var(--text2);
   font-size: 0.82rem; font-weight: 500;
-  transition: all 0.12s;
+  /* transition: all 0.12s; */
 }
 .tf-btn:hover { border-color: var(--accent); color: var(--text); }
 .tf-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 35%, transparent); }
@@ -676,7 +676,8 @@ input[type="date"]:focus { border-color: var(--accent); }
   background: var(--surf1); color: var(--text2);
   font-size: 1rem; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s; cursor: pointer;
+  /* transition: all 0.12s; */
+  cursor: pointer;
 }
 .tf-arrow:hover { border-color: var(--accent); color: var(--accent); }
 .tf-arrow:active { transform: scale(0.92); }
@@ -697,7 +698,7 @@ input[type="date"]:focus { border-color: var(--accent); }
 }
 .dc-head-collapsible {
   cursor: pointer; user-select: none;
-  transition: background 0.1s;
+  /* transition: background 0.1s; */
 }
 .dc-head-collapsible:hover { background: var(--surf2); }
 .dc-toggle {
@@ -714,7 +715,8 @@ input[type="date"]:focus { border-color: var(--accent); }
 .dc-row {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 20px; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background 0.1s;
+  cursor: pointer; 
+  /* transition: background 0.1s; */
 }
 .dc-row:last-child { border-bottom: none; }
 .dc-row:hover { background: var(--surf1); }
@@ -924,7 +926,8 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
 .cs {
   width: 24px; height: 24px; border-radius: 50%;
-  border: 2px solid transparent; cursor: pointer; transition: all 0.1s;
+  border: 2px solid transparent; cursor: pointer; 
+  /* transition: all 0.1s; */
 }
 .cs:hover, .cs.on { border-color: var(--text); transform: scale(1.2); }
 
@@ -934,7 +937,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   border: 1.5px solid var(--border2);
   background: var(--surf1); color: var(--text2);
   font-size: 0.82rem; font-weight: 500;
-  transition: all 0.1s;
+  /* transition: all 0.1s; */
 }
 .action-btn:hover { background: var(--surf2); color: var(--text); }
 .action-btn.primary {
@@ -990,7 +993,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   display: flex; align-items: center; gap: 6px;
   padding: 8px 12px; cursor: pointer;
   font-size: 0.85rem; color: var(--text2);
-  transition: background 0.08s, color 0.08s;
+  /* transition: background 0.08s, color 0.08s; */
   white-space: nowrap; overflow: hidden;
   border-radius: 0;
   user-select: none;
@@ -1011,7 +1014,8 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 .bm-tr-toggle {
   font-size: 9px; color: var(--text3); flex-shrink: 0;
   width: 20px; min-height: 20px; text-align: center;
-  transition: transform 0.15s; display: inline-flex;
+  /* transition: transform 0.15s; */
+  display: inline-flex;
   align-items: center; justify-content: center;
   border-radius: 3px; cursor: pointer; pointer-events: all;
 }
@@ -1055,7 +1059,9 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 /* Drag handle */
 .bm-drag-handle {
   color: var(--text3); font-size: 13px; cursor: grab; flex-shrink: 0;
-  opacity: 0; transition: opacity 0.1s; padding: 0 2px;
+  opacity: 0; 
+  transition: opacity 0.1s;
+  padding: 0 2px;
 }
 .bm-item:hover .bm-drag-handle { opacity: 1; }
 .bm-item.bm-dragging { opacity: 0.4; background: var(--surf2); }
@@ -1140,7 +1146,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
   display: flex; align-items: center; gap: 8px;
   padding: 9px 14px; cursor: pointer; font-size: 0.85rem;
   color: var(--text2); border-bottom: 1px solid var(--border);
-  transition: background 0.08s;
+  /* transition: background 0.08s; */
 }
 .bm-move-folder-row:last-child { border-bottom: none; }
 .bm-move-folder-row:hover { background: var(--surf1); color: var(--text); }
@@ -1274,7 +1280,7 @@ body.cal-sidebar-active .main {
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.12s;
+  /* transition: all 0.12s; */
 }
 .cal-alltime-btn:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
 .cal-alltime-btn.active { background: 
@@ -1286,7 +1292,8 @@ body.cal-sidebar-active .main {
 .cal-arrow-btn {
   flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
   background: var(--surf2); border: 1px solid var(--border2); color: var(--text2);
-  font-size: 1rem; line-height: 1; cursor: pointer; transition: all 0.12s;
+  font-size: 1rem; line-height: 1; cursor: pointer; 
+  /* transition: all 0.12s; */
 }
 .cal-arrow-btn:hover { background: var(--surf3); color: var(--text); }
 .cal-head-labels { display: flex; gap: 6px; flex: 1; justify-content: center; }
@@ -1303,7 +1310,8 @@ body.cal-sidebar-active .main {
 .cal-day-cell {
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; border-radius: 8px;
-  font-size: 0.78rem; color: var(--text); cursor: pointer; transition: all 0.1s;
+  font-size: 0.78rem; color: var(--text); cursor: pointer; 
+  /* transition: all 0.1s; */
 }
 .cal-day-cell:hover { background: var(--surf2); }
 .cal-day-cell.outside { color: var(--text3); opacity: 0.4; }
@@ -1334,7 +1342,7 @@ body.cal-sidebar-active .main {
 .cal-daynav-btn {
   flex: 1; padding: 8px 6px; background: var(--surf2); border: 1px solid var(--border2);
   border-radius: 8px; color: var(--text2); font-size: 0.76rem; font-weight: 600; cursor: pointer;
-  transition: all 0.12s;
+  /* transition: all 0.12s; */
 }
 .cal-daynav-btn:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -1342,7 +1350,8 @@ body.cal-sidebar-active .main {
 .cal-hours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .cal-hour-cell {
   padding: 7px 2px;  margin: 1px; text-align: center; background: var(--surf2); border: 1px solid transparent;
-  border-radius: 7px; font-size: 0.72rem; color: var(--text2); cursor: pointer; transition: all 0.1s;
+  border-radius: 7px; font-size: 0.72rem; color: var(--text2); cursor: pointer; 
+  /* transition: all 0.1s; */
 }
 .cal-hour-cell:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
 .cal-hour-cell.active {     background: 
@@ -1367,7 +1376,9 @@ body.cal-narrow .cal-sidebar.cal-revealed { transform: translateX(0); }
 .dh-range-btn {
   padding:11px 10px;border-radius:8px;
   border:1.5px solid var(--border2);background:var(--surf2);color:var(--text2);
-  font-size:0.82rem;font-weight:500;text-align:center;transition:all 0.12s;cursor:pointer;
+  font-size:0.82rem;font-weight:500;text-align:center;
+  /* transition:all 0.12s; */
+  cursor:pointer;
 }
 .dh-range-btn:hover { border-color:var(--danger);color:var(--danger);background:color-mix(in srgb,var(--danger) 6%,transparent); }
 .dh-range-btn.active { border-color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);font-weight:600; }
@@ -1597,7 +1608,7 @@ span {
 .mv-item:hover {
   background: var(--surf2);
   border-color: var(--accent);
-  transform: translateY(-1px);
+  transform: translateY(-2px)
 }
 
 .mv-rank {

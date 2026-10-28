@@ -232,7 +232,7 @@
     "message": "Create password"
   },
   "rename_bookmark": {
-  "message": "✏️ Rename bookmark"
+  "message": "Rename bookmark"
 },
  "lock_warning_title": {
     "message": "Lock history?"

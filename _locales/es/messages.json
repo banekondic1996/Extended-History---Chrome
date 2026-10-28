@@ -216,7 +216,7 @@
     "message": "Crear contraseña"
   },
   "rename_bookmark": {
-  "message": "✏️ Cambiar nombre del marcador"
+  "message": "Cambiar nombre del marcador"
 },
  "lock_warning_title": {
     "message": "¿Bloquear el historial?"

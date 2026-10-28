@@ -238,7 +238,7 @@
     "message": "正在加密…"
   },
   "rename_bookmark": {
-  "message": "✏️ 重命名书签"
+  "message": "重命名书签"
 },
 "remove_bookmark": {
     "message": "删除书签"

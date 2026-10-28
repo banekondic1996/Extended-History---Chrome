@@ -238,7 +238,7 @@
     "message": "Шифрование…"
   },
   "rename_bookmark": {
-  "message": "✏️ Переименовать закладку"
+  "message": "Переименовать закладку"
 },
   "remove_bookmark": {
     "message": "Удалить закладку"
