@@ -196,6 +196,10 @@ Fixed/changed in version 4.2.5:
 -UI fixes
 -Duplicate icon in bookmark context menu fix
 -Disabled favicon resolver option, until fixed for local cache
+
+Fixed/changed in version 4.2.6:
+-Removed unnecessary transitions for better UI responsiveness
+-UI bug fix (bookmarks context menu with navigation icons disabled, showed one icon)
 </pre>
 
 
