@@ -201,6 +201,7 @@ Fixed/changed in version 4.2.6:
 -Removed unnecessary transitions for better UI responsiveness
 -UI bug fix (bookmarks context menu with navigation icons disabled, showed one icon)
 -Popup recent history search bug fix
+-Holding next/previous day button now switches through dates
 </pre>
 
 
