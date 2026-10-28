@@ -946,8 +946,23 @@ function buildDateNav(retentionDays) {
       if (next === cur) return;                       // already at the first / last pill
       activateDatePill(vpKey(next));
     }
-    L.addEventListener('click', () => step(-1));
-    R.addEventListener('click', () => step(1));
+    // Hold an arrow to keep stepping through the dates (first step immediately, then repeating after a short delay).
+    function bindHold(btn, dir) {
+      let delayT = null, repT = null;
+      const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; };
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        stop();
+        step(dir);
+        delayT = setTimeout(() => { repT = setInterval(() => step(dir), 110); }, 420);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, stop));
+      window.addEventListener('pointerup', stop);
+      // Keyboard activation (Enter/Space) has no pointer events: detail === 0 there.
+      btn.addEventListener('click', (e) => { if (e.detail === 0) step(dir); });
+    }
+    bindHold(L, -1);
+    bindHold(R, 1);
 
     // Right-click: ‹ jumps to the newest day (today), › jumps to the oldest day that has history
     L.addEventListener('contextmenu', (e) => { e.preventDefault(); jumpToNewestDay(); });

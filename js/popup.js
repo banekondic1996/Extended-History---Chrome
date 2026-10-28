@@ -586,7 +586,33 @@ function performSearch(query) {
             return;
         }
 
-        const matches = response.entries || [];
+        // Very recent visits may not be in the database yet: merge them in from the live recent history
+        // (same as the main history page does), so a site you just visited is found by search too.
+        chrome.runtime.sendMessage({ type: 'GET_RECENT_HISTORY' }, (rr) => {
+            if (gen !== _popSearchGen) return;
+            let live = [];
+            if (!chrome.runtime.lastError && rr && Array.isArray(rr.entries)) {
+                const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+                const exprOn = !!(window.EhExpr && window.EhExpr.on());
+                const hit = (e) => {
+                    const hay = ((e.url || '') + ' ' + (e.title || '') + ' ' + (e.domain || tryDomain(e.url || ''))).toLowerCase();
+                    if (exprOn && window.EhExpr.test) return window.EhExpr.test(query, hay);
+                    return words.every(w => hay.includes(w));
+                };
+                const dk = (e) => (e.url || '') + '|' + Math.floor((Number(e.visitTime) || 0) / 5000);
+                const seen = new Set((response.entries || []).map(dk));
+                live = rr.entries.filter(hit).filter(e => { const k = dk(e); if (seen.has(k)) return false; seen.add(k); return true; });
+                if (typeof qfPopupFilter === 'function') live = qfPopupFilter(live);
+            }
+            const merged = live.length
+                ? live.concat(response.entries || []).sort((a, b) => b.visitTime - a.visitTime).slice(0, 100)
+                : (response.entries || []);
+            renderSearchResults(merged, resultsEl);
+        });
+    });
+}
+
+function renderSearchResults(matches, resultsEl) {
         _srchEntries = matches;
 
         if (!matches.length) {
@@ -677,7 +703,6 @@ function performSearch(query) {
 
             resultsEl.appendChild(row);
         }
-    });
 }
 
 // ── Recent history — read today's history live from Chrome API via background ──
@@ -1773,18 +1798,30 @@ if (document.body.classList.contains('sidebar-mode')) {
     if (sdnRight && openBtn)  sdnRight.appendChild(openBtn);
 
     // Left arrow (‹) — forward toward today
-    document.getElementById('sdnPrev')?.addEventListener('click', () => {
+    const sdnStepPrev = () => {
         if (isViewingToday()) return; // can't go past today
         const d = new Date(_sidebarViewDate);
         d.setDate(d.getDate() + 1);
         sdnGoToDate(d);
-    });
+    };
     // Right arrow (›) — back in time
-    document.getElementById('sdnNext')?.addEventListener('click', () => {
+    const sdnStepNext = () => {
         const d = new Date(_sidebarViewDate);
         d.setDate(d.getDate() - 1);
         sdnGoToDate(d);
-    });
+    };
+    // Hold an arrow to keep switching days.
+    const sdnHold = (id, fn) => {
+        const btn = document.getElementById(id); if (!btn) return;
+        let dt = null, rt = null;
+        const stop = () => { clearTimeout(dt); clearInterval(rt); dt = rt = null; };
+        btn.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; stop(); fn(); dt = setTimeout(() => { rt = setInterval(fn, 150); }, 420); });
+        ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, stop));
+        window.addEventListener('pointerup', stop);
+        btn.addEventListener('click', (e) => { if (e.detail === 0) fn(); });
+    };
+    sdnHold('sdnPrev', sdnStepPrev);
+    sdnHold('sdnNext', sdnStepNext);
     document.getElementById('sdnDateLabel')?.addEventListener('click', sdnOpenCalendar);
     // Clear button — resets any active search filter and jumps back to today
     document.getElementById('sdnClear')?.addEventListener('click', () => {
