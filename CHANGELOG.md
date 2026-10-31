@@ -209,7 +209,7 @@ Fixed/changed in version 4.2.7:
 -Added bookmark filtering
 -Added search/filtered history export encryption option
 -Fixed popup not searching whole history from extension
-
+-Fixed search input context menu paste not working
 </pre>
 
 
