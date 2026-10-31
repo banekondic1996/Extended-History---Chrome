@@ -65,6 +65,9 @@ const DEFAULT_SETTINGS = {
   autoExportEncrypt: false,    // incremental auto exports are encrypted with a password (see encryptExportParts)
   autoExportEncKey: '',        // base64 of the DOUBLE-HASHED password (PBKDF2 → SHA-256) = the AES key; the password itself is never stored
   autoExportEncSalt: '',       // base64 salt of that PBKDF2 (also written into every encrypted file so import can derive the key)
+  alwaysEncryptExports: false, // Settings → "Always encrypt search/filtered exports": every export is encrypted (history.js writes the other kinds)
+  exportEncKey: '',            // base64 double-hashed export password (the AES key) — never the password itself
+  exportEncSalt: '',           // base64 salt for that key (also written into every encrypted file)
   autoExportLastIncremental: null, // {since, until, at, count} of the last incremental export → "Re-download last incremental backup"
 };
 const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
@@ -3217,6 +3220,14 @@ async function handle(msg) {
       const list=await getSessions();
       const maxSess=await getMaxSessions();
       return {sessions:list.slice().reverse(),current:sessionId?{id:sessionId,start:sessionStart,tabs:Object.values(sessionTabs).filter(t=>t.url&&t.closed===null)}:null,maxSessions:maxSess};
+    }
+    case 'DELETE_SESSION': {
+      // Past sessions only (the active one lives in memory). Matches by id; older sessions without an id by start time.
+      const list = await getSessions();
+      const next = list.filter(x => msg.id ? x.id !== msg.id : x.start !== msg.start);
+      if (next.length === list.length) return { error: 'Session not found' };
+      await chrome.storage.local.set({ [SESSIONS_KEY]: next });
+      return { success: true };
     }
     case 'GET_TAB_STORAGE': {
       return { entries: await getTabStorage() };

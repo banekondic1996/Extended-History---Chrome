@@ -25,7 +25,7 @@
 
 (function () {
   var track   = document.getElementById('track');
-  var cards   = 7;
+  var cards   = 8;
   var dotsEl  = document.getElementById('dots');
   var prevBtn = document.getElementById('prevBtn');
   var nextBtn = document.getElementById('nextBtn');

@@ -239,10 +239,19 @@
   },
   "rename_bookmark": {
   "message": "重命名书签"
-},
-"remove_bookmark": {
+  },
+  "remove_bookmark": {
     "message": "删除书签"
   },
+  "bm_sort_default": {"message": "排序：默认"},
+  "bm_sort_domain_asc": {"message": "排序：域名 A–Z"},
+  "bm_sort_domain_desc": {"message": "排序：域名 Z–A"},
+  "bm_sort_title_asc": {"message": "排序：标题 A–Z"},
+  "bm_sort_title_desc": {"message": "排序：标题 Z–A"},
+  "always_encrypt_exports": {"message": "始终加密搜索和筛选导出文件"},
+  "always_encrypt_exports_desc": {"message": "启用后，搜索和筛选导出文件将使用你在此处设置的密码进行 AES-256 加密。仅保存由密码派生的密钥，不会保存密码本身。请妥善保管密码：导入或打开文件时需要使用。"},
+  "set_export_password": {"message": "设置导出密码"},
+  "set_export_password_note": {"message": "导入或打开导出文件时需要此密码。如果忘记密码，加密的导出文件将无法恢复。"},
    "quick_filters": {
     "message": "快速筛选"
   },

@@ -238,7 +238,16 @@
   },
   "rename_bookmark": {
   "message": "Bladwijzer hernoemen"
-},
+  },
+  "bm_sort_default": {"message": "Sorteren: Standaard"},
+  "bm_sort_domain_asc": {"message": "Sorteren: Domein A–Z"},
+  "bm_sort_domain_desc": {"message": "Sorteren: Domein Z–A"},
+  "bm_sort_title_asc": {"message": "Sorteren: Titel A–Z"},
+  "bm_sort_title_desc": {"message": "Sorteren: Titel Z–A"},
+  "always_encrypt_exports": {"message": "Zoek- en gefilterde exports altijd versleutelen"},
+  "always_encrypt_exports_desc": {"message": "Wanneer dit is ingeschakeld, worden zoek- en gefilterde exports versleuteld (AES-256) met het wachtwoord dat je hier instelt. Alleen een van het wachtwoord afgeleide sleutel wordt opgeslagen, nooit het wachtwoord zelf. Bewaar je wachtwoord goed: je hebt het nodig om de bestanden te importeren of te openen."},
+  "set_export_password": {"message": "Exportwachtwoord instellen"},
+  "set_export_password_note": {"message": "Nodig om je exports te importeren of te openen. Als je het vergeet, kunnen versleutelde exports niet worden hersteld."},
   "remove_bookmark": {
     "message": "Bladwijzer verwijderen"
   },

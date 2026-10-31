@@ -215,9 +215,18 @@
   "create_password": {
     "message": "Crear contraseña"
   },
+  "bm_sort_default": {"message": "Ordenar: Predeterminado"},
+  "bm_sort_domain_asc": {"message": "Ordenar: Dominio A–Z"},
+  "bm_sort_domain_desc": {"message": "Ordenar: Dominio Z–A"},
+  "bm_sort_title_asc": {"message": "Ordenar: Título A–Z"},
+  "bm_sort_title_desc": {"message": "Ordenar: Título Z–A"},
+  "always_encrypt_exports": {"message": "Cifrar siempre las exportaciones de búsquedas y filtros"},
+  "always_encrypt_exports_desc": {"message": "Cuando está activado, las exportaciones de búsquedas y filtros se cifran (AES-256) con la contraseña que configures aquí. Solo se guarda una clave derivada de la contraseña, nunca la contraseña en sí. Conserva tu contraseña: la necesitarás para importar o abrir los archivos."},
+  "set_export_password": {"message": "Establecer contraseña de exportación"},
+  "set_export_password_note": {"message": "Necesaria para importar o abrir tus exportaciones. Si la olvidas, no podrás recuperar los archivos exportados cifrados."},
   "rename_bookmark": {
   "message": "Cambiar nombre del marcador"
-},
+  },
  "lock_warning_title": {
     "message": "¿Bloquear el historial?"
   },

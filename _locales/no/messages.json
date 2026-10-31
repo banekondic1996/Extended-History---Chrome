@@ -238,7 +238,16 @@
   },
   "rename_bookmark": {
   "message": "Gi bokmerket nytt navn"
-},
+  },
+  "bm_sort_default": {"message": "Sorter: Standard"},
+  "bm_sort_domain_asc": {"message": "Sorter: Domene A–Å"},
+  "bm_sort_domain_desc": {"message": "Sorter: Domene Å–A"},
+  "bm_sort_title_asc": {"message": "Sorter: Tittel A–Å"},
+  "bm_sort_title_desc": {"message": "Sorter: Tittel Å–A"},
+  "always_encrypt_exports": {"message": "Krypter alltid søke-/filtrerte eksporter"},
+  "always_encrypt_exports_desc": {"message": "Når dette er aktivert, krypteres søke-/filtrerte eksporter (AES-256) med passordet du angir her. Bare en nøkkel som er avledet fra passordet, lagres – aldri selve passordet. Ta vare på passordet: det trengs for å importere eller åpne filene."},
+  "set_export_password": {"message": "Angi eksportpassord"},
+  "set_export_password_note": {"message": "Nødvendig for å importere eller åpne eksportene dine. Hvis du glemmer det, kan krypterte eksporter ikke gjenopprettes."},
   "remove_bookmark": {
     "message": "Fjern bokmerke"
   },

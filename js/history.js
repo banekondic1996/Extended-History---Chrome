@@ -275,6 +275,38 @@ async function ehExportToBlob(begin, pw, onProgress) {
   return new Blob(blobs, { type: 'application/json' });
 }
 
+// ── "Always encrypt exports" (Settings → Data) ─────────────────────────────
+// Same file format as encrypted auto exports (v2, kdf "dh"): the AES-256-GCM key is SHA-256(PBKDF2(password, salt)).
+// Only that key + salt are kept in settings (alwaysEncryptExports / exportEncKey / exportEncSalt) — never the password —
+// so every export path can encrypt without asking. Importing (or the "Decrypt file" button) asks for the password.
+function ehAlwaysEnc() {
+  const s = _curSettings || {};
+  return s.alwaysEncryptExports === true && !!s.exportEncKey && !!s.exportEncSalt;
+}
+const EH_DH_CHUNK = 8e6;                           // characters of plain text per encrypted piece
+// Encrypts a Blob of text (streamed: nothing is held as one big string). ext = extension of the plain file, so the
+// "Decrypt file" button can name the result correctly (json for history, csv for time spent).
+async function ehEncryptBlobDH(blob, ext) {
+  const s = _curSettings;
+  const key = await crypto.subtle.importKey('raw', _b64toU8(s.exportEncKey), 'AES-GCM', false, ['encrypt']);
+  const out = [new Blob(['{"__eh_encrypted":true,"v":2,"kdf":"dh","ext":"' + (ext || 'json') + '","salt":"' + s.exportEncSalt + '",\n"chunks":[\n'])];
+  const reader = blob.stream().pipeThrough(new TextDecoderStream()).getReader();
+  let acc = '', pending = null;
+  const seal = async (text) => {
+    const line = await ehEncryptChunk(key, text);
+    if (pending !== null) out.push(new Blob([pending + ',\n']));
+    pending = line;
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    acc += value;
+    while (acc.length >= EH_DH_CHUNK) { await seal(acc.slice(0, EH_DH_CHUNK)); acc = acc.slice(EH_DH_CHUNK); }
+  }
+  if (acc || pending === null) await seal(acc);
+  out.push(new Blob([pending + '\n]}\n']));
+  return new Blob(out, { type: 'application/json' });
+}
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -520,6 +552,7 @@ function appendPage() {
     row.dataset.id   = e.id;
     row.dataset.url  = e.url;
     row.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
+    row.dataset.vt   = e.visitTime;
     row.innerHTML = `
     <div class="entry-check" data-id="${esc(e.id)}" title="Select">✓</div>
     <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
@@ -988,7 +1021,7 @@ async function jumpToOldestDay() {
   activateDatePill(vpKey(idx));
 }
 
-function activateDatePill(key, silent) {
+function activateDatePill(key, silent, hour) {
   filterHour = null;
   document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
   document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
@@ -1016,8 +1049,15 @@ function activateDatePill(key, silent) {
     }
   }
   updateHourPillsState();
+  // Optional hour (0–23): "Jump to date&time" lands on the day AND the hour in a single search
+  if (hour != null && filterDate) {
+    filterHour = hour;
+    document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
+    document.querySelector(`.hn-pill[data-h="${hour}"]`)?.classList.add('active');
+    updateCalHourGridState();
+  }
   syncCalActiveDate(key);
-  if (!silent) doSearch();
+  return silent ? undefined : doSearch();
 }
 
 // ── Hour nav ────────────────────────────────────────────────────────────────
@@ -1514,12 +1554,14 @@ async function exportMatching() {
     if (!n) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
     const meta = { exportedAt: new Date().toISOString(), totalEntries: n, search: { query, mode, from: startDate ? new Date(startDate).toISOString() : null, to: endDate ? new Date(endDate).toISOString() : null } };
     const head = JSON.stringify(meta).slice(0, -1) + ',"entries":[';
-    const blob = new Blob([head, ...blobs, ']}'], { type: 'application/json' });
+    let blob = new Blob([head, ...blobs, ']}'], { type: 'application/json' });
+    const encOn = ehAlwaysEnc();
+    if (encOn) blob = await ehEncryptBlobDH(blob, 'json');
     const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}.json` });
+    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}${encOn ? '_enc' : ''}.json` });
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);
-    toast(tr('export_results_done', 'Exported {0} matching entries', fmtNum(n)), 'ok');
+    toast(tr('export_results_done', 'Exported {0} matching entries', fmtNum(n)) + (encOn ? ' (' + tr('encrypted', 'encrypted') + ')' : ''), 'ok');
   } catch (err) {
     toast('Export failed: ' + (err.message || err), 'err');
   } finally {
@@ -2197,7 +2239,7 @@ async function loadSessions() {
 
     el.innerHTML = '';
 
-    function buildSessionCard(dateLabel, badgeText, tabsArr) {
+    function buildSessionCard(dateLabel, badgeText, tabsArr, sessRef) {
       const card = document.createElement('div');
       card.className = 'session-card';
 
@@ -2306,6 +2348,12 @@ async function loadSessions() {
         toggle.classList.toggle('open', open);
       });
 
+      // Right-click a past session → Delete (with confirmation). The active session can't be deleted.
+      if (sessRef) card.addEventListener('contextmenu', ev => {
+        ev.preventDefault(); ev.stopPropagation();
+        showSessCtxMenu(ev.clientX, ev.clientY, sessRef, dateLabel.main, card);
+      });
+
       card.appendChild(head);
       card.appendChild(tabsEl);
       return card;
@@ -2324,7 +2372,7 @@ async function loadSessions() {
       const date = new Date(sess.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
       el.appendChild(buildSessionCard(
         { main: date, sub: `${dur} · ${sess.tabCount+' '+tr('unique_tabs','unique tabs')}` },
-        null, sess.tabs
+        null, sess.tabs, { id: sess.id, start: sess.start }
       ));
     });
 
@@ -2788,6 +2836,7 @@ function _bmBuildFlat() {
           node:       n,
           _title:     (n.title || '').toLowerCase(),
           _url:       (n.url   || '').toLowerCase(),
+          _domain:    (tryDomain(n.url || '') || '').toLowerCase(),
           _folder:    folderName.toLowerCase(),
           folderName: folderName,
         });
@@ -3301,6 +3350,7 @@ function _buildBmRow(n) {
   row.className = _bmSelected.has(n.id) ? 'bm-item bm-checked' : 'bm-item';
   row.dataset.bmId = n.id;
   row.draggable = true;
+  row.title = (n.title && n.title !== n.url ? n.title + '\n' : '') + (n.url || '');   // hover → title + URL
 
   const check = document.createElement('span');
   check.className = 'bm-item-check';
@@ -3419,7 +3469,8 @@ function _bmInitList(items, emptyMsg) {
   const pane = document.getElementById('bookmarksContent');
   pane.innerHTML = '';
   pane.scrollTop = 0;
-  _bmItems = items;
+  _bmItems = _bmSortItems(items);
+  items = _bmItems;
   _bmVRows.clear();
   _bmSizer = null;
 
@@ -3505,7 +3556,7 @@ _bmSetupList();
 // search results are ranked by match, so neither has a single per-folder
 // order to write back to via chrome.bookmarks.move.
 function _bmReorderEligible() {
-  return !!_bmActiveNode && !_bmIsSearch;
+  return !!_bmActiveNode && !_bmIsSearch && _bmSort === 'default';
 }
 
 // Called from _bmSetupList's dragstart/dragend above.
@@ -3613,21 +3664,61 @@ function renderBmItems(folderNode) {
   _bmInitList(items);
 }
 
-// Search: flat list across all bookmarks — uses precomputed _bmFlat index for speed
+// Search: flat list across all bookmarks — uses precomputed _bmFlat index for speed.
+// The "search in" selector (#bmSearchMode) limits which field(s) the words must match.
 function renderBookmarksWithFilter(query) {
   const q = query.trim().toLowerCase();
   if (!_bmTree) return;
   if (!q) { _bmIsSearch = false; renderBmItems(_bmActiveNode); return; }
 
-  // Multi-word: every word must appear in title, url, or folder name
+  const mode  = document.getElementById('bmSearchMode')?.value || 'all';
+  // Multi-word: every word must appear in the chosen field(s)
   const words = q.split(/\s+/).filter(Boolean);
-  const results = _bmFlat.filter(({ _title, _url, _folder }) =>
-    words.every(w => _title.includes(w) || _url.includes(w) || _folder.includes(w))
-  ).map(e => e.node);
+  const hit = (e, w) =>
+      mode === 'title'  ? e._title.includes(w)
+    : mode === 'url'    ? e._url.includes(w)
+    : mode === 'domain' ? e._domain.includes(w)
+    : (e._title.includes(w) || e._url.includes(w) || e._domain.includes(w) || e._folder.includes(w));
+  const results = _bmFlat.filter(e => words.every(w => hit(e, w))).map(e => e.node);
 
   _bmIsSearch = true;
   _bmInitList(results, 'No matching bookmarks');
 }
+
+// ── Bookmark sorting ─────────────────────────────────────────────────────────
+// 'default' keeps Chrome's own order (the order they were saved / added);
+// the others sort by domain name or title. Persisted per browser.
+let _bmSort = 'default';
+try { const v = localStorage.getItem('eh_bm_sort'); if (['domain-asc','domain-desc','title-asc','title-desc'].includes(v)) _bmSort = v; } catch {}
+function _bmSortItems(items) {
+  if (_bmSort === 'default') return items;
+  const dir = _bmSort.endsWith('-desc') ? -1 : 1;
+  const key = _bmSort.startsWith('title')
+    ? n => (n.title || n.url || '').toLowerCase()
+    : n => (tryDomain(n.url || '') || '').toLowerCase().replace(/^www\./, '');
+  const keyed = items.map((n, i) => ({ n, i, d: key(n) }));
+  keyed.sort((a, b) => (dir * a.d.localeCompare(b.d, undefined, { numeric: true, sensitivity: 'base' })) || (a.i - b.i));
+  return keyed.map(k => k.n);
+}
+function _bmRefreshView() {
+  const q = document.getElementById('bmSearch')?.value || '';
+  if (q.trim()) renderBookmarksWithFilter(q); else renderBmItems(_bmActiveNode);
+}
+(function setupBmSortSearchUi() {
+  const sortSel = document.getElementById('bmSortSel');
+  const modeSel = document.getElementById('bmSearchMode');
+  if (sortSel) {
+    sortSel.value = _bmSort;
+    sortSel.addEventListener('change', () => {
+      _bmSort = sortSel.value;
+      try { localStorage.setItem('eh_bm_sort', _bmSort); } catch {}
+      _bmRefreshView();
+    });
+  }
+  if (modeSel) modeSel.addEventListener('change', () => {
+    if ((document.getElementById('bmSearch')?.value || '').trim()) _bmRefreshView();
+  });
+})();
 // ── Resizable folder pane ────────────────────────────────────────────────────
 // Drag the thin handle between the folder tree and the bookmark list. The width
 // is remembered; double-click the handle to reset it.
@@ -4006,6 +4097,9 @@ function populateSettings(s) {
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
   if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
+  { const t = document.getElementById('popupSearchLimitToggle'), m = document.getElementById('popupSearchLimitMonths');
+    if (t) t.checked = s.popupSearchLimitEnabled === true;
+    if (m) m.value = s.popupSearchLimitMonths || 12; }
   if (popupHeightInput)  {
     popupHeightInput.value = s.popupHeight || 320;
     if (popupHeightVal) popupHeightVal.textContent = popupHeightInput.value + 'px';
@@ -4069,6 +4163,7 @@ function populateSettings(s) {
   if (autoExportWebDavPassword) autoExportWebDavPassword.value = s.autoExportWebDavPassword || '';
   updateAutoExportDestinationUi();
   ehInitBackupExtras(s);
+  ehInitAlwaysEnc(s);
   refreshAutoExportStatus();
 
   // Populate toolbar icon picker
@@ -4221,6 +4316,8 @@ async function saveSettings() {
   const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
   const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
+  const popupSearchLimitEnabled = document.getElementById('popupSearchLimitToggle')?.checked === true;
+  const popupSearchLimitMonths  = Math.max(1, Math.min(600, parseInt(document.getElementById('popupSearchLimitMonths')?.value || '12') || 12));
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const popupAsSidebar  = document.getElementById('popupSidebarToggle')?.checked === true;
   const popupQuickFilters = document.getElementById('popupQuickFiltersToggle')?.checked === true;
@@ -4268,6 +4365,8 @@ async function saveSettings() {
         popupShowSearch,
         popupShowTabs,
         popupShowUrl,
+        popupSearchLimitEnabled,
+        popupSearchLimitMonths,
         popupHeight,
         popupAsSidebar,
         popupQuickFilters,
@@ -4450,7 +4549,7 @@ function ehInitBackupExtras(s) {
       b.disabled = true; b.textContent = tr('redownloading', 'Preparing…');
       try {
         const r = await sendLong('REDOWNLOAD_LAST_INCREMENTAL');
-        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)', fmtNum(r.exported)) + (r.encrypted ? ' 🔒' : ''), 'ok');
+        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)', fmtNum(r.exported)) + (r.encrypted ? ' (' + tr('encrypted', 'encrypted') + ')' : ''), 'ok');
       } catch (err) { toast(err.message || String(err), 'err'); }
       b.disabled = false; b.textContent = orig;
     });
@@ -4470,6 +4569,92 @@ function ehInitBackupExtras(s) {
   document.getElementById('ehRedownloadNote').textContent = last && last.until
     ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries').replace('{0}', new Date(last.until).toLocaleString()).replace('{1}', fmtNum(last.count || 0))
     : tr('no_incremental_backup_yet', 'No incremental backup made yet');
+}
+
+// ── Settings: "Always encrypt search/filtered exports" ──────────────────────
+// Small modal with real password fields (prompt() would show the password in clear text).
+function ehPasswordModal(title, withConfirm, note) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(8,8,12,0.55);backdrop-filter:blur(6px)';
+    const card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1,#18181f);color:var(--text,#f0eee8);border:1px solid var(--border2,rgba(255,255,255,.12));box-shadow:0 24px 80px rgba(0,0,0,.5)';
+    const inp = 'display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin-top:10px;border-radius:8px;outline:none;font-size:.9rem;background:var(--surf3,#1f1f28);color:inherit;border:1px solid var(--border2,rgba(255,255,255,.12))';
+    card.innerHTML = '<div style="font-weight:700;font-size:1.05rem;margin-bottom:6px"></div>' +
+      '<div style="font-size:.78rem;line-height:1.5;color:var(--text2,#a09eb0)"></div>' +
+      '<input type="password" id="ehPm1" autocomplete="new-password" style="' + inp + '">' +
+      (withConfirm ? '<input type="password" id="ehPm2" autocomplete="new-password" style="' + inp + '">' : '') +
+      '<div id="ehPmErr" style="min-height:1.1em;margin-top:8px;font-size:.78rem;color:var(--danger,#f06060)"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px"><button class="action-btn" id="ehPmCancel" style="flex:1"></button><button class="action-btn" id="ehPmOk" style="flex:1;background:var(--accent);color:#fff"></button></div>';
+    card.children[0].textContent = title;
+    card.children[1].textContent = note || '';
+    const $ = q => card.querySelector(q);
+    $('#ehPm1').placeholder = tr('lock_password', 'Password');
+    if (withConfirm) $('#ehPm2').placeholder = tr('lock_confirm_password', 'Confirm password');
+    $('#ehPmCancel').textContent = tr('cancel', 'Cancel');
+    $('#ehPmOk').textContent = tr('ok', 'OK');
+    ov.appendChild(card); document.body.appendChild(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    const submit = () => {
+      const a = $('#ehPm1').value, err = $('#ehPmErr');
+      if (withConfirm) {
+        if (a.length < 4) { err.textContent = tr('lock_password_short', 'Password must be at least 4 characters'); return; }
+        if (a !== $('#ehPm2').value) { err.textContent = tr('lock_password_mismatch', 'Passwords do not match'); return; }
+      } else if (!a) { $('#ehPm1').focus(); return; }
+      done(a);
+    };
+    $('#ehPmOk').addEventListener('click', submit);
+    $('#ehPmCancel').addEventListener('click', () => done(null));
+    ov.addEventListener('mousedown', e => { if (e.target === ov) done(null); });
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); else if (e.key === 'Escape') done(null); });
+    setTimeout(() => $('#ehPm1').focus(), 30);
+  });
+}
+
+function ehInitAlwaysEnc(s) {
+  const tgl = document.getElementById('alwaysEncToggle');
+  if (!tgl) return;
+  const on = s.alwaysEncryptExports === true && !!s.exportEncKey;
+  tgl.checked = on;
+  const chg = document.getElementById('alwaysEncPwBtn');
+  if (chg) chg.style.display = on ? '' : 'none';
+  const st = document.getElementById('alwaysEncStatus');
+  if (st) st.textContent = on ? tr('always_enc_on', 'Exports are encrypted with your export password.') : '';
+  if (ehInitAlwaysEnc._wired) return;
+  ehInitAlwaysEnc._wired = true;
+
+  const save = async (settings) => {
+    const r = await send('SAVE_SETTINGS', { settings });
+    _curSettings = Object.assign(_curSettings || {}, (r && r.settings) || settings);
+    ehInitAlwaysEnc(_curSettings);
+  };
+  const setPassword = async () => {
+    const pw = await ehPasswordModal(
+      tr('set_export_password', 'Set export password'), true,
+      tr('set_export_password_note', 'Needed to import or open your exports. If you forget it, encrypted exports cannot be recovered.'));
+    if (!pw) return false;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await ehDoubleHashBytes(pw, salt);
+    await save({ alwaysEncryptExports: true, exportEncKey: _u8toB64(key), exportEncSalt: _u8toB64(salt) });
+    return true;
+  };
+  tgl.addEventListener('change', async (ev) => {
+    const chk = ev.target;
+    try {
+      if (chk.checked) {
+        if (await setPassword()) toast(tr('always_enc_enabled', 'Exports will now be encrypted'), 'ok');
+        else chk.checked = false;
+      } else {
+        if (!confirm(tr('always_enc_off_confirm', 'Stop encrypting exports? Files already encrypted still need the password.'))) { chk.checked = true; return; }
+        await save({ alwaysEncryptExports: false, exportEncKey: '', exportEncSalt: '' });
+        toast(tr('always_enc_disabled', 'Exports are no longer encrypted'), 'ok');
+      }
+    } catch (err) { toast(err.message || String(err), 'err'); chk.checked = !chk.checked; }
+  });
+  chg?.addEventListener('click', async () => {
+    try { if (await setPassword()) toast(tr('always_enc_pw_changed', 'Export password changed'), 'ok'); }
+    catch (err) { toast(err.message || String(err), 'err'); }
+  });
 }
 
 async function refreshAutoExportStatus() {
@@ -4960,6 +5145,40 @@ document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
   } catch (err) { toast(err.message, 'err'); }
 });
 
+// ── Session context menu (right-click a session → Delete) ────────────────────
+let _sessCtx = null;
+function showSessCtxMenu(x, y, ref, label, card) {
+  _sessCtx = { ref, label, card };
+  const m = document.getElementById('sessCtx');
+  if (!m) return;
+  hideCtxMenu();
+  m.style.display = 'block';
+  m.style.left = Math.max(4, Math.min(x, window.innerWidth  - 180)) + 'px';
+  m.style.top  = Math.max(4, Math.min(y, window.innerHeight - 60))  + 'px';
+}
+function hideSessCtxMenu() {
+  const m = document.getElementById('sessCtx');
+  if (m) m.style.display = 'none';
+}
+document.addEventListener('click', hideSessCtxMenu);
+document.addEventListener('scroll', hideSessCtxMenu, true);
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideSessCtxMenu(); });
+document.getElementById('sessCtxDelete')?.addEventListener('click', async () => {
+  const c = _sessCtx; _sessCtx = null;
+  hideSessCtxMenu();
+  if (!c) return;
+  if (!confirm(tr('confirm_delete_session', 'Delete this session ({0})? This cannot be undone.', c.label))) return;
+  try {
+    const r = await send('DELETE_SESSION', { id: c.ref.id, start: c.ref.start });
+    if (r && r.error) throw new Error(r.error);
+    c.card.remove();
+    toast(tr('session_deleted', 'Session deleted'), 'ok');
+    const el = document.getElementById('sessionsContent');
+    if (el && !el.querySelector('.session-card'))
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📋</span><span data-i18n-key="no_sessions_yet">No sessions recorded yet</span></div>';
+  } catch (err) { toast(err.message || String(err), 'err'); }
+});
+
 // ── Context menu ──────────────────────────────────────────────────────────────
 let _ctxEntry = null;
 let _ctxSource = 'history'; // 'history' | 'readingmode'
@@ -4972,21 +5191,25 @@ function showCtxMenu(x, y, entry, source) {
   const delSep     = document.getElementById('ctx-del-sep');
   const jumpEl     = document.getElementById('ctx-jump-to-date');
   const jumpSep    = document.getElementById('ctx-jump-sep');
+  const jumpDtEl   = document.getElementById('ctx-jump-to-datetime');
   const bmRemove   = document.getElementById('ctx-remove-bookmark');
   const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
   const bmRename   = document.getElementById('ctx-rename-bookmark');
+  const bmFilter   = document.getElementById('ctx-filter-domain');
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
   const hasBmId = !!entry.bmId;
   if (delEl)        delEl.style.display        = hasId   ? '' : 'none';
   if (delSep)       delSep.style.display       = hasId   ? '' : 'none';
   if (jumpEl)       jumpEl.style.display       = hasDate ? '' : 'none';
+  if (jumpDtEl)     jumpDtEl.style.display     = hasDate ? '' : 'none';
   if (jumpSep)      jumpSep.style.display      = hasDate ? '' : 'none';
   if (bmRemove)     bmRemove.style.display     = hasBmId ? '' : 'none';
   if (bmRename)     bmRename.style.display     = hasBmId ? '' : 'none';
+  if (bmFilter)     bmFilter.style.display     = hasBmId ? '' : 'none';
   if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
-  const mw = 210, mh = 300;
+  const mw = 210, mh = 370;
   menu.style.left = Math.min(x, window.innerWidth  - mw - 6) + 'px';
   menu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
 }
@@ -5015,6 +5238,44 @@ document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
     if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
     activateDatePill(dateKey);
   }
+});
+// Scrolls to an entry in the (already filtered) list and flashes it. Rows are append-only and 1:1 with the
+// list array, so the row index equals the array index; pages are rendered until that row exists.
+async function ehJumpHighlight(entry, source) {
+  const rm   = source === 'readingmode';
+  const list = rm ? _rmFiltered : allResults;
+  const area = rm ? rmListArea() : listArea();
+  if (!area || !list.length) return false;
+  const idx = list.findIndex(e => (entry.id && e.id === entry.id) || (e.url === entry.url && e.visitTime === entry.visitTime));
+  if (idx < 0) return false;
+  for (let guard = 0; guard < 5000 && (rm ? _rmVsOffset : vsOffset) <= idx && (rm ? _rmVsOffset : vsOffset) < list.length; guard++) {
+    if (rm) rmAppendPage(); else appendPage();
+  }
+  const row = area.querySelectorAll('.entry')[idx];
+  if (!row) return false;
+  area.querySelectorAll('.entry.jump-highlight').forEach(r => r.classList.remove('jump-highlight'));
+  row.scrollIntoView({ block: 'center' });
+  void row.offsetWidth;                       // restart the animation if it was already running
+  row.classList.add('jump-highlight');
+  setTimeout(() => row.classList.remove('jump-highlight'), 4500);
+  return true;
+}
+document.getElementById('ctx-jump-to-datetime').addEventListener('click', async () => {
+  const entry = _ctxEntry, source = _ctxSource;
+  hideCtxMenu();
+  if (!entry?.visitTime) return;
+  const d = new Date(entry.visitTime);
+  const dateKey = d.toLocaleDateString('en-CA');
+  try {
+    if (source === 'readingmode') {
+      rmActivateDatePill(dateKey);            // reading mode has no hour filter: land on the day, highlight the entry
+    } else {
+      const si = document.getElementById('searchInput');
+      if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
+      await activateDatePill(dateKey, false, d.getHours());   // date + hour filter, one search
+    }
+    await ehJumpHighlight(entry, source);
+  } catch (err) { toast(err.message || String(err), 'err'); }
 });
 document.getElementById('ctx-more-domain').addEventListener('click', () => {
   const domain = tryDomain(_ctxEntry?.url || '');
@@ -5065,6 +5326,19 @@ document.getElementById('ctx-rename-bookmark').addEventListener('click', async (
   toast('Bookmark renamed', 'ok');
   // Refresh list + search index, keeping folder, search query and scroll position
   reloadBookmarksKeepState(false).catch(() => loadBookmarks());
+});
+
+// Bookmarks: filter the list by this bookmark's domain (search box = domain, search-in = Domain)
+document.getElementById('ctx-filter-domain').addEventListener('click', () => {
+  const domain = tryDomain(_ctxEntry?.url || '');
+  hideCtxMenu();
+  if (!domain) return;
+  const modeSel = document.getElementById('bmSearchMode');
+  if (modeSel) modeSel.value = 'domain';
+  const si = document.getElementById('bmSearch');
+  if (si) si.value = domain;
+  document.getElementById('bmSearchClearBtn')?.classList.add('visible');
+  renderBookmarksWithFilter(domain);
 });
 
 document.getElementById('ctx-remove-bookmark').addEventListener('click', () => {

@@ -208,7 +208,16 @@
   },
   "rename_bookmark": {
   "message": "Renommer le favori"
-},
+  },
+  "bm_sort_default": {"message": "Trier : Par défaut"},
+  "bm_sort_domain_asc": {"message": "Trier : Domaine A–Z"},
+  "bm_sort_domain_desc": {"message": "Trier : Domaine Z–A"},
+  "bm_sort_title_asc": {"message": "Trier : Titre A–Z"},
+  "bm_sort_title_desc": {"message": "Trier : Titre Z–A"},
+  "always_encrypt_exports": {"message": "Toujours chiffrer les exportations issues des recherches et des filtres"},
+  "always_encrypt_exports_desc": {"message": "Lorsque cette option est activée, les exportations issues des recherches et des filtres sont chiffrées (AES-256) avec le mot de passe défini ici. Seule une clé dérivée du mot de passe est enregistrée, jamais le mot de passe lui-même. Conservez votre mot de passe : il est nécessaire pour importer ou ouvrir les fichiers."},
+  "set_export_password": {"message": "Définir le mot de passe d’exportation"},
+  "set_export_password_note": {"message": "Nécessaire pour importer ou ouvrir vos exportations. Si vous l’oubliez, les fichiers exportés chiffrés ne pourront pas être récupérés."},
   "lock_warning_title": {
     "message": "Verrouiller l’historique ?"
   },

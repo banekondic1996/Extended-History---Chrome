@@ -16,7 +16,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.2.6</div>
+      <div class="logo-sub">v4.2.7</div>
     </div>
   </div>
 
@@ -332,6 +332,19 @@
         <input type="text" id="bmSearch" placeholder="Search bookmarks…"/>
         <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
       </div>
+      <select class="mode-sel" id="bmSearchMode" title="Search in">
+        <option value="all" data-i18n-key="all_fields">All fields</option>
+        <option value="url" data-i18n-key="url">URL</option>
+        <option value="domain" data-i18n-key="domain">Domain</option>
+        <option value="title" data-i18n-key="title">Title</option>
+      </select>
+      <select class="mode-sel" id="bmSortSel" title="Sort bookmarks">
+        <option value="default" data-i18n-key="bm_sort_default">Sort: Default</option>
+        <option value="domain-asc" data-i18n-key="bm_sort_domain_asc">Sort: Domain A–Z</option>
+        <option value="domain-desc" data-i18n-key="bm_sort_domain_desc">Sort: Domain Z–A</option>
+        <option value="title-asc" data-i18n-key="bm_sort_title_asc">Sort: Title A–Z</option>
+        <option value="title-desc" data-i18n-key="bm_sort_title_desc">Sort: Title Z–A</option>
+      </select>
       <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" title="Select multiple bookmarks" data-i18n-key="select">Select</button>
     </div>
     <!-- Bookmark multiselect bar (hidden until selection mode active) -->
@@ -399,7 +412,7 @@
                 <option value="fr">Français</option>
                 <option value="he">עברית</option>
                 <option value="hi">हिन्दी</option>
-                <option value="la">Latina</option>
+                <option value="la">Latin</option>
                 <option value="nl">Nederlands</option>
                 <option value="no">Norsk</option>
                 <option value="ru">Русский</option>
@@ -679,6 +692,20 @@
               <button class="action-btn" id="testAutoExportBtn" style="font-size:0.75rem;padding:4px 10px" data-i18n-key="run_now">▶ Run now</button>
             </div>
           </div>
+          <div class="s-row" style="border-top:1px solid var(--border);border-bottom:none" id="alwaysEncRow">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="always_encrypt_exports">Always encrypt search/filtered exports</div>
+              <div class="s-row-desc" data-i18n-key="always_encrypt_exports_desc">When on, search/filtered exports are encrypted (AES-256) with the password you set here. Only a key derived from the password is stored, never the password itself. Keep your password: it is needed to import or open the files.</div>
+              <div class="s-row-desc" id="alwaysEncStatus" style="margin-top:4px"></div>
+            </div>
+            <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
+              <label class="toggle-switch" style="margin:0">
+                <input type="checkbox" id="alwaysEncToggle">
+                <span class="toggle-slider"></span>
+              </label>
+              <button class="action-btn" id="alwaysEncPwBtn" style="font-size:0.72rem;padding:3px 8px;display:none" data-i18n-key="enc_change_pw">Change password</button>
+            </div>
+          </div>
         </div>
 
         <div class="s-card">
@@ -766,6 +793,20 @@
             <div class="s-ctrl" style="gap:10px">
               <input type="range" id="popupHeightInput" value="320" min="150" max="400" step="10" style="width:140px;accent-color:var(--accent)"/>
               <span id="popupHeightVal" style="color:var(--text);font-size:0.85rem;min-width:44px;font-family:var(--font-mono)">320px</span>
+            </div>
+          </div>
+          <div class="s-row">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="popup_search_limit">Limit maximum old search history</div>
+              <div class="s-row-desc" data-i18n-key="popup_search_limit_desc">The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything.</div>
+            </div>
+            <div class="s-ctrl" style="gap:8px">
+              <input type="number" id="popupSearchLimitMonths" value="12" min="1" max="600" step="1" style="width:70px"/>
+              <span class="unit" data-i18n-key="months">months</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="popupSearchLimitToggle">
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
           <div class="s-row">
@@ -1138,6 +1179,7 @@
   <div class="ctx-item" id="ctx-open-incognito"><span class="ctx-icon">🕵</span> <span data-i18n-key="open_in_incognito">Open in incognito</span></div>
    <div class="ctx-sep" id="ctx-jump-sep"></div>
   <div class="ctx-item" id="ctx-jump-to-date"><span class="ctx-icon">📅</span> <span data-i18n-key="jump_to_date">Jump to date</span></div>
+  <div class="ctx-item" id="ctx-jump-to-datetime"><span class="ctx-icon">🕒</span> <span data-i18n-key="jump_to_datetime">Jump to date&amp;time</span></div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" id="ctx-more-domain"><span class="ctx-icon">🔎</span> <span data-i18n-key="more_from_domain">More from domain</span></div>
   <div class="ctx-item" id="ctx-ignore-domain"><span class="ctx-icon">🚫</span> <span data-i18n-key="ignore_domain">Ignore domain</span></div>
@@ -1145,10 +1187,16 @@
   <div class="ctx-item" id="ctx-copy-url"><span class="ctx-icon">⎘</span> <span data-i18n-key="copy_url">Copy URL</span></div>
   <div class="ctx-item" id="ctx-copy-title"><span class="ctx-icon">📋</span> <span data-i18n-key="copy_title">Copy title</span></div>
   <div class="ctx-item" id="ctx-rename-bookmark"  style="display:none"><span class="ctx-icon">📋</span> <span data-i18n-key="rename_bookmark">Rename bookmark</span></div>
+  <div class="ctx-item" id="ctx-filter-domain" style="display:none"><span class="ctx-icon">🔎</span> <span data-i18n-key="filter_by_domain">Filter by domain</span></div>
   <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
   <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none"><span class="ctx-icon">🗑</span> <span data-i18n-key="remove_bookmark">Remove bookmark</span></div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
   <div class="ctx-item danger" id="ctx-delete"><span class="ctx-icon">✕</span> <span data-i18n-key="delete_from_history">Delete from history</span></div>
+</div>
+
+<!-- Session context menu -->
+<div id="sessCtx" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:170px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
+  <div class="ctx-item danger" id="sessCtxDelete"><span class="ctx-icon">✕</span> <span data-i18n-key="delete">Delete</span></div>
 </div>
 
 <!-- Bookmark folder context menu -->

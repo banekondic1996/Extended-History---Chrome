@@ -241,8 +241,17 @@
   },
   "rename_bookmark": {
   "message": "Преименуј обелживач"
-},
- "remove_bookmark": {
+  },
+  "bm_sort_default": {"message": "Сортирање: Подразумевано"},
+  "bm_sort_domain_asc": {"message": "Сортирање: Домен А–Ш"},
+  "bm_sort_domain_desc": {"message": "Сортирање: Домен Ш–А"},
+  "bm_sort_title_asc": {"message": "Сортирање: Наслов А–Ш"},
+  "bm_sort_title_desc": {"message": "Сортирање: Наслов Ш–А"},
+  "always_encrypt_exports": {"message": "Увек шифруј извозе претраге и филтриране извозе"},
+  "always_encrypt_exports_desc": {"message": "Када је укључено, извози претраге и филтрирани извози се шифрују (AES-256) лозинком коју овде поставиш. Чува се само кључ изведен из лозинке, никада сама лозинка. Сачувај лозинку: потребна је за увоз или отварање датотека."},
+  "set_export_password": {"message": "Постави лозинку за извоз"},
+  "set_export_password_note": {"message": "Потребна је за увоз или отварање извоза. Ако је заборавиш, шифровани извози се не могу повратити."},
+  "remove_bookmark": {
     "message": "Уклони обележивач"
   },
   "select": {

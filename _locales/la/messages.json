@@ -243,10 +243,19 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-},
+  },
  "remove_bookmark": {
     "message": "Signaculum remove"
   },
+  "bm_sort_default": {"message": "Ordina: Defalta"},
+  "bm_sort_domain_asc": {"message": "Ordina: Dominium A–Z"},
+  "bm_sort_domain_desc": {"message": "Ordina: Dominium Z–A"},
+  "bm_sort_title_asc": {"message": "Ordina: Titulus A–Z"},
+  "bm_sort_title_desc": {"message": "Ordina: Titulus Z–A"},
+  "always_encrypt_exports": {"message": "Exportationes quaesitas vel filtratas semper encryptare"},
+  "always_encrypt_exports_desc": {"message": "Cum activa est, exportationes quaesitae vel filtratae (AES-256) tessera hic constituta encryptantur. Sola clavis ex tessera derivata servatur, numquam ipsa tessera. Tesseram serva: ad exportationes importandas vel aperiendas necessaria est."},
+  "set_export_password": {"message": "Tesseram exportationis constitue"},
+  "set_export_password_note": {"message": "Ad exportationes importandas vel aperiendas necessaria est. Si eam oblivisceris, exportationes encryptatae recuperari non poterunt."},
   "quick_filter_desc": {
     "message": "Serva gregem nominatum ditionum, verborum clavium vel URL (exempli gratia \"Media socialia\" → facebook.com, instagram.com, pinterest.com). Elige eum ex indice iuxta capsam quaerendi in pagina Historiae ut statim tantum illa elementa filtres."
   },

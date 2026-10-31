@@ -210,7 +210,16 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-},
+  },
+  "bm_sort_default": {"message": "מיון: ברירת מחדל"},
+  "bm_sort_domain_asc": {"message": "מיון: דומיין א–ת"},
+  "bm_sort_domain_desc": {"message": "מיון: דומיין ת–א"},
+  "bm_sort_title_asc": {"message": "מיון: כותרת א–ת"},
+  "bm_sort_title_desc": {"message": "מיון: כותרת ת–א"},
+  "always_encrypt_exports": {"message": "הצפנת ייצואים של חיפוש וסינון תמיד"},
+  "always_encrypt_exports_desc": {"message": "כשהאפשרות מופעלת, ייצואים של חיפוש וסינון מוצפנים (AES-256) באמצעות הסיסמה שתגדיר כאן. נשמר רק מפתח שנגזר מהסיסמה, ולא הסיסמה עצמה. שמור את הסיסמה שלך: היא נחוצה לייבוא הקבצים או לפתיחתם."},
+  "set_export_password": {"message": "הגדרת סיסמת ייצוא"},
+  "set_export_password_note": {"message": "נחוצה לייבוא הייצואים שלך או לפתיחתם. אם תשכח אותה, לא ניתן יהיה לשחזר ייצואים מוצפנים."},
  "lock_warning_title": {
     "message": "לנעול את היסטוריית הגלישה?"
   },
