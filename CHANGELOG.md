@@ -202,6 +202,14 @@ Fixed/changed in version 4.2.6:
 -UI bug fix (bookmarks context menu with navigation icons disabled, showed one icon)
 -Popup recent history search bug fix
 -Holding next/previous day button now switches through dates
+
+Fixed/changed in version 4.2.7:
+-Added ability to jump to date&time for searched history entries
+-Added ability to delete session entries
+-Added bookmark filtering
+-Added search/filtered history export encryption option
+-Fixed popup not searching whole history from extension
+
 </pre>
 
 
