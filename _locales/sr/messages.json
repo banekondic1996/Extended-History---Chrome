@@ -440,6 +440,15 @@
   "tabs": {
     "message": "картице"
   },
+  "unsaved_changes_title": {"message": "Сачувати измене?"},
+  "unsaved_changes_msg": {"message": "Имате несачуване измене у подешавањима."},
+  "filter_by_domain": {"message": "Филтрирај по домену"},
+  "always_enc_enabled": {"message": "Извози ће од сада бити шифровани"},
+  "always_enc_disabled": {"message": "Извози више нису шифровани"},
+  "always_enc_off_confirm": {"message": "Зауставити шифровање извоза? За већ шифроване датотеке и даље је потребна лозинка."},
+  "always_enc_pw_changed": {"message": "Лозинка за извоз је промењена"},
+  "window": {"message": "Прозор"},
+  "tab": {"message": "картица"},
   "since": {
     "message": "од"
   },

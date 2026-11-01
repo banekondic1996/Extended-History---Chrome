@@ -392,6 +392,15 @@
   "tabs": {
     "message": "onglets"
   },
+  "unsaved_changes_title": {"message": "Enregistrer les modifications ?"},
+  "unsaved_changes_msg": {"message": "Vous avez des modifications non enregistrées dans les paramètres."},
+  "filter_by_domain": {"message": "Filtrer par domaine"},
+  "always_enc_enabled": {"message": "Les exportations seront désormais chiffrées"},
+  "always_enc_disabled": {"message": "Les exportations ne sont plus chiffrées"},
+  "always_enc_off_confirm": {"message": "Arrêter de chiffrer les exportations ? Les fichiers déjà chiffrés nécessitent toujours le mot de passe."},
+  "always_enc_pw_changed": {"message": "Mot de passe d’exportation modifié"},
+  "window": {"message": "Fenêtre"},
+  "tab": {"message": "onglet"},
   "since": {
     "message": "depuis"
   },

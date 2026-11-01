@@ -354,6 +354,15 @@
   "tabs": {
     "message": "вкладки"
   },
+  "unsaved_changes_title": {"message": "Сохранить изменения?"},
+  "unsaved_changes_msg": {"message": "В настройках есть несохранённые изменения."},
+  "filter_by_domain": {"message": "Фильтр по домену"},
+  "always_enc_enabled": {"message": "Теперь экспортируемые файлы будут зашифрованы"},
+  "always_enc_disabled": {"message": "Экспортируемые файлы больше не шифруются"},
+  "always_enc_off_confirm": {"message": "Отключить шифрование экспорта? Для уже зашифрованных файлов пароль по-прежнему потребуется."},
+  "always_enc_pw_changed": {"message": "Пароль для экспорта изменён"},
+  "window": {"message": "Окно"},
+  "tab": {"message": "вкладка"},
   "since": {
     "message": "с"
   },

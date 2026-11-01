@@ -2277,7 +2277,7 @@ async function loadSessions() {
 
       const tabCount = document.createElement('span');
       tabCount.className   = 'sess-tab-count';
-      tabCount.textContent = `${tabsArr.length+' '+tr('tabs','tabs')}`;
+      tabCount.textContent = tabsArr.length+` ${tabsArr.length !== 1 ? tr('tabs','tabs') : tr('tab','tab') }`;
 
       const exportBtn = document.createElement('button');
       exportBtn.className   = 'tb-btn';
@@ -2341,7 +2341,7 @@ async function loadSessions() {
         for (const [wid, winTabs] of windowMap) {
           const winHeader = document.createElement('div');
           winHeader.className = 'sess-window-header';
-          winHeader.textContent = `Window ${winIndex} — ${winTabs.length} tab${winTabs.length !== 1 ? 's' : ''}`;
+          winHeader.textContent = tr('window','Window')+` ${winIndex} — ${winTabs.length} ${winTabs.length !== 1 ? tr('tabs','tabs') : tr('tab','tab') }`;
           tabsEl.appendChild(winHeader);
           winTabs.slice(0, 200).forEach(t => tabsEl.appendChild(buildSessTabEl(t)));
           winIndex++;
@@ -2392,8 +2392,9 @@ async function loadSessions() {
 function buildSessTabEl(t) {
   const dom = tryDomain(t.url || '');
 
-  const row = document.createElement('div');
+  const row = document.createElement('a');
   row.className = 'sess-tab-row';
+  row.href=t.url;
   row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
 
   const img = document.createElement('img');
@@ -3301,7 +3302,7 @@ function _updateBmSelBar() {
   if (toolbar) toolbar.style.display = _bmSelMode ? 'none' : 'flex';
   if (count) count.textContent = `${_bmSelected.size} `+ tr('selected','selected');
   const allBtn = document.getElementById('bmSelAllBtn');
-  if (allBtn) allBtn.textContent = _bmSelected.size > 0 ? tr('deselect_all', 'Deselect all') : tr('select_all', 'Select all');
+  if (allBtn) allBtn.textContent = _bmSelected.size > 0 ? tr('deselect_all', 'Deselect all') : tr('pop_select_all', 'Select all');
   const pane = document.getElementById('bookmarksContent');
   if (pane) pane.classList.toggle('bm-sel-mode', _bmSelMode);
 }
@@ -4637,7 +4638,6 @@ function ehInitAlwaysEnc(s) {
   const chg = document.getElementById('alwaysEncPwBtn');
   if (chg) chg.style.display = on ? '' : 'none';
   const st = document.getElementById('alwaysEncStatus');
-  if (st) st.textContent = on ? tr('always_enc_on', 'Exports are encrypted with your export password.') : '';
   if (ehInitAlwaysEnc._wired) return;
   ehInitAlwaysEnc._wired = true;
 
@@ -6321,7 +6321,7 @@ function askSaveSettings() {
     ov.innerHTML = `<div role="dialog" aria-modal="true" style="width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1);color:var(--text);border:1px solid var(--border2);box-shadow:0 20px 60px var(--shadow)">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:6px"></div>
       <div style="font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:16px"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"></div></div>`;
+      <div style="display:flex;gap:8px;justify-content:flex-end;"></div></div>`;
     const [title, msg, btns] = ov.firstElementChild.children;
     title.textContent = tr('unsaved_changes_title', 'Save changes?');
     msg.textContent = tr('unsaved_changes_msg', 'You have unsaved changes in Settings.');

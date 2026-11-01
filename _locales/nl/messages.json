@@ -2,6 +2,15 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+  "filter_by_domain": {"message": "Filteren op domein"},
+  "always_enc_enabled": {"message": "Exports worden voortaan versleuteld"},
+  "always_enc_disabled": {"message": "Exports worden niet langer versleuteld"},
+  "always_enc_off_confirm": {"message": "Stoppen met het versleutelen van exports? Voor eerder versleutelde bestanden blijft het wachtwoord nodig."},
+  "always_enc_pw_changed": {"message": "Exportwachtwoord gewijzigd"},
+  "window": {"message": "Venster"},
+  "tab": {"message": "tabblad"},
+  "unsaved_changes_title": {"message": "Wijzigingen opslaan?"},
+  "unsaved_changes_msg": {"message": "Je hebt niet-opgeslagen wijzigingen in Instellingen."},
   "lock_big_warning": {"message": "Je geschiedenis is te groot om te versleutelen"},
   "lock_big_limit": {"message": "limiet"},
   "lock_big_warning2": {"message": "Er wordt niets versleuteld (om het vergrendelen snel te houden), maar de interface blijft wel vergrendeld."},

@@ -14,6 +14,8 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
+  "window": {"message": "Window"},
+  "tab": {"message": "tab"},
   "expr_mode": {"message": "Expression mode"},
   "ctx_cut": {"message": "Cut"},
   "ctx_copy": {"message": "Copy"},
@@ -1349,6 +1351,8 @@
       }
     }
   },
+  "unsaved_changes_title": {"message": "Save changes?"},
+  "unsaved_changes_msg": {"message": "You have unsaved changes in Settings."},
   "jump_to_datetime": {"message": "Jump to date&time"},
   "bm_sort_default": {"message": "Sort: Default"},
   "bm_sort_domain_asc": {"message": "Sort: Domain A–Z"},
@@ -1358,7 +1362,6 @@
   "always_encrypt_exports_desc": {"message": "When on, search/filtered exports are encrypted (AES-256) with the password you set here. Only a key derived from the password is stored, never the password itself. Keep your password: it is needed to import or open the files."},
   "set_export_password": {"message": "Set export password"},
   "set_export_password_note": {"message": "Needed to import or open your exports. If you forget it, encrypted exports cannot be recovered."},
-  "always_enc_on": {"message": "Exports are encrypted with your export password."},
   "always_enc_enabled": {"message": "Exports will now be encrypted"},
   "always_enc_disabled": {"message": "Exports are no longer encrypted"},
   "always_enc_off_confirm": {"message": "Stop encrypting exports? Files already encrypted still need the password."},
@@ -1369,6 +1372,5 @@
   "popup_search_limit": {"message": "Limit maximum old search history"},
   "popup_search_limit_desc": {"message": "The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything."},
   "encrypted": {"message": "encrypted"},
-  "select_all": {"message": "Select all"},
   "export_interrupted": {"message": "Export was interrupted — please try again"}
 }

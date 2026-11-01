@@ -22,6 +22,13 @@
   "ctx_select_all": {"message": "全选"},
   "ignore_mode_black": {"message": "黑名单模式"},
   "ignore_mode_white": {"message": "白名单模式"},
+  "filter_by_domain": {"message": "按域名筛选"},
+  "always_enc_enabled": {"message": "导出文件现在将进行加密"},
+  "always_enc_disabled": {"message": "导出文件将不再加密"},
+  "always_enc_off_confirm": {"message": "停止加密导出文件？已加密的文件仍然需要密码。"},
+  "always_enc_pw_changed": {"message": "导出密码已更改"},
+  "window": {"message": "窗口"},
+  "tab": {"message": "标签页"},
   "ignore_clean_black": {"message": "删除黑名单中网站的现有记录"},
   "ignore_mode_desc_white": {"message": "白名单：仅保存下方列表中的网站；其他所有网站都会被忽略。列表为空时，不会忽略任何网站。"},
   "ignore_mode_desc_black": {"message": "黑名单：忽略下方列表中的网站"},
@@ -1289,6 +1296,8 @@
       }
     }
   },
+  "unsaved_changes_title": {"message": "保存更改？"},
+  "unsaved_changes_msg": {"message": "设置中有尚未保存的更改。"},
   "avg_time_per_weekday_range": {"message": "每周各工作日的平均用时（最近 {0} 天）"},
   "follow_system_theme": {"message": "跟随系统主题"},
   "follow_system_theme_desc": {"message": "根据操作系统自动切换浅色和深色模式。启用此选项时，侧边栏中的“浅色 / 深色”按钮将被隐藏。"},

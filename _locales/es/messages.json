@@ -422,6 +422,15 @@
   "tabs": {
     "message": "pestañas"
   },
+  "unsaved_changes_title": {"message": "¿Guardar los cambios?"},
+  "unsaved_changes_msg": {"message": "Tienes cambios sin guardar en Ajustes."},
+  "filter_by_domain": {"message": "Filtrar por dominio"},
+  "always_enc_enabled": {"message": "Las exportaciones ahora estarán cifradas"},
+  "always_enc_disabled": {"message": "Las exportaciones ya no están cifradas"},
+  "always_enc_off_confirm": {"message": "¿Dejar de cifrar las exportaciones? Los archivos ya cifrados seguirán necesitando la contraseña."},
+  "always_enc_pw_changed": {"message": "Contraseña de exportación cambiada"},
+  "window": {"message": "Ventana"},
+  "tab": {"message": "pestaña"},
   "since": {
     "message": "desde"
   },
