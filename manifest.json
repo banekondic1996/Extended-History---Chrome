@@ -1,14 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Extended History",
-  "version": "4.2.8",
+  "version": "4.2.9",
   "default_locale": "en",
   "description": "Unlimited history retention, session management, time tracking, bookmarks, multi-device.",
   "permissions": [
     "activeTab",
     "alarms",
     "bookmarks",
-    "clipboardRead",
     "browsingData",
     "contextMenus",
     "history",

@@ -18,6 +18,7 @@ const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
+const CONTEXT_MENU_EXPR_ID          = 'eh_expr_mode';
 const TAB_STORAGE_KEY               = 'eh_tab_storage';
 const FAV_CACHE_KEY                 = 'eh_fav_cache'; // domain → dataURL
 
@@ -1815,12 +1816,27 @@ function exprTerms(q) {
 
 async function ensureContextMenus() {
   const settings = await getSettings();
-  if (settings.contextMenuEnabled === false || await isLocked()) {
-    // Right-click menu disabled by the user, or the extension is locked — just clear it out.
+  if (await isLocked()) {
+    // Extension is locked — just clear everything out.
     chrome.contextMenus.removeAll();
     return;
   }
+  const pagesEnabled = settings.contextMenuEnabled !== false;
   chrome.contextMenus.removeAll(() => {
+    // "Expression mode" in the normal menu of the search boxes (history page, popup, sidebar). Hidden until a search box
+    // is right-clicked (see EH_EXPR_MENU below), so it never shows in other text fields.
+    const extPages = ['html/history.html', 'html/popup.html'].map(p => chrome.runtime.getURL(p) + '*');
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_EXPR_ID,
+      type: 'checkbox',
+      checked: false,
+      visible: false,
+      title: chrome.i18n.getMessage('expr_mode') || 'Expression mode',
+      contexts: ['editable'],
+      documentUrlPatterns: extPages,
+    }, () => { if (chrome.runtime.lastError) console.warn('[EH] expression menu failed:', chrome.runtime.lastError.message); });
+
+    if (!pagesEnabled) return;   // right-click menu on web pages disabled by the user
     chrome.contextMenus.create({
       id: CONTEXT_MENU_PARENT_ID,
       title: 'Extended History',
@@ -1846,7 +1862,17 @@ async function ensureContextMenus() {
   });
 }
 
+// The search boxes tell us right before their native menu opens whether to show the "Expression mode" item and whether it is ticked
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'EH_EXPR_MENU') return;
+  chrome.contextMenus.update(CONTEXT_MENU_EXPR_ID, { visible: !!msg.show, checked: !!msg.checked }, () => { void chrome.runtime.lastError; });
+});
+
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === CONTEXT_MENU_EXPR_ID) {
+    chrome.runtime.sendMessage({ type: 'EH_EXPR_TOGGLE', checked: !!info.checked }, () => { void chrome.runtime.lastError; });
+    return;
+  }
   const pageUrl = info.pageUrl || info.frameUrl || tab?.url || '';
 
   if (info.menuItemId === CONTEXT_MENU_IGNORE_DOMAIN_ID) {
@@ -2808,6 +2834,7 @@ if (chrome.omnibox) {
 
 // ── Message API ──────────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg,_s,respond)=>{
+  if (msg && (msg.type === 'EH_EXPR_MENU' || msg.type === 'EH_EXPR_TOGGLE')) return;   // handled by dedicated listeners
   if (msg && msg.target === 'eh-sql') return;      // addressed to the database (offscreen page), not to us
   handle(msg).then(r => {
     if (r && typeof r.error === 'string' && /being repaired/.test(r.error)) { _dbBusy = _dbBusy || { done: 0, total: 0 }; setTimeout(pollDbBusy, 500); return { error: 'Repairing the history database…', migrating: true }; }
