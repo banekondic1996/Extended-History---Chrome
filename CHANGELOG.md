@@ -216,6 +216,11 @@ Fixed/changed in version 4.2.8:
 -Fixed search/filter export not exporting everything (was exporting max 20.000 entries)
 -Fixed some missing translations
 -Fixed session tab's links context menu
+
+Fixed/changed in version 4.2.9:
+-Removed added clipboard permission that was needed for custom context menu in search input
+-Removed custom context menu for search input, now using chrome.contextMenu api instead
+-Fixed context menu not closing on right click for sessions in sessions tab
 </pre>
 
 
