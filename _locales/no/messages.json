@@ -238,7 +238,7 @@
   },
   "rename_bookmark": {
   "message": "Gi bokmerket nytt navn"
-  },
+},
   "bm_sort_default": {"message": "Sorter: Standard"},
   "bm_sort_domain_asc": {"message": "Sorter: Domene A–Å"},
   "bm_sort_domain_desc": {"message": "Sorter: Domene Å–A"},

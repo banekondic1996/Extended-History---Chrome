@@ -1368,5 +1368,7 @@
   "filter_by_domain": {"message": "Filter by domain"},
   "popup_search_limit": {"message": "Limit maximum old search history"},
   "popup_search_limit_desc": {"message": "The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything."},
-  "encrypted": {"message": "encrypted"}
+  "encrypted": {"message": "encrypted"},
+  "select_all": {"message": "Select all"},
+  "export_interrupted": {"message": "Export was interrupted — please try again"}
 }

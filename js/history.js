@@ -1525,9 +1525,9 @@ function setupToolbar() {
 
 // Exports ONLY the entries the current search/filters match (all of them, not just the part loaded on screen),
 // as the same .json format the normal export and Import use.
+let _ehExportSeq = 0;
 async function exportMatching() {
   const btn = document.getElementById('exportResultsBtn');
-  if (!allResults.length) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
   const { query, mode, startDate, endDate, expr } = getFilters();
   const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;
   const orig = btn ? btn.textContent : '';
@@ -1538,18 +1538,26 @@ async function exportMatching() {
     let batch = [], n = 0;
     const add = (e) => { const k = historyDupKey(e); if (seen.has(k)) return; seen.add(k); batch.push(JSON.stringify(slim(e))); n++; if (batch.length >= 5000) { blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')])); batch = []; } };
     // everything the database holds for this search, page by page…
-    const STEP = 4000, expCid = EH_CID + '_export';
+    // Straight from the database, page by page — never from the (capped) list on screen. Every export gets its own
+    // search id: the database drops a search whose token is older than one it already saw for that id, and a reused
+    // id made the second export of a session silently stop after the first page.
+    const STEP = 4000, expCid = EH_CID + '_export' + (++_ehExportSeq);
     let expTok = 0;
     for (let offset = 0; ; ) {
       if (btn) btn.textContent = '⬇ ' + fmtNum(n);
       const r = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: STEP, qf, expr, noTotal: true, cid: expCid, token: ++expTok });
+      if (r.cancelled) throw new Error(tr('export_interrupted', 'Export was interrupted — please try again'));
       const list = applyQuickFilterEntries(r.entries || []);
       for (const e of list) add(e);
       offset += (r.entries || []).length;
       if ((r.entries || []).length < STEP) break;
     }
-    // …plus what is on screen but not in the database yet (today's live visits)
-    for (const e of allResults) add(e);
+    // …plus today's live visits that are not in the database yet, matched against the same search / filters
+    try {
+      const live = await sendLong('GET_TODAY_HISTORY');
+      const inRange = e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate);
+      for (const e of applyQuickFilterEntries((live.entries || []).filter(e => inRange(e) && historyEntryMatches(e, query, mode)))) add(e);
+    } catch (_) {}
     if (batch.length) blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')]));
     if (!n) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
     const meta = { exportedAt: new Date().toISOString(), totalEntries: n, search: { query, mode, from: startDate ? new Date(startDate).toISOString() : null, to: endDate ? new Date(endDate).toISOString() : null } };
@@ -2349,7 +2357,7 @@ async function loadSessions() {
       });
 
       // Right-click a past session → Delete (with confirmation). The active session can't be deleted.
-      if (sessRef) card.addEventListener('contextmenu', ev => {
+      if (sessRef) head.addEventListener('contextmenu', ev => {   // header only: the tab links below keep their normal menu
         ev.preventDefault(); ev.stopPropagation();
         showSessCtxMenu(ev.clientX, ev.clientY, sessRef, dateLabel.main, card);
       });
@@ -3292,6 +3300,8 @@ function _updateBmSelBar() {
   if (bar)     bar.style.display     = _bmSelMode ? 'flex' : 'none';
   if (toolbar) toolbar.style.display = _bmSelMode ? 'none' : 'flex';
   if (count) count.textContent = `${_bmSelected.size} `+ tr('selected','selected');
+  const allBtn = document.getElementById('bmSelAllBtn');
+  if (allBtn) allBtn.textContent = _bmSelected.size > 0 ? tr('deselect_all', 'Deselect all') : tr('select_all', 'Select all');
   const pane = document.getElementById('bookmarksContent');
   if (pane) pane.classList.toggle('bm-sel-mode', _bmSelMode);
 }
@@ -3815,6 +3825,14 @@ document.getElementById('bmSelDeleteBtn')?.addEventListener('click', async () =>
   _exitBmSelMode();
   toast(failed ? `Deleted with ${failed} error(s)` : `Deleted ${ids.length} bookmark${ids.length === 1 ? '' : 's'}`, failed ? 'err' : 'ok');
   await reloadBookmarksKeepState();
+});
+
+// Select all / Deselect all: acts on every bookmark in the current list (not just the rendered rows)
+document.getElementById('bmSelAllBtn')?.addEventListener('click', () => {
+  if (_bmSelected.size > 0) _bmSelected.clear();
+  else for (const n of _bmItems) _bmSelected.add(n.id);
+  document.querySelectorAll('#bookmarksContent .bm-item').forEach(r => r.classList.toggle('bm-checked', _bmSelected.has(r.dataset.bmId)));
+  _updateBmSelBar();
 });
 
 document.getElementById('bmSelMoveBtn')?.addEventListener('click', () => {

@@ -239,7 +239,7 @@
   },
   "rename_bookmark": {
   "message": "Переименовать закладку"
-  },
+},
   "bm_sort_default": {"message": "Сортировка: По умолчанию"},
   "bm_sort_domain_asc": {"message": "Сортировка: Домен А–Я"},
   "bm_sort_domain_desc": {"message": "Сортировка: Домен Я–А"},

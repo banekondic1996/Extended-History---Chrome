@@ -240,7 +240,7 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-  },
+},
   "bm_sort_default": {"message": "क्रमबद्ध करें: डिफ़ॉल्ट"},
   "bm_sort_domain_asc": {"message": "क्रमबद्ध करें: डोमेन A–Z"},
   "bm_sort_domain_desc": {"message": "क्रमबद्ध करें: डोमेन Z–A"},

@@ -239,8 +239,8 @@
   },
   "rename_bookmark": {
   "message": "重命名书签"
-  },
-  "remove_bookmark": {
+},
+"remove_bookmark": {
     "message": "删除书签"
   },
   "bm_sort_default": {"message": "排序：默认"},

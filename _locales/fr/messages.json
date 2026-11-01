@@ -208,7 +208,7 @@
   },
   "rename_bookmark": {
   "message": "Renommer le favori"
-  },
+},
   "bm_sort_default": {"message": "Trier : Par défaut"},
   "bm_sort_domain_asc": {"message": "Trier : Domaine A–Z"},
   "bm_sort_domain_desc": {"message": "Trier : Domaine Z–A"},

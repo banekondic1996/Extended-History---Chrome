@@ -238,7 +238,7 @@
   },
   "rename_bookmark": {
   "message": "Bladwijzer hernoemen"
-  },
+},
   "bm_sort_default": {"message": "Sorteren: Standaard"},
   "bm_sort_domain_asc": {"message": "Sorteren: Domein A–Z"},
   "bm_sort_domain_desc": {"message": "Sorteren: Domein Z–A"},

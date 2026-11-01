@@ -210,7 +210,7 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-  },
+},
   "bm_sort_default": {"message": "מיון: ברירת מחדל"},
   "bm_sort_domain_asc": {"message": "מיון: דומיין א–ת"},
   "bm_sort_domain_desc": {"message": "מיון: דומיין ת–א"},
