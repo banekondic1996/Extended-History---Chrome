@@ -221,6 +221,11 @@ Fixed/changed in version 4.2.9:
 -Removed added clipboard permission that was needed for custom context menu in search input
 -Removed custom context menu for search input, now using chrome.contextMenu api instead
 -Fixed context menu not closing on right click for sessions in sessions tab
+
+Fixed/changed in version 4.3.0:
+-Fixed session links opening bug in sessions tab
+-Fixed CSS for session links to fell more responsive
+-Removed double setInterval function for popup, one was enough
 </pre>
 
 
