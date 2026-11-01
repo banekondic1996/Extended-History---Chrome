@@ -1626,16 +1626,16 @@ window.addEventListener('focus', () => scheduleLoadRecentTabs(0));
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') scheduleLoadRecentTabs(0);
 });
-// Light polling fallback while the Closed Tabs panel is the visible one.
-setInterval(() => {
-    const panel = document.getElementById('panel-tabs');
-    if (panel && panel.classList.contains('active') && document.visibilityState === 'visible') loadRecentTabs();
-}, 3000);
-
-// Polling fallback — skip while in selection mode to avoid wiping checked state
+// One light polling fallback (every 3 s) for both lists: Closed Tabs while that panel is visible, and the Recent
+// History view when new visits arrived. It does nothing while the popup / side panel is hidden or in selection mode.
 let lastCount = 0;
 setInterval(() => {
-    if (_selMode) return;
+    if (document.visibilityState !== 'visible') return;
+    const panel = document.getElementById('panel-tabs');
+    const panelStorage= document.getElementById('ts-quickstore');
+    if (panelStorage && panelStorage.classList.contains('active')) showTsQuickStore();
+    if (panel && panel.classList.contains('active')) loadRecentTabs();
+    if (_selMode) return;                       // skip in selection mode to avoid wiping checked state
     chrome.storage.local.get('eh_today_history', r => {
         const entries = r.eh_today_history || [];
         if (entries.length !== lastCount) {
@@ -1643,7 +1643,7 @@ setInterval(() => {
             refreshRecentHistoryView(true);
         }
     });
-}, 2000);
+}, 3000);
 
 // ══ Sidebar day navigation (Recent History tab, sidebar mode only) ═══════════
 // Prev/next-day arrows + a clickable date label (opens a custom calendar),
