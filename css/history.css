@@ -753,7 +753,7 @@ input[type="date"]:focus { border-color: var(--accent); }
 .sess-tab-row {
   display: flex; align-items: center; gap: 11px;
   padding: 9px 18px; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background 0.1s;
+  cursor: pointer;
 }
 .sess-tab-row:last-child { border-bottom: none; }
 .sess-tab-row:hover { background: var(--surf1); }

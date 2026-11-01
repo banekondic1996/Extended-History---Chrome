@@ -2395,7 +2395,10 @@ function buildSessTabEl(t) {
   const row = document.createElement('a');
   row.className = 'sess-tab-row';
   row.href=t.url;
-  row.addEventListener('click', () => chrome.tabs.create({ url: t.url, active: false }));
+  row.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: t.url, active: false });
+  });
 
   const img = document.createElement('img');
   img.className = 'sess-fav';
@@ -5168,7 +5171,6 @@ let _sessCtx = null;
 function showSessCtxMenu(x, y, ref, label, card) {
   const m = document.getElementById('sessCtx');
   if (!m) return;
-  // Right-clicking the same session again while its menu is open closes it
   if (m.style.display === 'block' && _sessCtx && _sessCtx.card === card) { hideSessCtxMenu(); return; }
   _sessCtx = { ref, label, card };
   hideCtxMenu();
@@ -5181,11 +5183,6 @@ function hideSessCtxMenu() {
   if (m) m.style.display = 'none';
 }
 document.addEventListener('click', hideSessCtxMenu);
-// A right-click anywhere while the session menu is open just closes it (capture phase: nothing else opens in its place)
-document.addEventListener('contextmenu', ev => {
-  const m = document.getElementById('sessCtx');
-  if (m && m.style.display === 'block') { ev.preventDefault(); ev.stopPropagation(); hideSessCtxMenu(); }
-}, true);
 document.addEventListener('scroll', hideSessCtxMenu, true);
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideSessCtxMenu(); });
 document.getElementById('sessCtxDelete')?.addEventListener('click', async () => {
