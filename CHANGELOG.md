@@ -210,6 +210,12 @@ Fixed/changed in version 4.2.7:
 -Added search/filtered history export encryption option
 -Fixed popup not searching whole history from extension
 -Fixed search input context menu paste not working
+  
+Fixed/changed in version 4.2.8:
+-Added option to select/deselect all bookmarks
+-Fixed search/filter export not exporting everything (was exporting max 20.000 entries)
+-Fixed some missing translations
+-Fixed session tab's links context menu
 </pre>
 
 
