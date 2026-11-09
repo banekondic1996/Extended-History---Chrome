@@ -278,16 +278,48 @@ async function ehExportToBlob(begin, pw, onProgress) {
   return new Blob(blobs, { type: 'application/json' });
 }
 
+// ── "Always encrypt exports" (Settings → Data) ─────────────────────────────
+// Same file format as encrypted auto exports (v2, kdf "dh"): the AES-256-GCM key is SHA-256(PBKDF2(password, salt)).
+// Only that key + salt are kept in settings (alwaysEncryptExports / exportEncKey / exportEncSalt) — never the password —
+// so every export path can encrypt without asking. Importing (or the "Decrypt file" button) asks for the password.
+function ehAlwaysEnc() {
+  const s = _curSettings || {};
+  return s.alwaysEncryptExports === true && !!s.exportEncKey && !!s.exportEncSalt;
+}
+const EH_DH_CHUNK = 8e6;                           // characters of plain text per encrypted piece
+// Encrypts a Blob of text (streamed: nothing is held as one big string). ext = extension of the plain file, so the
+// "Decrypt file" button can name the result correctly (json for history, csv for time spent).
+async function ehEncryptBlobDH(blob, ext) {
+  const s = _curSettings;
+  const key = await crypto.subtle.importKey('raw', _b64toU8(s.exportEncKey), 'AES-GCM', false, ['encrypt']);
+  const out = [new Blob(['{"__eh_encrypted":true,"v":2,"kdf":"dh","ext":"' + (ext || 'json') + '","salt":"' + s.exportEncSalt + '",\n"chunks":[\n'])];
+  const reader = blob.stream().pipeThrough(new TextDecoderStream()).getReader();
+  let acc = '', pending = null;
+  const seal = async (text) => {
+    const line = await ehEncryptChunk(key, text);
+    if (pending !== null) out.push(new Blob([pending + ',\n']));
+    pending = line;
+  };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    acc += value;
+    while (acc.length >= EH_DH_CHUNK) { await seal(acc.slice(0, EH_DH_CHUNK)); acc = acc.slice(EH_DH_CHUNK); }
+  }
+  if (acc || pending === null) await seal(acc);
+  out.push(new Blob([pending + '\n]}\n']));
+  return new Blob(out, { type: 'application/json' });
+}
 function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function fmtNum(n)  { return Number(n).toLocaleString(); }
 function timeAgo(t) {
   const s = Math.floor((Date.now() - t) / 1000);
-  if (s < 60)    return 'just now';
-  if (s < 3600)  return `${Math.floor(s/60)}m ago`;
-  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-  return `${Math.floor(s/86400)}d ago`;
+  if (s < 60)    return tr('just_now','just now');
+  if (s < 3600)  return tr('pop_min_ago',  '{0}m ago').replace('{0}', Math.floor(s/60));
+  if (s < 86400) return tr('pop_hour_ago', '{0}h ago').replace('{0}', Math.floor(s/3600));
+  return tr('pop_day_ago', '{0}d ago').replace('{0}', Math.floor(s/86400));
 }
 function dayLabel(ts) {
   const d = new Date(ts), now = new Date();
@@ -397,10 +429,16 @@ browser.runtime.onMessage.addListener((m) => {
 function applyTheme() {
   const t = window.EhTheme ? EhTheme.effective() : (document.documentElement.getAttribute('data-theme') || 'dark');
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeLight')?.classList.toggle('active', t === 'light');
-  document.getElementById('themeDark')?.classList.toggle('active', t === 'dark');
+  // One button: it offers the other mode (dark now → "☀ Light", light now → "🌙 Dark")
+  const tt = document.getElementById('themeToggle');
+  if (tt) {
+    const next = t === 'dark' ? 'light' : 'dark';
+    const ic = document.getElementById('themeToggleIcon'), lb = document.getElementById('themeToggleLbl');
+    if (ic) ic.textContent = next === 'light' ? '☀' : '🌙';
+    if (lb) { lb.setAttribute('data-i18n-key', next); lb.textContent = tr(next, next === 'light' ? 'Light' : 'Dark'); }
+  }
   // Re-apply wallpaper so overlay color adapts to new theme
-  browser.storage.local.get(WP_STORAGE_KEY).catch(() => undefined).then(r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
+  browser.storage.local.get(WP_STORAGE_KEY, r => { if (r[WP_STORAGE_KEY]?.enabled) applyWallpaper(r[WP_STORAGE_KEY]); });
 }
 // Manual Light / Dark buttons (hidden while "Follow system theme" is on).
 function setTheme(t) {
@@ -463,6 +501,18 @@ function buildVirtualList() {
 
   if (!allResults.length) {
     area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span><span>`+tr('no_history_found','No history found<')+`</span></div>`;
+    // No day-label elements exist, so dayLabelStickyCheck can't update the bar: set it from the selected date
+    // (otherwise it keeps showing the previous day).
+    const _bar = document.getElementById('dayLabelBar');
+    if (_bar) {
+      let t = '';
+      if (filterDate) {
+        const [y, m, d] = filterDate.split('-').map(Number);
+        if (y && m && d) t = dayLabel(new Date(y, m - 1, d).getTime());
+      }
+      _bar.textContent = t;
+    }
+    area._dlN = 0; area._dlLen = 0;
     return;
   }
 
@@ -470,6 +520,7 @@ function buildVirtualList() {
   appendPage();          // render first page immediately
   setupScrollObserver(area);
   calScrollSpyCheck(area);
+  dayLabelStickyCheck(area);
 }
 
 function appendPage() {
@@ -493,7 +544,7 @@ function appendPage() {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
       hdr.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
-      hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
+      hdr.innerHTML = esc(dl);
       area.appendChild(hdr);
       prevDay = dl;
     }
@@ -504,6 +555,7 @@ function appendPage() {
     row.dataset.id   = e.id;
     row.dataset.url  = e.url;
     row.dataset.date = new Date(e.visitTime).toLocaleDateString('en-CA');
+    row.dataset.vt   = e.visitTime;
     row.innerHTML = `
     <div class="entry-check" data-id="${esc(e.id)}" title="Select">✓</div>
     <img class="e-fav" src="${favUrl(dom)}" loading="lazy"/>
@@ -565,6 +617,7 @@ function setupScrollObserver(area) {
       appendPage();
     }
     calScrollSpyCheck(area);
+    dayLabelStickyCheck(area);
   };
 }
 
@@ -929,8 +982,23 @@ function buildDateNav(retentionDays) {
       if (next === cur) return;                       // already at the first / last pill
       activateDatePill(vpKey(next));
     }
-    L.addEventListener('click', () => step(-1));
-    R.addEventListener('click', () => step(1));
+    // Hold an arrow to keep stepping through the dates (first step immediately, then repeating after a short delay).
+    function bindHold(btn, dir) {
+      let delayT = null, repT = null;
+      const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; };
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        stop();
+        step(dir);
+        delayT = setTimeout(() => { repT = setInterval(() => step(dir), 110); }, 420);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, stop));
+      window.addEventListener('pointerup', stop);
+      // Keyboard activation (Enter/Space) has no pointer events: detail === 0 there.
+      btn.addEventListener('click', (e) => { if (e.detail === 0) step(dir); });
+    }
+    bindHold(L, -1);
+    bindHold(R, 1);
 
     // Right-click: ‹ jumps to the newest day (today), › jumps to the oldest day that has history
     L.addEventListener('contextmenu', (e) => { e.preventDefault(); jumpToNewestDay(); });
@@ -956,7 +1024,7 @@ async function jumpToOldestDay() {
   activateDatePill(vpKey(idx));
 }
 
-function activateDatePill(key, silent) {
+function activateDatePill(key, silent, hour) {
   filterHour = null;
   document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
   document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
@@ -984,8 +1052,15 @@ function activateDatePill(key, silent) {
     }
   }
   updateHourPillsState();
+  // Optional hour (0–23): "Jump to date&time" lands on the day AND the hour in a single search
+  if (hour != null && filterDate) {
+    filterHour = hour;
+    document.querySelectorAll('.hn-pill').forEach(x => x.classList.remove('active'));
+    document.querySelector(`.hn-pill[data-h="${hour}"]`)?.classList.add('active');
+    updateCalHourGridState();
+  }
   syncCalActiveDate(key);
-  if (!silent) doSearch();
+  return silent ? undefined : doSearch();
 }
 
 // ── Hour nav ────────────────────────────────────────────────────────────────
@@ -1273,15 +1348,38 @@ function buildCalHourGrid() {
   updateCalHourGridState();
 }
 
-// ── Scroll-spy: while browsing "All time", highlight the date of whatever's
-// currently at the top of the visible list, without touching filterDate. ──
-// NOTE: this used to scan every rendered `.entry` row (data-date lives on each
-// entry) to find the one at the top. Since the list is append-only infinite
-// scroll — old rows are never removed from the DOM — that scan grew with
-// however far you'd scrolled, and ran on every animation frame while
-// scrolling, which is what made scrolling feel like it was doing work.
-// `.day-label` headers carry the same date and there are orders of magnitude
-// fewer of them (one per day vs. one per visit), so scan those instead.
+function dayLabelStickyCheck(area) {
+  if (!area || area._dlPending) return;
+  area._dlPending = true;
+  requestAnimationFrame(() => {
+    area._dlPending = false;
+    const labels = area.getElementsByClassName('day-label');
+    const n = labels.length;
+    const bar = area.id === 'listArea' ? document.getElementById('dayLabelBar')
+              : area.id === 'rmListArea' ? document.getElementById('rmDayLabelBar') : null;
+    if (!n) { area._dlN = 0; area._dlLen = 0; if (bar) bar.textContent = ''; return; }
+    const limit = area.getBoundingClientRect().top + 1;
+    let lo = 0, hi = n - 1, cur = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (labels[mid].getBoundingClientRect().top <= limit) { cur = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    const want = Math.max(cur, 0);                       // labels [0, want) are covered
+    if (bar) {                                           // wallpaper mode: bar above the list shows the current day
+      const t = labels[want].textContent;
+      if (bar.textContent !== t) bar.textContent = t;
+      labels[0].classList.add('dl-top');
+    }
+    if (n !== area._dlLen || labels[0] !== area._dlFirst) {
+      for (let i = 0; i < n; i++) labels[i].classList.toggle('dl-covered', i < want);   // list changed: redo all
+    } else if (want !== area._dlN) {
+      const a = Math.min(want, area._dlN), b = Math.max(want, area._dlN);
+      for (let i = a; i < b && i < n; i++) labels[i].classList.toggle('dl-covered', i < want);
+    }
+    area._dlN = want; area._dlLen = n; area._dlFirst = labels[0];
+  });
+}
+
 let _calScrollSpyPending = false;
 function calScrollSpyCheck(area) {
   if (filterDate) return; // only meaningful in All-time mode
@@ -1422,39 +1520,17 @@ function setupToolbar() {
   document.getElementById('dateFromBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateFrom')));
   document.getElementById('dateToBtn')?.addEventListener('click', () => openDatePicker(document.getElementById('dateTo')));
 
-  // "All time" — clears only date/hour filters, NOT the search text
-  document.getElementById('clearFiltersBtn').addEventListener('click', () => {
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value   = '';
-    filterDate = null; filterHour = null;
-    vpSetActive(null);
-    document.querySelectorAll('.hn-pill').forEach(b => b.classList.remove('active'));
-    const allPill = document.getElementById('dnAllPill');
-    if (allPill) allPill.classList.add('active');
-    document.querySelector('.hn-pill[data-h="all"]')?.classList.add('active');
-    updateHourPillsState();
-    doSearch();
-  });
-
   document.getElementById('deleteResultsBtn').addEventListener('click', deleteMatching);
 
-  // "Export results": saves only what the current search / filters / date range match (built here, markup untouched).
-  const delBtn = document.getElementById('deleteResultsBtn');
-  if (delBtn && !document.getElementById('exportResultsBtn')) {
-    const b = document.createElement('button');
-    b.className = 'tb-btn'; b.id = 'exportResultsBtn';
-    b.textContent = tr('export_results', 'Export results');
-    b.title = tr('export_results_tip', 'Export only the entries matching the current search, filters and dates');
-    delBtn.parentNode.insertBefore(b, delBtn);
-    b.addEventListener('click', exportMatching);
-  }
+  // "Export": saves only what the current search / filters / date range match
+  document.getElementById('exportResultsBtn')?.addEventListener('click', exportMatching);
 }
 
 // Exports ONLY the entries the current search/filters match (all of them, not just the part loaded on screen),
 // as the same .json format the normal export and Import use.
+let _ehExportSeq = 0;
 async function exportMatching() {
   const btn = document.getElementById('exportResultsBtn');
-  if (!allResults.length) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
   const { query, mode, startDate, endDate, expr } = getFilters();
   const qf = (window.QuickFilters && window.QuickFilters.activePatterns && window.QuickFilters.activePatterns()) || null;
   const orig = btn ? btn.textContent : '';
@@ -1465,28 +1541,38 @@ async function exportMatching() {
     let batch = [], n = 0;
     const add = (e) => { const k = historyDupKey(e); if (seen.has(k)) return; seen.add(k); batch.push(JSON.stringify(slim(e))); n++; if (batch.length >= 5000) { blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')])); batch = []; } };
     // everything the database holds for this search, page by page…
-    const STEP = 4000, expCid = EH_CID + '_export';
+    // Straight from the database, page by page — never from the (capped) list on screen. Every export gets its own
+    // search id: the database drops a search whose token is older than one it already saw for that id, and a reused
+    // id made the second export of a session silently stop after the first page.
+    const STEP = 4000, expCid = EH_CID + '_export' + (++_ehExportSeq);
     let expTok = 0;
     for (let offset = 0; ; ) {
       if (btn) btn.textContent = '⬇ ' + fmtNum(n);
       const r = await sendLong('SEARCH', { query, mode, startDate, endDate, offset, limit: STEP, qf, expr, noTotal: true, cid: expCid, token: ++expTok });
+      if (r.cancelled) throw new Error(tr('export_interrupted', 'Export was interrupted — please try again'));
       const list = applyQuickFilterEntries(r.entries || []);
       for (const e of list) add(e);
       offset += (r.entries || []).length;
       if ((r.entries || []).length < STEP) break;
     }
-    // …plus what is on screen but not in the database yet (today's live visits)
-    for (const e of allResults) add(e);
+    // …plus today's live visits that are not in the database yet, matched against the same search / filters
+    try {
+      const live = await sendLong('GET_TODAY_HISTORY');
+      const inRange = e => (!startDate || e.visitTime >= startDate) && (!endDate || e.visitTime <= endDate);
+      for (const e of applyQuickFilterEntries((live.entries || []).filter(e => inRange(e) && historyEntryMatches(e, query, mode)))) add(e);
+    } catch (_) {}
     if (batch.length) blobs.push(new Blob([(blobs.length ? ',' : '') + batch.join(',')]));
     if (!n) { toast(tr('no_results_export', 'No results to export'), 'err'); return; }
     const meta = { exportedAt: new Date().toISOString(), totalEntries: n, search: { query, mode, from: startDate ? new Date(startDate).toISOString() : null, to: endDate ? new Date(endDate).toISOString() : null } };
     const head = JSON.stringify(meta).slice(0, -1) + ',"entries":[';
-    const blob = new Blob([head, ...blobs, ']}'], { type: 'application/json' });
+    let blob = new Blob([head, ...blobs, ']}'], { type: 'application/json' });
+    const encOn = ehAlwaysEnc();
+    if (encOn) blob = await ehEncryptBlobDH(blob, 'json');
     const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}.json` });
+    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_search_${new Date().toISOString().slice(0, 10)}${encOn ? '_enc' : ''}.json` });
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);
-    toast(tr('export_results_done', 'Exported {0} matching entries').replace('{0}',fmtNum(n)), 'ok');
+    toast(tr('export_results_done', 'Exported {0} matching entries', fmtNum(n)) + (encOn ? ' (' + tr('encrypted', 'encrypted') + ')' : ''), 'ok');
   } catch (err) {
     toast('Export failed: ' + (err.message || err), 'err');
   } finally {
@@ -1545,6 +1631,7 @@ function removeEntryFromView(id) {
   // If that was the last entry for this date, drop the now-empty day header too.
   if (date && !area.querySelector(`.entry[data-date="${CSS.escape(date)}"]`)) {
     area.querySelector(`.day-label[data-date="${CSS.escape(date)}"]`)?.remove();
+    dayLabelStickyCheck(area);
   }
 
   if (!allResults.length) {
@@ -2163,7 +2250,7 @@ async function loadSessions() {
 
     el.innerHTML = '';
 
-    function buildSessionCard(dateLabel, badgeText, tabsArr) {
+    function buildSessionCard(dateLabel, badgeText, tabsArr, sessRef) {
       const card = document.createElement('div');
       card.className = 'session-card';
 
@@ -2193,7 +2280,7 @@ async function loadSessions() {
 
       const tabCount = document.createElement('span');
       tabCount.className   = 'sess-tab-count';
-      tabCount.textContent = `${tabsArr.length+' '+tr('tabs','tabs')}`;
+      tabCount.textContent = tabsArr.length+` ${tabsArr.length !== 1 ? tr('tabs','tabs') : tr('tab','tab') }`;
 
       const exportBtn = document.createElement('button');
       exportBtn.className   = 'tb-btn';
@@ -2257,7 +2344,7 @@ async function loadSessions() {
         for (const [wid, winTabs] of windowMap) {
           const winHeader = document.createElement('div');
           winHeader.className = 'sess-window-header';
-          winHeader.textContent = `Window ${winIndex} — ${winTabs.length} tab${winTabs.length !== 1 ? 's' : ''}`;
+          winHeader.textContent = tr('window','Window')+` ${winIndex} — ${winTabs.length} ${winTabs.length !== 1 ? tr('tabs','tabs') : tr('tab','tab') }`;
           tabsEl.appendChild(winHeader);
           winTabs.slice(0, 200).forEach(t => tabsEl.appendChild(buildSessTabEl(t)));
           winIndex++;
@@ -2272,6 +2359,12 @@ async function loadSessions() {
         toggle.classList.toggle('open', open);
       });
 
+      // Right-click a past session → Delete (with confirmation). The active session can't be deleted.
+      if (sessRef) head.addEventListener('contextmenu', ev => {   // header only: the tab links below keep their normal menu
+        ev.preventDefault(); ev.stopPropagation();
+        showSessCtxMenu(ev.clientX, ev.clientY, sessRef, dateLabel.main, card);
+      });
+
       card.appendChild(head);
       card.appendChild(tabsEl);
       return card;
@@ -2280,7 +2373,7 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: _ehMsg("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+        { main: _ehMsg("current_session"), sub: `${tr('started','Started')+' '+timeAgo(current.start)} · ${dur}` },
                                       _ehMsg("active"), current.tabs
       ));
     }
@@ -2290,7 +2383,7 @@ async function loadSessions() {
       const date = new Date(sess.start).toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
       el.appendChild(buildSessionCard(
         { main: date, sub: `${dur} · ${sess.tabCount+' '+tr('unique_tabs','unique tabs')}` },
-        null, sess.tabs
+        null, sess.tabs, { id: sess.id, start: sess.start }
       ));
     });
 
@@ -2302,9 +2395,13 @@ async function loadSessions() {
 function buildSessTabEl(t) {
   const dom = tryDomain(t.url || '');
 
-  const row = document.createElement('div');
+  const row = document.createElement('a');
   row.className = 'sess-tab-row';
-  row.addEventListener('click', () => browser.tabs.create({ url: t.url, active: false }));
+  row.href=t.url;
+  row.addEventListener('click', (e) => {
+    e.preventDefault();
+    browser.tabs.create({ url: t.url, active: false });
+  });
 
   const img = document.createElement('img');
   img.className = 'sess-fav';
@@ -2333,6 +2430,15 @@ function buildSessTabEl(t) {
 
 
 // ══ TAB STORAGE ══════════════════════════════════════════════════════════════
+// Translated helpers for Tab Storage ({0} is filled in here, so it works with native and override languages alike)
+function tsTr(key, fb, n) { return String(tr(key, fb, n)).replace('{0}', n); }
+function tsTimeAgo(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 60)    return tr('pop_just_now', 'just now');
+  if (s < 3600)  return tr('pop_min_ago',  '{0}m ago', Math.floor(s/60)).replace('{0}', Math.floor(s/60));
+  if (s < 86400) return tr('pop_hour_ago', '{0}h ago', Math.floor(s/3600)).replace('{0}', Math.floor(s/3600));
+  return tr('pop_day_ago', '{0}d ago', Math.floor(s/86400)).replace('{0}', Math.floor(s/86400));
+}
 async function loadTabStorage() {
   const el = document.getElementById('tabStorageContent');
   if (!el) return;
@@ -2351,15 +2457,15 @@ async function loadTabStorage() {
     header.className = 'ts-header';
     const countEl = document.createElement('span');
     countEl.className = 'ts-count';
-    countEl.textContent = `${entries.length} stored tab${entries.length !== 1 ? 's' : ''}`;
+    countEl.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', entries.length);
     const clearBtn = document.createElement('button');
     clearBtn.className = 'tb-btn';
     clearBtn.textContent = '🗑 '+tr('clear_all','Clear all');
     clearBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)';
     clearBtn.addEventListener('click', async () => {
-      if (!confirm(`Clear all ${entries.length} stored tabs?`)) return;
+      if (!confirm(tsTr('confirm_clear_stored_tabs', 'Clear all stored tabs ({0})?', entries.length))) return;
       await send('CLEAR_TAB_STORAGE');
-      toast('Tab storage cleared', 'ok');
+      toast(tr('tab_storage_cleared', 'Tab storage cleared'), 'ok');
       loadTabStorage();
     });
     const restoreAllBtn = document.createElement('button');
@@ -2367,11 +2473,11 @@ async function loadTabStorage() {
     restoreAllBtn.textContent = '↺ '+tr('restore_all','Restore all');
     restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
     restoreAllBtn.addEventListener('click', async () => {
-      if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
+      if (entries.length > 15 && !confirm(tsTr('confirm_open_stored_tabs', 'Open all stored tabs ({0})?', entries.length))) return;
       // Hand off to background: clears storage + opens tabs with stagger
       const urls = entries.map(e => e.url).filter(Boolean);
       await send('RESTORE_TAB_STORAGE_ENTRIES', { ids: entries.map(e => e.id), urls });
-      toast(`Restoring ${entries.length} tab${entries.length !== 1 ? 's' : ''}…`, 'ok');
+      toast(tsTr('restoring_tabs', 'Restoring tabs ({0})…', entries.length), 'ok');
       loadTabStorage();
     });
     header.appendChild(countEl);
@@ -2385,6 +2491,8 @@ async function loadTabStorage() {
       const row = document.createElement('div');
       row.className = 'ts-row';
       row.title = entry.url;
+      row.dataset.title = (entry.title || '').toLowerCase();
+      row.dataset.url   = (entry.url || '').toLowerCase();
       const fav = document.createElement('img');
       fav.className = 'ts-fav';
       setFavicon(fav, dom);
@@ -2397,13 +2505,13 @@ async function loadTabStorage() {
       title.textContent = entry.title || entry.url;
       const meta = document.createElement('div');
       meta.className = 'ts-meta';
-      meta.textContent = dom + ' · Saved ' + timeAgo(entry.savedAt);
+      meta.textContent = dom + ' · ' + String(tr('saved', 'Saved ')).trim() + ' ' + tsTimeAgo(entry.savedAt);
       body.appendChild(title);
       body.appendChild(meta);
       const removeBtn = document.createElement('button');
       removeBtn.className = 'tb-btn';
       removeBtn.textContent = '✕';
-      removeBtn.title = 'Remove from storage';
+      removeBtn.title = tr('remove_from_storage', 'Remove from storage');
       removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 8px;flex-shrink:0;color:var(--text3)';
       removeBtn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
@@ -2414,7 +2522,7 @@ async function loadTabStorage() {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
             const n = list.querySelectorAll('.ts-row').length;
-            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+            countEl2.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', n);
           }
         }
         send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
@@ -2428,7 +2536,7 @@ async function loadTabStorage() {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
             const n = list.querySelectorAll('.ts-row').length;
-            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+            countEl2.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', n);
           }
         }
         send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
@@ -2439,12 +2547,62 @@ async function loadTabStorage() {
       list.appendChild(row);
     }
     el.appendChild(list);
+    filterTabStorageRows(document.getElementById('tabStorageSearchInput')?.value || '');
     // Restore scroll position after re-render
     requestAnimationFrame(() => { if (scrollEl) scrollEl.scrollTop = prevScroll; });
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
 }
+
+// ── Tab Storage search: filter stored tabs by title or URL ──────────────────
+function filterTabStorageRows(rawQuery) {
+  const query = (rawQuery || '').trim().toLowerCase();
+  const el = document.getElementById('tabStorageContent');
+  if (!el) return;
+  const rows = el.querySelectorAll('.ts-row');
+  let visible = 0;
+  rows.forEach(row => {
+    const matches = !query || (row.dataset.title || '').includes(query) || (row.dataset.url || '').includes(query);
+    row.style.display = matches ? '' : 'none';
+    if (matches) visible++;
+  });
+  let none = el.querySelector('.ts-no-match');
+  if (rows.length && query && !visible) {
+    if (!none) {
+      none = document.createElement('div');
+      none.className = 'state-msg ts-no-match';
+      none.innerHTML = '<span class="state-msg-icon">🔍</span>' + tr('no_matching_stored_tabs', 'No matching stored tabs.');
+      el.appendChild(none);
+    }
+  } else if (none) none.remove();
+}
+
+// Delegated listeners on document: work no matter when/how the panel is shown
+// or re-rendered, so the search never depends on the panel-switch path.
+function _tsSearchSync(input) {
+  document.getElementById('tabStorageSearchClearBtn')?.classList.toggle('visible', !!input.value.length);
+  filterTabStorageRows(input.value);
+}
+document.addEventListener('input', ev => {
+  if (ev.target && ev.target.id === 'tabStorageSearchInput') _tsSearchSync(ev.target);
+});
+document.addEventListener('keydown', ev => {
+  const t = ev.target;
+  if (t && t.id === 'tabStorageSearchInput' && ev.key === 'Escape' && t.value) {
+    ev.preventDefault(); t.value = ''; _tsSearchSync(t);
+  }
+});
+document.addEventListener('click', ev => {
+  const btn = ev.target && ev.target.closest && ev.target.closest('#tabStorageSearchClearBtn');
+  if (!btn) return;
+  const input = document.getElementById('tabStorageSearchInput');
+  if (!input) return;
+  input.value = '';
+  _tsSearchSync(input);
+  input.focus();
+});
+function wireTabStorageSearch() { /* kept for compatibility; listeners are delegated above */ }
 
 // ══ DEVICES ═════════════════════════════════════════════════════════════════
 async function loadDevices() {
@@ -2453,7 +2611,7 @@ async function loadDevices() {
   try {
     const { devices } = await send('GET_DEVICES');
     if (!devices?.length) {
-      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('no_synced_devices','No synced devices found.')+'<br><small style="color:var(--text3)">'+tr('browser_sync_hint','Sign in to your browser account and enable Sync.')+'</small></div>';
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📡</span>'+tr('no_synced_devices','No synced devices found.')+'<br><small style="color:var(--text3)">'+tr('chrome_sync_hint','Sign in to your browser account and enable Sync.')+'</small></div>';
       return;
     }
 
@@ -2754,6 +2912,7 @@ function _bmBuildFlat() {
           node:       n,
           _title:     (n.title || '').toLowerCase(),
           _url:       (n.url   || '').toLowerCase(),
+          _domain:    (tryDomain(n.url || '') || '').toLowerCase(),
           _folder:    folderName.toLowerCase(),
           folderName: folderName,
         });
@@ -3209,6 +3368,8 @@ function _updateBmSelBar() {
   if (bar)     bar.style.display     = _bmSelMode ? 'flex' : 'none';
   if (toolbar) toolbar.style.display = _bmSelMode ? 'none' : 'flex';
   if (count) count.textContent = `${_bmSelected.size} `+ tr('selected','selected');
+  const allBtn = document.getElementById('bmSelAllBtn');
+  if (allBtn) allBtn.textContent = _bmSelected.size > 0 ? tr('deselect_all', 'Deselect all') : tr('pop_select_all', 'Select all');
   const pane = document.getElementById('bookmarksContent');
   if (pane) pane.classList.toggle('bm-sel-mode', _bmSelMode);
 }
@@ -3267,6 +3428,7 @@ function _buildBmRow(n) {
   row.className = _bmSelected.has(n.id) ? 'bm-item bm-checked' : 'bm-item';
   row.dataset.bmId = n.id;
   row.draggable = true;
+  row.title = (n.title && n.title !== n.url ? n.title + '\n' : '') + (n.url || '');   // hover → title + URL
 
   const check = document.createElement('span');
   check.className = 'bm-item-check';
@@ -3385,7 +3547,8 @@ function _bmInitList(items, emptyMsg) {
   const pane = document.getElementById('bookmarksContent');
   pane.innerHTML = '';
   pane.scrollTop = 0;
-  _bmItems = items;
+  _bmItems = _bmSortItems(items);
+  items = _bmItems;
   _bmVRows.clear();
   _bmSizer = null;
 
@@ -3471,7 +3634,7 @@ _bmSetupList();
 // search results are ranked by match, so neither has a single per-folder
 // order to write back to via browser.bookmarks.move.
 function _bmReorderEligible() {
-  return !!_bmActiveNode && !_bmIsSearch;
+  return !!_bmActiveNode && !_bmIsSearch && _bmSort === 'default';
 }
 
 // Called from _bmSetupList's dragstart/dragend above.
@@ -3579,21 +3742,61 @@ function renderBmItems(folderNode) {
   _bmInitList(items);
 }
 
-// Search: flat list across all bookmarks — uses precomputed _bmFlat index for speed
+// Search: flat list across all bookmarks — uses precomputed _bmFlat index for speed.
+// The "search in" selector (#bmSearchMode) limits which field(s) the words must match.
 function renderBookmarksWithFilter(query) {
   const q = query.trim().toLowerCase();
   if (!_bmTree) return;
   if (!q) { _bmIsSearch = false; renderBmItems(_bmActiveNode); return; }
 
-  // Multi-word: every word must appear in title, url, or folder name
+  const mode  = document.getElementById('bmSearchMode')?.value || 'all';
+  // Multi-word: every word must appear in the chosen field(s)
   const words = q.split(/\s+/).filter(Boolean);
-  const results = _bmFlat.filter(({ _title, _url, _folder }) =>
-    words.every(w => _title.includes(w) || _url.includes(w) || _folder.includes(w))
-  ).map(e => e.node);
+  const hit = (e, w) =>
+      mode === 'title'  ? e._title.includes(w)
+    : mode === 'url'    ? e._url.includes(w)
+    : mode === 'domain' ? e._domain.includes(w)
+    : (e._title.includes(w) || e._url.includes(w) || e._domain.includes(w) || e._folder.includes(w));
+  const results = _bmFlat.filter(e => words.every(w => hit(e, w))).map(e => e.node);
 
   _bmIsSearch = true;
   _bmInitList(results, 'No matching bookmarks');
 }
+
+// ── Bookmark sorting ─────────────────────────────────────────────────────────
+// 'default' keeps Chrome's own order (the order they were saved / added);
+// the others sort by domain name or title. Persisted per browser.
+let _bmSort = 'default';
+try { const v = localStorage.getItem('eh_bm_sort'); if (['domain-asc','domain-desc','title-asc','title-desc'].includes(v)) _bmSort = v; } catch {}
+function _bmSortItems(items) {
+  if (_bmSort === 'default') return items;
+  const dir = _bmSort.endsWith('-desc') ? -1 : 1;
+  const key = _bmSort.startsWith('title')
+    ? n => (n.title || n.url || '').toLowerCase()
+    : n => (tryDomain(n.url || '') || '').toLowerCase().replace(/^www\./, '');
+  const keyed = items.map((n, i) => ({ n, i, d: key(n) }));
+  keyed.sort((a, b) => (dir * a.d.localeCompare(b.d, undefined, { numeric: true, sensitivity: 'base' })) || (a.i - b.i));
+  return keyed.map(k => k.n);
+}
+function _bmRefreshView() {
+  const q = document.getElementById('bmSearch')?.value || '';
+  if (q.trim()) renderBookmarksWithFilter(q); else renderBmItems(_bmActiveNode);
+}
+(function setupBmSortSearchUi() {
+  const sortSel = document.getElementById('bmSortSel');
+  const modeSel = document.getElementById('bmSearchMode');
+  if (sortSel) {
+    sortSel.value = _bmSort;
+    sortSel.addEventListener('change', () => {
+      _bmSort = sortSel.value;
+      try { localStorage.setItem('eh_bm_sort', _bmSort); } catch {}
+      _bmRefreshView();
+    });
+  }
+  if (modeSel) modeSel.addEventListener('change', () => {
+    if ((document.getElementById('bmSearch')?.value || '').trim()) _bmRefreshView();
+  });
+})();
 // ── Resizable folder pane ────────────────────────────────────────────────────
 // Drag the thin handle between the folder tree and the bookmark list. The width
 // is remembered; double-click the handle to reset it.
@@ -3690,6 +3893,14 @@ document.getElementById('bmSelDeleteBtn')?.addEventListener('click', async () =>
   _exitBmSelMode();
   toast(failed ? `Deleted with ${failed} error(s)` : `Deleted ${ids.length} bookmark${ids.length === 1 ? '' : 's'}`, failed ? 'err' : 'ok');
   await reloadBookmarksKeepState();
+});
+
+// Select all / Deselect all: acts on every bookmark in the current list (not just the rendered rows)
+document.getElementById('bmSelAllBtn')?.addEventListener('click', () => {
+  if (_bmSelected.size > 0) _bmSelected.clear();
+  else for (const n of _bmItems) _bmSelected.add(n.id);
+  document.querySelectorAll('#bookmarksContent .bm-item').forEach(r => r.classList.toggle('bm-checked', _bmSelected.has(r.dataset.bmId)));
+  _updateBmSelBar();
 });
 
 document.getElementById('bmSelMoveBtn')?.addEventListener('click', () => {
@@ -3972,6 +4183,9 @@ function populateSettings(s) {
   if (popupSearchToggle) popupSearchToggle.checked = s.popupShowSearch !== false;
   if (popupTabsToggle)   popupTabsToggle.checked   = s.popupShowTabs   !== false;
   if (popupURLsToggle)   popupURLsToggle.checked   = s.popupShowUrl   !== false;
+  { const t = document.getElementById('popupSearchLimitToggle'), m = document.getElementById('popupSearchLimitMonths');
+    if (t) t.checked = s.popupSearchLimitEnabled === true;
+    if (m) m.value = s.popupSearchLimitMonths || 12; }
   if (popupHeightInput)  {
     popupHeightInput.value = s.popupHeight || 320;
     if (popupHeightVal) popupHeightVal.textContent = popupHeightInput.value + 'px';
@@ -4037,6 +4251,7 @@ function populateSettings(s) {
   if (autoExportWebDavPassword) autoExportWebDavPassword.value = s.autoExportWebDavPassword || '';
   updateAutoExportDestinationUi();
   ehInitBackupExtras(s);
+  ehInitAlwaysEnc(s);
   refreshAutoExportStatus();
 
   // Populate toolbar icon picker
@@ -4189,6 +4404,8 @@ async function saveSettings() {
   const popupShowSearch = document.getElementById('popupSearchToggle')?.checked !== false;
   const popupShowTabs   = document.getElementById('popupTabsToggle')?.checked   !== false;
   const popupShowUrl   = document.getElementById('popupURLsToggle')?.checked   !== false;
+  const popupSearchLimitEnabled = document.getElementById('popupSearchLimitToggle')?.checked === true;
+  const popupSearchLimitMonths  = Math.max(1, Math.min(600, parseInt(document.getElementById('popupSearchLimitMonths')?.value || '12') || 12));
   const popupHeight     = parseInt(document.getElementById('popupHeightInput')?.value || '320');
   const popupAsSidebar  = document.getElementById('popupSidebarToggle')?.checked === true;
   const popupQuickFilters = document.getElementById('popupQuickFiltersToggle')?.checked === true;
@@ -4236,6 +4453,8 @@ async function saveSettings() {
         popupShowSearch,
         popupShowTabs,
         popupShowUrl,
+        popupSearchLimitEnabled,
+        popupSearchLimitMonths,
         popupHeight,
         popupAsSidebar,
         popupQuickFilters,
@@ -4418,7 +4637,7 @@ function ehInitBackupExtras(s) {
       b.disabled = true; b.textContent = tr('redownloading', 'Preparing…');
       try {
         const r = await sendLong('REDOWNLOAD_LAST_INCREMENTAL');
-        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)').replace('{0}',fmtNum(r.exported)) + (r.encrypted ? ' 🔒' : ''), 'ok');
+        toast(tr('redownload_done', 'Saved the last incremental backup ({0} entries)', fmtNum(r.exported)) + (r.encrypted ? ' (' + tr('encrypted', 'encrypted') + ')' : ''), 'ok');
       } catch (err) { toast(err.message || String(err), 'err'); }
       b.disabled = false; b.textContent = orig;
     });
@@ -4436,8 +4655,93 @@ function ehInitBackupExtras(s) {
   const rb = document.getElementById('ehRedownloadBtn');
   rb.disabled = !(last && last.until);
   document.getElementById('ehRedownloadNote').textContent = last && last.until
-    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries').replace('{0}',new Date(last.until).toLocaleString()).replace('{1}',fmtNum(last.count || 0))
+    ? tr('redownload_note', 'Last incremental backup: {0} · {1} entries').replace('{0}', new Date(last.until).toLocaleString()).replace('{1}', fmtNum(last.count || 0))
     : tr('no_incremental_backup_yet', 'No incremental backup made yet');
+}
+
+// ── Settings: "Always encrypt search/filtered exports" ──────────────────────
+// Small modal with real password fields (prompt() would show the password in clear text).
+function ehPasswordModal(title, withConfirm, note) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(8,8,12,0.55);backdrop-filter:blur(6px)';
+    const card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1,#18181f);color:var(--text,#f0eee8);border:1px solid var(--border2,rgba(255,255,255,.12));box-shadow:0 24px 80px rgba(0,0,0,.5)';
+    const inp = 'display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin-top:10px;border-radius:8px;outline:none;font-size:.9rem;background:var(--surf3,#1f1f28);color:inherit;border:1px solid var(--border2,rgba(255,255,255,.12))';
+    card.innerHTML = '<div style="font-weight:700;font-size:1.05rem;margin-bottom:6px"></div>' +
+      '<div style="font-size:.78rem;line-height:1.5;color:var(--text2,#a09eb0)"></div>' +
+      '<input type="password" id="ehPm1" autocomplete="new-password" style="' + inp + '">' +
+      (withConfirm ? '<input type="password" id="ehPm2" autocomplete="new-password" style="' + inp + '">' : '') +
+      '<div id="ehPmErr" style="min-height:1.1em;margin-top:8px;font-size:.78rem;color:var(--danger,#f06060)"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px"><button class="action-btn" id="ehPmCancel" style="flex:1"></button><button class="action-btn" id="ehPmOk" style="flex:1;background:var(--accent);color:#fff"></button></div>';
+    card.children[0].textContent = title;
+    card.children[1].textContent = note || '';
+    const $ = q => card.querySelector(q);
+    $('#ehPm1').placeholder = tr('lock_password', 'Password');
+    if (withConfirm) $('#ehPm2').placeholder = tr('lock_confirm_password', 'Confirm password');
+    $('#ehPmCancel').textContent = tr('cancel', 'Cancel');
+    $('#ehPmOk').textContent = tr('ok', 'OK');
+    ov.appendChild(card); document.body.appendChild(ov);
+    const done = v => { ov.remove(); resolve(v); };
+    const submit = () => {
+      const a = $('#ehPm1').value, err = $('#ehPmErr');
+      if (withConfirm) {
+        if (a.length < 4) { err.textContent = tr('lock_password_short', 'Password must be at least 4 characters'); return; }
+        if (a !== $('#ehPm2').value) { err.textContent = tr('lock_password_mismatch', 'Passwords do not match'); return; }
+      } else if (!a) { $('#ehPm1').focus(); return; }
+      done(a);
+    };
+    $('#ehPmOk').addEventListener('click', submit);
+    $('#ehPmCancel').addEventListener('click', () => done(null));
+    ov.addEventListener('mousedown', e => { if (e.target === ov) done(null); });
+    card.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); else if (e.key === 'Escape') done(null); });
+    setTimeout(() => $('#ehPm1').focus(), 30);
+  });
+}
+
+function ehInitAlwaysEnc(s) {
+  const tgl = document.getElementById('alwaysEncToggle');
+  if (!tgl) return;
+  const on = s.alwaysEncryptExports === true && !!s.exportEncKey;
+  tgl.checked = on;
+  const chg = document.getElementById('alwaysEncPwBtn');
+  if (chg) chg.style.display = on ? '' : 'none';
+  const st = document.getElementById('alwaysEncStatus');
+  if (ehInitAlwaysEnc._wired) return;
+  ehInitAlwaysEnc._wired = true;
+
+  const save = async (settings) => {
+    const r = await send('SAVE_SETTINGS', { settings });
+    _curSettings = Object.assign(_curSettings || {}, (r && r.settings) || settings);
+    ehInitAlwaysEnc(_curSettings);
+  };
+  const setPassword = async () => {
+    const pw = await ehPasswordModal(
+      tr('set_export_password', 'Set export password'), true,
+      tr('set_export_password_note', 'Needed to import or open your exports. If you forget it, encrypted exports cannot be recovered.'));
+    if (!pw) return false;
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await ehDoubleHashBytes(pw, salt);
+    await save({ alwaysEncryptExports: true, exportEncKey: _u8toB64(key), exportEncSalt: _u8toB64(salt) });
+    return true;
+  };
+  tgl.addEventListener('change', async (ev) => {
+    const chk = ev.target;
+    try {
+      if (chk.checked) {
+        if (await setPassword()) toast(tr('always_enc_enabled', 'Exports will now be encrypted'), 'ok');
+        else chk.checked = false;
+      } else {
+        if (!confirm(tr('always_enc_off_confirm', 'Stop encrypting exports? Files already encrypted still need the password.'))) { chk.checked = true; return; }
+        await save({ alwaysEncryptExports: false, exportEncKey: '', exportEncSalt: '' });
+        toast(tr('always_enc_disabled', 'Exports are no longer encrypted'), 'ok');
+      }
+    } catch (err) { toast(err.message || String(err), 'err'); chk.checked = !chk.checked; }
+  });
+  chg?.addEventListener('click', async () => {
+    try { if (await setPassword()) toast(tr('always_enc_pw_changed', 'Export password changed'), 'ok'); }
+    catch (err) { toast(err.message || String(err), 'err'); }
+  });
 }
 
 async function refreshAutoExportStatus() {
@@ -4447,10 +4751,11 @@ async function refreshAutoExportStatus() {
     const r = await send('GET_AUTO_EXPORT_STATUS');
     if (!r.enabled) { el.textContent = tr('disabled', 'Disabled'); return; }
     const parts = [];
-    if (r.lastRunAt) parts.push(tr('auto_export_last', 'Last export: {0}', new Date(r.lastRunAt).toLocaleDateString()));
+    if (r.lastRunAt) parts.push(tr('last_export', 'Last export:')+('{0}').replace('{0}', new Date(r.lastRunAt).toLocaleDateString()));
     parts.push(Date.now() >= r.nextDueAt
       ? tr('auto_export_due', 'Due — will run on next check')
-      : tr('auto_export_next', 'Next export: {0}').replace('{0}', new Date(r.nextDueAt).toLocaleDateString()));
+      : tr('auto_export_next', 'Next export: {0}').replace('{0}',new Date(r.nextDueAt).toLocaleDateString())
+              );
     el.textContent = parts.join(' · ');
   } catch {
     el.textContent = '';
@@ -4499,7 +4804,7 @@ document.getElementById('testAutoExportBtn')?.addEventListener('click', async ()
     const r = await sendLong('TRIGGER_AUTO_EXPORT');
     if (r.success) {
       const target = r.uploaded && !r.downloaded ? ' to WebDAV' : (r.uploaded ? ' + WebDAV' : '');
-      toast(tr('auto_export_done', 'Exported {0} entries').replace('{0}',fmtNum(r.exported)) + target, 'ok');
+      toast(tr('auto_export_done', 'Exported {0} entries', fmtNum(r.exported)) + target, 'ok');
     } else if (r.reason === 'empty' || r.reason === 'nothing_new') {
       toast(tr('auto_export_nothing_new', 'Nothing new to export since the last export'), 'ok');
     } else if (r.reason === 'download_failed') {
@@ -4647,8 +4952,16 @@ document.getElementById('exportDataBtn').addEventListener('click', async () => {
     const blob = await ehExportToBlob(begin, pw, (chars) => {
       toastProgress(`${useEncrypt ? tr('export_encrypting', 'Exporting & encrypting…') : tr('export_exporting', 'Exporting…')} ${Math.round(chars / 1048576)} MB`, null);
     });
-    const filename = `extended-history_${new Date().toISOString().slice(0,10)}${useEncrypt ? '_enc' : ''}.json`;
-    const url = URL.createObjectURL(blob);
+    let filename = `extended-history_${new Date().toISOString().slice(0,10)}${useEncrypt ? '_enc' : ''}.json`;
+    let outBlob = blob;
+    if (document.getElementById('exportDataZip')?.checked) {       // "Compress as .zip"
+      toastProgress(tr('export_compressing', 'Compressing…'), null);
+      try {
+        outBlob  = await ehMakeZip(filename, blob);
+        filename = filename.replace(/\.json$/, '.zip');
+      } catch (_) { outBlob = blob; }                               // zipping failed → still deliver the plain .json
+    }
+    const url = URL.createObjectURL(outBlob);
     const a = Object.assign(document.createElement('a'), { href: url, download: filename });
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300000);     // a big file is still being saved for a while
@@ -4810,7 +5123,7 @@ async function ehRunImport(file, allowRetentionPrompt) {
   if (st.dup)     notes.push(`${fmtNum(st.dup)} duplicates`);
   if (st.old)     notes.push(`${fmtNum(st.old)} older than your retention setting`);
   if (st.invalid) notes.push(`${fmtNum(st.invalid)} invalid`);
-  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)}`+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
+  toastLong(tr('import_finished','Import finished — ')+`${fmtNum(r.imported)} `+tr('new_entries_added','new entries added') + (notes.length ? ` (`+tr('skipped','skipped')+`: ${notes.join(', ')})` : ''), tr('ok','ok'));
   invalidateHistCache();
   doSearch();
 
@@ -4881,6 +5194,33 @@ document.getElementById('clearAllBtn').addEventListener('click', async () => {
   } catch (err) { toast(err.message, 'err'); }
 });
 
+// Time Spent → Export: every tracked day as .csv — date, website, time spent (hh:mm:ss)
+document.getElementById('exportTimeBtn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('exportTimeBtn');
+  if (btn) btn.disabled = true;
+  try {
+    await send('FLUSH_TIME');
+    const r = await send('EXPORT_TIME_DATA');
+    const rows = r.rows || [];
+    if (!rows.length) { toast(tr('no_time_data_export', 'No time data to export'), 'err'); return; }
+    const q = (v) => /[",\r\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+    const hms = (ms) => {
+      const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+      return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+    };
+    const lines = ['Date,Website,Timespent(hh:mm:ss)'];
+    for (const [date, site, ms] of rows) lines.push([date, q(site), hms(ms)].join(','));
+    const blob = new Blob(['\ufeff' + lines.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });   // BOM: Excel reads it as UTF-8
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `extended-history_time-spent_${new Date().toISOString().slice(0,10)}.csv` });
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 60000);
+    toast(tr('time_exported', 'Exported {0} rows', fmtNum(rows.length)), 'ok');
+  } catch (err) {
+    toast('Export failed: ' + (err.message || err), 'err');
+  } finally { if (btn) btn.disabled = false; }
+});
+
 document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
   if (!confirm(tr('clear_time_data','Clear all time-spent data? This will not affect history. Cannot be undone.'))) return;
   try {
@@ -4888,6 +5228,41 @@ document.getElementById('clearTimeBtn')?.addEventListener('click', async () => {
     toast(tr('time_data_cleared','Time data cleared'), 'ok');
     loadTimeSpent(curTimeDays || 15);
   } catch (err) { toast(err.message, 'err'); }
+});
+
+// ── Session context menu (right-click a session → Delete) ────────────────────
+let _sessCtx = null;
+function showSessCtxMenu(x, y, ref, label, card) {
+  const m = document.getElementById('sessCtx');
+  if (!m) return;
+  if (m.style.display === 'block' && _sessCtx && _sessCtx.card === card) { hideSessCtxMenu(); return; }
+  _sessCtx = { ref, label, card };
+  hideCtxMenu();
+  m.style.display = 'block';
+  m.style.left = Math.max(4, Math.min(x, window.innerWidth  - 180)) + 'px';
+  m.style.top  = Math.max(4, Math.min(y, window.innerHeight - 60))  + 'px';
+}
+function hideSessCtxMenu() {
+  const m = document.getElementById('sessCtx');
+  if (m) m.style.display = 'none';
+}
+document.addEventListener('click', hideSessCtxMenu);
+document.addEventListener('scroll', hideSessCtxMenu, true);
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideSessCtxMenu(); });
+document.getElementById('sessCtxDelete')?.addEventListener('click', async () => {
+  const c = _sessCtx; _sessCtx = null;
+  hideSessCtxMenu();
+  if (!c) return;
+  if (!confirm(tr('confirm_delete_session', 'Delete this session ({0})? This cannot be undone.', c.label))) return;
+  try {
+    const r = await send('DELETE_SESSION', { id: c.ref.id, start: c.ref.start });
+    if (r && r.error) throw new Error(r.error);
+    c.card.remove();
+    toast(tr('session_deleted', 'Session deleted'), 'ok');
+    const el = document.getElementById('sessionsContent');
+    if (el && !el.querySelector('.session-card'))
+      el.innerHTML = '<div class="state-msg"><span class="state-msg-icon">📋</span><span data-i18n-key="no_sessions_yet">No sessions recorded yet</span></div>';
+  } catch (err) { toast(err.message || String(err), 'err'); }
 });
 
 // ── Context menu ──────────────────────────────────────────────────────────────
@@ -4902,21 +5277,25 @@ function showCtxMenu(x, y, entry, source) {
   const delSep     = document.getElementById('ctx-del-sep');
   const jumpEl     = document.getElementById('ctx-jump-to-date');
   const jumpSep    = document.getElementById('ctx-jump-sep');
+  const jumpDtEl   = document.getElementById('ctx-jump-to-datetime');
   const bmRemove   = document.getElementById('ctx-remove-bookmark');
   const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
   const bmRename   = document.getElementById('ctx-rename-bookmark');
+  const bmFilter   = document.getElementById('ctx-filter-domain');
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
   const hasBmId = !!entry.bmId;
   if (delEl)        delEl.style.display        = hasId   ? '' : 'none';
   if (delSep)       delSep.style.display       = hasId   ? '' : 'none';
   if (jumpEl)       jumpEl.style.display       = hasDate ? '' : 'none';
+  if (jumpDtEl)     jumpDtEl.style.display     = hasDate ? '' : 'none';
   if (jumpSep)      jumpSep.style.display      = hasDate ? '' : 'none';
   if (bmRemove)     bmRemove.style.display     = hasBmId ? '' : 'none';
   if (bmRename)     bmRename.style.display     = hasBmId ? '' : 'none';
+  if (bmFilter)     bmFilter.style.display     = hasBmId ? '' : 'none';
   if (bmRemoveSep)  bmRemoveSep.style.display  = hasBmId ? '' : 'none';
   menu.style.display = 'block';
-  const mw = 210, mh = 300;
+  const mw = 210, mh = 370;
   menu.style.left = Math.min(x, window.innerWidth  - mw - 6) + 'px';
   menu.style.top  = Math.min(y, window.innerHeight - mh - 6) + 'px';
 }
@@ -4931,9 +5310,6 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideCtxMen
 document.getElementById('ctx-open-tab').addEventListener('click', () => {
   if (_ctxEntry?.url) browser.tabs.create({ url: _ctxEntry.url, active: false }); hideCtxMenu();
 });
-document.getElementById('ctx-open-incognito').addEventListener('click', () => {
-  if (_ctxEntry?.url) send('OPEN_INCOGNITO', { url: _ctxEntry.url }); hideCtxMenu();
-});
 document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
   if (!_ctxEntry?.visitTime) { hideCtxMenu(); return; }
   const dateKey = new Date(_ctxEntry.visitTime).toLocaleDateString('en-CA');
@@ -4945,6 +5321,44 @@ document.getElementById('ctx-jump-to-date').addEventListener('click', () => {
     if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
     activateDatePill(dateKey);
   }
+});
+// Scrolls to an entry in the (already filtered) list and flashes it. Rows are append-only and 1:1 with the
+// list array, so the row index equals the array index; pages are rendered until that row exists.
+async function ehJumpHighlight(entry, source) {
+  const rm   = source === 'readingmode';
+  const list = rm ? _rmFiltered : allResults;
+  const area = rm ? rmListArea() : listArea();
+  if (!area || !list.length) return false;
+  const idx = list.findIndex(e => (entry.id && e.id === entry.id) || (e.url === entry.url && e.visitTime === entry.visitTime));
+  if (idx < 0) return false;
+  for (let guard = 0; guard < 5000 && (rm ? _rmVsOffset : vsOffset) <= idx && (rm ? _rmVsOffset : vsOffset) < list.length; guard++) {
+    if (rm) rmAppendPage(); else appendPage();
+  }
+  const row = area.querySelectorAll('.entry')[idx];
+  if (!row) return false;
+  area.querySelectorAll('.entry.jump-highlight').forEach(r => r.classList.remove('jump-highlight'));
+  row.scrollIntoView({ block: 'center' });
+  void row.offsetWidth;                       // restart the animation if it was already running
+  row.classList.add('jump-highlight');
+  setTimeout(() => row.classList.remove('jump-highlight'), 4500);
+  return true;
+}
+document.getElementById('ctx-jump-to-datetime').addEventListener('click', async () => {
+  const entry = _ctxEntry, source = _ctxSource;
+  hideCtxMenu();
+  if (!entry?.visitTime) return;
+  const d = new Date(entry.visitTime);
+  const dateKey = d.toLocaleDateString('en-CA');
+  try {
+    if (source === 'readingmode') {
+      rmActivateDatePill(dateKey);            // reading mode has no hour filter: land on the day, highlight the entry
+    } else {
+      const si = document.getElementById('searchInput');
+      if (si) { si.value = ''; document.getElementById('searchClearBtn')?.classList.remove('visible'); }
+      await activateDatePill(dateKey, false, d.getHours());   // date + hour filter, one search
+    }
+    await ehJumpHighlight(entry, source);
+  } catch (err) { toast(err.message || String(err), 'err'); }
 });
 document.getElementById('ctx-more-domain').addEventListener('click', () => {
   const domain = tryDomain(_ctxEntry?.url || '');
@@ -4997,10 +5411,23 @@ document.getElementById('ctx-rename-bookmark').addEventListener('click', async (
   reloadBookmarksKeepState(false).catch(() => loadBookmarks());
 });
 
+// Bookmarks: filter the list by this bookmark's domain (search box = domain, search-in = Domain)
+document.getElementById('ctx-filter-domain').addEventListener('click', () => {
+  const domain = tryDomain(_ctxEntry?.url || '');
+  hideCtxMenu();
+  if (!domain) return;
+  const modeSel = document.getElementById('bmSearchMode');
+  if (modeSel) modeSel.value = 'domain';
+  const si = document.getElementById('bmSearch');
+  if (si) si.value = domain;
+  document.getElementById('bmSearchClearBtn')?.classList.add('visible');
+  renderBookmarksWithFilter(domain);
+});
+
 document.getElementById('ctx-remove-bookmark').addEventListener('click', () => {
   if (!_ctxEntry?.bmId) { hideCtxMenu(); return; }
   if (!confirm('Remove this bookmark?')) { hideCtxMenu(); return; }
-  browser.bookmarks.remove(_ctxEntry.bmId).catch(() => undefined).then(() => {
+  browser.bookmarks.remove(_ctxEntry.bmId, () => {
     hideCtxMenu();
     toast('Bookmark removed', 'ok');
     // Reload bookmarks panel
@@ -5456,6 +5883,7 @@ function rmUnload() {
   document.getElementById('rm-reader').style.display   = 'none';
   document.getElementById('rmDateScroll').innerHTML    = '';
   if (rmListArea()) rmListArea().innerHTML             = '';
+  const _rmBar = document.getElementById('rmDayLabelBar'); if (_rmBar) _rmBar.textContent = '';
 }
 
 // ── Date nav ─────────────────────────────────────────────────────────────────
@@ -5552,12 +5980,15 @@ function rmDoFilter() {
   const area = rmListArea();
   if (!_rmFiltered.length) {
     area.innerHTML = `<div class="state-msg"><span class="state-msg-icon">🔎</span>No entries found</div>`;
+    dayLabelStickyCheck(area);
     return;
   }
   area.innerHTML = '';
   rmAppendPage();
+  dayLabelStickyCheck(area);
   area.onscroll = () => {
     if (area.scrollTop + area.clientHeight >= area.scrollHeight - 400) rmAppendPage();
+    dayLabelStickyCheck(area);
   };
 }
 
@@ -5576,7 +6007,7 @@ function rmAppendPage() {
     if (dl !== prevDay) {
       const hdr = document.createElement('div');
       hdr.className = 'day-label';
-      hdr.innerHTML = `${esc(dl)}<span class="day-visits"></span>`;
+      hdr.innerHTML = esc(dl);
       area.appendChild(hdr);
       prevDay = dl;
     }
@@ -5601,6 +6032,7 @@ function rmAppendPage() {
 
   _rmVsOffset += slice.length;
   _rmVsLoading = false;
+  dayLabelStickyCheck(area);
 }
 
 // ── Wire up drop zone + file input ───────────────────────────────────────────
@@ -5812,6 +6244,16 @@ function _showIgnorePanel() {
           <span data-i18n-key="domains_added_will_not_be">Domains added here will not be saved in history. Use the button below to remove entries that are already stored.</span>
           <span data-i18n-key="ignore_keywords_note">Words without a dot are treated as keywords — they match any URL or page title containing that word.</span>
         </p>
+         <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="ignore-toggle-text">
+            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode:')}</div>
+            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist (sites in the list below are ignored)')}</div>
+          </div>
+          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
+            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
+            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
+          </div>
+        </div>
         <div class="ignore-toggle-wrapper">
           <label class="toggle-switch">
             <input type="checkbox" id="ignoreListToggle" checked>
@@ -5836,17 +6278,7 @@ function _showIgnorePanel() {
             </div>
           </label>
         </div>
-        <div class="ignore-toggle-wrapper" style="flex-direction:column;align-items:flex-start;gap:8px">
-          <div class="ignore-toggle-text">
-            <div class="ignore-toggle-title">${tr('ignore_mode_title', 'List mode')}</div>
-            <div class="ignore-toggle-subtitle" id="ignoreModeDesc">${tr('ignore_mode_desc_black', 'Blacklist: sites in the list below are ignored')}</div>
-          </div>
-          <div id="ignoreModeSwitch" role="radiogroup" style="display:inline-flex;gap:8px">
-            <button id="ignoreModeBlack" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_black', 'Blacklist mode')}</button>
-            <button id="ignoreModeWhite" type="button" class="action-btn" role="radio" style="background:transparent;border:1px solid var(--border,#444);border-radius:8px;padding:6px 16px;font-size:0.85rem;cursor:pointer;">${tr('ignore_mode_white', 'Whitelist mode')}</button>
-          </div>
-          <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
-        </div>
+       <div><button class="action-btn danger" id="ignoreCleanBtn" style="font-size:0.8rem;padding:6px 14px;margin-bottom:20px;">${tr('ignore_clean_black', 'Remove existing entries from sites that are in the blacklist')}</button></div>
         <div class="ignore-add">
           <input type="text" id="ignorePatternInput" placeholder="example.com or keyword" spellcheck="false">
           <button id="addIgnoreBtn" data-i18n-key="add_patern">Add Pattern</button>
@@ -5954,7 +6386,7 @@ function askSaveSettings() {
     ov.innerHTML = `<div role="dialog" aria-modal="true" style="width:100%;max-width:380px;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surf1);color:var(--text);border:1px solid var(--border2);box-shadow:0 20px 60px var(--shadow)">
       <div style="font-size:1.05rem;font-weight:700;margin-bottom:6px"></div>
       <div style="font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:16px"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"></div></div>`;
+      <div style="display:flex;gap:8px;justify-content:flex-end;"></div></div>`;
     const [title, msg, btns] = ov.firstElementChild.children;
     title.textContent = tr('unsaved_changes_title', 'Save changes?');
     msg.textContent = tr('unsaved_changes_msg', 'You have unsaved changes in Settings.');
@@ -6300,10 +6732,11 @@ async function loadDevTabs() {
       row.className = 'dev-tab-row';
       let tag;
       if (t.active) tag = 'active';
+      else if (t.pinned) tag = 'pinned (never stored)';
       else if (!t.trackable) tag = 'not trackable';
       else if (t.alreadyStored) tag = 'already stored';
       else tag = 'idle-tracked';
-      const hot = t.trackable && !t.active && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
+      const hot = t.trackable && !t.active && !t.pinned && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
       // Both idleMs (our accumulator) and wallIdleMs (raw lastAccessed gap)
       // have to clear the threshold before a store happens — show both
       // whenever they diverge by more than a minute so it's obvious which
@@ -6495,6 +6928,7 @@ function applyWallpaper(wp) {
   const style = document.createElement('style');
   style.id = 'eh-wallpaper-style';
   style.textContent = `
+    .bm-tree-pane, .bm-toolbar { background: transparent;}
     html.wallpaper-mode body { background: transparent !important; }
 
     /* Primary glass surfaces — blur amount and tint come straight from the
@@ -6506,7 +6940,7 @@ function applyWallpaper(wp) {
       background: ${glassRgba(overlayOpacity)} !important;
       backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
       -webkit-backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;
-      border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
+      border-color: var(--border) !important;
     }
 
     html.wallpaper-mode .modal-box,
@@ -6515,39 +6949,37 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .ctxMenu,
     html.wallpaper-mode .kpi-card,
     html.wallpaper-mode .modal-inner,
-    html.wallpaper-mode .ignore-add,
     html.wallpaper-mode .ignore-item,
     html.wallpaper-mode .session-card,
     html.wallpaper-mode .device-card,
     html.wallpaper-mode .ts-card,
-    html.wallpaper-mode .bm-item,
     html.wallpaper-mode .mv-item,
-    html.wallpaper-mode .day-label, .bm-tree-pane, .bm-toolbar, .sel-bar.on{
+    html.wallpaper-mode .settings-save-bar,
+    .sel-bar.on{
       background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
       -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} !important;
       color:var(--text2);
     }
-    /* The history list gets its own glass layer stacked on top of .main's
-       (which carries the same tint as the sidebar): a faint white lift over
-       the dark glass (list lighter than the UI in dark mode), and a faint
-       black shade over the light glass (list darker than the UI in light
-       mode). */
+
+    /* Day label bar sits ABOVE the list (outside the scroll area) so it never overlaps entries.
+       The in-list labels become plain, non-sticky separators; the first one is redundant with the bar. */
+    html.wallpaper-mode .day-label-bar { display: block !important; }
+    html.wallpaper-mode .day-label-bar:empty { display: none !important; }
+    html.wallpaper-mode .day-label{ background:none !important; }
+    html.wallpaper-mode #listArea .day-label { position: static !important; }
+    html.wallpaper-mode #rmListArea .day-label { position: static !important; }
+    html.wallpaper-mode #listArea .day-label.dl-top { display: none !important; border:none !important }
+    html.wallpaper-mode #rmListArea .day-label.dl-top { display: none !important; border:none !important }
+
     html.wallpaper-mode .list-area {
       background: ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'} !important;
     }
-    /* Sticky date headers must blend into that list surface: no tint of their
-       own (a second layer would show as a lighter band), just a blur so rows
-       scrolling underneath stay legible. */
     /* Settings > Match UI colors: no tint of its own - the list shows the same
        glass as the sidebar / calendar sidebar / main panel behind it. */
     html.wallpaper-mode.match-ui-colors .list-area { background: transparent !important; }
-    html.wallpaper-mode .list-area .day-label {
-      // background: transparent !important;
-      text-shadow: 0px 0px 9px var(--day);
-      backdrop-filter: blur(10px) !important;
-      -webkit-backdrop-filter: blur(10px) !important;
-    }
+
+
     html.wallpaper-mode #ctxMenu {
       background: ${isDark ? 'rgba(22,22,28,0.96)' : 'rgba(252,252,255,0.96)'} !important;
       backdrop-filter: blur(20px) saturate(1.6) !important;
@@ -6565,7 +6997,6 @@ function applyWallpaper(wp) {
     backdrop-filter: blur(50px);
     }
     html.wallpaper-mode  .state-msg{
-    background: ${isDark ? 'rgba(19,19,24,0.55)' : 'rgba(255,255,255,0.55)'} !important;
     height:100%
     }
     /* .topbar has a solid background in the base stylesheet — let .main's
@@ -6573,15 +7004,8 @@ function applyWallpaper(wp) {
     html.wallpaper-mode .topbar {
       background: transparent !important;
     }
-    /* .entry rows tile edge-to-edge across .list-area, so giving each one
-       its own glass layer (like the card elements above) stacked another
-       ~55% opaque layer on every row across the whole list — compounding
-       with .main's glass until the list read as solid instead of frosted.
-       Keep just the border for row separation; .main's glass carries the
-       actual background here. Hover/selected states still get their own
-       solid highlight from the base stylesheet. */
+
     html.wallpaper-mode .entry {
-      background: transparent !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'} !important;
     }
     html.wallpaper-mode .action-btn,
@@ -6592,7 +7016,7 @@ function applyWallpaper(wp) {
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
   
     }
-    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .nav-arrow, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
+    html.wallpaper-mode #dnLeft,#dnRight,.dn-pill, .tb-btn, .hn-pill, .sa-btn, .action-btn, .tf-btn, .chip, .wp-src-btn, .nav-arrow, .bm-sel-btn, #rmSearchMode, #rmDateFrom, #rmDateTo, #languageSelect{
       background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} !important;
       border-color: ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'} !important;
       color:var(--text2) !important;
@@ -6944,8 +7368,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch {}
 
   // Theme buttons
-  document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
-  document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    setTheme((window.EhTheme ? EhTheme.effective() : document.documentElement.getAttribute('data-theme')) === 'dark' ? 'light' : 'dark');
+  });
   // Follow-system toggle: previews immediately, saved with "Save Settings" (or reverted on discard)
   document.getElementById('followSystemThemeToggle')?.addEventListener('change', ev => {
     if (window.EhTheme) EhTheme.set(ev.target.checked, _curSettings.theme === 'light' ? 'light' : 'dark', false);

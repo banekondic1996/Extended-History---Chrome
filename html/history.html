@@ -16,7 +16,7 @@
     <img src="/icons/icon128.png" class="logo-icon">
     <div>
       <div class="logo-text" data-i18n-key="ext_name">Extended History</div>
-      <div class="logo-sub">v4.2.3</div>
+      <div class="logo-sub">v4.3.1</div>
     </div>
   </div>
 
@@ -71,8 +71,7 @@
 
   <div class="sidebar-actions">
     <button class="sa-btn" id="lockBtn" data-i18n-title="lock_btn_hint" title="Encrypt history and lock the extension">🔒 <span data-i18n-key="lock_btn">Lock</span></button>
-    <button class="sa-btn" id="themeLight">☀ <span data-i18n-key="light">Light</span></button>
-    <button class="sa-btn" id="themeDark">🌙 <span data-i18n-key="dark">Dark</span></button>
+    <button class="sa-btn" id="themeToggle"><span id="themeToggleIcon">☀</span> <span id="themeToggleLbl" data-i18n-key="light">Light</span></button>
   </div>
 </nav>
 <!-- ══ MAIN ══════════════════════════════════════════════════════════════════ -->
@@ -95,7 +94,7 @@
       <!-- Search + controls -->
       <div class="search-row">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Search history…"/>
+          <input type="text" id="searchInput" placeholder="Search history…" autocomplete="off"/>
           <button class="search-clear-btn" id="searchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
         </div>
         <select class="mode-sel" id="quickFilterSelect" title="Quick Filters">
@@ -110,7 +109,7 @@
         <div class="date-picker-btn" id="dateFromBtn"><input type="date" id="dateFrom" tabindex="-1"/></div>
         <span style="color:var(--text3);flex-shrink:0">→</span>
         <div class="date-picker-btn" id="dateToBtn"><input type="date" id="dateTo" tabindex="-1"/></div>
-        <button class="tb-btn" id="clearFiltersBtn" data-i18n-key="all_time" style="display:none">All time</button>
+        <button class="tb-btn" id="exportResultsBtn" data-i18n-key="export" data-i18n-title="export_results_tip" title="Export only the entries matching the current search, filters and dates">Export</button>
         <button class="tb-btn danger" id="deleteResultsBtn" data-i18n-key="delete_results">Delete results</button>
       </div>
     </div>
@@ -124,6 +123,7 @@
       </div>
     </div>
 
+    <div class="day-label-bar" id="dayLabelBar"></div>
     <div class="list-area" id="listArea"></div>
       <button class="scroll-to-bottom" id="histScrollBottom" title="Scroll to bottom">↓</button>
   </div>
@@ -186,6 +186,7 @@
           <input type="date" id="rmDateTo" style="height:36px;padding:0 8px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:0.78rem;outline:none;flex-shrink:0;cursor:pointer;margin-right: 100px;"/>
         </div>
       </div>
+      <div class="day-label-bar" id="rmDayLabelBar"></div>
       <div class="list-area" id="rmListArea"></div>
     </div>
   </div>
@@ -194,6 +195,12 @@
   <div class="panel" id="panel-tabstorage">
     <div class="panel-scroll">
       <div class="panel-heading" data-i18n-key="tab_storage">Tab Storage</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:0px 0px 15px">
+        <div class="search-box" style="flex:1;max-width:420px">
+          <input type="text" id="tabStorageSearchInput" placeholder="Search stored tabs by title or URL…" spellcheck="false" autocomplete="off">
+          <button class="search-clear-btn" id="tabStorageSearchClearBtn" title="Clear" data-i18n-title="clear">&#10005;</button>
+        </div>
+      </div>
       <div id="tabStorageContent"><div class="state-msg"><span class="state-msg-icon">📑</span><span data-i18n-key="loading">Loading…</span></div></div>
     </div>
   </div>
@@ -259,7 +266,10 @@
           <button class="tf-btn" data-days="30">30 <span data-i18n-key="days">days</span></button>
           <button class="tf-btn" data-days="90">90 <span data-i18n-key="days">days</span></button>
         </div>
-        <button class="tb-btn danger" id="clearTimeBtn" title="Clear all time-spent data (does not affect history)">🗑 <span data-i18n-key="clear_time_data">Clear time data</span></button>
+        <div style="display:flex;align-items:center;gap:8px">
+        <button class="tb-btn" id="exportTimeBtn" title="Export time spent as .csv (date, website, time spent)" data-i18n-title="export_time_csv_tip">⬇ <span data-i18n-key="export">Export</span></button>
+        <button class="tb-btn danger" id="clearTimeBtn" style="padding: 6px 12px !important;line-height: 20px;" title="Clear all time-spent data (does not affect history)">🗑 <span data-i18n-key="clear_time_data">Clear time data</span></button>
+        </div>
       </div>
 
       <div class="chart-card" id="dailyChartCard">
@@ -328,6 +338,19 @@
         <input type="text" id="bmSearch" placeholder="Search bookmarks…"/>
         <button class="search-clear-btn" id="bmSearchClearBtn" title="Clear" data-i18n-title="clear">✕</button>
       </div>
+      <select class="mode-sel" id="bmSearchMode" title="Search in">
+        <option value="all" data-i18n-key="all_fields">All fields</option>
+        <option value="url" data-i18n-key="url">URL</option>
+        <option value="domain" data-i18n-key="domain">Domain</option>
+        <option value="title" data-i18n-key="title">Title</option>
+      </select>
+      <select class="mode-sel" id="bmSortSel" title="Sort bookmarks">
+        <option value="default" data-i18n-key="bm_sort_default">Sort: Default</option>
+        <option value="domain-asc" data-i18n-key="bm_sort_domain_asc">Sort: Domain A–Z</option>
+        <option value="domain-desc" data-i18n-key="bm_sort_domain_desc">Sort: Domain Z–A</option>
+        <option value="title-asc" data-i18n-key="bm_sort_title_asc">Sort: Title A–Z</option>
+        <option value="title-desc" data-i18n-key="bm_sort_title_desc">Sort: Title Z–A</option>
+      </select>
       <button class="action-btn bm-sel-mode-toggle" id="bmSelModeBtn" title="Select multiple bookmarks" data-i18n-key="select">Select</button>
     </div>
     <!-- Bookmark multiselect bar (hidden until selection mode active) -->
@@ -335,6 +358,7 @@
       <span class="bm-sel-count" id="bmSelCount">0 <span data-i18n-key="selected">selected</span></span>
       <button class="bm-sel-btn" id="bmSelOpenBtn" data-i18n-key="open">Open</button>
       <button class="bm-sel-btn" id="bmSelMoveBtn" data-i18n-key="move_to">Move to…</button>
+      <button class="bm-sel-btn" id="bmSelAllBtn" data-i18n-key="pop_select_all">Select all</button>
       <button class="bm-sel-btn" id="bmSelCopyBtn" data-i18n-key="copy_links">Copy Links</button>
       <button class="bm-sel-btn bm-sel-del" id="bmSelDeleteBtn" data-i18n-key="delete">Delete</button>
       <button class="bm-sel-btn bm-sel-cancel" id="bmSelCancelBtn" data-i18n-key="cancel">Cancel</button>
@@ -395,7 +419,7 @@
                 <option value="fr">Français</option>
                 <option value="he">עברית</option>
                 <option value="hi">हिन्दी</option>
-                <option value="la">Latina</option>
+                <option value="la">Latin</option>
                 <option value="nl">Nederlands</option>
                 <option value="no">Norsk</option>
                 <option value="ru">Русский</option>
@@ -611,8 +635,11 @@
               <div class="s-row-lbl" data-i18n-key="export_history">Export history</div>
               <div class="s-row-desc" data-i18n-key="full_json_backup">Full JSON backup of all history + time data</div>
             </div>
-            <div class="s-ctrl">
+            <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
               <button class="action-btn" id="exportDataBtn">⬇ <span data-i18n-key="export_json">Export JSON</span></button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer">
+                <input type="checkbox" id="exportDataZip"/> <span data-i18n-key="compress_as_zip">Compress as .zip</span>
+              </label>
             </div>
           </div>
           <div class="s-row" style="border-top:1px solid var(--border)">
@@ -670,6 +697,20 @@
               </div>
               <div id="autoExportStatus" style="font-size:0.72rem;color:var(--text3);text-align:right;max-width:220px"></div>
               <button class="action-btn" id="testAutoExportBtn" style="font-size:0.75rem;padding:4px 10px" data-i18n-key="run_now">▶ Run now</button>
+            </div>
+          </div>
+          <div class="s-row" style="border-top:1px solid var(--border);border-bottom:none" id="alwaysEncRow">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="always_encrypt_exports">Always encrypt search/filtered exports</div>
+              <div class="s-row-desc" data-i18n-key="always_encrypt_exports_desc">When on, search/filtered exports are encrypted (AES-256) with the password you set here. Only a key derived from the password is stored, never the password itself. Keep your password: it is needed to import or open the files.</div>
+              <div class="s-row-desc" id="alwaysEncStatus" style="margin-top:4px"></div>
+            </div>
+            <div class="s-ctrl" style="flex-direction:column;align-items:flex-end;gap:6px">
+              <label class="toggle-switch" style="margin:0">
+                <input type="checkbox" id="alwaysEncToggle">
+                <span class="toggle-slider"></span>
+              </label>
+              <button class="action-btn" id="alwaysEncPwBtn" style="font-size:0.72rem;padding:3px 8px;display:none" data-i18n-key="enc_change_pw">Change password</button>
             </div>
           </div>
         </div>
@@ -761,6 +802,20 @@
               <span id="popupHeightVal" style="color:var(--text);font-size:0.85rem;min-width:44px;font-family:var(--font-mono)">320px</span>
             </div>
           </div>
+          <div class="s-row" style="display:none">
+            <div class="s-row-info">
+              <div class="s-row-lbl" data-i18n-key="popup_search_limit">Limit maximum old search history</div>
+              <div class="s-row-desc" data-i18n-key="popup_search_limit_desc">The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything.</div>
+            </div>
+            <div class="s-ctrl" style="gap:8px">
+              <input type="number" id="popupSearchLimitMonths" value="12" min="1" max="600" step="1" style="width:70px"/>
+              <span class="unit" data-i18n-key="months">months</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="popupSearchLimitToggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
           <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="popup_as_sidebar">Use as sidebar</div>
@@ -789,13 +844,13 @@
 
         <div class="s-card">
           <div class="s-card-title" data-i18n-key="ui">UI</div>
-          <div class="s-row">
+          <div class="s-row" style="opacity: 0.4;">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="favicon_resolver">Favicon resolver</div>
               <div class="s-row-desc" data-i18n-key="favicon_resolver_desc">How site icons are fetched. "Google" fetches live from Google's CDN each time. "Cached" fetches from Google once then stores icons locally — fastest after first load, works offline.</div>
             </div>
             <div class="s-ctrl">
-              <select id="faviconResolverSel">
+              <select id="faviconResolverSel" disabled>
                 <option value="google" data-i18n-key="google_resolver">Google resolver</option>
                 <option value="cached" data-i18n-key="cached_resolver">Cached (local)</option>
               </select>
@@ -1051,35 +1106,57 @@
   <div class="panel" id="panel-about">
     <div class="panel-scroll">
       <div class="panel-heading" style="margin-bottom: 0px;" data-i18n-key="about">About</div>
-      <div style="max-width:560px;padding:8px 0 8px"> <br>
+      <div style="max-width:560px;padding:12px 0 12px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:5px" data-i18n-key="created_by">
           Created by <strong style="color:var(--text)">Bane Kondić</strong>, cause he didn't like 90days history limit in Chromium.<br>
           This extension  <strong style="color:var(--text)">does not send data</strong> and is completely <strong style="color:var(--text)">open source</strong>,<br> code is available on creators Github profile
         </div>
         <a class="sa-btn" href="https://github.com/banekondic1996/" target="_blank" 
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s" 
+           style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s" 
            data-i18n-key="github_profile">
           Github Profile
         </a>
       </div>
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="feedback">Feedback</div>
-      <div style="max-width:560px;padding:8px 0 8px"> <br>
+      <div style="max-width:560px;padding:12px 0 12px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_discord">
           Link to <strong style="color:var(--text)">Discord server</strong> for feedbacks (or just leave review in chrome store)
         </div>
         <a class="sa-btn" href="https://discord.gg/xyzeh2WjmQ" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="discord_server">
           Discord server
         </a>
       </div>
-      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;margin-bottom: 18px;" data-i18n-key="rate_extension">Rate this extension </div>
-      <div style="max-width:560px;padding:8px 0 8px">
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="changelog">Changelog</div>
+      <div style="max-width:560px;padding:12px 0 12px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="changelog_desc">
+          See what changed in each version.
+        </div>
+        <a class="sa-btn" href="https://github.com/banekondic1996/Extended-History---Chrome/blob/main/CHANGELOG.md" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           data-i18n-key="changelog">
+          Changelog
+        </a>
+      </div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="tutorial">Tutorial</div>
+      <div style="max-width:560px;padding:12px 0 12px">
+        <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="tutorial_desc">
+          Read the introduction to the extension again.
+        </div>
+        <a class="sa-btn" href="tutorial.html" target="_blank" id="tutorialLink"
+           style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           data-i18n-key="tutorial">
+          Tutorial
+        </a>
+      </div>
+      <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="rate_extension">Rate this extension </div>
+      <div style="max-width:560px;padding:12px 0 12px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_chrome_webstore"> 
           Link to extensions page
         </div>
         <a class="sa-btn" href="https://addons.mozilla.org/en-US/firefox/addon/extended-history/reviews/" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:12px 20px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
+           style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="click_to_rate">
           Click to Rate 
         </a>
@@ -1105,29 +1182,35 @@
 
 <!-- Context menu -->
 <div id="ctxMenu" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:200px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
-  <div class="ctx-item" id="ctx-open-tab">↗ <span data-i18n-key="open_in_new_tab">Open in new tab</span></div>
-  <div class="ctx-item" id="ctx-open-incognito">🕵 <span data-i18n-key="open_in_incognito">Open in incognito</span></div>
+  <div class="ctx-item" id="ctx-open-tab"><span class="ctx-icon">↗</span> <span data-i18n-key="open_in_new_tab">Open in new tab</span></div>
    <div class="ctx-sep" id="ctx-jump-sep"></div>
-  <div class="ctx-item" id="ctx-jump-to-date">📅 <span data-i18n-key="jump_to_date">Jump to date</span></div>
+  <div class="ctx-item" id="ctx-jump-to-date"><span class="ctx-icon">📅</span> <span data-i18n-key="jump_to_date">Jump to date</span></div>
+  <div class="ctx-item" id="ctx-jump-to-datetime"><span class="ctx-icon">🕒</span> <span data-i18n-key="jump_to_datetime">Jump to date&amp;time</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" id="ctx-more-domain">🔎 <span data-i18n-key="more_from_domain">More from domain</span></div>
-  <div class="ctx-item" id="ctx-ignore-domain">🚫 <span data-i18n-key="ignore_domain">Ignore domain</span></div>
+  <div class="ctx-item" id="ctx-more-domain"><span class="ctx-icon">🔎</span> <span data-i18n-key="more_from_domain">More from domain</span></div>
+  <div class="ctx-item" id="ctx-ignore-domain"><span class="ctx-icon">🚫</span> <span data-i18n-key="ignore_domain">Ignore domain</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" id="ctx-copy-url">⎘ <span data-i18n-key="copy_url">Copy URL</span></div>
-  <div class="ctx-item" id="ctx-copy-title">📋 <span data-i18n-key="copy_title">Copy title</span></div>
-  <div class="ctx-item" id="ctx-rename-bookmark" style="display:none" data-i18n-key="rename_bookmark">Rename bookmark</div>
+  <div class="ctx-item" id="ctx-copy-url"><span class="ctx-icon">⎘</span> <span data-i18n-key="copy_url">Copy URL</span></div>
+  <div class="ctx-item" id="ctx-copy-title"><span class="ctx-icon">📋</span> <span data-i18n-key="copy_title">Copy title</span></div>
+  <div class="ctx-item" id="ctx-rename-bookmark"  style="display:none"><span class="ctx-icon">📋</span> <span data-i18n-key="rename_bookmark">Rename bookmark</span></div>
+  <div class="ctx-item" id="ctx-filter-domain" style="display:none"><span class="ctx-icon">🔎</span> <span data-i18n-key="filter_by_domain">Filter by domain</span></div>
   <div class="ctx-sep" id="ctx-bm-remove-sep" style="display:none"></div>
-  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none" data-i18n-key="remove_bookmark">🗑 Remove bookmark</div>
+  <div class="ctx-item danger" id="ctx-remove-bookmark" style="display:none"><span class="ctx-icon">🗑</span> <span data-i18n-key="remove_bookmark">Remove bookmark</span></div>
   <div class="ctx-sep" id="ctx-del-sep"></div>
-  <div class="ctx-item danger" id="ctx-delete">✕ <span data-i18n-key="delete_from_history">Delete from history</span></div>
+  <div class="ctx-item danger" id="ctx-delete"><span class="ctx-icon">✕</span> <span data-i18n-key="delete_from_history">Delete from history</span></div>
+</div>
+
+<!-- Session context menu -->
+<div id="sessCtx" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:170px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
+  <div class="ctx-item danger" id="sessCtxDelete"><span class="ctx-icon">✕</span> <span data-i18n-key="delete">Delete</span></div>
 </div>
 
 <!-- Bookmark folder context menu -->
 <div id="bmFolderCtx" style="display:none;position:fixed;z-index:9999;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;padding:4px;min-width:190px;box-shadow:0 8px 28px var(--shadow);font-size:0.85rem;">
-  <div class="ctx-item" id="bmCtxNewFolder">📁 <span data-i18n-key="new_subfolder">New subfolder</span></div>
-  <div class="ctx-item" id="bmCtxRename">✏ <span data-i18n-key="rename_folder">Rename folder</span></div>
+  <div class="ctx-item" id="bmCtxNewFolder"><span class="ctx-icon">📁</span> <span data-i18n-key="new_subfolder">New subfolder</span></div>
+  <div class="ctx-item" id="bmCtxRename"><span class="ctx-icon">✏</span> <span data-i18n-key="rename_folder">Rename folder</span></div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item danger" id="bmCtxDelete">✕ <span data-i18n-key="delete_folder">Delete folder</span></div>
+  <div class="ctx-item danger" id="bmCtxDelete"><span class="ctx-icon">✕</span> <span data-i18n-key="delete_folder">Delete folder</span></div>
 </div>
 
 <!-- Move bookmarks to folder modal -->

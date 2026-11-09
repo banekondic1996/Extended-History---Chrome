@@ -17,6 +17,7 @@ const QUICK_FILTERS_KEY = 'eh_quick_filters'; // Named saved filters: [{id,name,
 const SYNC_INTERVAL_KEY = 'eh_sync_interval'; // Minutes between today→history flushes
 const CONTEXT_MENU_PARENT_ID        = 'eh_options';
 const CONTEXT_MENU_IGNORE_DOMAIN_ID = 'eh_ignore_domain';
+const CONTEXT_MENU_EXPR_ID          = 'eh_expr_mode';
 const CONTEXT_MENU_STORE_TAB_ID     = 'eh_store_tab';
 const TAB_STORAGE_KEY               = 'eh_tab_storage';
 const FAV_CACHE_KEY                 = 'eh_fav_cache'; // domain → dataURL
@@ -65,6 +66,9 @@ const DEFAULT_SETTINGS = {
   autoExportEncrypt: false,    // incremental auto exports are encrypted with a password (see encryptExportParts)
   autoExportEncKey: '',        // base64 of the DOUBLE-HASHED password (PBKDF2 → SHA-256) = the AES key; the password itself is never stored
   autoExportEncSalt: '',       // base64 salt of that PBKDF2 (also written into every encrypted file so import can derive the key)
+  alwaysEncryptExports: false, // Settings → "Always encrypt search/filtered exports": every export is encrypted (history.js writes the other kinds)
+  exportEncKey: '',            // base64 double-hashed export password (the AES key) — never the password itself
+  exportEncSalt: '',           // base64 salt for that key (also written into every encrypted file)
   autoExportLastIncremental: null, // {since, until, at, count} of the last incremental export → "Re-download last incremental backup"
 };
 const MS_PER_MONTH = 30 * 86400000; // approximate month, consistent with the rest of the codebase
@@ -1645,6 +1649,13 @@ async function runAutoStore() {
       continue;
     }
 
+    if (tab.pinned) {
+      // Pinned tabs are never auto-stored. Keep the idle accumulator at 0 so
+      // that unpinning a long-idle tab doesn't instantly store it.
+      track.tabs[norm] = 0;
+      continue;
+    }
+
     const idleMs = (track.tabs[norm] || 0) + delta;
     track.tabs[norm] = idleMs;
 
@@ -1679,6 +1690,7 @@ async function runAutoStore() {
   if (!toStore.length) return;
 
   for (const { tab, norm } of toStore) {
+    if (tab.pinned) continue;
     if (!stored.find(e => e.url === norm)) {
       stored.push({
         id: `ts_auto_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1839,13 +1851,28 @@ function exprTerms(q) {
 
 async function ensureContextMenus() {
   const settings = await getSettings();
-  if (settings.contextMenuEnabled === false || await isLocked()) {
-    // Right-click menu disabled by the user, or the extension is locked — just clear it out.
+  if (await isLocked()) {
+    // Extension is locked — just clear everything out.
     await browser.contextMenus.removeAll().catch(() => {});
     return;
   }
+  const pagesEnabled = settings.contextMenuEnabled !== false;
   await browser.contextMenus.removeAll().catch(() => {});
   const made = (what) => () => { if (browser.runtime.lastError) console.warn('[EH] ' + what + ' failed:', browser.runtime.lastError.message); };
+  // "Expression mode" in the normal menu of the search boxes (history page, popup, sidebar). Hidden until a search box
+  // is right-clicked (see EH_EXPR_MENU below), so it never shows in other text fields.
+  const extPages = ['html/history.html', 'html/popup.html'].map(p => browser.runtime.getURL(p) + '*');
+  browser.contextMenus.create({
+    id: CONTEXT_MENU_EXPR_ID,
+    type: 'checkbox',
+    checked: false,
+    visible: false,
+    title: browser.i18n.getMessage('expr_mode') || 'Expression mode',
+    contexts: ['editable'],
+    documentUrlPatterns: extPages,
+  }, made('expression menu'));
+
+  if (!pagesEnabled) return;   // right-click menu on web pages disabled by the user
   browser.contextMenus.create({
     id: CONTEXT_MENU_PARENT_ID,
     title: 'Extended History',
@@ -1870,8 +1897,20 @@ async function ensureContextMenus() {
   }, made('store tab menu'));
 }
 
+// The search boxes tell us right before their native menu opens whether to show the "Expression mode" item and whether it is ticked
+browser.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'EH_EXPR_MENU') return;
+  browser.contextMenus.update(CONTEXT_MENU_EXPR_ID, { visible: !!msg.show, checked: !!msg.checked }).catch(() => {});
+  try { browser.menus && browser.menus.refresh && browser.menus.refresh(); } catch (_) {}
+});
+
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
   const pageUrl = info.pageUrl || info.frameUrl || tab?.url || '';
+
+  if (info.menuItemId === CONTEXT_MENU_EXPR_ID) {
+    browser.runtime.sendMessage({ type: 'EH_EXPR_TOGGLE', checked: !!info.checked }).catch(() => {});
+    return;
+  }
 
   if (info.menuItemId === CONTEXT_MENU_IGNORE_DOMAIN_ID) {
     if (!isTrackable(pageUrl)) return;
@@ -2833,6 +2872,7 @@ function ehOnMessage(msg) {
 }
 globalThis.EH_DIRECT = ehOnMessage;
 browser.runtime.onMessage.addListener((msg,_s,respond)=>{
+  if (msg && (msg.type === 'EH_EXPR_MENU' || msg.type === 'EH_EXPR_TOGGLE')) return;   // handled by dedicated listeners
   if (msg && msg.target === 'eh-sql') return;      // addressed to the database worker (answered in database/eh-sql.js), not to us
   ehOnMessage(msg).then(respond); return true;
 });
@@ -2946,6 +2986,27 @@ async function handle(msg) {
       if (qfMatch) entries = entries.filter(qfMatch);
       entries.sort((a,b)=>b.visitTime-a.visitTime);
       return {total:entries.length,entries:entries.slice(offset,offset+limit)};
+    }
+    case 'EXPORT_TIME_DATA': {
+      // Every tracked day, one row per date + website: [date, domain, ms], oldest first (honours "hide ignored domains")
+      const r=await browser.storage.local.get(TIME_KEY); const map=r[TIME_KEY]||{};
+      const hideList = await getTimeSpentIgnoreList();
+      const hideInvert = hideList ? await isIgnoreInvert() : false;
+      const rows=[];
+      for(const [domain,dayMap] of Object.entries(map)){
+        if (hideList && (hideList.some(p => domainMatchesIgnorePattern(domain, p)) !== hideInvert)) continue;
+        for(const [date,ms] of Object.entries(dayMap)) if (ms>0) rows.push([date,domain,ms]);
+      }
+      rows.sort((a,b)=> a[0]<b[0]?-1 : a[0]>b[0]?1 : b[2]-a[2]);
+      return { rows };
+    }
+    case 'DELETE_SESSION': {
+      // Past sessions only (the active one lives in memory). Matches by id; older sessions without an id by start time.
+      const list = await getSessions();
+      const next = list.filter(x => msg.id ? x.id !== msg.id : x.start !== msg.start);
+      if (next.length === list.length) return { error: 'Session not found' };
+      await browser.storage.local.set({ [SESSIONS_KEY]: next });
+      return { success: true };
     }
     case 'DELETE_IDS': {
       console.log('[EH][bg] DELETE_IDS received, ids:', msg.ids?.length, 'urls:', msg.urls);
@@ -3342,13 +3403,14 @@ async function handle(msg) {
       const result = tabs.map(tab => {
         const trackable = !!(tab.url && isTrackable(tab.url));
         const norm = trackable ? normalizeUrl(tab.url) : null;
-        const idleMs = tab.active ? 0 : (trackable ? (track.tabs[norm] || 0) : 0);
+        const idleMs = (tab.active || tab.pinned) ? 0 : (trackable ? (track.tabs[norm] || 0) : 0);
         const wallIdleMs = tab.active ? 0 : Date.now() - (tab.lastAccessed ?? Date.now());
         return {
           id: tab.id,
           title: tab.title || tab.url || '(untitled)',
           url: tab.url || '',
           active: !!tab.active,
+          pinned: !!tab.pinned,
           trackable,
           alreadyStored: trackable ? storedUrls.has(norm) : false,
           idleMs,
@@ -3701,7 +3763,6 @@ async function handle(msg) {
       for(const bm of (bookmarks||[])) if(bm.url){try{await browser.bookmarks.create({title:bm.title||bm.url,url:bm.url});imported++;}catch{}}
       return {success:true,imported};
     }
-    case 'OPEN_INCOGNITO': { try{await browser.windows.create({url:msg.url,incognito:true});}catch{} return {success:true}; }
     case 'GET_IGNORE_LIST': {
       const settings = await getSettings();
       return {

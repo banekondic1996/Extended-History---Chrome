@@ -78,7 +78,7 @@
     const rt = browser.runtime;
     if (!rt || !rt.sendMessage || !rt.getBackgroundPage || rt.__ehFast) return;
     const orig = rt.sendMessage.bind(rt);
-    const NOT_DIRECT = new Set(['AUTO_SAVE_READY']);          // answered by a per-tab listener that needs sender.tab
+    const NOT_DIRECT = new Set(['AUTO_SAVE_READY', 'EH_EXPR_MENU']);          // AUTO_SAVE_READY: answered by a per-tab listener that needs sender.tab; EH_EXPR_MENU: handled by its own onMessage listener
     let bgp = null;
     const getBg = () => bgp || (bgp = rt.getBackgroundPage().then(w => w || null, () => null));
     rt.sendMessage = async function (msg, ...rest) {

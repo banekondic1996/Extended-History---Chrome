@@ -83,6 +83,7 @@ function closeSidebarPanel() {
 
 // ── Sidebar-mode detection (loaded via browser.sidebarAction as popup.html?sidebar=1) ─
 let _sidebarAutoHideEnabled = true; // default on; synced from settings below once loaded
+let _popupSearchLimitMs = 0; // >0: popup search only looks back this far (Settings → Popup)
 if (new URLSearchParams(location.search).get('sidebar') === '1') {
     document.body.classList.add('sidebar-mode');
 
@@ -148,6 +149,8 @@ browser.storage.local.get('eh_settings').catch(() => undefined).then(r => {
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
     _popupShowUrl = s.popupShowUrl !== false;
+    _popupSearchLimitMs = s.popupSearchLimitEnabled === true
+        ? Math.max(1, Math.min(600, parseInt(s.popupSearchLimitMonths) || 12)) * 30 * 86400000 : 0;
     _sidebarAutoHideEnabled = s.sidebarAutoHide !== false;
     if (s.faviconResolver) _popupFavMode = s.faviconResolver;
 
@@ -548,49 +551,110 @@ function closeSearchOverlay() {
 
 const POP_CID = Math.random().toString(36).slice(2);
 let _popSearchGen = 0;
-function performSearch(query) {
+// Same paging as the main history page: the first screenful comes back fast, then the rest of the matches
+// (up to POP_SEARCH_MAX) arrive in steps and are appended behind it. Rows are rendered lazily on scroll.
+const POP_SEARCH_FIRST = 300, POP_SEARCH_STEP = 4000, POP_SEARCH_MAX = 20000, POP_RENDER_STEP = 80;
+function popSend(msg) {
+    return browser.runtime.sendMessage(msg)
+        .then(r => r || { error: 'No response' })
+        .catch(e => ({ error: (e && e.message) || 'Error', _rt: true }));
+}
+async function performSearch(query) {
     const resultsEl = document.getElementById('searchResults');
     const gen = ++_popSearchGen;
-    // Same search as the main history page: the database filters the whole history (including the
-    // active quick filter), and a newer keystroke cancels the older query.
     const qf = (typeof qfActivePatterns === 'function') ? qfActivePatterns() : null;
+    const expr = !!(window.EhExpr && window.EhExpr.on());
+    const base = { type: 'SEARCH', query, mode: 'all', noTotal: true, qf, expr, cid: POP_CID };
+    if (_popupSearchLimitMs > 0) base.startDate = Date.now() - _popupSearchLimitMs;
 
-    browser.runtime.sendMessage({
-        type: 'SEARCH',
-        query: query,
-        mode: 'all',
-        limit: 100,
-        noTotal: true,
-        qf,
-        expr: !!(window.EhExpr && window.EhExpr.on()),
-        cid: POP_CID,
-        token: gen
-    }).catch(() => undefined).then((response) => {
-        if (gen !== _popSearchGen) return;                       // a newer search replaced this one
-        if (!response) {
-            resultsEl.innerHTML = '<div class="empty">' + tr('pop_search_error', 'Search error') + '</div>';
-            return;
+    const r = await popSend({ ...base, offset: 0, limit: POP_SEARCH_FIRST, token: gen });
+    if (gen !== _popSearchGen) return;                           // a newer search replaced this one
+    if (r._rt) { resultsEl.innerHTML = '<div class="empty">' + tr('pop_search_error', 'Search error') + '</div>'; return; }
+    if (r.cancelled) return;
+    if (r.error) {
+        // e.g. the history database is still starting / being upgraded — say so instead of "No results"
+        resultsEl.innerHTML = '<div class="empty"></div>';
+        resultsEl.firstChild.textContent = r.error || tr('pop_search_error', 'Search error');
+        if (r.migrating) setTimeout(() => { if (gen === _popSearchGen) performSearch(query); }, 2000);
+        return;
+    }
+
+    // Very recent visits may not be in the database yet: merge them in from the live recent history
+    // (same as the main history page does), so a site you just visited is found by search too.
+    const dk = (e) => (e.url || '') + '|' + Math.floor((Number(e.visitTime) || 0) / 5000);
+    const seen = new Set((r.entries || []).map(dk));
+    let live = [];
+    const rr = await popSend({ type: 'GET_RECENT_HISTORY' });
+    if (gen !== _popSearchGen) return;
+    if (!rr._rt && Array.isArray(rr.entries)) {
+        const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const hit = (e) => {
+            const hay = ((e.url || '') + ' ' + (e.title || '') + ' ' + (e.domain || tryDomain(e.url || ''))).toLowerCase();
+            if (expr && window.EhExpr.test) return window.EhExpr.test(query, hay);
+            return words.every(w => hay.includes(w));
+        };
+        live = rr.entries.filter(hit).filter(e => { const k = dk(e); if (seen.has(k)) return false; seen.add(k); return true; });
+        if (typeof qfPopupFilter === 'function') live = qfPopupFilter(live);
+    }
+    const first = live.length
+        ? live.concat(r.entries || []).sort((a, b) => b.visitTime - a.visitTime)
+        : (r.entries || []);
+    renderSearchResults(first, resultsEl);
+
+    // …the rest of the matches, appended as they arrive
+    if ((r.entries || []).length >= POP_SEARCH_FIRST) {
+        let offset = POP_SEARCH_FIRST;
+        while (offset < POP_SEARCH_MAX) {
+            const want = Math.min(POP_SEARCH_STEP, POP_SEARCH_MAX - offset);
+            const r2 = await popSend({ ...base, offset, limit: want, token: gen });
+            if (gen !== _popSearchGen || r2.cancelled || r2.error) return;
+            const got = r2.entries || [];
+            let more = got.filter(e => { const k = dk(e); if (seen.has(k)) return false; seen.add(k); return true; });
+            if (typeof qfPopupFilter === 'function') more = qfPopupFilter(more);
+            if (more.length) appendSearchResults(more, resultsEl);
+            offset += got.length;
+            if (got.length < want) break;
         }
-        if (response && response.cancelled) return;
-        if (!response || response.error) {
-            // e.g. the history database is still starting / being upgraded — say so instead of "No results"
-            const msg = (response && response.error) || tr('pop_search_error', 'Search error');
-            resultsEl.innerHTML = '<div class="empty"></div>';
-            resultsEl.firstChild.textContent = msg;
-            if (response && response.migrating) setTimeout(() => { if (gen === _popSearchGen) performSearch(query); }, 2000);
-            return;
-        }
+    }
+}
 
-        const matches = response.entries || [];
-        _srchEntries = matches;
+let _srchRendered = 0;
+let _srchScrollEl = null;
+function renderSearchResults(matches, resultsEl) {
+    _srchEntries = matches;
+    _srchRendered = 0;
+    if (!matches.length) {
+        resultsEl.innerHTML = '<div class="empty">' + tr('pop_no_results', 'No results found') + '</div>';
+        return;
+    }
+    resultsEl.innerHTML = '';
+    if (_srchScrollEl !== resultsEl) {
+        _srchScrollEl = resultsEl;
+        resultsEl.addEventListener('scroll', () => {
+            if (resultsEl.scrollTop + resultsEl.clientHeight >= resultsEl.scrollHeight - 200) renderMoreSearchRows(resultsEl);
+        }, { passive: true });
+    }
+    renderMoreSearchRows(resultsEl);
+}
+// More matches arrived from the background: remember them; they are drawn when scrolled to
+function appendSearchResults(more, resultsEl) {
+    _srchEntries = _srchEntries.concat(more);
+    if (resultsEl.querySelector('.empty')) renderSearchResults(_srchEntries, resultsEl);
+    else if (resultsEl.scrollTop + resultsEl.clientHeight >= resultsEl.scrollHeight - 200) renderMoreSearchRows(resultsEl);
+    if (typeof updateSrchModeBar === 'function' && _srchSelMode) updateSrchModeBar();
+}
+function renderMoreSearchRows(resultsEl) {
+    const slice = _srchEntries.slice(_srchRendered, _srchRendered + POP_RENDER_STEP);
+    if (!slice.length) return;
+    const frag = document.createDocumentFragment();
+    for (const e of slice) frag.appendChild(buildSearchRow(e));
+    resultsEl.appendChild(frag);
+    _srchRendered += slice.length;
+    // list shorter than the viewport (nothing to scroll): keep filling
+    if (resultsEl.scrollHeight <= resultsEl.clientHeight + 100 && _srchRendered < _srchEntries.length) renderMoreSearchRows(resultsEl);
+}
 
-        if (!matches.length) {
-            resultsEl.innerHTML = '<div class="empty">' + tr('pop_no_results', 'No results found') + '</div>';
-            return;
-        }
-
-        resultsEl.innerHTML = '';
-        for (const e of matches) {
+function buildSearchRow(e) {
             const t = new Date(e.visitTime).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
             const row = document.createElement('a');
@@ -670,9 +734,7 @@ function performSearch(query) {
                 else { browser.tabs.create({ url: e.url, active: false }); }
             });
 
-            resultsEl.appendChild(row);
-        }
-    });
+            return row;
 }
 
 // ── Recent history — read today's history live from the browser API via background ──
@@ -1556,24 +1618,22 @@ window.addEventListener('focus', () => scheduleLoadRecentTabs(0));
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') scheduleLoadRecentTabs(0);
 });
-// Light polling fallback while the Closed Tabs panel is the visible one.
-setInterval(() => {
-    const panel = document.getElementById('panel-tabs');
-    if (panel && panel.classList.contains('active') && document.visibilityState === 'visible') loadRecentTabs();
-}, 3000);
-
-// Polling fallback — skip while in selection mode to avoid wiping checked state
+// One light polling fallback (every 3 s) for both lists: Closed Tabs while that panel is visible, and the Recent
+// History view when new visits arrived. It does nothing while the popup / sidebar is hidden or in selection mode.
 let lastCount = 0;
 setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    const panel = document.getElementById('panel-tabs');
+    if (panel && panel.classList.contains('active')) loadRecentTabs();
     if (_selMode) return;
     browser.storage.local.get('eh_today_history').catch(() => undefined).then(r => {
-        const entries = r.eh_today_history || [];
+        const entries = (r && r.eh_today_history) || [];
         if (entries.length !== lastCount) {
             lastCount = entries.length;
             refreshRecentHistoryView(true);
         }
     });
-}, 2000);
+}, 3000);
 
 // ══ Sidebar day navigation (Recent History tab, sidebar mode only) ═══════════
 // Prev/next-day arrows + a clickable date label (opens a custom calendar),
@@ -1767,18 +1827,30 @@ if (document.body.classList.contains('sidebar-mode')) {
     if (sdnRight && openBtn)  sdnRight.appendChild(openBtn);
 
     // Left arrow (‹) — forward toward today
-    document.getElementById('sdnPrev')?.addEventListener('click', () => {
+    const sdnStepPrev = () => {
         if (isViewingToday()) return; // can't go past today
         const d = new Date(_sidebarViewDate);
         d.setDate(d.getDate() + 1);
         sdnGoToDate(d);
-    });
+    };
     // Right arrow (›) — back in time
-    document.getElementById('sdnNext')?.addEventListener('click', () => {
+    const sdnStepNext = () => {
         const d = new Date(_sidebarViewDate);
         d.setDate(d.getDate() - 1);
         sdnGoToDate(d);
-    });
+    };
+    // Hold an arrow to keep switching days.
+    const sdnHold = (id, fn) => {
+        const btn = document.getElementById(id); if (!btn) return;
+        let dt = null, rt = null;
+        const stop = () => { clearTimeout(dt); clearInterval(rt); dt = rt = null; };
+        btn.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; stop(); fn(); dt = setTimeout(() => { rt = setInterval(fn, 150); }, 420); });
+        ['pointerup', 'pointerleave', 'pointercancel', 'blur'].forEach(ev => btn.addEventListener(ev, stop));
+        window.addEventListener('pointerup', stop);
+        btn.addEventListener('click', (e) => { if (e.detail === 0) fn(); });
+    };
+    sdnHold('sdnPrev', sdnStepPrev);
+    sdnHold('sdnNext', sdnStepNext);
     document.getElementById('sdnDateLabel')?.addEventListener('click', sdnOpenCalendar);
     // Clear button — resets any active search filter and jumps back to today
     document.getElementById('sdnClear')?.addEventListener('click', () => {

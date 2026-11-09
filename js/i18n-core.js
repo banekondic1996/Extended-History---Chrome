@@ -103,8 +103,7 @@
  *   EhExpr.on()                 → true while expression mode is on
  *   EhExpr.test(query, text)    → does `text` match every word of `query`?
  *   EhExpr.attach(input, cb)    → badge + right-click item for a search <input>; cb() runs when the mode changes
- * The search box gets its own right-click menu (Cut / Copy / Paste / Select all + the mode switch), drawn inside the page so it
- * also works in the small popup and the sidebar.
+ * The search box keeps the normal browser context menu; the background adds an "Expression mode" checkbox to it.
  */
 (function () {
   'use strict';
@@ -151,58 +150,24 @@
   }
   function test(q, text) { return terms(q).every(function (r) { return r.test(text); }); }
 
-  // ── custom right-click menu ────────────────────────────────────────────────────────────────────────
-  var menuEl = null;
-  function closeMenu() { if (menuEl) { menuEl.remove(); menuEl = null; } document.removeEventListener('mousedown', onDocDown, true); document.removeEventListener('keydown', onDocKey, true); }
-  function onDocDown(e) { if (menuEl && !menuEl.contains(e.target)) closeMenu(); }
-  function onDocKey(e) { if (e.key === 'Escape') { e.preventDefault(); closeMenu(); } }
-  function pasteInto(input) {
-    input.focus();
-    var done = function (txt) {
-      if (txt == null) return;
-      var a = input.selectionStart, b = input.selectionEnd;
-      input.setRangeText(txt, a, b, 'end');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    var fallback = function () { try { if (!document.execCommand('paste')) throw 0; } catch (_) {} };
-    try { navigator.clipboard.readText().then(done, fallback); } catch (_) { fallback(); }
+  // ── native right-click menu ────────────────────────────────────────────────────────────────────────
+  // The browser's own context menu is kept. The background adds an "Expression mode" checkbox to it (browser.contextMenus,
+  // contexts:['editable']). Before the menu opens we tell the background whether the item should be shown (only for the
+  // search boxes) and whether it is ticked; when clicked, the background broadcasts EH_EXPR_TOGGLE and set() runs here.
+  function announce(show) {
+    try { browser.runtime.sendMessage({ type: 'EH_EXPR_MENU', show: !!show, checked: state }).catch(function () {}); } catch (_) {}
   }
-  function openMenu(input, x, y) {
-    closeMenu();
-    var m = document.createElement('div');
-    m.setAttribute('role', 'menu');
-    m.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483000;min-width:170px;max-width:96vw;padding:4px;border-radius:8px;' +
-      'background:var(--bg2,var(--surface,#2a2a2e));color:var(--text,#eee);border:1px solid var(--border,rgba(128,128,128,.4));' +
-      'box-shadow:0 6px 24px rgba(0,0,0,.45);font:13px system-ui,sans-serif;user-select:none';
-    var hasSel = input.selectionStart !== input.selectionEnd;
-    function item(label, enabled, fn, hint) {
-      var d = document.createElement('div');
-      d.setAttribute('role', 'menuitem');
-      d.style.cssText = 'display:flex;justify-content:space-between;gap:18px;padding:6px 10px;border-radius:5px;cursor:' + (enabled ? 'pointer' : 'default') + ';opacity:' + (enabled ? 1 : .4);
-      var l = document.createElement('span'); l.textContent = label; d.appendChild(l);
-      if (hint) { var h = document.createElement('span'); h.textContent = hint; h.style.opacity = '.55'; d.appendChild(h); }
-      if (enabled) {
-        d.addEventListener('mouseenter', function () { d.style.background = 'rgba(128,128,128,.25)'; });
-        d.addEventListener('mouseleave', function () { d.style.background = ''; });
-        d.addEventListener('mousedown', function (e) { e.preventDefault(); });   // keep the focus/selection in the input
-        d.addEventListener('click', function () { closeMenu(); fn(); });
-      }
-      m.appendChild(d);
-    }
-    item(T('ctx_cut', 'Cut'), hasSel, function () { input.focus(); try { document.execCommand('cut'); } catch (_) {} }, 'Ctrl+X');
-    item(T('ctx_copy', 'Copy'), hasSel, function () { input.focus(); try { document.execCommand('copy'); } catch (_) {} }, 'Ctrl+C');
-    item(T('ctx_paste', 'Paste'), true, function () { pasteInto(input); }, 'Ctrl+V');
-    item(T('ctx_select_all', 'Select all'), !!input.value, function () { input.focus(); input.select(); }, 'Ctrl+A');
-    var sep = document.createElement('div'); sep.style.cssText = 'height:1px;margin:4px 2px;background:var(--border,rgba(128,128,128,.4))'; m.appendChild(sep);
-    item((state ? '✓ ' : '') + T('expr_mode', 'Expression mode') + '  (cat*  *cat*)', true, function () { set(!state); input.focus(); });
-    document.documentElement.appendChild(m);
-    var r = m.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-    m.style.left = Math.max(2, Math.min(x, vw - r.width - 2)) + 'px';
-    m.style.top = Math.max(2, Math.min(y, vh - r.height - 2)) + 'px';
-    menuEl = m;
-    document.addEventListener('mousedown', onDocDown, true);
-    document.addEventListener('keydown', onDocKey, true);
-  }
+  try {
+    browser.runtime.onMessage.addListener(function (m) {
+      if (m && m.type === 'EH_EXPR_TOGGLE') set(!!m.checked);
+    });
+  } catch (_) {}
+  // A right-click anywhere else in the page hides the item again (it must not show up in other text fields)
+  document.addEventListener('mousedown', function (e) {
+    if (e.button !== 2) return;
+    var isSearch = inputs.some(function (r) { return r.input === e.target; });
+    if (!isSearch && e.target && e.target.closest && e.target.closest('input,textarea,[contenteditable]')) announce(false);
+  }, true);
 
   function attach(input, onChange) {
     if (!input || inputs.some(function (r) { return r.input === input; })) return;
@@ -218,7 +183,9 @@
     inputs.push(rec);
     if (onChange) listeners.push(onChange);
     refresh(rec);
-    input.addEventListener('contextmenu', function (e) { e.preventDefault(); openMenu(input, e.clientX, e.clientY); });
+    // mousedown comes before contextmenu, which gives the background time to show/tick the item
+    input.addEventListener('mousedown', function (e) { if (e.button === 2) announce(true); });
+    input.addEventListener('keydown', function (e) { if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) announce(true); });
     // Fallback shortcut inside the search box
     input.addEventListener('keydown', function (e) {
       if (e.ctrlKey && e.altKey && (e.key === 'e' || e.key === 'E')) { e.preventDefault(); set(!state); }
