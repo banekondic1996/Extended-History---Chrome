@@ -1,8 +1,7 @@
-# <img width="48" height="48" alt="icon48" src="/icons/icon128.png" /> Extended History <br>
-**Description:**
+# <img width="48" height="48" alt="icon48" src="/icons/icon128.png" /> Extended History (Firefox addon) <br>
+**For more info check the main branch:**
 <pre>
-Chrome extension for extended history duration and better history view,<br>and option to store history for more then 90 days.
-Originally made just because of 90 days limit in chromium,<br>instead of rebuilding chromium I made extension. 
+<a href='https://github.com/banekondic1996/Extended-History---Chrome/tree/main'>Link</a>
 </pre>
 **Features:**
 <pre>
@@ -18,6 +17,8 @@ Originally made just because of 90 days limit in chromium,<br>instead of rebuild
 -Store tabs
 -Encrypt history exports
 -Read exported history, without import, even encrypted ones
+-Find history using quick filters
+-Lock history
 </pre>
 
 <br>
