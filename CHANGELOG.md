@@ -226,6 +226,11 @@ Fixed/changed in version 4.3.0:
 -Fixed session links opening bug in sessions tab
 -Fixed CSS for session links to fell more responsive
 -Removed double setInterval function for popup, one was enough
+
+Fixed/changed in version 4.3.1:
+-Added tab storage search (based on Firefox user request)
+-Fixed few missing translations
+-Fixed auto store tabs storing pinned tabs (now it doesn't) (based on Firefox user request)
 </pre>
 
 
