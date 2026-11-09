@@ -247,7 +247,11 @@
   },
   "rename_bookmark": {
   "message": "Gi bokmerket nytt navn"
-},
+  },
+  "started": {"message": "Startet"},
+  "jump_to_datetime": {"message": "Gå til dato og klokkeslett"},
+  "just_now": {"message": "akkurat nå"},
+  "ago": {"message": "siden"},
   "bm_sort_default": {"message": "Sorter: Standard"},
   "bm_sort_domain_asc": {"message": "Sorter: Domene A–Å"},
   "bm_sort_domain_desc": {"message": "Sorter: Domene Å–A"},
@@ -1326,5 +1330,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Søk i lagrede faner etter tittel eller URL…"},
+  "stored_tabs_count": {"message": "Lagrede faner: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Slette alle lagrede faner ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Åpne alle lagrede faner ({0})?"},
+  "no_matching_stored_tabs": {"message": "Ingen samsvarende lagrede faner."},
+  "tab_storage_cleared": {"message": "Fanelageret er tømt"},
+  "restoring_tabs": {"message": "Gjenoppretter faner ({0})…"},
+  "remove_from_storage": {"message": "Fjern fra lager"}
 }

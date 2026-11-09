@@ -48,6 +48,7 @@ function applyTranslations() {
     { id: 'ignorePatternInput', key: 'ph_ignore_pattern'   },
     { id: 'rmSearchInput',      key: 'ph_search_history'   },
     { id: 'deviceSearchInput',  key: 'ph_search_devices'   },
+    { id: 'tabStorageSearchInput', key: 'ph_search_tab_storage' },
   ].forEach(({ id, key }) => {
     const el = document.getElementById(id);
     const text = _msg(key);

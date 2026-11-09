@@ -84,6 +84,7 @@
   "thu": {"message": "ה׳"},
   "fri": {"message": "ו׳"},
   "sat": {"message": "ש׳"},
+  "started": {"message": "התחיל"},
   "merging_imported": {"message": "ממזג את ההיסטוריה שיובאה…"},
   "building_search_index": {"message": "בונה אינדקס חיפוש…"},
   "reparing_database": {"message": "מתקן את מסד הנתונים של ההיסטוריה…"},
@@ -218,8 +219,11 @@
     "message": "יצירת סיסמה"
   },
   "rename_bookmark": {
-  "message": "बुकमार्क का नाम बदलें"
+    "message": "שנה שם לסימנייה"
 },
+  "jump_to_datetime": {"message": "מעבר לתאריך ולשעה"},
+  "just_now": {"message": "הרגע"},
+  "ago": {"message": "לפני"},
   "bm_sort_default": {"message": "מיון: ברירת מחדל"},
   "bm_sort_domain_asc": {"message": "מיון: דומיין א–ת"},
   "bm_sort_domain_desc": {"message": "מיון: דומיין ת–א"},
@@ -1304,5 +1308,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "חפש כרטיסיות שמורות לפי כותרת או כתובת…"},
+  "stored_tabs_count": {"message": "כרטיסיות שמורות: {0}"},
+  "confirm_clear_stored_tabs": {"message": "למחוק את כל הכרטיסיות השמורות ({0})?"},
+  "confirm_open_stored_tabs": {"message": "לפתוח את כל הכרטיסיות השמורות ({0})?"},
+  "no_matching_stored_tabs": {"message": "לא נמצאו כרטיסיות שמורות תואמות."},
+  "tab_storage_cleared": {"message": "אחסון הכרטיסיות נוקה"},
+  "restoring_tabs": {"message": "משחזר כרטיסיות ({0})…"},
+  "remove_from_storage": {"message": "הסר מהאחסון"}
 }

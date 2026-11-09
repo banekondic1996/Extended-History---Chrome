@@ -252,10 +252,14 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-},
- "remove_bookmark": {
+  },
+  "remove_bookmark": {
     "message": "Signaculum remove"
   },
+  "started": {"message": "Coepit"},
+  "jump_to_datetime": {"message": "Ad diem et horam transi"},
+  "just_now": {"message": "nunc"},
+  "ago": {"message": "abhinc"},
   "bm_sort_default": {"message": "Ordina: Defalta"},
   "bm_sort_domain_asc": {"message": "Ordina: Dominium A–Z"},
   "bm_sort_domain_desc": {"message": "Ordina: Dominium Z–A"},
@@ -1160,5 +1164,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Schedas servatas per titulum vel URL quaerere…"},
+  "stored_tabs_count": {"message": "Schedae servatae: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Omnes schedas servatas ({0}) delere?"},
+  "confirm_open_stored_tabs": {"message": "Omnes schedas servatas ({0}) aperire?"},
+  "no_matching_stored_tabs": {"message": "Nullae schedae servatae congruentes."},
+  "tab_storage_cleared": {"message": "Repositorium scedarum purgatum est"},
+  "restoring_tabs": {"message": "Schedae restituuntur ({0})…"},
+  "remove_from_storage": {"message": "Ex repositorio removere"}
 }

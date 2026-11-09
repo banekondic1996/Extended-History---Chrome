@@ -239,7 +239,11 @@
   },
   "rename_bookmark": {
   "message": "Переименовать закладку"
-},
+  },
+  "started": {"message": "Началось"},
+  "jump_to_datetime": {"message": "Перейти к дате и времени"},
+  "just_now": {"message": "только что"},
+  "ago": {"message": "назад"},
   "bm_sort_default": {"message": "Сортировка: По умолчанию"},
   "bm_sort_domain_asc": {"message": "Сортировка: Домен А–Я"},
   "bm_sort_domain_desc": {"message": "Сортировка: Домен Я–А"},
@@ -1339,5 +1343,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Поиск сохранённых вкладок по названию или URL…"},
+  "stored_tabs_count": {"message": "Сохранённых вкладок: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Удалить все сохранённые вкладки ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Открыть все сохранённые вкладки ({0})?"},
+  "no_matching_stored_tabs": {"message": "Подходящих сохранённых вкладок нет."},
+  "tab_storage_cleared": {"message": "Хранилище вкладок очищено"},
+  "restoring_tabs": {"message": "Восстановление вкладок ({0})…"},
+  "remove_from_storage": {"message": "Удалить из хранилища"}
 }

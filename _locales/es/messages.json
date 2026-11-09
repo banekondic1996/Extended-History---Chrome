@@ -226,8 +226,12 @@
   "set_export_password_note": {"message": "Necesaria para importar o abrir tus exportaciones. Si la olvidas, no podrás recuperar los archivos exportados cifrados."},
   "rename_bookmark": {
   "message": "Cambiar nombre del marcador"
-},
- "lock_warning_title": {
+  },
+ "jump_to_datetime": {"message": "Ir a fecha y hora"},
+  "just_now": {"message": "justo ahora"},
+  "ago": {"message": "hace"},
+  "started": {"message": "Iniciado"},
+  "lock_warning_title": {
     "message": "¿Bloquear el historial?"
   },
   "lock_warning_body": {
@@ -1348,5 +1352,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Buscar pestañas guardadas por título o URL…"},
+  "stored_tabs_count": {"message": "Pestañas guardadas: {0}"},
+  "confirm_clear_stored_tabs": {"message": "¿Borrar todas las pestañas guardadas ({0})?"},
+  "confirm_open_stored_tabs": {"message": "¿Abrir todas las pestañas guardadas ({0})?"},
+  "no_matching_stored_tabs": {"message": "No hay pestañas guardadas que coincidan."},
+  "tab_storage_cleared": {"message": "Almacén de pestañas vaciado"},
+  "restoring_tabs": {"message": "Restaurando pestañas ({0})…"},
+  "remove_from_storage": {"message": "Quitar del almacén"}
 }

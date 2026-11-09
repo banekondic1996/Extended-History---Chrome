@@ -246,10 +246,14 @@
   },
   "rename_bookmark": {
   "message": "重命名书签"
-},
-"remove_bookmark": {
+  },
+  "remove_bookmark": {
     "message": "删除书签"
   },
+  "started": {"message": "已开始"},
+  "jump_to_datetime": {"message": "跳转到日期和时间"},
+  "just_now": {"message": "刚刚"},
+  "ago": {"message": "前"},
   "bm_sort_default": {"message": "排序：默认"},
   "bm_sort_domain_asc": {"message": "排序：域名 A–Z"},
   "bm_sort_domain_desc": {"message": "排序：域名 Z–A"},
@@ -1338,5 +1342,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "按标题或 URL 搜索已存储的标签页…"},
+  "stored_tabs_count": {"message": "已存储的标签页：{0}"},
+  "confirm_clear_stored_tabs": {"message": "清除所有已存储的标签页（{0}）？"},
+  "confirm_open_stored_tabs": {"message": "打开所有已存储的标签页（{0}）？"},
+  "no_matching_stored_tabs": {"message": "没有匹配的已存储标签页。"},
+  "tab_storage_cleared": {"message": "标签页存储已清空"},
+  "restoring_tabs": {"message": "正在恢复标签页（{0}）…"},
+  "remove_from_storage": {"message": "从存储中移除"}
 }

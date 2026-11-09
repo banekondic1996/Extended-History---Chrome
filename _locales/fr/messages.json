@@ -209,6 +209,10 @@
   "rename_bookmark": {
   "message": "Renommer le favori"
 },
+  "jump_to_datetime": {"message": "Aller à la date et à l’heure"},
+  "just_now": {"message": "à l’instant"},
+  "ago": {"message": "il y a"},
+  "started": {"message": "Démarré"},
   "bm_sort_default": {"message": "Trier : Par défaut"},
   "bm_sort_domain_asc": {"message": "Trier : Domaine A–Z"},
   "bm_sort_domain_desc": {"message": "Trier : Domaine Z–A"},
@@ -1338,5 +1342,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Rechercher dans les onglets stockés par titre ou URL…"},
+  "stored_tabs_count": {"message": "Onglets stockés : {0}"},
+  "confirm_clear_stored_tabs": {"message": "Supprimer tous les onglets stockés ({0}) ?"},
+  "confirm_open_stored_tabs": {"message": "Ouvrir tous les onglets stockés ({0}) ?"},
+  "no_matching_stored_tabs": {"message": "Aucun onglet stocké correspondant."},
+  "tab_storage_cleared": {"message": "Stockage d'onglets vidé"},
+  "restoring_tabs": {"message": "Restauration des onglets ({0})…"},
+  "remove_from_storage": {"message": "Retirer du stockage"}
 }

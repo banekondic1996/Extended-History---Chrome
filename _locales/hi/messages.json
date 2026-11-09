@@ -249,7 +249,11 @@
   },
   "rename_bookmark": {
   "message": "बुकमार्क का नाम बदलें"
-},
+  },
+  "started": {"message": "शुरू हुआ"},
+  "jump_to_datetime": {"message": "तारीख और समय पर जाएँ"},
+  "just_now": {"message": "अभी-अभी"},
+  "ago": {"message": "पहले"},
   "bm_sort_default": {"message": "क्रमबद्ध करें: डिफ़ॉल्ट"},
   "bm_sort_domain_asc": {"message": "क्रमबद्ध करें: डोमेन A–Z"},
   "bm_sort_domain_desc": {"message": "क्रमबद्ध करें: डोमेन Z–A"},
@@ -1304,5 +1308,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "शीर्षक या URL से सहेजे गए टैब खोजें…"},
+  "stored_tabs_count": {"message": "सहेजे गए टैब: {0}"},
+  "confirm_clear_stored_tabs": {"message": "सभी सहेजे गए टैब ({0}) हटाएँ?"},
+  "confirm_open_stored_tabs": {"message": "सभी सहेजे गए टैब ({0}) खोलें?"},
+  "no_matching_stored_tabs": {"message": "कोई मेल खाता सहेजा गया टैब नहीं मिला।"},
+  "tab_storage_cleared": {"message": "टैब स्टोरेज साफ़ कर दिया गया"},
+  "restoring_tabs": {"message": "टैब पुनर्स्थापित किए जा रहे हैं ({0})…"},
+  "remove_from_storage": {"message": "स्टोरेज से हटाएँ"}
 }

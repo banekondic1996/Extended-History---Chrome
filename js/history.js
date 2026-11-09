@@ -313,10 +313,10 @@ function esc(s) {
 function fmtNum(n)  { return Number(n).toLocaleString(); }
 function timeAgo(t) {
   const s = Math.floor((Date.now() - t) / 1000);
-  if (s < 60)    return 'just now';
-  if (s < 3600)  return `${Math.floor(s/60)}m ago`;
-  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-  return `${Math.floor(s/86400)}d ago`;
+  if (s < 60)    return tr('just_now','just now');
+  if (s < 3600)  return tr('pop_min_ago',  '{0}m ago').replace('{0}', Math.floor(s/60));
+  if (s < 86400) return tr('pop_hour_ago', '{0}h ago').replace('{0}', Math.floor(s/3600));
+  return tr('pop_day_ago', '{0}d ago').replace('{0}', Math.floor(s/86400));
 }
 function dayLabel(ts) {
   const d = new Date(ts), now = new Date();
@@ -2370,7 +2370,7 @@ async function loadSessions() {
     if (current) {
       const dur = fmtDuration(Date.now() - current.start);
       el.appendChild(buildSessionCard(
-        { main: _ehMsg("current_session"), sub: `Started ${timeAgo(current.start)} · ${dur}` },
+        { main: _ehMsg("current_session"), sub: `${tr('started','Started')+' '+timeAgo(current.start)} · ${dur}` },
                                       _ehMsg("active"), current.tabs
       ));
     }
@@ -2427,6 +2427,15 @@ function buildSessTabEl(t) {
 
 
 // ══ TAB STORAGE ══════════════════════════════════════════════════════════════
+// Translated helpers for Tab Storage ({0} is filled in here, so it works with native and override languages alike)
+function tsTr(key, fb, n) { return String(tr(key, fb)).replace('{0}', n); }
+function tsTimeAgo(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 60)    return tr('pop_just_now', 'just now');
+  if (s < 3600)  return tr('pop_min_ago',  '{0}m ago', Math.floor(s/60)).replace('{0}', Math.floor(s/60));
+  if (s < 86400) return tr('pop_hour_ago', '{0}h ago', Math.floor(s/3600)).replace('{0}', Math.floor(s/3600));
+  return tr('pop_day_ago', '{0}d ago', Math.floor(s/86400)).replace('{0}', Math.floor(s/86400));
+}
 async function loadTabStorage() {
   const el = document.getElementById('tabStorageContent');
   if (!el) return;
@@ -2445,15 +2454,15 @@ async function loadTabStorage() {
     header.className = 'ts-header';
     const countEl = document.createElement('span');
     countEl.className = 'ts-count';
-    countEl.textContent = `${entries.length} stored tab${entries.length !== 1 ? 's' : ''}`;
+    countEl.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', entries.length);
     const clearBtn = document.createElement('button');
     clearBtn.className = 'tb-btn';
     clearBtn.textContent = '🗑 '+tr('clear_all','Clear all');
     clearBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)';
     clearBtn.addEventListener('click', async () => {
-      if (!confirm(`Clear all ${entries.length} stored tabs?`)) return;
+      if (!confirm(tsTr('confirm_clear_stored_tabs', 'Clear all stored tabs ({0})?', entries.length))) return;
       await send('CLEAR_TAB_STORAGE');
-      toast('Tab storage cleared', 'ok');
+      toast(tr('tab_storage_cleared', 'Tab storage cleared'), 'ok');
       loadTabStorage();
     });
     const restoreAllBtn = document.createElement('button');
@@ -2461,11 +2470,11 @@ async function loadTabStorage() {
     restoreAllBtn.textContent = '↺ '+tr('restore_all','Restore all');
     restoreAllBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)';
     restoreAllBtn.addEventListener('click', async () => {
-      if (entries.length > 15 && !confirm(`Open all ${entries.length} stored tabs?`)) return;
+      if (entries.length > 15 && !confirm(tsTr('confirm_open_stored_tabs', 'Open all stored tabs ({0})?', entries.length))) return;
       // Hand off to background: clears storage + opens tabs with stagger
       const urls = entries.map(e => e.url).filter(Boolean);
       await send('RESTORE_TAB_STORAGE_ENTRIES', { ids: entries.map(e => e.id), urls });
-      toast(`Restoring ${entries.length} tab${entries.length !== 1 ? 's' : ''}…`, 'ok');
+      toast(tsTr('restoring_tabs', 'Restoring tabs ({0})…', entries.length), 'ok');
       loadTabStorage();
     });
     header.appendChild(countEl);
@@ -2479,6 +2488,8 @@ async function loadTabStorage() {
       const row = document.createElement('div');
       row.className = 'ts-row';
       row.title = entry.url;
+      row.dataset.title = (entry.title || '').toLowerCase();
+      row.dataset.url   = (entry.url || '').toLowerCase();
       const fav = document.createElement('img');
       fav.className = 'ts-fav';
       setFavicon(fav, dom);
@@ -2491,13 +2502,13 @@ async function loadTabStorage() {
       title.textContent = entry.title || entry.url;
       const meta = document.createElement('div');
       meta.className = 'ts-meta';
-      meta.textContent = dom + ' · Saved ' + timeAgo(entry.savedAt);
+      meta.textContent = dom + ' · ' + String(tr('saved', 'Saved ')).trim() + ' ' + tsTimeAgo(entry.savedAt);
       body.appendChild(title);
       body.appendChild(meta);
       const removeBtn = document.createElement('button');
       removeBtn.className = 'tb-btn';
       removeBtn.textContent = '✕';
-      removeBtn.title = 'Remove from storage';
+      removeBtn.title = tr('remove_from_storage', 'Remove from storage');
       removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 8px;flex-shrink:0;color:var(--text3)';
       removeBtn.addEventListener('click', async (ev) => {
         ev.stopPropagation();
@@ -2508,7 +2519,7 @@ async function loadTabStorage() {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
             const n = list.querySelectorAll('.ts-row').length;
-            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+            countEl2.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', n);
           }
         }
         send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
@@ -2522,7 +2533,7 @@ async function loadTabStorage() {
           const countEl2 = el.querySelector('.ts-count');
           if (countEl2) {
             const n = list.querySelectorAll('.ts-row').length;
-            countEl2.textContent = `${n} stored tab${n !== 1 ? 's' : ''}`;
+            countEl2.textContent = tsTr('stored_tabs_count', 'Stored tabs: {0}', n);
           }
         }
         send('REMOVE_TAB_STORAGE_ENTRY', { id: entry.id });
@@ -2533,12 +2544,62 @@ async function loadTabStorage() {
       list.appendChild(row);
     }
     el.appendChild(list);
+    filterTabStorageRows(document.getElementById('tabStorageSearchInput')?.value || '');
     // Restore scroll position after re-render
     requestAnimationFrame(() => { if (scrollEl) scrollEl.scrollTop = prevScroll; });
   } catch (err) {
     el.innerHTML = `<div class="state-msg"><span class="state-msg-icon">⚠</span>${esc(err.message)}</div>`;
   }
 }
+
+// ── Tab Storage search: filter stored tabs by title or URL ──────────────────
+function filterTabStorageRows(rawQuery) {
+  const query = (rawQuery || '').trim().toLowerCase();
+  const el = document.getElementById('tabStorageContent');
+  if (!el) return;
+  const rows = el.querySelectorAll('.ts-row');
+  let visible = 0;
+  rows.forEach(row => {
+    const matches = !query || (row.dataset.title || '').includes(query) || (row.dataset.url || '').includes(query);
+    row.style.display = matches ? '' : 'none';
+    if (matches) visible++;
+  });
+  let none = el.querySelector('.ts-no-match');
+  if (rows.length && query && !visible) {
+    if (!none) {
+      none = document.createElement('div');
+      none.className = 'state-msg ts-no-match';
+      none.innerHTML = '<span class="state-msg-icon">🔍</span>' + tr('no_matching_stored_tabs', 'No matching stored tabs.');
+      el.appendChild(none);
+    }
+  } else if (none) none.remove();
+}
+
+// Delegated listeners on document: work no matter when/how the panel is shown
+// or re-rendered, so the search never depends on the panel-switch path.
+function _tsSearchSync(input) {
+  document.getElementById('tabStorageSearchClearBtn')?.classList.toggle('visible', !!input.value.length);
+  filterTabStorageRows(input.value);
+}
+document.addEventListener('input', ev => {
+  if (ev.target && ev.target.id === 'tabStorageSearchInput') _tsSearchSync(ev.target);
+});
+document.addEventListener('keydown', ev => {
+  const t = ev.target;
+  if (t && t.id === 'tabStorageSearchInput' && ev.key === 'Escape' && t.value) {
+    ev.preventDefault(); t.value = ''; _tsSearchSync(t);
+  }
+});
+document.addEventListener('click', ev => {
+  const btn = ev.target && ev.target.closest && ev.target.closest('#tabStorageSearchClearBtn');
+  if (!btn) return;
+  const input = document.getElementById('tabStorageSearchInput');
+  if (!input) return;
+  input.value = '';
+  _tsSearchSync(input);
+  input.focus();
+});
+function wireTabStorageSearch() { /* kept for compatibility; listeners are delegated above */ }
 
 // ══ DEVICES ═════════════════════════════════════════════════════════════════
 async function loadDevices() {
@@ -6396,7 +6457,7 @@ function switchPanel(name, skipGuard) {
   if (name === 'timespent') loadTimeSpent(curTimeDays || 15);
   if (name === 'devices')    { loadDevices(); wireDeviceSearch(); }
   if (name === 'sessions')   loadSessions();
-  if (name === 'tabstorage') loadTabStorage();
+  if (name === 'tabstorage') { loadTabStorage(); wireTabStorageSearch(); }
   if (name === 'bookmarks') loadBookmarks();
    if (name === 'mostvisited') loadMostVisited();
   if (name === 'quickfilters') { if (window.QuickFilters) window.QuickFilters.loadPanel(); }
@@ -6671,10 +6732,11 @@ async function loadDevTabs() {
       row.className = 'dev-tab-row';
       let tag;
       if (t.active) tag = 'active';
+      else if (t.pinned) tag = 'pinned (never stored)';
       else if (!t.trackable) tag = 'not trackable';
       else if (t.alreadyStored) tag = 'already stored';
       else tag = 'idle-tracked';
-      const hot = t.trackable && !t.active && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
+      const hot = t.trackable && !t.active && !t.pinned && !t.alreadyStored && r.autoStoreEnabled && t.idleMs >= t.thresholdMs * 0.75;
       // Both idleMs (our accumulator) and wallIdleMs (raw lastAccessed gap)
       // have to clear the threshold before a store happens — show both
       // whenever they diverge by more than a minute so it's obvious which

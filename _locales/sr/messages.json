@@ -893,6 +893,8 @@
   "confirm_ignore_invert": {"message": "Режим листе дозвољених сајтова: од сада се у историју НЕЋЕ чувати НИШТА осим сајтова са твоје листе. Наставити?"},
   "enc_prompt_pw": {"message": "Лозинка за шифровање инкременталних извоза (поново је потребна за њихов увоз):"},
   "link_to_chrome_webstore": {"message": "Линк до странице са екстензијама"},
+  "jump_to_datetime": {"message": "Пређи на датум и време"},
+  "just_now": {"message": "управо сада"},
   "click_to_rate": {
     "message": "Кликните да оцените"
   },
@@ -1326,5 +1328,14 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "started": {"message": "Почело"},
+  "ph_search_tab_storage": {"message": "Претражи сачуване картице по наслову или URL-у…"},
+  "stored_tabs_count": {"message": "Сачуваних картица: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Обрисати све сачуване картице ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Отворити све сачуване картице ({0})?"},
+  "no_matching_stored_tabs": {"message": "Нема одговарајућих сачуваних картица."},
+  "tab_storage_cleared": {"message": "Складиште картица је очишћено"},
+  "restoring_tabs": {"message": "Враћање картица ({0})…"},
+  "remove_from_storage": {"message": "Уклони из складишта"}
 }

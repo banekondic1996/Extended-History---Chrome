@@ -1622,6 +1622,13 @@ async function runAutoStore() {
       continue;
     }
 
+    if (tab.pinned) {
+      // Pinned tabs are never auto-stored. Keep the idle accumulator at 0 so
+      // that unpinning a long-idle tab doesn't instantly store it.
+      track.tabs[norm] = 0;
+      continue;
+    }
+
     const idleMs = (track.tabs[norm] || 0) + delta;
     track.tabs[norm] = idleMs;
 
@@ -1656,6 +1663,7 @@ async function runAutoStore() {
   if (!toStore.length) return;
 
   for (const { tab, norm } of toStore) {
+    if (tab.pinned) continue;
     if (!stored.find(e => e.url === norm)) {
       stored.push({
         id: `ts_auto_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -3372,13 +3380,14 @@ async function handle(msg) {
       const result = tabs.map(tab => {
         const trackable = !!(tab.url && isTrackable(tab.url));
         const norm = trackable ? normalizeUrl(tab.url) : null;
-        const idleMs = tab.active ? 0 : (trackable ? (track.tabs[norm] || 0) : 0);
+        const idleMs = (tab.active || tab.pinned) ? 0 : (trackable ? (track.tabs[norm] || 0) : 0);
         const wallIdleMs = tab.active ? 0 : Date.now() - (tab.lastAccessed ?? Date.now());
         return {
           id: tab.id,
           title: tab.title || tab.url || '(untitled)',
           url: tab.url || '',
           active: !!tab.active,
+          pinned: !!tab.pinned,
           trackable,
           alreadyStored: trackable ? storedUrls.has(norm) : false,
           idleMs,

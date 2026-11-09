@@ -247,7 +247,11 @@
   },
   "rename_bookmark": {
   "message": "Bladwijzer hernoemen"
-},
+  },
+  "started": {"message": "Gestart"},
+  "jump_to_datetime": {"message": "Ga naar datum en tijd"},
+  "just_now": {"message": "zojuist"},
+  "ago": {"message": "geleden"},
   "bm_sort_default": {"message": "Sorteren: Standaard"},
   "bm_sort_domain_asc": {"message": "Sorteren: Domein A–Z"},
   "bm_sort_domain_desc": {"message": "Sorteren: Domein Z–A"},
@@ -1338,5 +1342,13 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Zoek opgeslagen tabbladen op titel of URL…"},
+  "stored_tabs_count": {"message": "Opgeslagen tabbladen: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Alle opgeslagen tabbladen ({0}) wissen?"},
+  "confirm_open_stored_tabs": {"message": "Alle opgeslagen tabbladen ({0}) openen?"},
+  "no_matching_stored_tabs": {"message": "Geen overeenkomende opgeslagen tabbladen."},
+  "tab_storage_cleared": {"message": "Tabbladopslag gewist"},
+  "restoring_tabs": {"message": "Tabbladen herstellen ({0})…"},
+  "remove_from_storage": {"message": "Uit opslag verwijderen"}
 }

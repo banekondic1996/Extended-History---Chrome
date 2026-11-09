@@ -1351,6 +1351,8 @@
       }
     }
   },
+  "just_now": {"message": "just now"},
+  "ago": {"message": "ago"},
   "unsaved_changes_title": {"message": "Save changes?"},
   "unsaved_changes_msg": {"message": "You have unsaved changes in Settings."},
   "jump_to_datetime": {"message": "Jump to date&time"},
@@ -1372,5 +1374,14 @@
   "popup_search_limit": {"message": "Limit maximum old search history"},
   "popup_search_limit_desc": {"message": "The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything."},
   "encrypted": {"message": "encrypted"},
-  "export_interrupted": {"message": "Export was interrupted — please try again"}
+  "export_interrupted": {"message": "Export was interrupted — please try again"},
+  "ph_search_tab_storage": {"message": "Search stored tabs by title or URL…"},
+  "stored_tabs_count": {"message": "Stored tabs: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Clear all stored tabs ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Open all stored tabs ({0})?"},
+  "no_matching_stored_tabs": {"message": "No matching stored tabs."},
+  "tab_storage_cleared": {"message": "Tab storage cleared"},
+  "restoring_tabs": {"message": "Restoring tabs ({0})…"},
+  "remove_from_storage": {"message": "Remove from storage"},
+  "started": {"message": "Started"}
 }
