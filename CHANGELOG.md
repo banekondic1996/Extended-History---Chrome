@@ -231,6 +231,9 @@ Fixed/changed in version 4.3.1:
 -Added tab storage search (based on Firefox user request)
 -Fixed few missing translations
 -Fixed auto store tabs storing pinned tabs (now it doesn't) (based on Firefox user request)
+
+Fixed/changed in version 4.3.2 (in testing):
+-Added quick bar option
 </pre>
 
 
