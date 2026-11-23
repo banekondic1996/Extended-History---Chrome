@@ -1338,5 +1338,11 @@
   "no_matching_stored_tabs": {"message": "Ingen samsvarende lagrede faner."},
   "tab_storage_cleared": {"message": "Fanelageret er tømt"},
   "restoring_tabs": {"message": "Gjenoppretter faner ({0})…"},
-  "remove_from_storage": {"message": "Fjern fra lager"}
+  "remove_from_storage": {"message": "Fjern fra lager"},
+  "quick_bar": {"message": "Hurtiglinje"},
+  "quick_bar_desc": {"message": "Viser en smal linje med domeneikoner ved siden av hovedpanelet. Klikk på et ikon for å filtrere historikken etter domenet; høyreklikk for å slette det."},
+  "add_to_quick_bar": {"message": "Legg til i hurtiglinjen"},
+  "add_domain_to_quick_bar_prompt": {"message": "Legg til domene i hurtiglinjen (f.eks. example.com):"},
+  "quick_bar_added": {"message": "{0} lagt til i hurtiglinjen"},
+  "quick_bar_exists": {"message": "{0} finnes allerede i hurtiglinjen"}
 }

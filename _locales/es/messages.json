@@ -1360,5 +1360,11 @@
   "no_matching_stored_tabs": {"message": "No hay pestañas guardadas que coincidan."},
   "tab_storage_cleared": {"message": "Almacén de pestañas vaciado"},
   "restoring_tabs": {"message": "Restaurando pestañas ({0})…"},
-  "remove_from_storage": {"message": "Quitar del almacén"}
+  "remove_from_storage": {"message": "Quitar del almacén"},
+  "quick_bar": {"message": "Barra rápida"},
+  "quick_bar_desc": {"message": "Muestra una barra estrecha de iconos de dominios junto al panel principal. Haz clic en un icono para filtrar el historial por ese dominio; haz clic derecho para eliminarlo."},
+  "add_to_quick_bar": {"message": "Añadir a la barra rápida"},
+  "add_domain_to_quick_bar_prompt": {"message": "Añadir dominio a la barra rápida (p. ej., example.com):"},
+  "quick_bar_added": {"message": "Se añadió {0} a la barra rápida"},
+  "quick_bar_exists": {"message": "{0} ya está en la barra rápida"}
 }

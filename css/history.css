@@ -1175,7 +1175,7 @@ input[type="color"] { opacity: 0; position: absolute; pointer-events: none; widt
 /* ── Search clear button ── */
 .search-clear-btn {
   background:none;border:none;outline:none;color:var(--text3);font-size:11px;
-  cursor:pointer;padding:2px 4px;border-radius:4px;display:none;flex-shrink:0;
+  cursor:pointer;padding:8px 4px;border-radius:4px;display:none;flex-shrink:0;
   transition:color .1s;line-height:1;
 }
 .search-clear-btn:hover { color:var(--text); }
@@ -1891,3 +1891,46 @@ body.rm-cal .cal-hours-grid { display: none; }
 /* Sessions tab: no text selection (clicks/right-clicks act on whole rows and links) */
 #panel-sessions { -webkit-user-select: none; user-select: none; }
 #panel-sessions input, #panel-sessions textarea { -webkit-user-select: text; user-select: text; }
+
+
+/* ══ QUICK BAR ═════════════════════════════════════════════════════════════
+   Narrow icon bar to the right of .main (between it and the calendar bar).
+   Shown only on the History tab, and only when Settings → Quick bar is on
+   (body.qb-on, body.qb-history). --qb-gap is 2px, or 0 with rounded corners off. */
+.quickbar {
+  display: none;
+  width: 50px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  background: var(--surf0);
+  border: 1px solid var(--border);
+  margin: var(--ui-margin, 8px) var(--qb-gap, 2px);
+  border-radius: var(--ui-radius, 20px);
+  overflow: hidden;
+}
+body.qb-on.qb-history:not(.qb-cal) .quickbar { display: flex; justify-content: center; }
+body.qb-on.qb-history:not(.qb-cal) .main { margin-right: var(--qb-gap, 2px); }
+.qb-list { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.qb-list::-webkit-scrollbar { display: none; }
+.qb-list { opacity: 0.3; }
+.qb-list:hover { opacity: 1; }
+/* Calendar mode: list sits under .cal-hours-grid, wrapping in rows, blurred until hovered */
+.qb-list.qb-in-cal { flex-direction: row; flex-wrap: wrap; align-content: flex-start; justify-content: center; flex: 1 1 auto; min-height: 48px; overflow-y: auto; scrollbar-width: none; filter: blur(8px); }
+.qb-list.qb-in-cal::-webkit-scrollbar { display: none; }
+/* Only the icon area scrolls, not the whole calendar */
+body.qb-cal .cal-sidebar-inner { overflow: hidden; }
+body.qb-cal .cal-sidebar-inner > :not(.qb-list) { flex-shrink: 0; }
+.qb-list.qb-in-cal:hover { filter: none; }
+.qb-btn {
+  width: 48px; height: 48px; padding: 14px; box-sizing: border-box; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 12px;
+  color: var(--text2); font-weight: 600; font-size: 1.1rem; line-height: 1;
+}
+.qb-btn:hover { background: var(--surf3); color: var(--text); }
+.qb-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; pointer-events: none; }
+.qb-add { font-size: 1.5rem; font-weight: 400; }
+
+
+.qb-ghost { opacity: 0.4; }

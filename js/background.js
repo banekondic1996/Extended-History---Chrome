@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS = {
   roundedCorners: true,      // UI rounded corners on the sidebar/main panels (default on)
   navIcons: true,            // Show the icons in the sidebar navigation (off = text only)
   matchUiColors: true,       // History list uses the same colour as the rest of the UI instead of its own shade
+  quickBarEnabled: false,    // Narrow bar of favourite-domain icons beside the main panel
   calendarMode: false,       // Replace date/hour pill nav with a right-side calendar sidebar
   hideIgnoredInTimeSpent: false, // Hide (not delete) ignore-list-matched domains from the Time Spent view
   autoExportIntervalMonths: 0, // 0 = disabled. When set (e.g. 4), a .json export of everything new

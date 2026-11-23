@@ -1316,5 +1316,11 @@
   "no_matching_stored_tabs": {"message": "לא נמצאו כרטיסיות שמורות תואמות."},
   "tab_storage_cleared": {"message": "אחסון הכרטיסיות נוקה"},
   "restoring_tabs": {"message": "משחזר כרטיסיות ({0})…"},
-  "remove_from_storage": {"message": "הסר מהאחסון"}
+  "remove_from_storage": {"message": "הסר מהאחסון"},
+  "quick_bar": {"message": "סרגל מהיר"},
+  "quick_bar_desc": {"message": "מציג סרגל צר של סמלי דומיינים לצד החלונית הראשית. לחץ על סמל כדי לסנן את ההיסטוריה לפי הדומיין שלו; לחץ עליו לחיצה ימנית כדי למחוק אותו."},
+  "add_to_quick_bar": {"message": "הוסף לסרגל המהיר"},
+  "add_domain_to_quick_bar_prompt": {"message": "הוסף דומיין לסרגל המהיר (למשל example.com):"},
+  "quick_bar_added": {"message": "{0} נוסף לסרגל המהיר"},
+  "quick_bar_exists": {"message": "{0} כבר נמצא בסרגל המהיר"}
 }

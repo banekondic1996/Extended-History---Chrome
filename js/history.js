@@ -768,9 +768,11 @@ function applyRoundedCorners(enabled) {
   if (enabled === false) {
     root.style.setProperty('--ui-radius', '0px');
     root.style.setProperty('--ui-margin', '0px');
+    root.style.setProperty('--qb-gap', '0px');
   } else {
     root.style.removeProperty('--ui-radius');
     root.style.removeProperty('--ui-margin');
+    root.style.removeProperty('--qb-gap');
   }
 }
 
@@ -1408,6 +1410,7 @@ function applyCalendarMode(enabled) {
 }
 
 function updateCalSidebarVisibility() {
+  document.body.classList.toggle('qb-history', !!document.getElementById('panel-history')?.classList.contains('active'));   // quick bar: History tab only
   const onHistoryPanel = document.getElementById('panel-history')?.classList.contains('active');
   // Reading Mode always uses the calendar (a loaded file can span years — hundreds of pills were slow and clumsy)
   const onReading = !!document.getElementById('panel-readingmode')?.classList.contains('active') && _rmEntries.length > 0;
@@ -1417,6 +1420,7 @@ function updateCalSidebarVisibility() {
   document.body.classList.toggle('cal-sidebar-active', active);
   if (active) { renderCalendarWidget(); updateCalHourGridState(); }
   checkCalNarrow();
+  if (typeof qbPlaceList === 'function') qbPlaceList();
 }
 
 // ── Narrow-viewport auto-hide (< 1000px) ────────────────────────────────────
@@ -4210,6 +4214,8 @@ function populateSettings(s) {
   if (navIconsTgl) navIconsTgl.checked = s.navIcons !== false;
   const matchUiColorsTgl = document.getElementById('matchUiColorsToggle');
   if (matchUiColorsTgl) matchUiColorsTgl.checked = s.matchUiColors === true;
+  const quickBarTgl = document.getElementById('quickBarToggle');
+  if (quickBarTgl) quickBarTgl.checked = s.quickBarEnabled === true;
   const calendarModeTgl = document.getElementById('calendarModeToggle');
   if (calendarModeTgl) calendarModeTgl.checked = s.calendarMode === true;
   const fadeInListTgl = document.getElementById('fadeInListToggle');
@@ -4313,6 +4319,7 @@ function applyVisuals(s) {
   applyNavIcons(s.navIcons !== false);
   applyMatchUiColors(s.matchUiColors === true);
   applyCalendarMode(s.calendarMode === true);
+  applyQuickBar(s.quickBarEnabled === true);
   applyIconVariant(s.toolbarIcon || 'default');
   
   // Apply background tint: hue-rotate filter on the wallpaper layer.
@@ -4412,6 +4419,7 @@ async function saveSettings() {
   const navIcons = document.getElementById('navIconsToggle')?.checked !== false;
   const matchUiColors = document.getElementById('matchUiColorsToggle')?.checked === true;
   const calendarMode = document.getElementById('calendarModeToggle')?.checked === true;
+  const quickBarEnabled = document.getElementById('quickBarToggle')?.checked === true;
   const fadeInListOnDateChange = document.getElementById('fadeInListToggle')?.checked !== false;
   const contextMenuEnabled = document.getElementById('contextMenuToggle')?.checked !== false;
   const datePillsWheelScroll = document.getElementById('datePillsWheelToggle')?.checked === true;
@@ -4463,6 +4471,7 @@ async function saveSettings() {
         navIcons,
         matchUiColors,
         calendarMode,
+        quickBarEnabled,
         fadeInListOnDateChange,
         datePillsWheelSensitivity,
         toolbarIcon,
@@ -5262,6 +5271,168 @@ document.getElementById('sessCtxDelete')?.addEventListener('click', async () => 
   } catch (err) { toast(err.message || String(err), 'err'); }
 });
 
+// ══ QUICK BAR ═════════════════════════════════════════════════════════════
+// Narrow icon bar beside .main. Each icon is a saved domain; clicking one
+// filters the history search by that domain. Domains live in chrome.storage.local.
+const QB_KEY = 'eh_quickbar_domains';
+let _qbDomains = [];
+const _qbAddEl = document.getElementById('qbAddBtn');   // kept by reference: it moves between the bar and the calendar list
+
+function qbNormalize(raw) {
+  let d = String(raw || '').trim().toLowerCase();
+  if (!d) return '';
+  if (/^[a-z][a-z0-9+.-]*:\/\//.test(d)) { try { d = new URL(d).hostname; } catch { return ''; } }
+  d = d.split(/[\/?#]/)[0].replace(/:\d+$/, '').replace(/^www\./, '');
+  return /^[^\s.]+(\.[^\s.]+)+$|^localhost$/.test(d) ? d : '';
+}
+async function qbLoad() {
+  try {
+    const r = await chrome.storage.local.get(QB_KEY);
+    _qbDomains = Array.isArray(r[QB_KEY]) ? r[QB_KEY].filter(x => typeof x === 'string') : [];
+  } catch { _qbDomains = []; }
+}
+async function qbSave() { await chrome.storage.local.set({ [QB_KEY]: _qbDomains }); }
+async function qbAddDomain(raw) {
+  const d = qbNormalize(raw);
+  if (!d) throw new Error('Enter a valid domain, e.g. example.com');
+  await qbLoad();
+  if (_qbDomains.includes(d)) return false;
+  _qbDomains.push(d);
+  await qbSave();
+  qbRender();
+  return true;
+}
+async function qbRemoveDomain(domain) {
+  await qbLoad();
+  _qbDomains = _qbDomains.filter(d => d !== domain);
+  await qbSave();
+  qbRender();
+}
+function qbRender() {
+  const list = document.getElementById('qbList');
+  if (!list) return;
+  list.querySelectorAll('.qb-btn[data-domain]').forEach(n => n.remove());   // keep the "+" button (it can live inside the list)
+  for (const domain of _qbDomains) {
+    const b = document.createElement('button');
+    b.className = 'qb-btn';
+    b.dataset.domain = domain;
+    b.title = domain;
+    const img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    const fr = _curSettings && _curSettings.faviconResolver;
+    if (fr === 'cached') setFavicon(img, domain);
+    else if (fr === 'browser') img.src = chrome.runtime.getURL(`_favicon/?pageUrl=${encodeURIComponent('https://' + domain)}&size=64`);
+    else img.src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
+    img.onerror = () => { img.style.display = 'none'; b.textContent = domain.charAt(0).toUpperCase(); };
+    b.appendChild(img);
+    list.appendChild(b);
+  }
+  qbPlaceList();   // re-attach the "+" button after the list was rebuilt
+}
+let _qbResetPending = false;   // set by an icon click; the next typing in the search box resets the filter to "All fields"
+function qbFilterByDomain(domain) {
+  switchPanel('history');
+  _qbResetPending = true;
+  const modeSel = document.getElementById('searchMode');
+  if (modeSel) modeSel.value = 'domain';
+  const si = document.getElementById('searchInput');
+  if (si) { si.value = domain+' '; document.getElementById('searchClearBtn')?.classList.add('visible'); }
+  activateDatePill('all');
+}
+function hideQbCtx() { const m = document.getElementById('qbCtx'); if (m) m.style.display = 'none'; }
+// Calendar mode: the icon list moves under the calendar's hour grid (wrapping rows); otherwise it lives in the bar.
+function qbPlaceList() {
+  const list = document.getElementById('qbList');
+  const bar = document.getElementById('quickBar');
+  const calInner = document.querySelector('#calSidebar .cal-sidebar-inner');
+  if (!list || !bar || !calInner) return;
+  const b = document.body.classList;
+  const inCal = b.contains('qb-on') && b.contains('cal-sidebar-active') && b.contains('cal-mode') && !b.contains('rm-cal');
+  if (inCal) {
+    const grid = document.getElementById('calHoursGrid');
+    if (list.parentNode !== calInner) calInner.insertBefore(list, grid ? grid.nextSibling : null);
+  } else if (list.parentNode !== bar) {
+    bar.insertBefore(list, bar.firstChild);
+  }
+  list.classList.toggle('qb-in-cal', inCal);
+  document.body.classList.toggle('qb-cal', inCal);   // bar itself is hidden in calendar mode
+  // "+" travels with the icons: last item of the list in calendar mode, under the list in the bar otherwise
+  const add = _qbAddEl;
+  if (add) { if (inCal) list.appendChild(add); else bar.appendChild(add); }
+}
+function applyQuickBar(enabled) {
+  document.body.classList.toggle('qb-on', enabled === true);
+  qbPlaceList();
+  if (enabled === true) qbLoad().then(qbRender);
+}
+function wireQuickBar() {
+  const list = document.getElementById('qbList');
+  let ctxDomain = '';
+  list?.addEventListener('click', ev => {
+    const b = ev.target.closest('.qb-btn[data-domain]');
+    if (b) qbFilterByDomain(b.dataset.domain);
+  });
+  list?.addEventListener('contextmenu', ev => {
+    const b = ev.target.closest('.qb-btn[data-domain]');
+    if (!b) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ctxDomain = b.dataset.domain;
+    const m = document.getElementById('qbCtx');
+    m.style.display = 'block';
+    m.style.left = Math.min(ev.clientX, window.innerWidth - 150) + 'px';
+    m.style.top  = Math.min(ev.clientY, window.innerHeight - 50) + 'px';
+  });
+  // Drag to reorder (SortableJS, bundled in js/sortable.min.js)
+  if (list && window.Sortable) {
+    Sortable.create(list, {
+      animation: 150,
+      draggable: '.qb-btn[data-domain]',
+      ghostClass: 'qb-ghost',
+      delay: 120,
+      delayOnTouchOnly: true,
+      onEnd: async () => {
+        _qbDomains = [...list.querySelectorAll('.qb-btn[data-domain]')].map(b => b.dataset.domain);
+        try { await qbSave(); } catch (err) { toast(err.message || String(err), 'err'); }
+      }
+    });
+  }
+  document.getElementById('qbCtxDelete')?.addEventListener('click', async () => {
+    hideQbCtx();
+    if (ctxDomain) await qbRemoveDomain(ctxDomain).catch(err => toast(err.message || String(err), 'err'));
+    ctxDomain = '';
+  });
+  document.getElementById('qbAddBtn')?.addEventListener('click', async () => {
+    const v = prompt(tr('add_domain_to_quick_bar_prompt','Add domain to quick bar (e.g. example.com):'), '');
+    if (v === null) return;
+    try {
+      const added = await qbAddDomain(v);
+      if (!added) toast('Already in the quick bar');
+    } catch (err) { toast(err.message || String(err), 'err'); }
+  });
+  document.getElementById('searchInput')?.addEventListener('input', () => {
+    if (!_qbResetPending) return;
+    _qbResetPending = false;
+    const modeSel = document.getElementById('searchMode');
+    if (modeSel && modeSel.value === 'domain') modeSel.value = 'all';
+  });
+  // A manual change of the filter cancels the pending reset
+  document.getElementById('searchMode')?.addEventListener('change', () => { _qbResetPending = false; });
+  document.addEventListener('click', hideQbCtx);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') hideQbCtx(); });
+  window.addEventListener('blur', hideQbCtx);
+  try {
+    chrome.storage.onChanged.addListener((ch, area) => {
+      if (area === 'local' && ch[QB_KEY] && document.body.classList.contains('qb-on')) {
+        _qbDomains = Array.isArray(ch[QB_KEY].newValue) ? ch[QB_KEY].newValue : [];
+        qbRender();
+      }
+    });
+  } catch {}
+}
+wireQuickBar();
+
 // ── Context menu ──────────────────────────────────────────────────────────────
 let _ctxEntry = null;
 let _ctxSource = 'history'; // 'history' | 'readingmode'
@@ -5279,6 +5450,8 @@ function showCtxMenu(x, y, entry, source) {
   const bmRemoveSep= document.getElementById('ctx-bm-remove-sep');
   const bmRename   = document.getElementById('ctx-rename-bookmark');
   const bmFilter   = document.getElementById('ctx-filter-domain');
+  const qbItem     = document.getElementById('ctx-add-quickbar');
+  if (qbItem) qbItem.style.display = document.body.classList.contains('qb-on') ? '' : 'none';
   const hasId   = !!entry.id;
   const hasDate = !!entry.visitTime;
   const hasBmId = !!entry.bmId;
@@ -5385,6 +5558,15 @@ document.getElementById('ctx-ignore-domain').addEventListener('click', async () 
     // Background purges matching history asynchronously — refresh shortly after
     if (source === 'history') setTimeout(() => doSearch(), 900);
   } catch (err) { toast(err.message, 'err'); }
+});
+document.getElementById('ctx-add-quickbar').addEventListener('click', async () => {
+  const domain = tryDomain(_ctxEntry?.url || '');
+  hideCtxMenu();
+  if (!domain) return;
+  try {
+    const added = await qbAddDomain(domain);
+    toast(added ? tr('quick_bar_added','Added {0} to quick bar').replace('{0}', domain) : tr('quick_bar_exists','{0} is already in the quick bar').replace('{0}', domain), added ? 'ok' : '');
+  } catch (err) { toast(err.message || String(err), 'err'); }
 });
 document.getElementById('ctx-copy-url').addEventListener('click', () => {
   if (_ctxEntry?.url) navigator.clipboard.writeText(_ctxEntry.url).then(() => toast('URL copied', 'ok')); hideCtxMenu();
@@ -6831,6 +7013,9 @@ function setupPopupSettingsListeners() {
   const fadeInListToggle = document.getElementById('fadeInListToggle');
   if (fadeInListToggle) fadeInListToggle.addEventListener('change', () => { _fadeInListEnabled = fadeInListToggle.checked; });
 
+  const quickBarToggle = document.getElementById('quickBarToggle');
+  if (quickBarToggle) quickBarToggle.addEventListener('change', () => applyQuickBar(quickBarToggle.checked));
+
   const calendarModeToggle = document.getElementById('calendarModeToggle');
   if (calendarModeToggle) {
     calendarModeToggle.addEventListener('change', () => {
@@ -6936,6 +7121,7 @@ function applyWallpaper(wp) {
        fixed full-page overlay. */
     html.wallpaper-mode .sidebar,
     html.wallpaper-mode .main,
+    html.wallpaper-mode .quickbar,
     html.wallpaper-mode .cal-sidebar {
       background: ${glassRgba(overlayOpacity)} !important;
       backdrop-filter: blur(${blurAmount}px) saturate(1.4) !important;

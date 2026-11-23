@@ -156,6 +156,10 @@
   "more_from_domain": {
     "message": "More from domain"
   },
+  "quick_bar": {"message": "Quick bar"},
+  "quick_bar_desc": {"message": "Shows a narrow bar of domain icons beside the main panel. Click an icon to filter history by that domain; right-click it to delete."},
+  "quick_bar_add": {"message": "Add domain"},
+  "add_to_quick_bar": {"message": "Add to quick bar"},
   "ignore_domain": {
     "message": "Ignore domain"
   },
@@ -1383,5 +1387,8 @@
   "tab_storage_cleared": {"message": "Tab storage cleared"},
   "restoring_tabs": {"message": "Restoring tabs ({0})…"},
   "remove_from_storage": {"message": "Remove from storage"},
-  "started": {"message": "Started"}
+  "started": {"message": "Started"},
+  "add_domain_to_quick_bar_prompt": {"message": "Add domain to quick bar (e.g. example.com):"},
+  "quick_bar_added": {"message": "Added {0} to quick bar"},
+  "quick_bar_exists": {"message": "{0} is already in the quick bar"}
 }

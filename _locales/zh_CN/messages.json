@@ -1350,5 +1350,11 @@
   "no_matching_stored_tabs": {"message": "没有匹配的已存储标签页。"},
   "tab_storage_cleared": {"message": "标签页存储已清空"},
   "restoring_tabs": {"message": "正在恢复标签页（{0}）…"},
-  "remove_from_storage": {"message": "从存储中移除"}
+  "remove_from_storage": {"message": "从存储中移除"},
+  "quick_bar": {"message": "快捷栏"},
+  "quick_bar_desc": {"message": "在主面板旁显示一条窄窄的域名图标栏。点击图标可按该域名筛选历史记录；右键点击可删除该图标。"},
+  "add_to_quick_bar": {"message": "添加到快捷栏"},
+  "add_domain_to_quick_bar_prompt": {"message": "将域名添加到快捷栏（例如 example.com）："},
+  "quick_bar_added": {"message": "已将 {0} 添加到快捷栏"},
+  "quick_bar_exists": {"message": "{0} 已在快捷栏中"}
 }

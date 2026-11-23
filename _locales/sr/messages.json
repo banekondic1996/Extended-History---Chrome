@@ -1337,5 +1337,11 @@
   "no_matching_stored_tabs": {"message": "Нема одговарајућих сачуваних картица."},
   "tab_storage_cleared": {"message": "Складиште картица је очишћено"},
   "restoring_tabs": {"message": "Враћање картица ({0})…"},
-  "remove_from_storage": {"message": "Уклони из складишта"}
+  "remove_from_storage": {"message": "Уклони из складишта"},
+  "quick_bar": {"message": "Брза трака"},
+  "quick_bar_desc": {"message": "Приказује уску траку са иконицама домена поред главног панела. Кликните на икону да филтрирате историју по том домену; кликните десним тастером да је уклоните."},
+  "add_to_quick_bar": {"message": "Додај на брзу траку"},
+  "add_domain_to_quick_bar_prompt": {"message": "Додај домен на брзу траку (нпр. example.com):"},
+  "quick_bar_added": {"message": "{0} је додат на брзу траку"},
+  "quick_bar_exists": {"message": "{0} је већ на брзој траци"}
 }

@@ -1316,5 +1316,11 @@
   "no_matching_stored_tabs": {"message": "कोई मेल खाता सहेजा गया टैब नहीं मिला।"},
   "tab_storage_cleared": {"message": "टैब स्टोरेज साफ़ कर दिया गया"},
   "restoring_tabs": {"message": "टैब पुनर्स्थापित किए जा रहे हैं ({0})…"},
-  "remove_from_storage": {"message": "स्टोरेज से हटाएँ"}
+  "remove_from_storage": {"message": "स्टोरेज से हटाएँ"},
+  "quick_bar": {"message": "क्विक बार"},
+  "quick_bar_desc": {"message": "मुख्य पैनल के बगल में डोमेन आइकन की एक संकरी पट्टी दिखाता है। किसी डोमेन के इतिहास को फ़िल्टर करने के लिए उसके आइकन पर क्लिक करें; हटाने के लिए उस पर राइट-क्लिक करें।"},
+  "add_to_quick_bar": {"message": "क्विक बार में जोड़ें"},
+  "add_domain_to_quick_bar_prompt": {"message": "क्विक बार में डोमेन जोड़ें (जैसे example.com):"},
+  "quick_bar_added": {"message": "{0} को क्विक बार में जोड़ा गया"},
+  "quick_bar_exists": {"message": "{0} पहले से क्विक बार में है"}
 }

@@ -1172,5 +1172,11 @@
   "no_matching_stored_tabs": {"message": "Nullae schedae servatae congruentes."},
   "tab_storage_cleared": {"message": "Repositorium scedarum purgatum est"},
   "restoring_tabs": {"message": "Schedae restituuntur ({0})…"},
-  "remove_from_storage": {"message": "Ex repositorio removere"}
+  "remove_from_storage": {"message": "Ex repositorio removere"},
+  "quick_bar": {"message": "Linea celeris"},
+  "quick_bar_desc": {"message": "Lineam angustam iconorum dominiorum iuxta tabulam principalem ostendit. Iconem preme ut historiam secundum illud dominium filtres; dextra parte clicca ut deleas."},
+  "add_to_quick_bar": {"message": "Ad lineam celerem adde"},
+  "add_domain_to_quick_bar_prompt": {"message": "Dominium ad lineam celerem adde (ex. example.com):"},
+  "quick_bar_added": {"message": "{0} ad lineam celerem additum"},
+  "quick_bar_exists": {"message": "{0} iam in linea celeri est"}
 }

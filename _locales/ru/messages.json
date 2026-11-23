@@ -1351,5 +1351,11 @@
   "no_matching_stored_tabs": {"message": "Подходящих сохранённых вкладок нет."},
   "tab_storage_cleared": {"message": "Хранилище вкладок очищено"},
   "restoring_tabs": {"message": "Восстановление вкладок ({0})…"},
-  "remove_from_storage": {"message": "Удалить из хранилища"}
+  "remove_from_storage": {"message": "Удалить из хранилища"},
+  "quick_bar": {"message": "Быстрая панель"},
+  "quick_bar_desc": {"message": "Показывает узкую панель значков доменов рядом с основной панелью. Нажмите на значок, чтобы отфильтровать историю по этому домену; щёлкните правой кнопкой мыши, чтобы удалить его."},
+  "add_to_quick_bar": {"message": "Добавить на быструю панель"},
+  "add_domain_to_quick_bar_prompt": {"message": "Добавить домен на быструю панель (например, example.com):"},
+  "quick_bar_added": {"message": "{0} добавлен на быструю панель"},
+  "quick_bar_exists": {"message": "{0} уже есть на быстрой панели"}
 }

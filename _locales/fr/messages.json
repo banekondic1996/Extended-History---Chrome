@@ -1350,5 +1350,11 @@
   "no_matching_stored_tabs": {"message": "Aucun onglet stocké correspondant."},
   "tab_storage_cleared": {"message": "Stockage d'onglets vidé"},
   "restoring_tabs": {"message": "Restauration des onglets ({0})…"},
-  "remove_from_storage": {"message": "Retirer du stockage"}
+  "remove_from_storage": {"message": "Retirer du stockage"},
+  "quick_bar": {"message": "Barre rapide"},
+  "quick_bar_desc": {"message": "Affiche une barre étroite d’icônes de domaines à côté du panneau principal. Cliquez sur une icône pour filtrer l’historique par domaine ; faites un clic droit pour la supprimer."},
+  "add_to_quick_bar": {"message": "Ajouter à la barre rapide"},
+  "add_domain_to_quick_bar_prompt": {"message": "Ajouter un domaine à la barre rapide (p. ex. example.com) :"},
+  "quick_bar_added": {"message": "{0} ajouté à la barre rapide"},
+  "quick_bar_exists": {"message": "{0} est déjà dans la barre rapide"}
 }

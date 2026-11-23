@@ -1350,5 +1350,11 @@
   "no_matching_stored_tabs": {"message": "Geen overeenkomende opgeslagen tabbladen."},
   "tab_storage_cleared": {"message": "Tabbladopslag gewist"},
   "restoring_tabs": {"message": "Tabbladen herstellen ({0})…"},
-  "remove_from_storage": {"message": "Uit opslag verwijderen"}
+  "remove_from_storage": {"message": "Uit opslag verwijderen"},
+  "quick_bar": {"message": "Snelle balk"},
+  "quick_bar_desc": {"message": "Toont een smalle balk met domeiniconen naast het hoofdvenster. Klik op een icoon om de geschiedenis op dat domein te filteren; klik met de rechtermuisknop om het te verwijderen."},
+  "add_to_quick_bar": {"message": "Toevoegen aan snelle balk"},
+  "add_domain_to_quick_bar_prompt": {"message": "Domein toevoegen aan de snelle balk (bijv. example.com):"},
+  "quick_bar_added": {"message": "{0} toegevoegd aan de snelle balk"},
+  "quick_bar_exists": {"message": "{0} staat al in de snelle balk"}
 }
