@@ -5180,12 +5180,12 @@ async function ehRunImport(file, allowRetentionPrompt) {
 }
 
 document.getElementById('reBackfillBtn')?.addEventListener('click', async () => {
-  if (!confirm(tr('re_import_all','Re-import all available Chrome native history? New entries will be merged in.'))) return;
-  toast(tr('importing_from_chrome','Importing from Chrome history…'));
+  if (!confirm(tr('re_import_all','Re-import all available Edge native history? New entries will be merged in.'))) return;
+  toast(tr('importing_from_chrome','Importing from Edge history…'));
   try {
     const r = await send('RE_BACKFILL');
     if (r?.error) { toast(r.error, 'err'); return; }
-    toast(`Imported ${fmtNum(r.imported)} new entries from Chrome history`, 'ok');
+    toast(`Imported ${fmtNum(r.imported)} new entries from Edge history`, 'ok');
     invalidateHistCache();
     doSearch();
   } catch (err) { toast(err.message, 'err'); }

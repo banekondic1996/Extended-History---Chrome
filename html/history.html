@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title data-i18n-key="ext_name">Extended History</title>
 <link rel="stylesheet" href="../css/history.css"/>
+<script src="../js/history-gate.js"></script>
 <script src="../js/theme-init.js"></script>
 </head>
 <body>
@@ -819,7 +820,7 @@
           <div class="s-row">
             <div class="s-row-info">
               <div class="s-row-lbl" data-i18n-key="popup_as_sidebar">Use as sidebar</div>
-              <div class="s-row-desc" data-i18n-key="popup_as_sidebar_desc">Open Extended History in Chrome's side panel instead of a popup, so it can extend over the whole page</div>
+              <div class="s-row-desc" data-i18n-key="popup_as_sidebar_desc">Open Extended History in Edge's side panel instead of a popup, so it can extend over the whole page</div>
             </div>
             <div class="s-ctrl">
               <label class="toggle-switch">
@@ -1089,8 +1090,8 @@
           <div class="s-card-title" style="color:var(--danger)" data-i18n-key="danger_zone">Danger Zone</div>
           <div class="s-row">
             <div class="s-row-info">
-              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Chrome history</div>
-              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Chrome native history again (merges, no duplicates)</div>
+              <div class="s-row-lbl" data-i18n-key="reimport_chrome_history">Re-import Edge history</div>
+              <div class="s-row-desc" data-i18n-key="pull_all_chrome_history">Pull all available Edge native history again (merges, no duplicates)</div>
             </div>
             <div class="s-ctrl">
               <button class="action-btn" id="reBackfillBtn">↺ <span data-i18n-key="reimport">Re-import</span></button>
@@ -1165,9 +1166,9 @@
       <div style="font-size: 1.6rem;font-weight: 700;letter-spacing: -0.02em;margin-top: 10px;" data-i18n-key="rate_extension">Rate this extension </div>
       <div style="max-width:560px;padding:12px 0 12px">
         <div style="font-size:0.92rem;color:var(--text2);line-height:1.7;margin-bottom:10px" data-i18n-key="link_to_chrome_webstore"> 
-          Link to <strong style="color:var(--text)">Chrome Web Store</strong> extensions page
+          Link to <strong style="color:var(--text)">Microsoft Edge Add-ons</strong> extensions page
         </div>
-        <a class="sa-btn" href="https://chromewebstore.google.com/detail/extended-history/cdfgfljiefjinljmnedgkfhgcgldkhkk" target="_blank"
+        <a class="sa-btn" href="https://microsoftedge.microsoft.com/addons/search/Extended%20History" target="_blank"
            style="display:inline-flex;align-items:center;gap:10px;padding:8px;background:var(--surf2);border:1.5px solid var(--border2);border-radius:10px;color:var(--text) !important;text-decoration:none;font-size:0.9rem;font-weight:500;transition:all 0.15s"
            data-i18n-key="click_to_rate">
           Click to Rate 
@@ -1256,7 +1257,7 @@
   <div class="modal-box">
     <div id="dhMainView">
     <div class="modal-title">🗑 <span data-i18n-key="delete_history">Delete History</span></div>
-    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Chrome's native history.</div>
+    <div class="modal-sub" data-i18n-key="choose_a_time_range">Choose a time range to delete. This will remove entries from both this extension and Edge's native history.</div>
     <div class="dh-range-grid" id="dhRangeGrid">
       <button class="dh-range-btn" data-range="1h" data-i18n-key="last_1_hour">Last 1 hour</button>
       <button class="dh-range-btn" data-range="24h" data-i18n-key="last_24_hours">Last 24 hours</button>

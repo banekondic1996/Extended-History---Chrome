@@ -72,6 +72,9 @@ function applyIconVariant(variant) {
     if (img) img.src = file;
 }
 
+// Loaded via history redirect (Edge flyout / large popup): fill the window.
+if (new URLSearchParams(location.search).get('flyout') === '1') document.body.classList.add('flyout-mode');
+
 // ── Sidebar-mode detection (loaded via chrome.sidePanel as popup.html?sidebar=1) ─
 let _sidebarAutoHideEnabled = true; // default on; synced from settings below once loaded
 if (new URLSearchParams(location.search).get('sidebar') === '1') {
@@ -149,7 +152,7 @@ chrome.storage.local.get('eh_settings', r => {
     // Popup-specific settings
     if (s.popupShowSearch === false) document.querySelector('.search-bar').style.display = 'none';
     if (s.popupShowTabs   === false) document.getElementById('tabsRow').style.display    = 'none';
-    if (s.popupHeight && !document.body.classList.contains('sidebar-mode')) {
+    if (s.popupHeight && !document.body.classList.contains('sidebar-mode') && !document.body.classList.contains('flyout-mode')) {
         document.querySelector('.content').style.maxHeight = s.popupHeight + 'px';
         document.querySelector('.search-list').style.maxHeight = s.popupHeight + 'px';
     }
@@ -257,7 +260,7 @@ document.getElementById('storeBtn').addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tab = tabs[0];
         if (!tab || !tab.url) return;
-        if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:')) {
+        if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('extension://') || tab.url.startsWith('about:')) {
             const btn = document.getElementById('storeBtn');
             const orig = btn.textContent;
             btn.textContent = tr('pop_cant_store', "Can't store this page");
@@ -1129,6 +1132,7 @@ function renderQuickStoreList() {
       const validTabs = tabs.filter(t =>
         t.url &&
         !t.url.startsWith('chrome://') &&
+        !t.url.startsWith('edge://') &&
         !t.url.startsWith('chrome-extension://') &&
         !stored.has(t.url)
       );

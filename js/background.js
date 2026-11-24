@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS = {
   fadeInListOnDateChange: true, // Fade the list in when switching dates (on by default)
   datePillsWheelScroll: false, // Let a vertical mouse wheel scroll the horizontal date-pill bar
   datePillsWheelSensitivity: 1, // Days moved per wheel "click" (1-6) when the above is enabled
-  popupAsSidebar: false,     // Open Extended History in Chrome's side panel instead of the popup
+  popupAsSidebar: false,     // Open Extended History in Edge's side panel instead of the popup
   sidebarAutoHide: true,     // Close the sidebar automatically when the mouse leaves it
   roundedCorners: true,      // UI rounded corners on the sidebar/main panels (default on)
   navIcons: true,            // Show the icons in the sidebar navigation (off = text only)
@@ -130,7 +130,7 @@ function applyToolbarIcon(variant) {
 // refreshActiveTabIcons();   // service worker (re)started
 
 // ── Popup / Side panel mode ──────────────────────────────────────────────────
-// Chrome equivalent of Firefox's browserAction+sidebarAction pairing. When
+// Edge/Chromium equivalent of Firefox's browserAction+sidebarAction pairing. When
 // "Use as sidebar" is enabled we clear the action's default popup (same call
 // Firefox uses) so a click doesn't just open the small dropdown, and we tell
 // chrome.sidePanel to open on that same action click instead. When disabled,

@@ -24,12 +24,6 @@
     "http://*/*",
     "https://*/*"
   ],
-  "externally_connectable": {
-    "ids": [
-      "kgoinbofcdfokmfmlgadadfkabjliofl"
-    ],
-    "matches": []
-  },
   "background": {
     "service_worker": "js/background.js"
   },

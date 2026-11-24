@@ -15,11 +15,11 @@ html{
 body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,'Segoe UI',sans-serif; width:340px; font-size:13px; position:relative; }
 /* Sidebar mode: loaded via chrome.sidePanel (popup.html?sidebar=1) — fill the
    full-height panel instead of the small fixed-size popup dropdown. */
-body.sidebar-mode { width:100%; max-width:none; height:100vh; display:flex; flex-direction:column; }
-body.sidebar-mode .content-wrapper { flex:1; display:flex; flex-direction:column; min-height:0; }
-body.sidebar-mode .content {flex:1;max-height:none !important;min-height: 100%;}
-body.sidebar-mode .search-list { flex:1; max-height:none !important; min-height:0; }
-body.sidebar-mode .tab-panel.active { min-height:100%; }
+body.sidebar-mode , body.flyout-mode { width:100%; max-width:none; height:100vh; display:flex; flex-direction:column; }
+body.sidebar-mode .content-wrapper , body.flyout-mode .content-wrapper { flex:1; display:flex; flex-direction:column; min-height:0; }
+body.sidebar-mode .content , body.flyout-mode .content {flex:1;max-height:none !important;min-height: 100%;}
+body.sidebar-mode .search-list , body.flyout-mode .search-list { flex:1; max-height:none !important; min-height:0; }
+body.sidebar-mode .tab-panel.active , body.flyout-mode .tab-panel.active { min-height:100%; }
 /* Keep the title bar pinned at the top and never let it get squeezed by the
    flex column — same for the other fixed-height chrome (tabs, footer, search). */
 body.sidebar-mode .header { display:none; }
@@ -64,9 +64,16 @@ body.sidebar-mode .hico, body.sidebar-mode .htitle { display:none; }
 .sdn-cal-month.cur { border-color:var(--accent); color:var(--accent); font-weight:700; }
 .sdn-cal-month:disabled { color:var(--text3); opacity:0.3; cursor:default; }
 body.sidebar-mode .tabs,
+body.flyout-mode .tabs,
 body.sidebar-mode .sel-mode-row,
+body.flyout-mode .sel-mode-row,
 body.sidebar-mode .footer,
-body.sidebar-mode .search-bar { flex-shrink:0; }
+body.flyout-mode .footer,
+body.sidebar-mode .search-bar,
+body.flyout-mode .tabs,
+body.flyout-mode .sel-mode-row,
+body.flyout-mode .footer,
+body.flyout-mode .search-bar { flex-shrink:0; }
 .header { display:flex; align-items:center; gap:8px; padding:12px 14px 10px; border-bottom:1px solid var(--border); }
 .hico { width:26px;height:26px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:6px; display:flex;align-items:center;justify-content:center; font-size:13px; }
 .htitle { font-weight:600; font-size:0.9rem; flex:1; }
