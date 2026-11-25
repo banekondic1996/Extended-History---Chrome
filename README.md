@@ -1,9 +1,11 @@
-# <img width="48" height="48" alt="icon48" src="/icons/icon128.png" /> Extended History <br>
-**Description:**
+# <img width="48" height="48" alt="icon48" src="/icons/icon128.png" /> Extended History (Edge extension) <br>
+**For more info check the main branch:**
 <pre>
-Chrome extension for extended history duration and better history view,<br>and option to store history for more then 90 days.
-Originally made just because of 90 days limit in chromium,<br>instead of rebuilding chromium I made extension. 
+<a href='https://github.com/banekondic1996/Extended-History---Chrome/tree/main'>Link</a>
 </pre>
+**Doesn't work same as Chrome extension!** </br>
+Ctrl+H opens popup differently in Edge browser
+
 **Features:**
 <pre>
 -Filter history by date, url, title
@@ -21,15 +23,7 @@ Originally made just because of 90 days limit in chromium,<br>instead of rebuild
 -Find history using quick filters
 -Lock history
 </pre>
-**To do (ordered by importance):**
-<pre>
--Added regex support to search
--Add support to import from Google Takeout
--Popup/sidebar deleting in progress modal is missing
--Fix browser cache based favicon resolver, by saving small favicons as base64 in localstorage
--Store page even if page didn't load completely
--Import history within certain time range
-</pre>
+
 <br>
 <img width="1918" height="994" alt="image" src="https://github.com/user-attachments/assets/30e942f4-586c-4b42-9cec-93ab77c6b0df" />
 <img width="1918" height="994" alt="image" src="s1.png" />
