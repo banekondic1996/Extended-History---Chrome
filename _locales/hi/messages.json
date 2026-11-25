@@ -15,7 +15,22 @@
   "oct": {"message": "अक्टू॰"},
   "nov": {"message": "नव॰"},
   "dec": {"message": "दिस॰"},
-    "ignore_mode_black": {"message": "ब्लैकलिस्ट मोड"},
+  "unsaved_changes_title": {"message": "क्या बदलाव सहेजें?"},
+  "unsaved_changes_msg": {"message": "सेटिंग्स में आपके बदलाव अभी सहेजे नहीं गए हैं।"},
+  "filter_by_domain": {"message": "डोमेन के अनुसार फ़िल्टर करें"},
+  "always_enc_enabled": {"message": "अब एक्सपोर्ट एन्क्रिप्ट किए जाएँगे"},
+  "always_enc_disabled": {"message": "अब एक्सपोर्ट एन्क्रिप्ट नहीं किए जाएँगे"},
+  "always_enc_off_confirm": {"message": "एक्सपोर्ट एन्क्रिप्ट करना बंद करें? पहले से एन्क्रिप्ट की गई फ़ाइलों के लिए पासवर्ड फिर भी ज़रूरी होगा।"},
+  "always_enc_pw_changed": {"message": "एक्सपोर्ट पासवर्ड बदल दिया गया"},
+  "window": {"message": "विंडो"},
+  "tab": {"message": "टैब"},
+  "redownload_note": {"message": "अंतिम इन्क्रिमेंटल बैकअप: {0} · {1} प्रविष्टियाँ"},
+  "enc_note_on": {"message": "AES-256 से एन्क्रिप्ट किया गया। कुंजी (आपके पासवर्ड का दोहरा हैश, स्वयं पासवर्ड नहीं) इस एक्सटेंशन में रखी जाती है ताकि एक्सपोर्ट अपने-आप चल सकें। अपना पासवर्ड सुरक्षित रखें: इम्पोर्ट करते समय इसकी आवश्यकता होगी।"},
+  "changelog_desc": {"message": "हर संस्करण में हुए बदलाव देखें।"},
+  "changelog": {"message": "बदलावों का विवरण"},
+  "tutorial": {"message": "ट्यूटोरियल"},
+  "tutorial_desc": {"message": "एक्सटेंशन का परिचय फिर से पढ़ें।"},
+  "ignore_mode_black": {"message": "ब्लैकलिस्ट मोड"},
   "ignore_mode_white": {"message": "व्हाइटलिस्ट मोड"},
   "ignore_clean_black": {"message": "ब्लैकलिस्ट में मौजूद साइटों की मौजूदा प्रविष्टियाँ हटाएँ"},
   "ignore_mode_desc_white": {"message": "व्हाइटलिस्ट: नीचे दी गई सूची की केवल साइटें ही सेव होती हैं; बाकी सब अनदेखी की जाती हैं। सूची खाली होने पर कुछ भी अनदेखा नहीं किया जाता।"},
@@ -233,10 +248,23 @@
     "message": "एन्क्रिप्ट किया जा रहा है…"
   },
   "rename_bookmark": {
-  "message": "✏️ बुकमार्क का नाम बदलें"
-},
+  "message": "बुकमार्क का नाम बदलें"
+  },
+  "started": {"message": "शुरू हुआ"},
+  "jump_to_datetime": {"message": "तारीख और समय पर जाएँ"},
+  "just_now": {"message": "अभी-अभी"},
+  "ago": {"message": "पहले"},
+  "bm_sort_default": {"message": "क्रमबद्ध करें: डिफ़ॉल्ट"},
+  "bm_sort_domain_asc": {"message": "क्रमबद्ध करें: डोमेन A–Z"},
+  "bm_sort_domain_desc": {"message": "क्रमबद्ध करें: डोमेन Z–A"},
+  "bm_sort_title_asc": {"message": "क्रमबद्ध करें: शीर्षक A–Z"},
+  "bm_sort_title_desc": {"message": "क्रमबद्ध करें: शीर्षक Z–A"},
+  "always_encrypt_exports": {"message": "खोज/फ़िल्टर किए गए एक्सपोर्ट को हमेशा एन्क्रिप्ट करें"},
+  "always_encrypt_exports_desc": {"message": "चालू होने पर, खोज/फ़िल्टर किए गए एक्सपोर्ट यहाँ सेट किए गए पासवर्ड से एन्क्रिप्ट (AES-256) किए जाते हैं। केवल पासवर्ड से बनी कुंजी सेव होती है, पासवर्ड स्वयं कभी नहीं। अपना पासवर्ड सुरक्षित रखें: फ़ाइलों को इम्पोर्ट करने या खोलने के लिए इसकी ज़रूरत होगी।"},
+  "set_export_password": {"message": "एक्सपोर्ट पासवर्ड सेट करें"},
+  "set_export_password_note": {"message": "अपने एक्सपोर्ट को इम्पोर्ट करने या खोलने के लिए आवश्यक। यदि आप इसे भूल जाते हैं, तो एन्क्रिप्ट किए गए एक्सपोर्ट वापस प्राप्त नहीं किए जा सकते।"},
  "remove_bookmark": {
-    "message": "🗑 बुकमार्क हटाएँ"
+    "message": "बुकमार्क हटाएँ"
   },
   "quick_filters": {
     "message": "त्वरित फ़िल्टर"
@@ -1280,5 +1308,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "शीर्षक या URL से सहेजे गए टैब खोजें…"},
+  "stored_tabs_count": {"message": "सहेजे गए टैब: {0}"},
+  "confirm_clear_stored_tabs": {"message": "सभी सहेजे गए टैब ({0}) हटाएँ?"},
+  "confirm_open_stored_tabs": {"message": "सभी सहेजे गए टैब ({0}) खोलें?"},
+  "no_matching_stored_tabs": {"message": "कोई मेल खाता सहेजा गया टैब नहीं मिला।"},
+  "tab_storage_cleared": {"message": "टैब स्टोरेज साफ़ कर दिया गया"},
+  "restoring_tabs": {"message": "टैब पुनर्स्थापित किए जा रहे हैं ({0})…"},
+  "remove_from_storage": {"message": "स्टोरेज से हटाएँ"},
+  "quick_bar": {"message": "क्विक बार"},
+  "quick_bar_desc": {"message": "मुख्य पैनल के बगल में डोमेन आइकन की एक संकरी पट्टी दिखाता है। किसी डोमेन के इतिहास को फ़िल्टर करने के लिए उसके आइकन पर क्लिक करें; हटाने के लिए उस पर राइट-क्लिक करें।"},
+  "add_to_quick_bar": {"message": "क्विक बार में जोड़ें"},
+  "add_domain_to_quick_bar_prompt": {"message": "क्विक बार में डोमेन जोड़ें (जैसे example.com):"},
+  "quick_bar_added": {"message": "{0} को क्विक बार में जोड़ा गया"},
+  "quick_bar_exists": {"message": "{0} पहले से क्विक बार में है"}
 }

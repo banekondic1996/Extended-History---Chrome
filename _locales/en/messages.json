@@ -14,6 +14,8 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
+  "window": {"message": "Window"},
+  "tab": {"message": "tab"},
   "expr_mode": {"message": "Expression mode"},
   "ctx_cut": {"message": "Cut"},
   "ctx_copy": {"message": "Copy"},
@@ -22,6 +24,12 @@
   "ignore_mode_title": {"message": "List mode"},
   "ignore_mode_black": {"message": "Blacklist mode"},
   "ignore_mode_white": {"message": "Whitelist mode"},
+  "redownload_note": {"message": "Last incremental backup: {0} · {1} entries"},
+  "enc_note_on": {"message": "Encrypted with AES-256. The key (a double hash of your password, not the password) is kept in this extension so exports can run on their own. Keep your password: importing asks for it."},
+  "changelog_desc": {"message": "See what changed in each version."},
+  "changelog": {"message": "Changelog"},
+  "tutorial": {"message": "Tutorial"},
+  "tutorial_desc": {"message": "Read the introduction to the extension again."},
   "ignore_clean_black": {"message": "Remove existing entries from sites that are in the blacklist"},
   "ignore_mode_desc_white": {"message": "Whitelist: ONLY the sites in the list below are saved; everything else is ignored. With an empty list nothing is ignored."},
   "ignore_mode_desc_black": {"message": "Blacklist: sites in the list below are ignored"},
@@ -148,6 +156,10 @@
   "more_from_domain": {
     "message": "More from domain"
   },
+  "quick_bar": {"message": "Quick bar"},
+  "quick_bar_desc": {"message": "Shows a narrow bar of domain icons beside the main panel. Click an icon to filter history by that domain; right-click it to delete."},
+  "quick_bar_add": {"message": "Add domain"},
+  "add_to_quick_bar": {"message": "Add to quick bar"},
   "ignore_domain": {
     "message": "Ignore domain"
   },
@@ -226,7 +238,7 @@
     "message": "Create password"
   },
   "rename_bookmark": {
-  "message": "✏️ Rename bookmark"
+  "message": "Rename bookmark"
 },
  "lock_warning_title": {
     "message": "Lock history?"
@@ -259,7 +271,7 @@
     "message": "Encrypting…"
   },
   "remove_bookmark": {
-    "message": "🗑 Remove bookmark"
+    "message": "Remove bookmark"
   },
    "select": {
     "message": "Select"
@@ -1342,5 +1354,41 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "just_now": {"message": "just now"},
+  "ago": {"message": "ago"},
+  "unsaved_changes_title": {"message": "Save changes?"},
+  "unsaved_changes_msg": {"message": "You have unsaved changes in Settings."},
+  "jump_to_datetime": {"message": "Jump to date&time"},
+  "bm_sort_default": {"message": "Sort: Default"},
+  "bm_sort_domain_asc": {"message": "Sort: Domain A–Z"},
+  "bm_sort_domain_desc": {"message": "Sort: Domain Z–A"},
+  "session_deleted": {"message": "Session deleted"},
+  "always_encrypt_exports": {"message": "Always encrypt search/filtered exports"},
+  "always_encrypt_exports_desc": {"message": "When on, search/filtered exports are encrypted (AES-256) with the password you set here. Only a key derived from the password is stored, never the password itself. Keep your password: it is needed to import or open the files."},
+  "set_export_password": {"message": "Set export password"},
+  "set_export_password_note": {"message": "Needed to import or open your exports. If you forget it, encrypted exports cannot be recovered."},
+  "always_enc_enabled": {"message": "Exports will now be encrypted"},
+  "always_enc_disabled": {"message": "Exports are no longer encrypted"},
+  "always_enc_off_confirm": {"message": "Stop encrypting exports? Files already encrypted still need the password."},
+  "always_enc_pw_changed": {"message": "Export password changed"},
+  "bm_sort_title_asc": {"message": "Sort: Title A–Z"},
+  "bm_sort_title_desc": {"message": "Sort: Title Z–A"},
+  "filter_by_domain": {"message": "Filter by domain"},
+  "popup_search_limit": {"message": "Limit maximum old search history"},
+  "popup_search_limit_desc": {"message": "The popup / sidebar search only looks back this many months. Makes searching faster when your history is very big (e.g. 10 years). The History page still searches everything."},
+  "encrypted": {"message": "encrypted"},
+  "export_interrupted": {"message": "Export was interrupted — please try again"},
+  "ph_search_tab_storage": {"message": "Search stored tabs by title or URL…"},
+  "stored_tabs_count": {"message": "Stored tabs: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Clear all stored tabs ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Open all stored tabs ({0})?"},
+  "no_matching_stored_tabs": {"message": "No matching stored tabs."},
+  "tab_storage_cleared": {"message": "Tab storage cleared"},
+  "restoring_tabs": {"message": "Restoring tabs ({0})…"},
+  "remove_from_storage": {"message": "Remove from storage"},
+  "started": {"message": "Started"},
+  "add_domain_to_quick_bar_prompt": {"message": "Add domain to quick bar (e.g. example.com):"},
+  "quick_bar_added": {"message": "Added {0} to quick bar"},
+  "quick_bar_exists": {"message": "{0} is already in the quick bar"}
 }

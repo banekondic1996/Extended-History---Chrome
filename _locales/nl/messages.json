@@ -2,6 +2,15 @@
   "ext_name": {
     "message": "Uitgebreide Geschiedenis"
   },
+  "filter_by_domain": {"message": "Filteren op domein"},
+  "always_enc_enabled": {"message": "Exports worden voortaan versleuteld"},
+  "always_enc_disabled": {"message": "Exports worden niet langer versleuteld"},
+  "always_enc_off_confirm": {"message": "Stoppen met het versleutelen van exports? Voor eerder versleutelde bestanden blijft het wachtwoord nodig."},
+  "always_enc_pw_changed": {"message": "Exportwachtwoord gewijzigd"},
+  "window": {"message": "Venster"},
+  "tab": {"message": "tabblad"},
+  "unsaved_changes_title": {"message": "Wijzigingen opslaan?"},
+  "unsaved_changes_msg": {"message": "Je hebt niet-opgeslagen wijzigingen in Instellingen."},
   "lock_big_warning": {"message": "Je geschiedenis is te groot om te versleutelen"},
   "lock_big_limit": {"message": "limiet"},
   "lock_big_warning2": {"message": "Er wordt niets versleuteld (om het vergrendelen snel te houden), maar de interface blijft wel vergrendeld."},
@@ -18,8 +27,14 @@
   "time_data_cleared": {"message": "Tijdgegevens gewist"},
   "cant_update_retention": {"message": "Bewaartermijn kon niet worden bijgewerkt"},
   "no_entries_file": {"message": "Geen items gevonden in het bestand"},
-    "ignore_mode_black": {"message": "Zwarte lijst-modus"},
+  "ignore_mode_black": {"message": "Zwarte lijst-modus"},
   "ignore_mode_white": {"message": "Witte lijst-modus"},
+  "redownload_note": {"message": "Laatste incrementele back-up: {0} · {1} vermeldingen"},
+  "enc_note_on": {"message": "Versleuteld met AES-256. De sleutel (een dubbele hash van je wachtwoord, niet het wachtwoord zelf) wordt in deze extensie bewaard, zodat exports zelfstandig kunnen worden uitgevoerd. Bewaar je wachtwoord goed: je hebt het nodig om gegevens te importeren."},
+  "changelog_desc": {"message": "Bekijk wat er in elke versie is veranderd."},
+  "changelog": {"message": "Wijzigingslogboek"},
+  "tutorial": {"message": "Handleiding"},
+  "tutorial_desc": {"message": "Lees de introductie van de extensie opnieuw."},
   "ignore_clean_black": {"message": "Bestaande vermeldingen verwijderen van sites op de zwarte lijst"},
   "ignore_mode_desc_white": {"message": "Witte lijst: ALLEEN de sites in de onderstaande lijst worden opgeslagen; al het andere wordt genegeerd. Bij een lege lijst wordt niets genegeerd."},
   "ignore_mode_desc_black": {"message": "Zwarte lijst: sites in de onderstaande lijst worden genegeerd"},
@@ -231,10 +246,23 @@
     "message": "Versleutelen…"
   },
   "rename_bookmark": {
-  "message": "✏️ Bladwijzer hernoemen"
-},
+  "message": "Bladwijzer hernoemen"
+  },
+  "started": {"message": "Gestart"},
+  "jump_to_datetime": {"message": "Ga naar datum en tijd"},
+  "just_now": {"message": "zojuist"},
+  "ago": {"message": "geleden"},
+  "bm_sort_default": {"message": "Sorteren: Standaard"},
+  "bm_sort_domain_asc": {"message": "Sorteren: Domein A–Z"},
+  "bm_sort_domain_desc": {"message": "Sorteren: Domein Z–A"},
+  "bm_sort_title_asc": {"message": "Sorteren: Titel A–Z"},
+  "bm_sort_title_desc": {"message": "Sorteren: Titel Z–A"},
+  "always_encrypt_exports": {"message": "Zoek- en gefilterde exports altijd versleutelen"},
+  "always_encrypt_exports_desc": {"message": "Wanneer dit is ingeschakeld, worden zoek- en gefilterde exports versleuteld (AES-256) met het wachtwoord dat je hier instelt. Alleen een van het wachtwoord afgeleide sleutel wordt opgeslagen, nooit het wachtwoord zelf. Bewaar je wachtwoord goed: je hebt het nodig om de bestanden te importeren of te openen."},
+  "set_export_password": {"message": "Exportwachtwoord instellen"},
+  "set_export_password_note": {"message": "Nodig om je exports te importeren of te openen. Als je het vergeet, kunnen versleutelde exports niet worden hersteld."},
   "remove_bookmark": {
-    "message": "🗑 Bladwijzer verwijderen"
+    "message": "Bladwijzer verwijderen"
   },
   "quick_filters": {
     "message": "Snelle filters"
@@ -1314,5 +1342,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Zoek opgeslagen tabbladen op titel of URL…"},
+  "stored_tabs_count": {"message": "Opgeslagen tabbladen: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Alle opgeslagen tabbladen ({0}) wissen?"},
+  "confirm_open_stored_tabs": {"message": "Alle opgeslagen tabbladen ({0}) openen?"},
+  "no_matching_stored_tabs": {"message": "Geen overeenkomende opgeslagen tabbladen."},
+  "tab_storage_cleared": {"message": "Tabbladopslag gewist"},
+  "restoring_tabs": {"message": "Tabbladen herstellen ({0})…"},
+  "remove_from_storage": {"message": "Uit opslag verwijderen"},
+  "quick_bar": {"message": "Snelle balk"},
+  "quick_bar_desc": {"message": "Toont een smalle balk met domeiniconen naast het hoofdvenster. Klik op een icoon om de geschiedenis op dat domein te filteren; klik met de rechtermuisknop om het te verwijderen."},
+  "add_to_quick_bar": {"message": "Toevoegen aan snelle balk"},
+  "add_domain_to_quick_bar_prompt": {"message": "Domein toevoegen aan de snelle balk (bijv. example.com):"},
+  "quick_bar_added": {"message": "{0} toegevoegd aan de snelle balk"},
+  "quick_bar_exists": {"message": "{0} staat al in de snelle balk"}
 }

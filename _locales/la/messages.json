@@ -21,7 +21,22 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Dec"},
-    "ignore_mode_black": {"message": "Modus indicis nigri"},
+  "unsaved_changes_title": {"message": "Mutationesne servare?"},
+  "unsaved_changes_msg": {"message": "Mutationes in Praeferentiis nondum servatae sunt."},
+  "filter_by_domain": {"message": "Filtra per dominium"},
+  "always_enc_enabled": {"message": "Exportationes nunc encryptae erunt"},
+  "always_enc_disabled": {"message": "Exportationes iam non encryptae sunt"},
+  "always_enc_off_confirm": {"message": "Desinere exportationes encryptare? Documenta iam encrypta adhuc tessera indigent."},
+  "always_enc_pw_changed": {"message": "Tessera exportationis mutata"},
+  "window": {"message": "Fenestra"},
+  "tab": {"message": "tabula"},
+  "redownload_note": {"message": "Novissimum exemplar incrementale: {0} · {1} inscriptiones"},
+  "enc_note_on": {"message": "AES-256 encryptum. Clavis (duplex hash tesserae tuae, non ipsa tessera) in hac extensione servatur, ut exportationes sponte currere possint. Tesseram tuam serva: ad importandum requiretur."},
+  "changelog_desc": {"message": "Vide quid in unaquaque versione mutatum sit."},
+  "changelog": {"message": "Index mutationum"},
+  "tutorial": {"message": "Praecepta"},
+  "tutorial_desc": {"message": "Introductionem extensionis iterum lege."},
+  "ignore_mode_black": {"message": "Modus indicis nigri"},
   "ignore_mode_white": {"message": "Modus indicis albi"},
   "ignore_clean_black": {"message": "Inscriptiones exsistentes ex sitibus in indice nigro positis remove"},
   "ignore_mode_desc_white": {"message": "Index albus: SOLI situs in indice infra posito servantur; omnia alia ignorantur. Si index vacuus est, nihil ignoratur."},
@@ -236,11 +251,24 @@
     "message": "Encryptio…"
   },
   "rename_bookmark": {
-  "message": "✏️ बुकमार्क का नाम बदलें"
-},
- "remove_bookmark": {
-    "message": "🗑 Signaculum remove"
+  "message": "बुकमार्क का नाम बदलें"
   },
+  "remove_bookmark": {
+    "message": "Signaculum remove"
+  },
+  "started": {"message": "Coepit"},
+  "jump_to_datetime": {"message": "Ad diem et horam transi"},
+  "just_now": {"message": "nunc"},
+  "ago": {"message": "abhinc"},
+  "bm_sort_default": {"message": "Ordina: Defalta"},
+  "bm_sort_domain_asc": {"message": "Ordina: Dominium A–Z"},
+  "bm_sort_domain_desc": {"message": "Ordina: Dominium Z–A"},
+  "bm_sort_title_asc": {"message": "Ordina: Titulus A–Z"},
+  "bm_sort_title_desc": {"message": "Ordina: Titulus Z–A"},
+  "always_encrypt_exports": {"message": "Exportationes quaesitas vel filtratas semper encryptare"},
+  "always_encrypt_exports_desc": {"message": "Cum activa est, exportationes quaesitae vel filtratae (AES-256) tessera hic constituta encryptantur. Sola clavis ex tessera derivata servatur, numquam ipsa tessera. Tesseram serva: ad exportationes importandas vel aperiendas necessaria est."},
+  "set_export_password": {"message": "Tesseram exportationis constitue"},
+  "set_export_password_note": {"message": "Ad exportationes importandas vel aperiendas necessaria est. Si eam oblivisceris, exportationes encryptatae recuperari non poterunt."},
   "quick_filter_desc": {
     "message": "Serva gregem nominatum ditionum, verborum clavium vel URL (exempli gratia \"Media socialia\" → facebook.com, instagram.com, pinterest.com). Elige eum ex indice iuxta capsam quaerendi in pagina Historiae ut statim tantum illa elementa filtres."
   },
@@ -1136,5 +1164,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Schedas servatas per titulum vel URL quaerere…"},
+  "stored_tabs_count": {"message": "Schedae servatae: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Omnes schedas servatas ({0}) delere?"},
+  "confirm_open_stored_tabs": {"message": "Omnes schedas servatas ({0}) aperire?"},
+  "no_matching_stored_tabs": {"message": "Nullae schedae servatae congruentes."},
+  "tab_storage_cleared": {"message": "Repositorium scedarum purgatum est"},
+  "restoring_tabs": {"message": "Schedae restituuntur ({0})…"},
+  "remove_from_storage": {"message": "Ex repositorio removere"},
+  "quick_bar": {"message": "Linea celeris"},
+  "quick_bar_desc": {"message": "Lineam angustam iconorum dominiorum iuxta tabulam principalem ostendit. Iconem preme ut historiam secundum illud dominium filtres; dextra parte clicca ut deleas."},
+  "add_to_quick_bar": {"message": "Ad lineam celerem adde"},
+  "add_domain_to_quick_bar_prompt": {"message": "Dominium ad lineam celerem adde (ex. example.com):"},
+  "quick_bar_added": {"message": "{0} ad lineam celerem additum"},
+  "quick_bar_exists": {"message": "{0} iam in linea celeri est"}
 }

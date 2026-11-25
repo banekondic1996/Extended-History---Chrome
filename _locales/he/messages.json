@@ -16,7 +16,22 @@
   "oct": {"message": "אוק׳"},
   "nov": {"message": "נוב׳"},
   "dec": {"message": "דצמ׳"},
-    "ignore_mode_black": {"message": "מצב רשימה שחורה"},
+  "unsaved_changes_title": {"message": "לשמור את השינויים?"},
+  "unsaved_changes_msg": {"message": "יש לך שינויים שלא נשמרו בהגדרות."},
+  "filter_by_domain": {"message": "סינון לפי דומיין"},
+  "always_enc_enabled": {"message": "הייצוא יוצפן מעכשיו"},
+  "always_enc_disabled": {"message": "הייצוא כבר לא מוצפן"},
+  "always_enc_off_confirm": {"message": "להפסיק להצפין ייצואים? קבצים שכבר הוצפנו עדיין דורשים את הסיסמה."},
+  "always_enc_pw_changed": {"message": "סיסמת הייצוא שונתה"},
+  "window": {"message": "חלון"},
+  "tab": {"message": "כרטיסייה"},
+  "redownload_note": {"message": "הגיבוי המצטבר האחרון: {0} · {1} רשומות"},
+  "enc_note_on": {"message": "מוצפן באמצעות AES-256. המפתח (גיבוב כפול של הסיסמה שלך, ולא הסיסמה עצמה) נשמר בתוסף כדי שהייצואים יוכלו לפעול באופן עצמאי. שמור את הסיסמה שלך: היא תידרש בעת הייבוא."},
+  "changelog_desc": {"message": "אפשר לראות מה השתנה בכל גרסה."},
+  "changelog": {"message": "יומן שינויים"},
+  "tutorial": {"message": "מדריך"},
+  "tutorial_desc": {"message": "קרא שוב את המבוא לתוסף."},
+  "ignore_mode_black": {"message": "מצב רשימה שחורה"},
   "ignore_mode_white": {"message": "מצב רשימה לבנה"},
   "ignore_clean_black": {"message": "הסרת רשומות קיימות מאתרים שברשימה השחורה"},
   "ignore_mode_desc_white": {"message": "רשימה לבנה: רק האתרים שברשימה שלמטה נשמרים; כל השאר מתעלמים. אם הרשימה ריקה, לא מתעלמים מכלום."},
@@ -69,6 +84,7 @@
   "thu": {"message": "ה׳"},
   "fri": {"message": "ו׳"},
   "sat": {"message": "ש׳"},
+  "started": {"message": "התחיל"},
   "merging_imported": {"message": "ממזג את ההיסטוריה שיובאה…"},
   "building_search_index": {"message": "בונה אינדקס חיפוש…"},
   "reparing_database": {"message": "מתקן את מסד הנתונים של ההיסטוריה…"},
@@ -203,8 +219,20 @@
     "message": "יצירת סיסמה"
   },
   "rename_bookmark": {
-  "message": "✏️ बुकमार्क का नाम बदलें"
+    "message": "שנה שם לסימנייה"
 },
+  "jump_to_datetime": {"message": "מעבר לתאריך ולשעה"},
+  "just_now": {"message": "הרגע"},
+  "ago": {"message": "לפני"},
+  "bm_sort_default": {"message": "מיון: ברירת מחדל"},
+  "bm_sort_domain_asc": {"message": "מיון: דומיין א–ת"},
+  "bm_sort_domain_desc": {"message": "מיון: דומיין ת–א"},
+  "bm_sort_title_asc": {"message": "מיון: כותרת א–ת"},
+  "bm_sort_title_desc": {"message": "מיון: כותרת ת–א"},
+  "always_encrypt_exports": {"message": "הצפנת ייצואים של חיפוש וסינון תמיד"},
+  "always_encrypt_exports_desc": {"message": "כשהאפשרות מופעלת, ייצואים של חיפוש וסינון מוצפנים (AES-256) באמצעות הסיסמה שתגדיר כאן. נשמר רק מפתח שנגזר מהסיסמה, ולא הסיסמה עצמה. שמור את הסיסמה שלך: היא נחוצה לייבוא הקבצים או לפתיחתם."},
+  "set_export_password": {"message": "הגדרת סיסמת ייצוא"},
+  "set_export_password_note": {"message": "נחוצה לייבוא הייצואים שלך או לפתיחתם. אם תשכח אותה, לא ניתן יהיה לשחזר ייצואים מוצפנים."},
  "lock_warning_title": {
     "message": "לנעול את היסטוריית הגלישה?"
   },
@@ -236,7 +264,7 @@
     "message": "מצפין…"
   },
  "remove_bookmark": {
-    "message": "🗑 הסר סימנייה"
+    "message": "הסר סימנייה"
   },
   "quick_filters": {
     "message": "מסננים מהירים"
@@ -1280,5 +1308,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "חפש כרטיסיות שמורות לפי כותרת או כתובת…"},
+  "stored_tabs_count": {"message": "כרטיסיות שמורות: {0}"},
+  "confirm_clear_stored_tabs": {"message": "למחוק את כל הכרטיסיות השמורות ({0})?"},
+  "confirm_open_stored_tabs": {"message": "לפתוח את כל הכרטיסיות השמורות ({0})?"},
+  "no_matching_stored_tabs": {"message": "לא נמצאו כרטיסיות שמורות תואמות."},
+  "tab_storage_cleared": {"message": "אחסון הכרטיסיות נוקה"},
+  "restoring_tabs": {"message": "משחזר כרטיסיות ({0})…"},
+  "remove_from_storage": {"message": "הסר מהאחסון"},
+  "quick_bar": {"message": "סרגל מהיר"},
+  "quick_bar_desc": {"message": "מציג סרגל צר של סמלי דומיינים לצד החלונית הראשית. לחץ על סמל כדי לסנן את ההיסטוריה לפי הדומיין שלו; לחץ עליו לחיצה ימנית כדי למחוק אותו."},
+  "add_to_quick_bar": {"message": "הוסף לסרגל המהיר"},
+  "add_domain_to_quick_bar_prompt": {"message": "הוסף דומיין לסרגל המהיר (למשל example.com):"},
+  "quick_bar_added": {"message": "{0} נוסף לסרגל המהיר"},
+  "quick_bar_exists": {"message": "{0} כבר נמצא בסרגל המהיר"}
 }

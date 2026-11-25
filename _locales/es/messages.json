@@ -22,6 +22,12 @@
   "ignore_mode_title": {"message": "Modo de lista"},
   "ignore_mode_black": {"message": "Modo de lista negra"},
   "ignore_mode_white": {"message": "Modo de lista blanca"},
+  "redownload_note": {"message": "Última copia de seguridad incremental: {0} · {1} entradas"},
+  "enc_note_on": {"message": "Cifrado con AES-256. La clave (un doble hash de tu contraseña, no la contraseña en sí) se guarda en esta extensión para que las exportaciones se ejecuten automáticamente. Conserva tu contraseña: se te pedirá al importar."},
+  "changelog_desc": {"message": "Consulta los cambios de cada versión."},
+  "changelog": {"message": "Registro de cambios"},
+  "tutorial": {"message": "Tutorial"},
+  "tutorial_desc": {"message": "Vuelve a leer la introducción a la extensión."},
   "ignore_clean_black": {"message": "Eliminar las entradas existentes de los sitios incluidos en la lista negra"},
   "ignore_mode_desc_white": {"message": "Lista blanca: SOLO se guardan los sitios de la lista siguiente; todo lo demás se ignora. Si la lista está vacía, no se ignora nada."},
   "ignore_mode_desc_black": {"message": "Lista negra: se ignoran los sitios de la lista siguiente"},
@@ -209,10 +215,23 @@
   "create_password": {
     "message": "Crear contraseña"
   },
+  "bm_sort_default": {"message": "Ordenar: Predeterminado"},
+  "bm_sort_domain_asc": {"message": "Ordenar: Dominio A–Z"},
+  "bm_sort_domain_desc": {"message": "Ordenar: Dominio Z–A"},
+  "bm_sort_title_asc": {"message": "Ordenar: Título A–Z"},
+  "bm_sort_title_desc": {"message": "Ordenar: Título Z–A"},
+  "always_encrypt_exports": {"message": "Cifrar siempre las exportaciones de búsquedas y filtros"},
+  "always_encrypt_exports_desc": {"message": "Cuando está activado, las exportaciones de búsquedas y filtros se cifran (AES-256) con la contraseña que configures aquí. Solo se guarda una clave derivada de la contraseña, nunca la contraseña en sí. Conserva tu contraseña: la necesitarás para importar o abrir los archivos."},
+  "set_export_password": {"message": "Establecer contraseña de exportación"},
+  "set_export_password_note": {"message": "Necesaria para importar o abrir tus exportaciones. Si la olvidas, no podrás recuperar los archivos exportados cifrados."},
   "rename_bookmark": {
-  "message": "✏️ Cambiar nombre del marcador"
-},
- "lock_warning_title": {
+  "message": "Cambiar nombre del marcador"
+  },
+ "jump_to_datetime": {"message": "Ir a fecha y hora"},
+  "just_now": {"message": "justo ahora"},
+  "ago": {"message": "hace"},
+  "started": {"message": "Iniciado"},
+  "lock_warning_title": {
     "message": "¿Bloquear el historial?"
   },
   "lock_warning_body": {
@@ -243,7 +262,7 @@
     "message": "Cifrando…"
   },
  "remove_bookmark": {
-    "message": "🗑 Eliminar marcador"
+    "message": "Eliminar marcador"
   },
    "quick_filters": {
     "message": "Filtros rápidos"
@@ -407,6 +426,15 @@
   "tabs": {
     "message": "pestañas"
   },
+  "unsaved_changes_title": {"message": "¿Guardar los cambios?"},
+  "unsaved_changes_msg": {"message": "Tienes cambios sin guardar en Ajustes."},
+  "filter_by_domain": {"message": "Filtrar por dominio"},
+  "always_enc_enabled": {"message": "Las exportaciones ahora estarán cifradas"},
+  "always_enc_disabled": {"message": "Las exportaciones ya no están cifradas"},
+  "always_enc_off_confirm": {"message": "¿Dejar de cifrar las exportaciones? Los archivos ya cifrados seguirán necesitando la contraseña."},
+  "always_enc_pw_changed": {"message": "Contraseña de exportación cambiada"},
+  "window": {"message": "Ventana"},
+  "tab": {"message": "pestaña"},
   "since": {
     "message": "desde"
   },
@@ -1324,5 +1352,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Buscar pestañas guardadas por título o URL…"},
+  "stored_tabs_count": {"message": "Pestañas guardadas: {0}"},
+  "confirm_clear_stored_tabs": {"message": "¿Borrar todas las pestañas guardadas ({0})?"},
+  "confirm_open_stored_tabs": {"message": "¿Abrir todas las pestañas guardadas ({0})?"},
+  "no_matching_stored_tabs": {"message": "No hay pestañas guardadas que coincidan."},
+  "tab_storage_cleared": {"message": "Almacén de pestañas vaciado"},
+  "restoring_tabs": {"message": "Restaurando pestañas ({0})…"},
+  "remove_from_storage": {"message": "Quitar del almacén"},
+  "quick_bar": {"message": "Barra rápida"},
+  "quick_bar_desc": {"message": "Muestra una barra estrecha de iconos de dominios junto al panel principal. Haz clic en un icono para filtrar el historial por ese dominio; haz clic derecho para eliminarlo."},
+  "add_to_quick_bar": {"message": "Añadir a la barra rápida"},
+  "add_domain_to_quick_bar_prompt": {"message": "Añadir dominio a la barra rápida (p. ej., example.com):"},
+  "quick_bar_added": {"message": "Se añadió {0} a la barra rápida"},
+  "quick_bar_exists": {"message": "{0} ya está en la barra rápida"}
 }

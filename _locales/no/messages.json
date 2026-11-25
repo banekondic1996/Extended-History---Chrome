@@ -28,9 +28,24 @@
   "thu": {"message": "Tor"},
   "fri": {"message": "Fre"},
   "sat": {"message": "Lør"},
+  "unsaved_changes_title": {"message": "Lagre endringene?"},
+  "unsaved_changes_msg": {"message": "Du har ulagrede endringer i Innstillinger."},
+  "filter_by_domain": {"message": "Filtrer etter domene"},
+  "always_enc_enabled": {"message": "Eksporter blir nå kryptert"},
+  "always_enc_disabled": {"message": "Eksporter krypteres ikke lenger"},
+  "always_enc_off_confirm": {"message": "Slutte å kryptere eksporter? Filer som allerede er kryptert, trenger fortsatt passordet."},
+  "always_enc_pw_changed": {"message": "Eksportpassord endret"},
+  "window": {"message": "Vindu"},
+  "tab": {"message": "fane"},
   "discard": {"message": "Forkast"},
   "ignore_mode_black": {"message": "Svartelistemodus"},
   "ignore_mode_white": {"message": "Hvitelistemodus"},
+  "redownload_note": {"message": "Siste trinnvise sikkerhetskopi: {0} · {1} oppføringer"},
+  "enc_note_on": {"message": "Kryptert med AES-256. Nøkkelen (en dobbel hash av passordet ditt, ikke selve passordet) lagres i denne utvidelsen, slik at eksporter kan kjøres automatisk. Ta vare på passordet: du trenger det ved import."},
+  "changelog_desc": {"message": "Se hva som er endret i hver versjon."},
+  "changelog": {"message": "Endringslogg"},
+  "tutorial": {"message": "Veiledning"},
+  "tutorial_desc": {"message": "Les introduksjonen til utvidelsen på nytt."},
   "ignore_clean_black": {"message": "Fjern eksisterende oppføringer fra nettsteder på svartelisten"},
   "ignore_mode_desc_white": {"message": "Hviteliste: BARE nettstedene i listen nedenfor lagres; alt annet ignoreres. Hvis listen er tom, ignoreres ingenting."},
   "ignore_mode_desc_black": {"message": "Svarteliste: nettsteder i listen nedenfor ignoreres"},
@@ -231,10 +246,23 @@
     "message": "Krypterer…"
   },
   "rename_bookmark": {
-  "message": "✏️ Gi bokmerket nytt navn"
-},
+  "message": "Gi bokmerket nytt navn"
+  },
+  "started": {"message": "Startet"},
+  "jump_to_datetime": {"message": "Gå til dato og klokkeslett"},
+  "just_now": {"message": "akkurat nå"},
+  "ago": {"message": "siden"},
+  "bm_sort_default": {"message": "Sorter: Standard"},
+  "bm_sort_domain_asc": {"message": "Sorter: Domene A–Å"},
+  "bm_sort_domain_desc": {"message": "Sorter: Domene Å–A"},
+  "bm_sort_title_asc": {"message": "Sorter: Tittel A–Å"},
+  "bm_sort_title_desc": {"message": "Sorter: Tittel Å–A"},
+  "always_encrypt_exports": {"message": "Krypter alltid søke-/filtrerte eksporter"},
+  "always_encrypt_exports_desc": {"message": "Når dette er aktivert, krypteres søke-/filtrerte eksporter (AES-256) med passordet du angir her. Bare en nøkkel som er avledet fra passordet, lagres – aldri selve passordet. Ta vare på passordet: det trengs for å importere eller åpne filene."},
+  "set_export_password": {"message": "Angi eksportpassord"},
+  "set_export_password_note": {"message": "Nødvendig for å importere eller åpne eksportene dine. Hvis du glemmer det, kan krypterte eksporter ikke gjenopprettes."},
   "remove_bookmark": {
-    "message": "🗑 Fjern bokmerke"
+    "message": "Fjern bokmerke"
   },
   "quick_filters": {
     "message": "Hurtigfiltre"
@@ -1302,5 +1330,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Søk i lagrede faner etter tittel eller URL…"},
+  "stored_tabs_count": {"message": "Lagrede faner: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Slette alle lagrede faner ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Åpne alle lagrede faner ({0})?"},
+  "no_matching_stored_tabs": {"message": "Ingen samsvarende lagrede faner."},
+  "tab_storage_cleared": {"message": "Fanelageret er tømt"},
+  "restoring_tabs": {"message": "Gjenoppretter faner ({0})…"},
+  "remove_from_storage": {"message": "Fjern fra lager"},
+  "quick_bar": {"message": "Hurtiglinje"},
+  "quick_bar_desc": {"message": "Viser en smal linje med domeneikoner ved siden av hovedpanelet. Klikk på et ikon for å filtrere historikken etter domenet; høyreklikk for å slette det."},
+  "add_to_quick_bar": {"message": "Legg til i hurtiglinjen"},
+  "add_domain_to_quick_bar_prompt": {"message": "Legg til domene i hurtiglinjen (f.eks. example.com):"},
+  "quick_bar_added": {"message": "{0} lagt til i hurtiglinjen"},
+  "quick_bar_exists": {"message": "{0} finnes allerede i hurtiglinjen"}
 }

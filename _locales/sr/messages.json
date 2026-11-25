@@ -16,8 +16,14 @@
   "nov": {"message": "Нов"},
   "dec": {"message": "Дец"},
   "discard": {"message": "Одбаци"},
-   "ignore_mode_black": {"message": "Режим црне листе"},
+  "ignore_mode_black": {"message": "Режим црне листе"},
   "ignore_mode_white": {"message": "Режим беле листе"},
+  "redownload_note": {"message": "Последња инкрементална резервна копија: {0} · {1} уноса"},
+  "enc_note_on": {"message": "Шифровано помоћу AES-256. Кључ (двоструки хеш твоје лозинке, а не сама лозинка) чува се у овом проширењу како би се извоз обављао аутоматски. Сачувај лозинку: биће потребна приликом увоза."},
+  "changelog_desc": {"message": "Погледај шта је промењено у свакој верзији."},
+  "changelog": {"message": "Дневник промена"},
+  "tutorial": {"message": "Упутство"},
+  "tutorial_desc": {"message": "Поново прочитај увод у проширење."},
   "ignore_clean_black": {"message": "Уклони постојеће уносе са сајтова који су на црној листи"},
   "ignore_mode_desc_white": {"message": "Бела листа: чувају се САМО сајтови са листе испод; све остало се игнорише. Ако је листа празна, ништа се не игнорише."},
   "ignore_mode_desc_black": {"message": "Црна листа: сајтови са листе испод се игноришу"},
@@ -234,10 +240,19 @@
     "message": "Шифровање…"
   },
   "rename_bookmark": {
-  "message": "✏️ Преименуј обелживач"
+  "message": "Преименуј обелживач"
 },
+  "bm_sort_default": {"message": "Сортирање: Подразумевано"},
+  "bm_sort_domain_asc": {"message": "Сортирање: Домен А–Ш"},
+  "bm_sort_domain_desc": {"message": "Сортирање: Домен Ш–А"},
+  "bm_sort_title_asc": {"message": "Сортирање: Наслов А–Ш"},
+  "bm_sort_title_desc": {"message": "Сортирање: Наслов Ш–А"},
+  "always_encrypt_exports": {"message": "Увек шифруј извозе претраге и филтриране извозе"},
+  "always_encrypt_exports_desc": {"message": "Када је укључено, извози претраге и филтрирани извози се шифрују (AES-256) лозинком коју овде поставиш. Чува се само кључ изведен из лозинке, никада сама лозинка. Сачувај лозинку: потребна је за увоз или отварање датотека."},
+  "set_export_password": {"message": "Постави лозинку за извоз"},
+  "set_export_password_note": {"message": "Потребна је за увоз или отварање извоза. Ако је заборавиш, шифровани извози се не могу повратити."},
  "remove_bookmark": {
-    "message": "🗑 Уклони обележивач"
+    "message": "Уклони обележивач"
   },
   "select": {
     "message": "Изабери"
@@ -425,6 +440,15 @@
   "tabs": {
     "message": "картице"
   },
+  "unsaved_changes_title": {"message": "Сачувати измене?"},
+  "unsaved_changes_msg": {"message": "Имате несачуване измене у подешавањима."},
+  "filter_by_domain": {"message": "Филтрирај по домену"},
+  "always_enc_enabled": {"message": "Извози ће од сада бити шифровани"},
+  "always_enc_disabled": {"message": "Извози више нису шифровани"},
+  "always_enc_off_confirm": {"message": "Зауставити шифровање извоза? За већ шифроване датотеке и даље је потребна лозинка."},
+  "always_enc_pw_changed": {"message": "Лозинка за извоз је промењена"},
+  "window": {"message": "Прозор"},
+  "tab": {"message": "картица"},
   "since": {
     "message": "од"
   },
@@ -869,6 +893,8 @@
   "confirm_ignore_invert": {"message": "Режим листе дозвољених сајтова: од сада се у историју НЕЋЕ чувати НИШТА осим сајтова са твоје листе. Наставити?"},
   "enc_prompt_pw": {"message": "Лозинка за шифровање инкременталних извоза (поново је потребна за њихов увоз):"},
   "link_to_chrome_webstore": {"message": "Линк до странице са екстензијама"},
+  "jump_to_datetime": {"message": "Пређи на датум и време"},
+  "just_now": {"message": "управо сада"},
   "click_to_rate": {
     "message": "Кликните да оцените"
   },
@@ -1302,5 +1328,20 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "started": {"message": "Почело"},
+  "ph_search_tab_storage": {"message": "Претражи сачуване картице по наслову или URL-у…"},
+  "stored_tabs_count": {"message": "Сачуваних картица: {0}"},
+  "confirm_clear_stored_tabs": {"message": "Обрисати све сачуване картице ({0})?"},
+  "confirm_open_stored_tabs": {"message": "Отворити све сачуване картице ({0})?"},
+  "no_matching_stored_tabs": {"message": "Нема одговарајућих сачуваних картица."},
+  "tab_storage_cleared": {"message": "Складиште картица је очишћено"},
+  "restoring_tabs": {"message": "Враћање картица ({0})…"},
+  "remove_from_storage": {"message": "Уклони из складишта"},
+  "quick_bar": {"message": "Брза трака"},
+  "quick_bar_desc": {"message": "Приказује уску траку са иконицама домена поред главног панела. Кликните на икону да филтрирате историју по том домену; кликните десним тастером да је уклоните."},
+  "add_to_quick_bar": {"message": "Додај на брзу траку"},
+  "add_domain_to_quick_bar_prompt": {"message": "Додај домен на брзу траку (нпр. example.com):"},
+  "quick_bar_added": {"message": "{0} је додат на брзу траку"},
+  "quick_bar_exists": {"message": "{0} је већ на брзој траци"}
 }

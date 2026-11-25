@@ -16,6 +16,12 @@
   "oct": {"message": "Oct"},
   "nov": {"message": "Nov"},
   "dec": {"message": "Déc"},
+  "redownload_note": {"message": "Dernière sauvegarde incrémentielle : {0} · {1} entrées"},
+  "enc_note_on": {"message": "Chiffré avec AES-256. La clé (un double hachage de votre mot de passe, et non le mot de passe lui-même) est conservée dans cette extension pour permettre l’exécution automatique des exportations. Conservez votre mot de passe : il vous sera demandé lors de l’importation."},
+  "changelog_desc": {"message": "Découvrez les changements apportés à chaque version."},
+  "changelog": {"message": "Historique des modifications"},
+  "tutorial": {"message": "Tutoriel"},
+  "tutorial_desc": {"message": "Relisez l’introduction à l’extension."},
   "ignore_mode_black": {"message": "Mode liste noire"},
   "ignore_mode_white": {"message": "Mode liste blanche"},
   "ignore_clean_black": {"message": "Supprimer les entrées existantes des sites figurant dans la liste noire"},
@@ -201,8 +207,21 @@
     "message": "Créer un mot de passe"
   },
   "rename_bookmark": {
-  "message": "✏️ Renommer le favori"
+  "message": "Renommer le favori"
 },
+  "jump_to_datetime": {"message": "Aller à la date et à l’heure"},
+  "just_now": {"message": "à l’instant"},
+  "ago": {"message": "il y a"},
+  "started": {"message": "Démarré"},
+  "bm_sort_default": {"message": "Trier : Par défaut"},
+  "bm_sort_domain_asc": {"message": "Trier : Domaine A–Z"},
+  "bm_sort_domain_desc": {"message": "Trier : Domaine Z–A"},
+  "bm_sort_title_asc": {"message": "Trier : Titre A–Z"},
+  "bm_sort_title_desc": {"message": "Trier : Titre Z–A"},
+  "always_encrypt_exports": {"message": "Toujours chiffrer les exportations issues des recherches et des filtres"},
+  "always_encrypt_exports_desc": {"message": "Lorsque cette option est activée, les exportations issues des recherches et des filtres sont chiffrées (AES-256) avec le mot de passe défini ici. Seule une clé dérivée du mot de passe est enregistrée, jamais le mot de passe lui-même. Conservez votre mot de passe : il est nécessaire pour importer ou ouvrir les fichiers."},
+  "set_export_password": {"message": "Définir le mot de passe d’exportation"},
+  "set_export_password_note": {"message": "Nécessaire pour importer ou ouvrir vos exportations. Si vous l’oubliez, les fichiers exportés chiffrés ne pourront pas être récupérés."},
   "lock_warning_title": {
     "message": "Verrouiller l’historique ?"
   },
@@ -234,7 +253,7 @@
     "message": "Chiffrement…"
   },
 "remove_bookmark": {
-    "message": "🗑 Supprimer le favori"
+    "message": "Supprimer le favori"
   },
   "scroll_sensitivity": {
     "message": "Sensibilité du défilement"
@@ -377,6 +396,15 @@
   "tabs": {
     "message": "onglets"
   },
+  "unsaved_changes_title": {"message": "Enregistrer les modifications ?"},
+  "unsaved_changes_msg": {"message": "Vous avez des modifications non enregistrées dans les paramètres."},
+  "filter_by_domain": {"message": "Filtrer par domaine"},
+  "always_enc_enabled": {"message": "Les exportations seront désormais chiffrées"},
+  "always_enc_disabled": {"message": "Les exportations ne sont plus chiffrées"},
+  "always_enc_off_confirm": {"message": "Arrêter de chiffrer les exportations ? Les fichiers déjà chiffrés nécessitent toujours le mot de passe."},
+  "always_enc_pw_changed": {"message": "Mot de passe d’exportation modifié"},
+  "window": {"message": "Fenêtre"},
+  "tab": {"message": "onglet"},
   "since": {
     "message": "depuis"
   },
@@ -1314,5 +1342,19 @@
         "content": "$1"
       }
     }
-  }
+  },
+  "ph_search_tab_storage": {"message": "Rechercher dans les onglets stockés par titre ou URL…"},
+  "stored_tabs_count": {"message": "Onglets stockés : {0}"},
+  "confirm_clear_stored_tabs": {"message": "Supprimer tous les onglets stockés ({0}) ?"},
+  "confirm_open_stored_tabs": {"message": "Ouvrir tous les onglets stockés ({0}) ?"},
+  "no_matching_stored_tabs": {"message": "Aucun onglet stocké correspondant."},
+  "tab_storage_cleared": {"message": "Stockage d'onglets vidé"},
+  "restoring_tabs": {"message": "Restauration des onglets ({0})…"},
+  "remove_from_storage": {"message": "Retirer du stockage"},
+  "quick_bar": {"message": "Barre rapide"},
+  "quick_bar_desc": {"message": "Affiche une barre étroite d’icônes de domaines à côté du panneau principal. Cliquez sur une icône pour filtrer l’historique par domaine ; faites un clic droit pour la supprimer."},
+  "add_to_quick_bar": {"message": "Ajouter à la barre rapide"},
+  "add_domain_to_quick_bar_prompt": {"message": "Ajouter un domaine à la barre rapide (p. ex. example.com) :"},
+  "quick_bar_added": {"message": "{0} ajouté à la barre rapide"},
+  "quick_bar_exists": {"message": "{0} est déjà dans la barre rapide"}
 }
