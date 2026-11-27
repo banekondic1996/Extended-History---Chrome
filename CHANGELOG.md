@@ -235,7 +235,7 @@ Fixed/changed in version 4.3.1:
 Fixed/changed in version 4.3.2:
 -Added quick bar option
 
-Fixed/changed in version 4.3.3:
+Fixed/changed in version 4.3.3 (in testing):
 -Memory usage optimizations
 -Upgraded Sqlite3 to newest version
 </pre>
