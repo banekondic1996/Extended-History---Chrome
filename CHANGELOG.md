@@ -237,7 +237,8 @@ Fixed/changed in version 4.3.2:
 
 Fixed/changed in version 4.3.3 (in testing):
 -Memory usage optimizations
--Upgraded Sqlite3 to newest version
+-Upgraded Sqlite3 to newest version (3.46.1 to 3.54.1)
+-Small CSS fixes
 </pre>
 
 
