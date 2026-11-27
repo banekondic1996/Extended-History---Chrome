@@ -232,8 +232,12 @@ Fixed/changed in version 4.3.1:
 -Fixed few missing translations
 -Fixed auto store tabs storing pinned tabs (now it doesn't) (based on Firefox user request)
 
-Fixed/changed in version 4.3.2 (in testing):
+Fixed/changed in version 4.3.2:
 -Added quick bar option
+
+Fixed/changed in version 4.3.3:
+-Memory usage optimizations
+-Upgraded Sqlite3 to newest version
 </pre>
 
 
